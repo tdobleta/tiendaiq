@@ -103,6 +103,23 @@ async function terminarInstalacion(res, url) {
   await guardarTienda(tienda, datos.access_token, { alcances: datos.scope });
   console.log(`  ✚ instalada · ${tienda}`);
 
+  // Registrar el webhook de desinstalación: cuando el merchant borra la app,
+  // Shopify nos avisa y limpiamos su token al instante (no lazy en el 401).
+  try {
+    const { gql } = require("./shopify");
+    await gql(
+      `mutation($topic: WebhookSubscriptionTopic!, $sub: WebhookSubscriptionInput!) {
+        webhookSubscriptionCreate(topic: $topic, webhookSubscription: $sub) {
+          userErrors { message }
+        }
+      }`,
+      { topic: "APP_UNINSTALLED", sub: { callbackUrl: `${env.APP_URL}/webhooks`, format: "JSON" } },
+      { tienda, token: datos.access_token }
+    );
+  } catch (e) {
+    console.log(`  ⚠ webhook uninstall no registrado: ${e.message.slice(0, 80)}`);
+  }
+
   // Adentro del admin, no a la app suelta.
   const handle = tienda.replace(".myshopify.com", "");
   res

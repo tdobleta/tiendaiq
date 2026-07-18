@@ -41,3 +41,9 @@ services:
       # DEV_MODE apagado en producción: todo pasa por el pase firmado.
       - key: DEV_MODE
         value: "0"
+      # Plan gratis: páginas por mes antes de exigir suscripción.
+      - key: PAGINAS_GRATIS
+        value: "3"
+      # Cargos de PRUEBA mientras no lances en serio. Cambiar a "0" para cobrar.
+      - key: PLAN_TEST
+        value: "1"

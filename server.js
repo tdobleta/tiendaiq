@@ -27,6 +27,7 @@ const { env, sesionDeEnv } = require("./shopify");
 const { sesionDe, borrarTienda, listarTiendas } = require("./tiendas");
 const { guardarPaginaDB, leerPaginaDB, listarPaginasDB } = require("./db");
 const { iniciarInstalacion, terminarInstalacion, tiendaDelPase } = require("./auth");
+const { estadoPlan, exigirCupo, contarUso, crearSuscripcion } = require("./facturacion");
 
 // Render (y cualquier host) fija el puerto por env; local usa 4321.
 const PUERTO = Number(env.PORT || process.env.PORT || 4321);
@@ -55,6 +56,44 @@ const json = (res, codigo, cuerpo) => {
   res.writeHead(codigo, { "Content-Type": "application/json; charset=utf-8" });
   res.end(JSON.stringify(cuerpo));
 };
+
+// Cuerpo CRUDO (Buffer): los webhooks de Shopify se verifican con HMAC sobre
+// los bytes exactos — parsear antes de verificar rompe la firma.
+function leerCrudo(req) {
+  return new Promise((resolve, reject) => {
+    const partes = [];
+    req.on("data", (c) => partes.push(c));
+    req.on("end", () => resolve(Buffer.concat(partes)));
+    req.on("error", reject);
+  });
+}
+
+// POST /webhooks — desinstalación y pedidos de privacidad (GDPR).
+// Shopify exige responder 200 a los de privacidad aunque no guardemos datos
+// de clientes (no guardamos ninguno: solo tokens de tienda y páginas).
+async function webhooks(req, res) {
+  const crudo = await leerCrudo(req);
+  const firma = req.headers["x-shopify-hmac-sha256"] || "";
+  const esperada = require("crypto")
+    .createHmac("sha256", env.SHOPIFY_CLIENT_SECRET)
+    .update(crudo)
+    .digest("base64");
+  const a = Buffer.from(esperada), b = Buffer.from(firma);
+  if (a.length !== b.length || !require("crypto").timingSafeEqual(a, b)) {
+    return void res.writeHead(401).end();
+  }
+
+  const topico = req.headers["x-shopify-topic"] || "";
+  const tienda = req.headers["x-shopify-shop-domain"] || "";
+
+  if (topico === "app/uninstalled" && tienda) {
+    await borrarTienda(tienda);
+    console.log(`  ✖ desinstalada · ${tienda}`);
+  }
+  // customers/data_request, customers/redact, shop/redact:
+  // no almacenamos datos de clientes finales — 200 alcanza.
+  res.writeHead(200).end();
+}
 
 function leerCuerpo(req) {
   return new Promise((resolve, reject) => {
@@ -165,10 +204,23 @@ async function api(req, res, url) {
     return p ? json(res, 200, p) : json(res, 404, { error: "No existe esa página" });
   }
 
+  // GET /api/plan — estado del plan para la UI
+  if (req.method === "GET" && ruta === "/api/plan") {
+    return json(res, 200, await estadoPlan(sesion));
+  }
+
+  // POST /api/plan/suscribir — devuelve la URL de confirmación de Shopify
+  if (req.method === "POST" && ruta === "/api/plan/suscribir") {
+    const urlConfirmacion = await crearSuscripcion(sesion, URL_APP);
+    return json(res, 200, { url: urlConfirmacion });
+  }
+
   // POST /api/paginas — el botón "Crear página con IA"
   if (req.method === "POST" && ruta === "/api/paginas") {
     const { producto_id, idioma = "es", angulo = "" } = await leerCuerpo(req);
     if (!producto_id) return json(res, 400, { error: "Falta producto_id" });
+
+    await exigirCupo(sesion); // 402 si agotó las gratis y no es pro
 
     const t0 = Date.now();
     const { data, urls, avisos, uso } = await crearPagina(producto_id, sesion, { idioma, angulo });
@@ -183,7 +235,7 @@ async function api(req, res, url) {
       url_publica: null
     });
 
-    escribirPreview(data, urls); // el preview lee data.js
+    await contarUso(sesion);
     return json(res, 200, { ...registro, segundos: (Date.now() - t0) / 1000, uso });
   }
 
@@ -195,7 +247,6 @@ async function api(req, res, url) {
     if (!data) return json(res, 400, { error: "Falta data" });
     existente.data = data;
     await guardarPagina(sesion.tienda, existente);
-    escribirPreview(data, existente.urls);
     return json(res, 200, existente);
   }
 
@@ -223,6 +274,9 @@ const servidor = http.createServer(async (req, res) => {
     // --- instalación ---
     if (url.pathname === "/auth") return iniciarInstalacion(res, url, URL_APP);
     if (url.pathname === "/auth/callback") return await terminarInstalacion(res, url);
+
+    // --- webhooks de Shopify (desinstalación + privacidad) ---
+    if (req.method === "POST" && url.pathname === "/webhooks") return await webhooks(req, res);
 
     // --- app ---
     if (url.pathname.startsWith("/api/")) return await api(req, res, url);

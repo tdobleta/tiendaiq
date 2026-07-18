@@ -53,9 +53,17 @@
     if (!r.ok) {
       const e = new Error(cuerpo.error || `Error ${r.status}`);
       e.reinstalar = cuerpo.reinstalar;
+      e.actualizar = cuerpo.actualizar || r.status === 402;
       throw e;
     }
     return cuerpo;
+  }
+
+  // Cupo agotado → llevar al merchant a confirmar la suscripción en Shopify.
+  async function irASuscripcion() {
+    const { url } = await api("/plan/suscribir", { method: "POST" });
+    // La confirmación de Shopify no puede vivir en el iframe: ventana top.
+    (window.top || window).location.href = url;
   }
 
   const esc = (s) =>
@@ -256,7 +264,16 @@
       estado.error = e.message;
       ir("informacion");
       requestAnimationFrame(() => {
-        vista.insertAdjacentHTML("afterbegin", `<div class="error">✖ ${esc(estado.error)}</div>`);
+        vista.insertAdjacentHTML(
+          "afterbegin",
+          e.actualizar
+            ? `<div class="error">✖ ${esc(estado.error)}
+                 <button class="btn btn--acento" id="btn-plan" style="margin-left:12px">Pasar a Pro</button>
+               </div>`
+            : `<div class="error">✖ ${esc(estado.error)}</div>`
+        );
+        const b = $("btn-plan");
+        if (b) b.onclick = irASuscripcion;
       });
     }
   }
@@ -310,8 +327,14 @@
       </div>
 
       <div class="marco">
-        <iframe id="marco" src="/preview/index.html?t=${Date.now()}"></iframe>
+        <iframe id="marco" src="/preview/index.html?app=1&t=${Date.now()}"></iframe>
       </div>`;
+
+    // El iframe no lee ningún archivo global: recibe LOS DATOS DE ESTA página
+    // por mensaje. Dos merchants generando a la vez no se pisan.
+    const marco = $("marco");
+    marco.onload = () =>
+      marco.contentWindow.postMessage({ tiendaiq: true, data: pg.data, urls: pg.urls }, "*");
 
     $("volver").onclick = () => cargarLista();
     $("regenerar").onclick = () => ir("informacion");

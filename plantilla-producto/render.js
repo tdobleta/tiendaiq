@@ -18,9 +18,14 @@
   // Tienda: la plantilla Liquid deja datos en window.TIENDAIQ_*.
   // Preview local: data.js define DATA y URLS.
   const EN_TIENDA = typeof window.TIENDAIQ_DATA !== "undefined" && !!window.TIENDAIQ_DATA;
-  const DATOS = EN_TIENDA ? window.TIENDAIQ_DATA : (typeof DATA !== "undefined" ? DATA : null);
+  // ?app=1 → preview de la app: ignora data.js y espera los datos por mensaje.
+  const MODO_APP = /[?&]app=1/.test(location.search);
+  const DATOS = EN_TIENDA
+    ? window.TIENDAIQ_DATA
+    : MODO_APP ? null : (typeof DATA !== "undefined" ? DATA : null);
   const MAPA_URLS =
-    (EN_TIENDA && window.TIENDAIQ_URLS) || (typeof URLS !== "undefined" ? URLS : {});
+    (EN_TIENDA && window.TIENDAIQ_URLS) ||
+    (!MODO_APP && typeof URLS !== "undefined" ? URLS : {});
 
   // ---------- helpers ----------
 
@@ -416,6 +421,21 @@
     boton.classList.add("activa");
   };
 
-  if (EN_TIENDA) document.body.classList.add("publicada");
-  document.getElementById("app").innerHTML = render(DATOS);
+  function montar(datos) {
+    if (EN_TIENDA) document.body.classList.add("publicada");
+    document.getElementById("app").innerHTML = render(datos);
+  }
+
+  if (DATOS) {
+    // Tienda (TIENDAIQ_DATA) o preview local por archivo (data.js).
+    montar(DATOS);
+  } else {
+    // Preview de la app: el padre manda los datos de SU página por mensaje.
+    // Así cada merchant ve la suya y no un data.js global compartido.
+    window.addEventListener("message", (e) => {
+      if (!e.data || !e.data.tiendaiq) return;
+      Object.assign(MAPA_URLS, e.data.urls || {});
+      montar(e.data.data);
+    });
+  }
 })();
