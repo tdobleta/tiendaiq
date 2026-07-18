@@ -139,13 +139,22 @@
         ${cola}
       </div>`;
 
-    const metrica = (icono, nombre, valor, acento) => `
-      <div class="metrica ${acento ? "metrica--acento" : ""}">
-        <div class="metrica__icono">${icono}</div>
-        <div>
-          <div class="metrica__nombre">${nombre}</div>
-          <div class="metrica__valor">${valor}</div>
+    // Tiles de métrica al estilo PagePilot: ícono + label arriba, valor
+    // grande abajo alineado con el label.
+    const ICONO_METRICA = {
+      pagina: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3.5" width="14" height="17" rx="2"/><path d="M9 8.5h6M9 12h6M9 15.5h4"/></svg>`,
+      check: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 12.5l2.4 2.4 4.6-5.4"/></svg>`,
+      lapiz: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16.7 3.8l3.5 3.5L7.5 20H4v-3.5z"/><path d="M14.5 6l3.5 3.5"/></svg>`,
+      estrella: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3.5l2.5 5.4 5.9.7-4.4 4 1.2 5.9L12 16.6l-5.2 2.9 1.2-5.9-4.4-4 5.9-.7z"/></svg>`
+    };
+
+    const metrica = (icono, nombre, valor, tinte) => `
+      <div class="metrica ${tinte ? "metrica--" + tinte : ""}">
+        <div class="metrica__fila">
+          <span class="metrica__icono">${icono}</span>
+          <span class="metrica__nombre">${nombre}</span>
         </div>
+        <div class="metrica__valor">${valor}</div>
       </div>`;
 
     vista.innerHTML = `
@@ -211,13 +220,13 @@
         <div class="tarjeta__titulo">Tus números</div>
         <div class="panel__sub">Sincronizado con tu tienda, en tiempo real</div>
         <div class="metricas">
-          ${metrica("◧", "Páginas creadas", creadas, true)}
-          ${metrica("▲", "Publicadas", publicadas)}
-          ${metrica("✎", "Borradores", creadas - publicadas)}
+          ${metrica(ICONO_METRICA.pagina, "Páginas creadas", creadas, "violeta")}
+          ${metrica(ICONO_METRICA.check, "Publicadas", publicadas, "verde")}
+          ${metrica(ICONO_METRICA.lapiz, "Borradores", creadas - publicadas)}
           ${metrica(
-            "✦",
+            ICONO_METRICA.estrella,
             "Plan",
-            plan.plan === "pro" ? "Pro · sin límite" : `${plan.usadas} de ${plan.limite} este mes`
+            plan.plan === "pro" ? "Pro · sin límite" : `${plan.usadas} de ${plan.limite}`
           )}
         </div>
       </div>
@@ -228,13 +237,29 @@
         <div class="herramientas">
           <div class="herramienta">
             <div class="herramienta__nombre">Páginas de producto con IA</div>
-            <p>Elegí un producto de tu catálogo y la IA escribe el copy, clasifica las fotos y arma la landing completa.</p>
-            <button class="btn" id="herr-crear">Crear página de producto</button>
+            <p>Elegí un producto y la IA arma la landing completa.</p>
+            <button class="btn btn--chico" id="herr-crear">Crear página de producto</button>
+            <div class="herramienta__preview herramienta__preview--paginas">
+              <div class="mini-card">
+                <div class="mini-media"></div>
+                <div class="mini-linea mini-linea--ancha"></div>
+                <div class="mini-linea"></div>
+                <div class="mini-boton"></div>
+              </div>
+            </div>
           </div>
-          <div class="herramienta herramienta--pronto">
+          <div class="herramienta">
             <div class="herramienta__nombre">Tienda Shopify con IA</div>
-            <p>Una tienda completa con productos ganadores, armada por IA desde cero.</p>
-            <button class="btn btn--fantasma" disabled>Próximamente</button>
+            <p>Una tienda completa armada por IA desde cero.</p>
+            <button class="btn btn--chico btn--fantasma" disabled>Próximamente</button>
+            <div class="herramienta__preview herramienta__preview--tienda">
+              <div class="mini-card">
+                <div class="mini-media mini-media--verde"></div>
+                <div class="mini-linea mini-linea--ancha"></div>
+                <div class="mini-linea"></div>
+                <div class="mini-boton"></div>
+              </div>
+            </div>
           </div>
         </div>
       </div>`;

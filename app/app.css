@@ -18,10 +18,10 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
-  font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+  font-family: "Inter", -apple-system, "Segoe UI", system-ui, sans-serif;
   background: var(--fondo);
   color: var(--texto);
-  font-size: 14px;
+  font-size: 13.5px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
 }
@@ -251,8 +251,9 @@ main { max-width: 1180px; margin: 0 auto; padding: 28px 24px 60px; }
   display: flex; align-items: flex-start; justify-content: space-between;
   gap: 16px; flex-wrap: wrap;
 }
-.panel__sub { font-size: 12.5px; color: var(--suave); margin: -10px 0 16px; }
-.panel__cabecera .panel__sub { margin: 3px 0 16px; }
+/* El subtítulo va PEGADO al título de sección (2-3px), como PagePilot. */
+.tarjeta__titulo + .panel__sub { margin: -12px 0 16px; }
+.panel__sub { font-size: 12.5px; color: var(--suave); }
 
 .progreso { text-align: right; font-size: 12px; color: var(--suave); min-width: 185px; }
 .progreso__barra {
@@ -263,16 +264,16 @@ main { max-width: 1180px; margin: 0 auto; padding: 28px 24px 60px; }
 .pasos-grilla { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
 .paso-card {
   border: 1px solid var(--borde); border-radius: 10px; background: #fff;
-  padding: 16px; display: flex; flex-direction: column; align-items: flex-start; gap: 9px;
+  padding: 15px 16px; display: flex; flex-direction: column; align-items: flex-start; gap: 6px;
 }
 /* Círculo punteado = paso pendiente; negro sólido = hecho. Igual que la
    referencia: el estado se lee de un vistazo por el ícono. */
 .paso-card__icono {
-  width: 36px; height: 36px; border-radius: 50%;
-  border: 1.5px dashed #c9c9c9; background: #fff; color: var(--negro);
-  display: grid; place-items: center; margin-bottom: 3px;
+  width: 28px; height: 28px; border-radius: 50%;
+  border: 1.3px dashed #c4c4c4; background: #fff; color: var(--negro);
+  display: grid; place-items: center; margin-bottom: 8px;
 }
-.paso-card__icono svg { width: 17px; height: 17px; display: block; }
+.paso-card__icono svg { width: 14px; height: 14px; display: block; }
 .paso-card__icono--hecho { background: var(--negro); border: none; color: #fff; }
 .paso-card__titulo { font-size: 13.5px; font-weight: 600; color: var(--negro); }
 .paso-card__texto { font-size: 12.5px; color: var(--suave); flex: 1; }
@@ -286,29 +287,49 @@ main { max-width: 1180px; margin: 0 auto; padding: 28px 24px 60px; }
 
 .btn--chico { padding: 7px 14px; font-size: 12.5px; }
 
+/* Tiles de métrica al estilo PagePilot: fila ícono+label, valor grande
+   debajo alineado con el label; primer tile violeta, segundo verde. */
 .metricas { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
 .metrica {
-  border: 1px solid var(--borde); border-radius: var(--radio);
-  padding: 14px 16px; display: flex; align-items: center; gap: 12px;
+  border: 1px solid var(--borde); border-radius: 10px; background: #fff;
+  padding: 13px 16px 14px;
 }
-.metrica--acento { background: #f5f2fd; border-color: #e2d9f7; }
-.metrica__icono {
-  width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
-  background: var(--fondo); border: 1px solid var(--borde);
-  display: grid; place-items: center; font-size: 14px; color: var(--acento);
-}
-.metrica--acento .metrica__icono { background: #fff; }
-.metrica__nombre { font-size: 12px; color: var(--suave); }
-.metrica__valor { font-size: 19px; font-weight: 700; color: var(--negro); line-height: 1.2; }
+.metrica--violeta { background: #f6f3fe; border-color: #e6ddf9; }
+.metrica--verde { background: #f0fdf4; border-color: #d5f5df; }
+.metrica__fila { display: flex; align-items: center; gap: 9px; }
+.metrica__icono { width: 19px; height: 19px; flex-shrink: 0; color: var(--negro); }
+.metrica--violeta .metrica__icono { color: var(--acento); }
+.metrica--verde .metrica__icono { color: var(--ok); }
+.metrica__icono svg { width: 100%; height: 100%; display: block; }
+.metrica__nombre { font-size: 12.5px; color: var(--texto); font-weight: 500; }
+.metrica__valor { font-size: 20px; font-weight: 700; color: var(--negro); line-height: 1.2; margin: 5px 0 0 28px; }
+.metrica--violeta .metrica__valor { color: var(--acento); }
 
-.herramientas { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+/* Herramientas: título, texto, botón y una vista en miniatura decorativa,
+   como las tarjetas con captura de PagePilot. */
+.herramientas { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
 .herramienta {
-  border: 1px solid var(--borde); border-radius: var(--radio); padding: 16px;
-  display: flex; flex-direction: column; align-items: flex-start; gap: 8px;
+  border: 1px solid var(--borde); border-radius: 10px; padding: 15px 16px;
+  background: #fff;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 7px;
 }
 .herramienta__nombre { font-size: 13.5px; font-weight: 600; color: var(--negro); }
-.herramienta p { font-size: 12.5px; color: var(--suave); flex: 1; }
-.herramienta--pronto { background: var(--fondo); }
+.herramienta p { font-size: 12.5px; color: var(--suave); }
+.herramienta__preview {
+  width: 100%; height: 130px; border-radius: 8px; margin-top: 8px;
+  display: grid; place-items: center; overflow: hidden;
+}
+.herramienta__preview--paginas { background: linear-gradient(135deg, #ede9fe, #dbeafe); }
+.herramienta__preview--tienda { background: linear-gradient(135deg, #dcfce7, #d1fae5); }
+.mini-card {
+  width: 150px; background: #fff; border-radius: 8px; padding: 10px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .10);
+}
+.mini-media { height: 44px; border-radius: 5px; background: #e9e4fb; margin-bottom: 8px; }
+.mini-media--verde { background: #d9f3e1; }
+.mini-linea { height: 6px; border-radius: 3px; background: #ececec; margin-bottom: 5px; width: 60%; }
+.mini-linea--ancha { width: 85%; }
+.mini-boton { height: 12px; border-radius: 4px; background: var(--negro); margin-top: 7px; width: 45%; }
 
 @media (max-width: 860px) {
   .pasos-grilla { grid-template-columns: 1fr; }
