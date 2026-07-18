@@ -197,6 +197,22 @@ async function api(req, res, url) {
     );
   }
 
+  // GET /api/paginas — resumen para el inicio (no toca Shopify, solo DB)
+  if (req.method === "GET" && ruta === "/api/paginas") {
+    const ps = await listarPaginas(sesion.tienda);
+    return json(
+      res,
+      200,
+      ps.map((p) => ({
+        id: p.id,
+        estado: p.estado,
+        url_publica: p.url_publica || null,
+        titulo: p.data?.facetas?.hero?.titulo || null,
+        actualizado: p.actualizado || null
+      }))
+    );
+  }
+
   // GET /api/paginas/:id
   const mGet = ruta.match(/^\/api\/paginas\/([^/]+)$/);
   if (req.method === "GET" && mGet) {

@@ -21,8 +21,10 @@
   if (EMBEBIDA) document.body.classList.add("embebida");
 
   const estado = {
-    pantalla: "lista",
+    pantalla: "inicio",
     productos: [],
+    paginas: [], // resumen de páginas para el inicio
+    plan: null,
     filtro: "",
     producto: null, // el elegido
     pagina: null, // el registro que devuelve el server
@@ -74,6 +76,11 @@
   // ---------- barra de pasos ----------
 
   function pintarPasos() {
+    // El inicio es un panel, no un paso del flujo: sin barra.
+    if (estado.pantalla === "inicio") {
+      $("pasos").innerHTML = "";
+      return;
+    }
     const pasos = [
       { id: "lista", texto: "Elegir producto" },
       { id: "informacion", texto: "Información" },
@@ -91,6 +98,142 @@
         );
       })
       .join("");
+  }
+
+  // ---------- 0. inicio (panel principal, estilo PagePilot) ----------
+  //
+  // Todo lo que muestra es REAL: páginas y plan salen del server. Nada de
+  // métricas de venta que no medimos ni links a cosas que no existen.
+
+  async function pantallaInicio() {
+    vista.innerHTML = `<div class="generando"><div class="giro"></div><h2>Leyendo tu tienda…</h2></div>`;
+    try {
+      const [plan, paginas] = await Promise.all([api("/plan"), api("/paginas")]);
+      estado.plan = plan;
+      estado.paginas = paginas;
+    } catch (e) {
+      vista.innerHTML = `<div class="error">✖ No se pudo leer la tienda: ${esc(e.message)}</div>`;
+      return;
+    }
+    if (estado.pantalla !== "inicio") return; // navegó mientras cargaba
+
+    const plan = estado.plan;
+    const creadas = estado.paginas.length;
+    const publicadas = estado.paginas.filter((p) => p.estado === "publicada").length;
+    const hechos = (creadas > 0 ? 1 : 0) + (publicadas > 0 ? 1 : 0);
+    const sinCupo = plan.plan !== "pro" && plan.usadas >= plan.limite;
+
+    const pasoCard = (icono, titulo, texto, cola) => `
+      <div class="paso-card">
+        <div class="paso-card__icono">${icono}</div>
+        <div class="paso-card__titulo">${titulo}</div>
+        <p class="paso-card__texto">${texto}</p>
+        ${cola}
+      </div>`;
+
+    const metrica = (icono, nombre, valor, acento) => `
+      <div class="metrica ${acento ? "metrica--acento" : ""}">
+        <div class="metrica__icono">${icono}</div>
+        <div>
+          <div class="metrica__nombre">${nombre}</div>
+          <div class="metrica__valor">${valor}</div>
+        </div>
+      </div>`;
+
+    vista.innerHTML = `
+      <div class="inicio-cabecera">
+        <h1>Bienvenido a TiendaIQ</h1>
+        <div class="inicio-cabecera__acciones">
+          <button class="btn btn--fantasma" id="ir-paginas">◧ Ver mis páginas</button>
+          <button class="btn btn--acento" id="ir-crear">✨ Crear página de producto con IA</button>
+        </div>
+      </div>
+
+      ${
+        sinCupo
+          ? `<div class="banner-plan">
+               <span>Usaste las ${plan.limite} páginas gratis de este mes. Pasate a Pro para generar sin límite.</span>
+               <button class="btn btn--acento" id="ir-plan">Actualizar plan</button>
+             </div>`
+          : ""
+      }
+
+      <div class="tarjeta">
+        <div class="panel__cabecera">
+          <div>
+            <div class="tarjeta__titulo">Primeros pasos</div>
+            <div class="panel__sub">Completá estos pasos para empezar a vender con TiendaIQ</div>
+          </div>
+          <div class="progreso">
+            <span>${hechos} de 2 completado</span>
+            <div class="progreso__barra"><div style="width:${(hechos / 2) * 100}%"></div></div>
+          </div>
+        </div>
+        <div class="pasos-grilla">
+          ${pasoCard(
+            "✨",
+            "Crear página de producto",
+            "Generá tu primera página de producto con IA.",
+            creadas
+              ? `<span class="chip-estado chip-estado--ok">Completado</span>`
+              : `<button class="btn btn--chico" id="paso-crear">Crear página</button>`
+          )}
+          ${pasoCard(
+            "▲",
+            "Publicar en la tienda",
+            "Publicá una página de producto en tu tienda.",
+            publicadas
+              ? `<span class="chip-estado chip-estado--ok">Completado</span>`
+              : `<button class="btn btn--chico" id="paso-publicar">Publicar página</button>`
+          )}
+          ${pasoCard(
+            "🏪",
+            "Crear tu tienda con IA",
+            "Una tienda Shopify completa armada desde cero.",
+            `<span class="chip-estado chip-estado--pronto">Próximamente</span>`
+          )}
+        </div>
+      </div>
+
+      <div class="tarjeta">
+        <div class="tarjeta__titulo">Tus números</div>
+        <div class="panel__sub">Sincronizado con tu tienda, en tiempo real</div>
+        <div class="metricas">
+          ${metrica("◧", "Páginas creadas", creadas, true)}
+          ${metrica("▲", "Publicadas", publicadas)}
+          ${metrica("✎", "Borradores", creadas - publicadas)}
+          ${metrica(
+            "✦",
+            "Plan",
+            plan.plan === "pro" ? "Pro · sin límite" : `${plan.usadas} de ${plan.limite} este mes`
+          )}
+        </div>
+      </div>
+
+      <div class="tarjeta">
+        <div class="tarjeta__titulo">Herramientas</div>
+        <div class="panel__sub">Explorá lo que TiendaIQ puede hacer por tu tienda.</div>
+        <div class="herramientas">
+          <div class="herramienta">
+            <div class="herramienta__nombre">Páginas de producto con IA</div>
+            <p>Elegí un producto de tu catálogo y la IA escribe el copy, clasifica las fotos y arma la landing completa.</p>
+            <button class="btn" id="herr-crear">Crear página de producto</button>
+          </div>
+          <div class="herramienta herramienta--pronto">
+            <div class="herramienta__nombre">Tienda Shopify con IA</div>
+            <p>Una tienda completa con productos ganadores, armada por IA desde cero.</p>
+            <button class="btn btn--fantasma" disabled>Próximamente</button>
+          </div>
+        </div>
+      </div>`;
+
+    const aLista = () => cargarLista();
+    ["ir-crear", "ir-paginas", "paso-crear", "paso-publicar", "herr-crear"].forEach((id) => {
+      const b = $(id);
+      if (b) b.onclick = aLista;
+    });
+    const bPlan = $("ir-plan");
+    if (bPlan) bPlan.onclick = irASuscripcion;
   }
 
   // ---------- 1. lista ----------
@@ -115,6 +258,7 @@
       </button>`;
 
     vista.innerHTML = `
+      <button class="volver" id="volver-inicio">← Inicio</button>
       <div class="cabecera">
         <h1>Crear página de producto con IA</h1>
         <p>Elegí uno de tus productos y la IA arma la landing completa.</p>
@@ -126,6 +270,8 @@
           ? `<div class="grilla">${vistos.map(tarjeta).join("")}</div>`
           : `<div class="vacio">Ningún producto coincide con "${esc(estado.filtro)}".</div>`
       }`;
+
+    $("volver-inicio").onclick = () => ir("inicio");
 
     const q0 = $("q");
     q0.oninput = () => {
@@ -725,6 +871,7 @@ Al principio dudaba pero lo uso todos los días."></textarea>
   // ---------- ruteo ----------
 
   const PANTALLAS = {
+    inicio: pantallaInicio,
     lista: pantallaLista,
     informacion: pantallaInformacion,
     generando: pantallaGenerando,
@@ -750,5 +897,12 @@ Al principio dudaba pero lo uso todos los días."></textarea>
     }
   }
 
-  cargarLista();
+  // La marca del header (solo fuera del admin) vuelve al inicio.
+  const marca = document.querySelector(".barra__marca");
+  if (marca) {
+    marca.style.cursor = "pointer";
+    marca.onclick = () => ir("inicio");
+  }
+
+  ir("inicio");
 })();
