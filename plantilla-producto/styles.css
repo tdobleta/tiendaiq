@@ -182,7 +182,9 @@
    jerarquía clara, no como un segundo título. */
 #app .hero__precios { display: flex; align-items: baseline; gap: 12px; margin-bottom: 4px; }
 #app .hero__precio { font-size: 23px; font-weight: 800; color: var(--negro); }
-#app .hero__comparativo { font-size: 15px; color: #9ca3af; text-decoration: line-through; }
+/* Precio anterior: rojo, casi tan grande como el vigente, bien tachado —
+   el ancla de descuento es parte del argumento de venta, no un detalle gris. */
+#app .hero__comparativo { font-size: 20px; font-weight: 700; color: #d02e3f; text-decoration: line-through; }
 
 #app .hero__impuestos { font-size: 12.5px; color: var(--texto-suave); margin-bottom: 14px; }
 
