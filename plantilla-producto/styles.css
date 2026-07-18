@@ -1,0 +1,451 @@
+/* ============================================================
+   PLANTILLA DE PÁGINA DE PRODUCTO — estilos
+   Todo lo visual vive acá. render.js no lleva estilos inline.
+   ============================================================ */
+
+:root {
+  --negro: #111111;
+  --texto: #333333;
+  --texto-suave: #6b7280;
+  --borde: #e5e7eb;
+  --fondo-suave: #fafafa;
+  --estrella: #f5b301;
+  --check: #16a34a;
+  --violeta: #7c5cd6;   /* ticks de los bullets del hero */
+  --azul-verif: #2b7cf6; /* sello de comprador verificado */
+  --tabla-fila: #5f6672;
+  --radio: 12px;
+  --ancho: 1100px;
+}
+
+/* Todo lo genérico va encerrado en #app: en la tienda esta hoja convive con
+   el CSS del tema, y un reset global le rompería el header y el footer. */
+:where(#app, #app *) { margin: 0; padding: 0; box-sizing: border-box; }
+
+#app {
+  font-family: "Poppins", "Segoe UI", system-ui, sans-serif;
+  color: var(--texto);
+  background: #ffffff;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+#app img { max-width: 100%; display: block; }
+
+#app .contenedor {
+  max-width: var(--ancho);
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+#app section { padding: 56px 0; }
+
+#app h1, #app h2, #app h3 { color: var(--negro); line-height: 1.25; font-weight: 700; }
+#app h2 { font-size: 28px; }
+
+/* ---------- CTA ---------- */
+#app .cta {
+  display: inline-block;
+  background: var(--negro);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 14px 48px;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: inherit;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: opacity .15s;
+}
+#app .cta:hover { opacity: .85; }
+
+/* El botón de compra del hero es la acción principal de la página:
+   ancho completo y bien alto, como el "Add To Cart" de PagePilot. */
+/* Botón de compra: el punto de atención de la columna. Ancho completo,
+   alto, con margen generoso arriba y abajo. */
+#app .cta--full {
+  display: block;
+  width: 100%;
+  padding: 19px 24px;
+  font-size: 16.5px;
+  border-radius: 10px;
+  margin: 4px 0 26px;
+}
+#app form[action="/cart/add"] { margin: 4px 0 26px; }
+#app form[action="/cart/add"] .cta--full { margin: 0; }
+#app .cta-centro { text-align: center; margin-top: 32px; }
+
+/* ---------- Estrellas ---------- */
+#app .estrellas { color: var(--estrella); letter-spacing: 2px; font-size: 14px; }
+
+/* ---------- Placeholder de imagen (slot sin dato) ---------- */
+#app .ph-img {
+  border: 2px dashed #cbd5e1;
+  border-radius: var(--radio);
+  background: var(--fondo-suave);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  font-size: 13px;
+  min-height: 220px;
+  text-align: center;
+  padding: 12px;
+}
+#app .ph-img::before { content: "🖼"; font-size: 28px; margin-right: 8px; }
+
+/* ============================================================
+   HERO
+   ============================================================ */
+#app .hero { padding-top: 52px; }
+/* El hero es más ancho que el resto de la página (como PagePilot): la galería
+   domina y las dos columnas tienen aire de sobra. Solo acá, no en las secciones
+   de abajo. */
+#app .hero .contenedor { max-width: 1280px; }
+#app .hero__grid {
+  display: grid;
+  grid-template-columns: 1.08fr 1fr;
+  gap: 72px;
+  align-items: start;
+}
+
+/* La galería acompaña el scroll hasta que la columna derecha se termina.
+   Funciona porque el grid es align-items:start (la columna no se estira). */
+#app .hero__galeria { position: sticky; top: 24px; }
+
+/* Sin borde, esquinas más redondeadas: la foto llena la caja, como PagePilot. */
+#app .hero__principal {
+  border-radius: 16px;
+  overflow: hidden;
+  aspect-ratio: 1 / 1;
+  background: var(--fondo-suave);
+}
+#app .hero__principal img { width: 100%; height: 100%; object-fit: cover; }
+#app .hero__principal .ph-img { height: 100%; border-radius: 0; border: none; }
+
+/* Grilla de columnas iguales: las miniaturas ocupan TODO el ancho de la
+   galería en vez de quedar chicas y con espacio muerto. */
+#app .hero__miniaturas { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-top: 12px; }
+#app .hero__mini {
+  aspect-ratio: 1 / 1;
+  border: 1px solid var(--borde);
+  border-radius: 10px;
+  overflow: hidden;
+  cursor: pointer;
+  background: var(--fondo-suave);
+  padding: 0;
+  transition: border-color .12s;
+}
+#app .hero__mini:hover { border-color: #9ca3af; }
+#app .hero__mini img { width: 100%; height: 100%; object-fit: cover; }
+#app .hero__mini.activa { border: 2px solid var(--negro); }
+
+/* Rating: chico, introductorio, poco espacio abajo. */
+#app .hero__resenas { display: flex; align-items: center; gap: 9px; font-size: 13.5px; color: var(--texto-suave); font-weight: 500; }
+#app .hero__resenas .estrellas { font-size: 16px; letter-spacing: 1px; }
+
+/* Título: el elemento dominante. Sigue siendo el más grande de lejos. */
+#app .hero__titulo { font-size: 40px; line-height: 1.14; margin: 12px 0 16px; }
+
+/* Precio: pesado pero SIN competir con el título. 23px lo deja como segunda
+   jerarquía clara, no como un segundo título. */
+#app .hero__precios { display: flex; align-items: baseline; gap: 12px; margin-bottom: 4px; }
+#app .hero__precio { font-size: 23px; font-weight: 800; color: var(--negro); }
+#app .hero__comparativo { font-size: 15px; color: #9ca3af; text-decoration: line-through; }
+
+#app .hero__impuestos { font-size: 12.5px; color: var(--texto-suave); margin-bottom: 24px; }
+
+/* Subtítulo: va DEBAJO del precio y en negrita (no es un texto secundario,
+   es la promesa del producto). Lo genera la IA por producto. */
+/* Descripción: ancho acotado, más separada del precio. */
+#app .hero__subtitulo {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--negro);
+  line-height: 1.55;
+  max-width: 42ch;
+  margin-bottom: 26px;
+}
+
+/* Beneficios: alto uniforme, separación pareja, enmarcados arriba y abajo. */
+#app .hero__bullets { list-style: none; border-top: 1px solid var(--borde); border-bottom: 1px solid var(--borde); padding: 26px 0; margin-bottom: 30px; }
+#app .hero__bullets li {
+  display: flex; align-items: flex-start; gap: 12px;
+  font-size: 16px; color: var(--texto); margin-bottom: 15px;
+}
+#app .hero__bullets li:last-child { margin-bottom: 0; }
+#app .hero__bullets .tick { width: 18px; height: 18px; color: var(--violeta); flex-shrink: 0; margin-top: 2px; }
+#app .hero__bullets .tick svg { width: 100%; height: 100%; display: block; }
+
+/* Variantes: cada grupo bien separado, label chico en mayúsculas. */
+#app .hero__variantes { margin-bottom: 24px; }
+#app .hero__variantes label { display: block; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--texto-suave); margin-bottom: 9px; }
+
+#app .hero__cantidad { margin-bottom: 28px; }
+#app .hero__cantidad label { display: block; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--texto-suave); margin-bottom: 9px; }
+#app .selector-cantidad { display: inline-flex; border: 1px solid var(--borde); border-radius: 8px; overflow: hidden; }
+#app .selector-cantidad button { width: 42px; height: 42px; border: none; background: #fff; font-size: 18px; cursor: pointer; }
+#app .selector-cantidad input { width: 50px; text-align: center; border: none; border-left: 1px solid var(--borde); border-right: 1px solid var(--borde); font-size: 14px; }
+#app .chip {
+  display: inline-block; border: 1px solid var(--borde); border-radius: 8px;
+  padding: 9px 16px; font-size: 13px; font-family: inherit;
+  margin: 0 8px 8px 0; cursor: pointer; background: #fff; color: var(--texto);
+  transition: border-color .12s;
+}
+#app .chip:hover { border-color: #9ca3af; }
+#app .chip.activa { border-color: var(--negro); border-width: 2px; padding: 8px 15px; color: var(--negro); font-weight: 500; }
+
+/* Bloque de envío/garantía/devoluciones: 3 columnas centradas, ícono arriba. */
+#app .hero__badges { display: flex; justify-content: space-between; gap: 8px; border-top: 1px solid var(--borde); border-bottom: 1px solid var(--borde); padding: 24px 0; }
+/* border:0 fuerza planos: el recuadro venía del tema, PagePilot los tiene sin caja. */
+#app .badge { flex: 1; text-align: center; font-size: 12.5px; font-weight: 500; color: var(--negro); line-height: 1.35; border: 0; background: none; padding: 0; }
+#app .badge__icono { display: block; margin: 0 auto 8px; width: 24px; height: 24px; color: var(--negro); }
+#app .badge__icono svg { width: 100%; height: 100%; }
+
+/* Reseña destacada: prueba social elegante, con aire arriba y abajo. */
+#app .resena-destacada {
+  display: flex; gap: 18px; align-items: flex-start;
+  padding: 24px 0; border-bottom: 1px solid var(--borde);
+}
+#app .resena-destacada__foto { position: relative; flex-shrink: 0; }
+#app .resena-destacada__avatar {
+  width: 64px; height: 64px; border-radius: 50%;
+  background: var(--fondo-suave); border: 1px solid var(--borde);
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+}
+#app .resena-destacada__avatar img { width: 100%; height: 100%; object-fit: cover; }
+#app .resena-destacada__silueta { font-size: 26px; opacity: .35; }
+
+/* Chrome del editor: se oculta en la tienda publicada con body.publicada */
+#app .resena-destacada__editar {
+  position: absolute; left: -4px; bottom: -6px;
+  background: #fff; border: 1px solid var(--borde);
+  border-radius: 20px; padding: 3px 10px;
+  font-size: 11px; font-family: inherit; font-weight: 500;
+  color: var(--negro); cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0,0,0,.12);
+  white-space: nowrap;
+}
+body.publicada #app .resena-destacada__editar { display: none; }
+
+#app .resena-destacada__cuerpo { padding-top: 2px; }
+#app .resena-destacada__cuerpo .estrellas { font-size: 14px; color: var(--estrella); }
+#app .resena-destacada__texto { font-size: 13.5px; color: var(--texto); margin-top: 6px; line-height: 1.6; }
+#app .resena-destacada__autor {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 13px; font-weight: 500; color: var(--negro); margin-top: 9px;
+}
+#app .resena-destacada__autor svg { width: 15px; height: 15px; color: var(--azul-verif); flex-shrink: 0; }
+#app .verificado { color: var(--azul-verif); }
+
+/* Acordeones: empiezan más abajo, filas más altas. */
+#app .acordeon:first-of-type { margin-top: 8px; }
+#app .acordeon { border-bottom: 1px solid var(--borde); }
+#app .acordeon summary {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 19px 0; font-size: 14px; font-weight: 500; cursor: pointer; list-style: none;
+}
+#app .acordeon summary::-webkit-details-marker { display: none; }
+#app .acordeon__titulo { display: flex; align-items: center; gap: 10px; }
+#app .acordeon__icono { width: 18px; height: 18px; color: var(--negro); flex-shrink: 0; }
+#app .acordeon__icono svg { width: 100%; height: 100%; display: block; }
+#app .acordeon summary::after { content: "⌄"; color: var(--texto-suave); transition: transform .15s; }
+#app .acordeon[open] summary::after { transform: rotate(180deg); }
+#app .acordeon p { padding: 0 0 16px; font-size: 13px; color: var(--texto-suave); }
+
+/* ============================================================
+   BLOQUES TEXTO / IMAGEN (alternados)
+   ============================================================ */
+#app .dupla { background: #fff; }
+#app .dupla__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 64px;
+  align-items: center;
+}
+#app .dupla--invertida .dupla__grid > .dupla__media { order: 2; }
+#app .dupla__media img { border-radius: var(--radio); width: 100%; }
+#app .dupla h2 { margin-bottom: 14px; }
+/* Un párrafo de venta no debería pasar de ~60 caracteres por línea. */
+#app .dupla p { color: var(--texto-suave); font-size: 15px; margin-bottom: 24px; max-width: 46ch; }
+
+/* ============================================================
+   ICONOS (2 + imagen circular + 2)
+   ============================================================ */
+#app .iconos { text-align: center; }
+#app .iconos__subtitulo { color: var(--texto-suave); font-size: 15px; max-width: 640px; margin: 10px auto 40px; }
+#app .iconos__grid {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr 1fr;
+  gap: 32px;
+  align-items: center;
+}
+#app .iconos__col { display: flex; flex-direction: column; gap: 40px; }
+#app .icono-item { text-align: center; }
+#app .icono-item__emoji { font-size: 26px; margin-bottom: 8px; }
+#app .icono-item__titulo { font-weight: 600; font-size: 15px; color: var(--negro); margin-bottom: 4px; }
+#app .icono-item__frase { font-size: 13px; color: var(--texto-suave); max-width: 220px; margin: 0 auto; }
+
+#app .iconos__centro {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  overflow: hidden;
+  margin: 0 auto;
+  max-width: 380px;
+}
+#app .iconos__centro img { width: 100%; height: 100%; object-fit: cover; }
+#app .iconos__centro .ph-img { height: 100%; border-radius: 50%; }
+
+/* ============================================================
+   TABLA COMPARATIVA
+   ============================================================ */
+#app .tabla__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 56px;
+  align-items: center;
+}
+#app .tabla h2 { margin-bottom: 14px; }
+#app .tabla p { color: var(--texto-suave); font-size: 15px; margin-bottom: 24px; max-width: 46ch; }
+
+/* La fila es UNA pieza: etiqueta gris + zona de ✓/✕ pegadas, separadas de la
+   de arriba por border-spacing (no por un box-shadow inset, que era un parche). */
+#app .tabla-comparativa {
+  width: 100%; border-collapse: separate; border-spacing: 0 4px; font-size: 13px;
+}
+#app .tabla-comparativa th {
+  font-weight: 600; color: var(--negro); padding: 4px 10px 10px; text-align: center;
+  font-size: 12px; vertical-align: bottom; line-height: 1.3;
+}
+#app .tabla-comparativa th:first-child { width: 44%; }
+#app .tabla-comparativa td { padding: 11px 10px; text-align: center; background: var(--fondo-suave); }
+#app .tabla-comparativa td:first-child {
+  background: var(--tabla-fila); color: #fff; font-weight: 500;
+  border-radius: 6px 0 0 6px; font-size: 12px;
+}
+#app .tabla-comparativa td:last-child { border-radius: 0 6px 6px 0; }
+#app .tabla-comparativa .si { color: var(--check); font-weight: 700; font-size: 16px; }
+#app .tabla-comparativa .no { color: var(--negro); font-weight: 700; font-size: 14px; }
+
+/* ============================================================
+   STATS
+   ============================================================ */
+#app .stats__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 56px;
+  align-items: center;
+}
+#app .stats__media img { border-radius: var(--radio); width: 100%; }
+#app .stats h2 { margin-bottom: 26px; }
+#app .stat-item { display: flex; align-items: center; gap: 18px; padding: 16px 0; border-bottom: 1px solid var(--borde); }
+#app .stat-item:last-of-type { border-bottom: none; }
+#app .stat-item__circulo {
+  width: 56px; height: 56px; border-radius: 50%; flex-shrink: 0;
+  border: 3px solid var(--negro);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700; color: var(--negro);
+}
+#app .stat-item__frase { font-size: 14px; }
+
+/* ============================================================
+   FAQ
+   ============================================================ */
+#app .faq { background: #fff; }
+#app .faq__cabecera { text-align: center; margin-bottom: 32px; }
+#app .faq__cabecera p { color: var(--texto-suave); font-size: 14px; margin-top: 6px; }
+#app .faq__lista { max-width: 760px; margin: 0 auto; }
+#app .faq__item {
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  margin-bottom: 12px;
+  padding: 0 18px;
+}
+#app .faq__item summary {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 15px 0; font-size: 14px; font-weight: 500; cursor: pointer; list-style: none;
+}
+#app .faq__item summary::-webkit-details-marker { display: none; }
+#app .faq__item summary::after {
+  content: "⌄"; color: var(--texto-suave); flex-shrink: 0;
+  margin-left: 16px; transition: transform .15s; line-height: 1;
+}
+#app .faq__item[open] summary::after { transform: rotate(180deg); }
+#app .faq__item[open] { border-color: #d1d5db; }
+#app .faq__item p { padding: 0 0 15px; font-size: 13px; color: var(--texto-suave); }
+
+/* ============================================================
+   GARANTÍA
+   ============================================================ */
+#app .garantia { text-align: center; }
+#app .garantia__icono { font-size: 34px; margin-bottom: 12px; }
+#app .garantia p { color: var(--texto-suave); font-size: 15px; max-width: 720px; margin: 12px auto 0; }
+
+/* ============================================================
+   RESEÑAS
+   ============================================================ */
+#app .resenas { background: #fff; }
+#app .resenas__cabecera { text-align: center; margin-bottom: 28px; }
+#app .resenas__cabecera .estrellas { font-size: 18px; margin-bottom: 8px; }
+#app .resenas__cabecera p { color: var(--texto-suave); font-size: 14px; margin-top: 6px; }
+
+#app .resenas__editar {
+  display: inline-block; background: var(--negro); color: #fff;
+  font-size: 11px; padding: 5px 12px; border-radius: 6px; margin-bottom: 16px;
+  border: none; cursor: pointer; font-family: inherit;
+}
+
+#app .resenas__grid {
+  columns: 5 200px;
+  column-gap: 14px;
+}
+#app .tarjeta-resena {
+  break-inside: avoid;
+  border: 1px solid var(--borde);
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 14px;
+  font-size: 12px;
+  background: #fff;
+}
+#app .tarjeta-resena--vacia { border-style: dashed; }
+#app .tarjeta-resena__img { border-radius: 8px; overflow: hidden; margin-bottom: 10px; }
+#app .tarjeta-resena__img img { width: 100%; }
+#app .tarjeta-resena__img .ph-img { min-height: 110px; font-size: 11px; }
+#app .tarjeta-resena__img .ph-img::before { font-size: 20px; }
+#app .tarjeta-resena__autor { font-weight: 600; color: var(--negro); margin-bottom: 2px; }
+#app .tarjeta-resena__autor.guia { color: #94a3b8; font-weight: 500; }
+#app .tarjeta-resena__verificado { font-size: 11px; color: var(--texto-suave); margin-bottom: 4px; }
+#app .tarjeta-resena__texto { color: var(--texto); }
+#app .tarjeta-resena__texto.guia { color: #94a3b8; font-style: italic; }
+
+/* ============================================================
+   RECOMENDADOS
+   ============================================================ */
+#app .recomendados { background: var(--fondo-suave); }
+#app .recomendados h2 { text-align: center; margin-bottom: 28px; }
+#app .recomendados__grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; }
+#app .tarjeta-producto {
+  background: #fff; border: 1px solid var(--borde); border-radius: 10px;
+  padding: 14px; text-align: center; font-size: 13px;
+}
+#app .tarjeta-producto .ph-img { min-height: 120px; margin-bottom: 10px; }
+#app .tarjeta-producto .ph-img::before { content: "📦"; font-size: 24px; margin: 0; }
+#app .tarjeta-producto__nombre { font-weight: 500; color: var(--negro); }
+#app .tarjeta-producto__precio { color: var(--texto-suave); font-size: 12px; }
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 860px) {
+  #app .hero__grid, #app .dupla__grid, #app .tabla__grid, #app .stats__grid { grid-template-columns: 1fr; gap: 28px; }
+  #app .dupla--invertida .dupla__grid > .dupla__media { order: 0; }
+  #app .iconos__grid { grid-template-columns: 1fr; }
+  #app .recomendados__grid { grid-template-columns: repeat(2, 1fr); }
+  #app .hero__titulo { font-size: 26px; }
+  #app h2 { font-size: 23px; }
+}
+

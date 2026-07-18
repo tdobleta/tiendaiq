@@ -1,0 +1,43 @@
+# ============================================================
+# Render — infraestructura de TiendaIQ en un archivo.
+#
+# Con esto, "New → Blueprint" en Render levanta el server Y la base de datos
+# juntos, conectados. No hay que configurar la DATABASE_URL a mano: Render la
+# inyecta desde la base que crea acá.
+#
+# Las claves secretas (tokens) NO van acá — se cargan en el panel de Render
+# como variables de entorno (sync: false las deja en blanco para completar).
+# ============================================================
+
+databases:
+  - name: tiendaiq-db
+    plan: free
+    databaseName: tiendaiq
+    postgresMajorVersion: "16"
+
+services:
+  - type: web
+    name: tiendaiq
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    healthCheckPath: /
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: tiendaiq-db
+          property: connectionString
+      # APP_URL se completa con la URL que Render te da (https://tiendaiq.onrender.com)
+      - key: APP_URL
+        sync: false
+      # Secretos: se pegan en el panel, no en el repo.
+      - key: SHOPIFY_CLIENT_ID
+        sync: false
+      - key: SHOPIFY_CLIENT_SECRET
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      # DEV_MODE apagado en producción: todo pasa por el pase firmado.
+      - key: DEV_MODE
+        value: "0"

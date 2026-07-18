@@ -1,0 +1,14 @@
+.env
+node_modules/
+tiendas/
+paginas/
+ultima-pagina.json
+tunel.log
+tunel.pid
+pagina-publicada.html
+server.log
+.claude/
+shopify-factory/
+skills/
+tienda-iq/
+oauth.js

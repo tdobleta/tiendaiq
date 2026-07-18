@@ -1,0 +1,13 @@
+{
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.112.0",
+    "cloudflared": "^0.7.1",
+    "pg": "^8.22.0"
+  },
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

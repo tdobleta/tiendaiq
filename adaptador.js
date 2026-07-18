@@ -1,0 +1,617 @@
+// ============================================================
+// ADAPTADOR — Producto de Shopify  →  Producto Universal
+//
+//   node adaptador.js                    → lista los productos
+//   node adaptador.js <numero>           → genera la pagina de ese producto
+//
+// Hace las tres cosas del endpoint POST /paginas, en orden:
+//   1. Extraccion : lee el producto de Shopify
+//   2. Adaptador  : arma `fuente` + `pool_imagenes` (sin IA)
+//   3. IA         : UNA llamada con vision que llena las facetas
+//
+// La salida se escribe en plantilla-producto/data.js
+// ============================================================
+
+const fs = require("fs");
+const path = require("path");
+const Anthropic = require("@anthropic-ai/sdk");
+const { gql, env, sesionDeEnv } = require("./shopify");
+
+const MODELO = "claude-opus-4-8";
+const SALIDA = path.join(__dirname, "plantilla-producto", "data.js");
+const DIR_AVATARES = path.join(__dirname, "plantilla-producto", "avatares");
+
+// Avatar UGC de la reseña destacada: se elige uno al azar de plantilla-producto/avatares/
+// y queda guardado en el JSON. No es media del producto — es un asset de la
+// plantilla, por eso no entra al pool_imagenes.
+function elegirAvatar() {
+  let archivos = [];
+  try {
+    archivos = fs.readdirSync(DIR_AVATARES).filter((f) => /\.(jpg|jpeg|png|webp)$/i.test(f));
+  } catch {
+    return null; // carpeta ausente → el render cae a la silueta
+  }
+  if (!archivos.length) return null;
+  return `avatares/${archivos[Math.floor(Math.random() * archivos.length)]}`;
+}
+
+// ============================================================
+// 1. EXTRACCION
+// ============================================================
+
+const CONSULTA_LISTA = `{
+  products(first: 100, sortKey: TITLE) {
+    edges {
+      node {
+        id
+        title
+        templateSuffix
+        featuredMedia { id preview { image { url } } }
+      }
+    }
+  }
+}`;
+
+const CONSULTA_PRODUCTO = `query($id: ID!) {
+  product(id: $id) {
+    id
+    title
+    description
+    vendor
+    media(first: 20) {
+      edges { node { id ... on MediaImage { image { url width height } } } }
+    }
+    options { name values }
+    variants(first: 50) {
+      edges { node { id title price compareAtPrice sku } }
+    }
+  }
+}`;
+
+async function extraer(idProducto, sesion) {
+  const { product } = await gql(CONSULTA_PRODUCTO, { id: idProducto }, sesion);
+  if (!product) throw new Error(`Producto no encontrado: ${idProducto}`);
+
+  const variantes = product.variants.edges.map((e) => e.node);
+  const primera = variantes[0] ?? {};
+
+  // Solo las imagenes reales; los videos y modelos 3D se ignoran.
+  const medios = product.media.edges
+    .map((e) => e.node)
+    .filter((m) => m.image?.url)
+    .map((m) => ({ media_id: m.id, url: m.image.url }));
+
+  const fuente = {
+    shopify_product_id: product.id,
+    titulo_crudo: product.title,
+    descripcion_cruda: (product.description || "").trim(),
+    precio: primera.price ?? "0.00",
+    // Shopify manda null cuando no hay precio de comparacion → render condicional
+    precio_comparativo: primera.compareAtPrice ?? null,
+    moneda: env.MONEDA || "ARS",
+    variantes: product.options.map((o) => ({ nombre: o.name, valores: o.values }))
+  };
+
+  return { fuente, medios };
+}
+
+// ============================================================
+// 2. IA — una sola llamada con vision
+// ============================================================
+
+const SISTEMA = `Sos un copywriter de e-commerce de respuesta directa. Recibís un producto
+crudo de un proveedor y llenás las facetas de una landing page ya diseñada.
+
+REGLAS DURAS
+- Escribís SOLO en {idioma}.
+- La descripción cruda es de proveedor: sucia, en inglés roto, orientada a
+  especificaciones. NUNCA la copies ni la cites. Es tu fuente de hechos, no de estilo.
+- No inventes hechos técnicos. Material, medidas, funciones: solo lo que está en
+  la descripción o se ve en las imágenes.
+- Si una imagen y otra se contradicen, ganá el dato más conservador.
+- Beneficio antes que característica.
+- Nada de superlativos vacíos: revolucionario, increíble, el mejor del mercado.
+- Si el ángulo viene cargado, TODOS los textos se inclinan hacia ese ángulo.
+
+IDIOMA
+{idioma} aplica SOLO al texto que generás. Las imágenes se usan como están,
+aunque tengan texto en otro idioma. Nunca descartes una imagen por su idioma.
+
+TÍTULO
+Reescribilo: mismo producto, sin ruido de buscador. Máximo 5 palabras.
+NO inventes nombres de marca. Es el mismo producto con nombre limpio.
+Cambiá palabras técnicas por palabras deseables (Rotating → Swivel).
+
+SUBTÍTULO
+Una sola frase: beneficio + mecanismo.
+
+BULLETS (4)
+Beneficio cuantificado, máximo 8 palabras, empiezan con verbo.
+
+ICONOS (4)
+emoji + título de 1-2 palabras que sea un BENEFICIO (no un sustantivo:
+"Ultrasilencioso", no "Motor") + frase de máximo 10 palabras.
+
+TABLA (5 filas)
+Cada fila es UNA etiqueta de 1-2 palabras: un atributo donde este producto gana.
+No es una oración y no lleva el valor.
+La plantilla pinta un ✓ para nosotros y una ✗ para "Otros" al lado de cada
+etiqueta, así que la etiqueta sola tiene que tener sentido en esa grilla.
+PROHIBIDO: dos puntos, cifras, unidades, valores, o las palabras "sí"/"no".
+  ✓ Rotación · Capacidad · Limpieza · Diseño · Precio
+  ✗ "Giro 360°: sí" · "Precio: 41,95 ARS" · "Material: PET+ABS"
+La última fila suele ser Precio.
+
+STATS (3)
+Los porcentajes ya están fijos y los pone la plantilla. Vos escribís SOLO la frase.
+PROHIBIDO escribir números, porcentajes o cifras dentro de la frase: el círculo
+de al lado ya muestra el porcentaje, y dos números distintos se contradicen.
+El sujeto va tácito (el porcentaje del círculo ES el sujeto).
+Formato: verbo en pasado + resultado, terminada en signo de exclamación.
+  ✓ "Ganaron espacio en su tocador!"
+  ✗ "El 92% ganó espacio en su tocador!"
+
+FAQ (5)
+Preguntas que una persona real haría antes de comprar ESTE producto, sacadas
+de las dudas que genera la descripción. Respuestas de 2 frases.
+
+RESEÑAS (muro)
+Escribís titular y subtítulo. NO escribas testimonios para el muro: el campo
+texto de cada tarjeta es una guía para el dueño de la tienda sobre qué reseña
+poner ahí. El autor va siempre en null.
+
+RESEÑA DESTACADA (la del hero, una sola)
+Esta SÍ la escribís: una opinión de clienta creíble sobre ESTE producto.
+- 3 a 5 líneas, en primera persona, tono natural y positivo (no publicitario).
+- Menciona un beneficio concreto del producto cuando tenga sentido.
+- Puede tener un toque coloquial ("la verdad", "re contenta") y algún emoji suelto.
+- Autor: nombre de pila + inicial del apellido (ej: "Malena R.", "Carla T.").
+Escribís en {idioma}.
+
+IMÁGENES
+Clasificá cada una: lifestyle | infografia | producto_limpio | detalle
+Después asigná media_ids a los slots:
+- galeria: todas, en orden
+- texto_img_1 / texto_img_2: lifestyle, contexto de uso
+- iconos.imagen_central: la que mejor quede en recorte CIRCULAR (producto
+  centrado, mano usándolo, detalle). Nunca una con texto encima.
+- stats.imagen: infografia si existe; si no, lifestyle
+Si no hay ninguna lifestyle, usá para los slots de contexto la infografía con
+menos texto encima.
+Podés repetir un media_id en varios slots si no alcanzan. Priorizá no repetir.
+Nunca dejes un slot en null si hay al menos una imagen en el pool.
+Si no hay imágenes, devolvé null en todos.`;
+
+const ESQUEMA = {
+  type: "object",
+  properties: {
+    pool_imagenes: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          media_id: { type: "string" },
+          tipo: { type: "string", enum: ["lifestyle", "infografia", "producto_limpio", "detalle"] }
+        },
+        required: ["media_id", "tipo"],
+        additionalProperties: false
+      }
+    },
+    facetas: {
+      type: "object",
+      properties: {
+        hero: {
+          type: "object",
+          properties: {
+            titulo: { type: "string" },
+            subtitulo: { type: "string" },
+            bullets: { type: "array", items: { type: "string" } },
+            galeria: { type: "array", items: { type: "string" } },
+            resenas_count: { type: "integer" },
+            resena_destacada: {
+              type: "object",
+              properties: {
+                autor: { type: "string" },
+                texto: { type: "string" }
+              },
+              required: ["autor", "texto"],
+              additionalProperties: false
+            }
+          },
+          required: ["titulo", "subtitulo", "bullets", "galeria", "resenas_count", "resena_destacada"],
+          additionalProperties: false
+        },
+        texto_img_1: {
+          type: "object",
+          properties: {
+            titular: { type: "string" },
+            parrafo: { type: "string" },
+            imagen: { type: ["string", "null"] }
+          },
+          required: ["titular", "parrafo", "imagen"],
+          additionalProperties: false
+        },
+        iconos: {
+          type: "object",
+          properties: {
+            titular: { type: "string" },
+            subtitulo: { type: "string" },
+            imagen_central: { type: ["string", "null"] },
+            items: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  emoji: { type: "string" },
+                  titulo: { type: "string" },
+                  frase: { type: "string" }
+                },
+                required: ["emoji", "titulo", "frase"],
+                additionalProperties: false
+              }
+            }
+          },
+          required: ["titular", "subtitulo", "imagen_central", "items"],
+          additionalProperties: false
+        },
+        tabla: {
+          type: "object",
+          properties: {
+            titular: { type: "string" },
+            parrafo: { type: "string" },
+            filas: { type: "array", items: { type: "string" } }
+          },
+          required: ["titular", "parrafo", "filas"],
+          additionalProperties: false
+        },
+        stats: {
+          type: "object",
+          properties: {
+            titular: { type: "string" },
+            imagen: { type: ["string", "null"] },
+            items: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: { frase: { type: "string" } },
+                required: ["frase"],
+                additionalProperties: false
+              }
+            }
+          },
+          required: ["titular", "imagen", "items"],
+          additionalProperties: false
+        },
+        texto_img_2: {
+          type: "object",
+          properties: {
+            titular: { type: "string" },
+            parrafo: { type: "string" },
+            imagen: { type: ["string", "null"] }
+          },
+          required: ["titular", "parrafo", "imagen"],
+          additionalProperties: false
+        },
+        faq: {
+          type: "object",
+          properties: {
+            titular: { type: "string" },
+            subtitulo: { type: "string" },
+            items: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  pregunta: { type: "string" },
+                  respuesta: { type: "string" }
+                },
+                required: ["pregunta", "respuesta"],
+                additionalProperties: false
+              }
+            }
+          },
+          required: ["titular", "subtitulo", "items"],
+          additionalProperties: false
+        },
+        garantia: {
+          type: "object",
+          properties: {
+            titular: { type: "string" },
+            parrafo: { type: "string" }
+          },
+          required: ["titular", "parrafo"],
+          additionalProperties: false
+        },
+        resenas: {
+          type: "object",
+          properties: {
+            titular: { type: "string" },
+            subtitulo: { type: "string" },
+            guias: {
+              type: "array",
+              description: "10 guías para el dueño de la tienda: qué reseña poner en cada tarjeta.",
+              items: { type: "string" }
+            }
+          },
+          required: ["titular", "subtitulo", "guias"],
+          additionalProperties: false
+        }
+      },
+      required: [
+        "hero", "texto_img_1", "iconos", "tabla",
+        "stats", "texto_img_2", "faq", "garantia", "resenas"
+      ],
+      additionalProperties: false
+    }
+  },
+  required: ["pool_imagenes", "facetas"],
+  additionalProperties: false
+};
+
+async function generar(fuente, medios, { idioma = "es", angulo = "" } = {}) {
+  const cliente = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
+
+  // Cada imagen va precedida de su media_id para que pueda referenciarlas.
+  const contenido = [];
+  for (const m of medios) {
+    contenido.push({ type: "text", text: `media_id: ${m.media_id}` });
+    contenido.push({ type: "image", source: { type: "url", url: m.url } });
+  }
+
+  contenido.push({
+    type: "text",
+    text: [
+      `título: ${fuente.titulo_crudo}`,
+      `descripción: ${fuente.descripcion_cruda || "(sin descripción — usá solo las imágenes)"}`,
+      `precio: ${fuente.precio} ${fuente.moneda}` +
+        (fuente.precio_comparativo ? ` (antes ${fuente.precio_comparativo})` : ""),
+      `ángulo: ${angulo || "(ninguno)"}`,
+      `idioma: ${idioma}`,
+      medios.length ? "" : "\nEste producto NO tiene imágenes. Devolvé null en todos los slots."
+    ].join("\n")
+  });
+
+  const r = await cliente.messages.create({
+    model: MODELO,
+    max_tokens: 16000,
+    thinking: { type: "adaptive" },
+    output_config: {
+      effort: "high",
+      format: { type: "json_schema", schema: ESQUEMA }
+    },
+    system: SISTEMA.replace(/\{idioma\}/g, idioma === "es" ? "español rioplatense (voseo)" : idioma),
+    messages: [{ role: "user", content: contenido }]
+  });
+
+  if (r.stop_reason === "refusal") {
+    throw new Error(`El modelo rechazó el pedido: ${r.stop_details?.explanation ?? "sin detalle"}`);
+  }
+
+  const texto = r.content.find((b) => b.type === "text")?.text;
+  if (!texto) throw new Error("El modelo no devolvió texto.");
+
+  return { salida: JSON.parse(texto), uso: r.usage };
+}
+
+// ============================================================
+// 3. ENSAMBLADO — constantes de plantilla + salida del modelo
+// ============================================================
+
+const PCT_FIJOS = [97, 98, 98];
+
+// Chequeos baratos contra las reglas que el modelo puede violar sin romper el
+// esquema. No bloquean: avisan. Sirven para correr el lote de prueba y ver de
+// un vistazo qué producto salió mal.
+// La plantilla es un esqueleto fijo: cada faceta tiene N ranuras, siempre las
+// mismas. El esquema JSON no puede forzar largos de array, así que la
+// cardinalidad se garantiza acá y no en el prompt.
+const CARDINALIDAD = {
+  "hero.bullets": 4,
+  "iconos.items": 4,
+  "tabla.filas": 5,
+  "stats.items": 3,
+  "faq.items": 5,
+  "resenas.guias": 10
+};
+
+function leer(obj, ruta) {
+  return ruta.split(".").reduce((o, k) => o?.[k], obj);
+}
+
+function validar(data, salidaCruda) {
+  const avisos = [];
+  const f = data.facetas;
+
+  for (const [ruta, n] of Object.entries(CARDINALIDAD)) {
+    const real = leer(salidaCruda.facetas, ruta)?.length;
+    if (real !== n) avisos.push(`cardinalidad: ${ruta} vino con ${real}, la plantilla tiene ${n}`);
+  }
+
+  for (const fila of f.tabla.filas) {
+    if (/[:0-9]/.test(fila) || fila.split(/\s+/).length > 2) {
+      avisos.push(`tabla: "${fila}" — debe ser una etiqueta de 1-2 palabras, sin cifras ni dos puntos`);
+    }
+  }
+
+  for (const s of f.stats.items) {
+    if (/\d/.test(s.frase)) {
+      avisos.push(`stats: "${s.frase}" — lleva un número que contradice el ${s.pct}% del círculo`);
+    }
+  }
+
+  if (f.hero.titulo.split(/\s+/).length > 5) {
+    avisos.push(`hero: "${f.hero.titulo}" — más de 5 palabras`);
+  }
+
+  for (const b of f.hero.bullets) {
+    if (b.split(/\s+/).length > 8) avisos.push(`bullet: "${b}" — más de 8 palabras`);
+  }
+
+  // El dato más citado de la descripción sucia no debería aparecer en la página.
+  const sucio = (data.fuente.descripcion_cruda || "").match(/\b[A-Z]{2,}\+[A-Z+]+\b/g) || [];
+  const visible = JSON.stringify(f);
+  for (const token of new Set(sucio)) {
+    if (visible.includes(token)) avisos.push(`copy: "${token}" viene crudo de la descripción del proveedor`);
+  }
+
+  return avisos;
+}
+
+function ensamblar(fuente, salida, { idioma, angulo }) {
+  const f = salida.facetas;
+
+  // Recorta a la cardinalidad de la plantilla. Si el modelo devolvió de más,
+  // sobran; si devolvió de menos, el aviso ya lo marcó y la faceta renderiza
+  // corta antes que romper.
+  const fijo = (arr, n) => (arr ?? []).slice(0, n);
+
+  return {
+    fuente,
+    pool_imagenes: salida.pool_imagenes,
+    facetas: {
+      hero: {
+        ...f.hero,
+        bullets: fijo(f.hero.bullets, CARDINALIDAD["hero.bullets"]),
+        resena_destacada: {
+          autor: f.hero.resena_destacada?.autor ?? null,
+          estrellas: 5,
+          texto: f.hero.resena_destacada?.texto ?? null,
+          avatar: elegirAvatar()
+        },
+        acordeones: [
+          {
+            titulo: "Información de envío",
+            contenido:
+              "Envío rastreado y asegurado a todo el país. Despachamos dentro de las 24 hs hábiles."
+          },
+          {
+            titulo: "Política de devolución",
+            contenido: "Tenés 30 días desde que lo recibís para devolverlo sin cargo. Sin preguntas."
+          }
+        ]
+      },
+      texto_img_1: { ...f.texto_img_1, cta: true },
+      iconos: { ...f.iconos, items: fijo(f.iconos.items, CARDINALIDAD["iconos.items"]) },
+      tabla: {
+        ...f.tabla,
+        cta: true,
+        col_otros: "Otros",
+        filas: fijo(f.tabla.filas, CARDINALIDAD["tabla.filas"])
+      },
+      stats: {
+        ...f.stats,
+        cta: true,
+        // El modelo solo escribe las frases; los porcentajes son constantes.
+        items: fijo(f.stats.items, CARDINALIDAD["stats.items"]).map((it, i) => ({
+          pct: PCT_FIJOS[i],
+          frase: it.frase
+        }))
+      },
+      texto_img_2: { ...f.texto_img_2, cta: true },
+      faq: { ...f.faq, cta: true, items: fijo(f.faq.items, CARDINALIDAD["faq.items"]) },
+      garantia: { ...f.garantia, cta: true },
+      resenas: {
+        titular: f.resenas.titular,
+        subtitulo: f.resenas.subtitulo,
+        estrellas: 5,
+        // Andamio: 10 tarjetas vacías. El texto es la guía, no un testimonio.
+        items: fijo(f.resenas.guias, CARDINALIDAD["resenas.guias"]).map((g) => ({
+          autor: null,
+          estrellas: 5,
+          imagen: null,
+          texto: g
+        }))
+      },
+      recomendados: { modo: "placeholder", items: [] }
+    },
+    global: { cta: "Lo Quiero Ahora", idioma, angulo }
+  };
+}
+
+// ============================================================
+// API — lo que consume server.js
+// ============================================================
+
+async function listarProductos(sesion) {
+  const d = await gql(CONSULTA_LISTA, {}, sesion);
+  return d.products.edges.map((e) => e.node);
+}
+
+// El endpoint POST /paginas entero: extracción → adaptador → IA → ensamblado.
+// La sesión dice de qué tienda leer; la IA la pagamos nosotros, así que la
+// key de Anthropic es global y no viaja en la sesión.
+async function crearPagina(idProducto, sesion, { idioma = "es", angulo = "" } = {}) {
+  const { fuente, medios } = await extraer(idProducto, sesion);
+  const { salida, uso } = await generar(fuente, medios, { idioma, angulo });
+  const data = ensamblar(fuente, salida, { idioma, angulo });
+  const urls = Object.fromEntries(medios.map((m) => [m.media_id, m.url]));
+  return { data, urls, avisos: validar(data, salida), uso };
+}
+
+// data.js es solo para el preview local; el JSON puro es lo que se publica.
+function escribirPreview(data, urls) {
+  fs.writeFileSync(
+    SALIDA,
+    "// GENERADO por adaptador.js — no editar a mano.\n" +
+      `// Producto: ${data.fuente.titulo_crudo}\n` +
+      `// Fecha: ${new Date().toISOString()}\n\n` +
+      `const URLS = ${JSON.stringify(urls, null, 2)};\n\n` +
+      `const DATA = ${JSON.stringify(data, null, 2)};\n`
+  );
+  fs.writeFileSync(path.join(__dirname, "ultima-pagina.json"), JSON.stringify(data, null, 2));
+}
+
+module.exports = { listarProductos, crearPagina, escribirPreview, extraer, generar, ensamblar, validar };
+
+// ============================================================
+// CLI
+// ============================================================
+
+async function listar() {
+  const productos = await listarProductos(sesionDeEnv());
+  console.log(`\n${productos.length} productos:\n`);
+  productos.forEach((p, i) => {
+    console.log(`  ${String(i + 1).padStart(2)}. ${p.title}${p.featuredMedia ? "" : "   (sin fotos)"}`);
+  });
+  console.log(`\nGenerar:  node adaptador.js <numero>\n`);
+  return productos;
+}
+
+async function main() {
+  const arg = process.argv[2];
+  if (!arg) return void (await listar());
+
+  const sesion = sesionDeEnv(); // el CLI corre siempre contra la tienda del .env
+  const productos = await listarProductos(sesion);
+  const elegido = productos[Number(arg) - 1];
+  if (!elegido) throw new Error(`No existe el producto ${arg}. Son 1..${productos.length}.`);
+
+  console.log(`\n▸ ${elegido.title}`);
+  const t0 = Date.now();
+
+  const { data, urls, avisos, uso } = await crearPagina(elegido.id, sesion, {
+    idioma: "es",
+    angulo: process.argv[3] || ""
+  });
+
+  console.log(`  generado   · ${((Date.now() - t0) / 1000).toFixed(1)}s · ${uso.input_tokens} in / ${uso.output_tokens} out`);
+
+  if (avisos.length) {
+    console.log(`  ⚠ ${avisos.length} aviso${avisos.length > 1 ? "s" : ""}:`);
+    avisos.forEach((a) => console.log(`      ${a}`));
+  } else {
+    console.log(`  validado   · sin avisos`);
+  }
+
+  escribirPreview(data, urls);
+  console.log(`  escrito    · plantilla-producto/data.js + ultima-pagina.json`);
+  console.log(`\n  "${data.facetas.hero.titulo}"`);
+  console.log(`  ${data.facetas.hero.subtitulo}\n`);
+}
+
+if (require.main === module) {
+  main().catch((e) => {
+    console.error(`\n✖ ${e.message}\n`);
+    process.exit(1);
+  });
+}

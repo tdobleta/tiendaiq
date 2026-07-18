@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TiendaIQ — Páginas de producto con IA</title>
+
+  <!-- App Bridge: hace que la app viva adentro del admin de Shopify.
+       Va antes que todo lo demás; Shopify lo exige así.
+       El api-key lo inyecta el server desde .env. -->
+  <meta name="shopify-api-key" content="{{SHOPIFY_CLIENT_ID}}">
+  <script src="https://cdn.shopify.com/shopifycloud/app-bridge.js"></script>
+
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <!-- Adentro del admin, Shopify ya pone su propio header: el nuestro sobra.
+       app.js le pone la clase "embebida" al body y este header se oculta. -->
+  <header class="barra">
+    <div class="barra__marca">
+      <span class="barra__logo">◧</span> TiendaIQ
+    </div>
+    <nav class="pasos" id="pasos"></nav>
+  </header>
+
+  <main id="vista"></main>
+
+  <script src="app.js"></script>
+</body>
+</html>
