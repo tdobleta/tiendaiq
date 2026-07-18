@@ -429,6 +429,59 @@
     ].join("\n");
   }
 
+  // Recomendados en vivo: en la tienda se piden a la API de recomendaciones
+  // de Shopify (la misma que usan los temas), así la sección refleja SIEMPRE
+  // el catálogo real, sin congelar nada en la generación. Si no devuelve
+  // nada útil cae a /products.json; si tampoco, quedan los placeholders.
+  async function cargarRecomendados(moneda) {
+    const grid = document.querySelector(".recomendados__grid");
+    const idProducto = window.TIENDAIQ_PRODUCT_ID;
+    if (!grid || !idProducto) return;
+
+    const normalizar = (p) => ({
+      nombre: p.title,
+      url: p.url || `/products/${p.handle}`,
+      imagen: p.featured_image?.src || p.featured_image || p.images?.[0]?.src || null,
+      // la API AJAX da centavos (número); /products.json da "19.95" (string)
+      precio:
+        typeof p.price === "number"
+          ? (p.price / 100).toFixed(2)
+          : p.price ?? p.variants?.[0]?.price ?? ""
+    });
+
+    let productos = [];
+    try {
+      const r = await fetch(`/recommendations/products.json?product_id=${idProducto}&limit=5`);
+      if (r.ok) productos = (await r.json()).products || [];
+    } catch {}
+    if (!productos.length) {
+      try {
+        const r = await fetch(`/products.json?limit=8`);
+        if (r.ok)
+          productos = ((await r.json()).products || [])
+            .filter((p) => p.id !== idProducto)
+            .slice(0, 5);
+      } catch {}
+    }
+    if (!productos.length) return;
+
+    grid.innerHTML = productos
+      .map(normalizar)
+      .map(
+        (p) => `
+        <a class="tarjeta-producto" href="${esc(p.url)}">
+          ${
+            p.imagen
+              ? `<img class="tarjeta-producto__img" src="${esc(p.imagen)}" alt="${esc(p.nombre)}" loading="lazy">`
+              : `<div class="ph-img"></div>`
+          }
+          <div class="tarjeta-producto__nombre">${esc(p.nombre)}</div>
+          <div class="tarjeta-producto__precio">${esc(precioBonito(moneda ?? "", p.precio))}</div>
+        </a>`
+      )
+      .join("");
+  }
+
   // interacción mínima de la galería
   window.cambiarPrincipal = function (mediaId, boton) {
     document.getElementById("imagen-principal").innerHTML = img(mediaId);
@@ -490,6 +543,8 @@
   function montar(datos) {
     if (EN_TIENDA) document.body.classList.add("publicada");
     document.getElementById("app").innerHTML = render(datos);
+    // Solo en la tienda: el preview no tiene storefront al que preguntarle.
+    if (EN_TIENDA) cargarRecomendados(datos?.fuente?.moneda);
   }
 
   if (DATOS) {

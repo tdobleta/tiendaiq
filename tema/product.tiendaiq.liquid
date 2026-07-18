@@ -10,6 +10,7 @@
 <script>
   window.TIENDAIQ_DATA = {{ product.metafields.tiendaiq.pagina.value | json }};
   window.TIENDAIQ_VARIANT = {{ product.selected_or_first_available_variant.id | json }};
+  window.TIENDAIQ_PRODUCT_ID = {{ product.id | json }};
   window.TIENDAIQ_ASSET_BASE = {{ 'tiendaiq.js' | asset_url | json }}.replace(/[^/]*$/, '');
   {% comment %} Mapa media_id → url, con las fotos vivas del producto.
      La clave replica el gid de la Admin API para que el pool matchee. {% endcomment %}

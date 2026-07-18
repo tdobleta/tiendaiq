@@ -464,21 +464,55 @@ body.publicada #app .resena-destacada__editar { display: none; }
 #app .tarjeta-producto {
   background: #fff; border: 1px solid var(--borde); border-radius: 10px;
   padding: 14px; text-align: center; font-size: 13px;
+  display: block; text-decoration: none; color: inherit;
+  transition: border-color .12s, transform .12s;
 }
+#app a.tarjeta-producto:hover { border-color: #9ca3af; transform: translateY(-2px); }
 #app .tarjeta-producto .ph-img { min-height: 120px; margin-bottom: 10px; }
 #app .tarjeta-producto .ph-img::before { content: "📦"; font-size: 24px; margin: 0; }
-#app .tarjeta-producto__nombre { font-weight: 500; color: var(--negro); }
-#app .tarjeta-producto__precio { color: var(--texto-suave); font-size: 12px; }
+#app .tarjeta-producto__img {
+  width: 100%; aspect-ratio: 1 / 1; object-fit: cover;
+  border-radius: 8px; margin-bottom: 10px; background: var(--fondo-suave);
+}
+#app .tarjeta-producto__nombre {
+  font-weight: 500; color: var(--negro);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+#app .tarjeta-producto__precio { color: var(--texto-suave); font-size: 12px; margin-top: 2px; font-weight: 500; }
 
 /* ============================================================
    RESPONSIVE
    ============================================================ */
+/* Tablet y móvil: una sola columna, menos aire, la galería deja de ser
+   sticky (en columna única taparía el contenido) y la imagen central de
+   los íconos pasa arriba. */
 @media (max-width: 860px) {
-  #app .hero__grid, #app .dupla__grid, #app .tabla__grid, #app .stats__grid { grid-template-columns: 1fr; gap: 28px; }
-  #app .dupla--invertida .dupla__grid > .dupla__media { order: 0; }
-  #app .iconos__grid { grid-template-columns: 1fr; }
-  #app .recomendados__grid { grid-template-columns: repeat(2, 1fr); }
-  #app .hero__titulo { font-size: 26px; }
+  #app section { padding: 36px 0; }
+  #app .contenedor, #app .hero .contenedor { padding: 0 16px; }
+  #app .hero { padding-top: 14px; }
+  #app .hero__grid, #app .dupla__grid, #app .tabla__grid, #app .stats__grid { grid-template-columns: 1fr; gap: 26px; }
+  #app .hero__galeria { position: static; }
+  #app .hero__titulo { font-size: 27px; }
+  #app .hero__precio { font-size: 20px; }
   #app h2 { font-size: 23px; }
+  #app .dupla--invertida .dupla__grid > .dupla__media { order: 0; }
+  #app .iconos__grid { grid-template-columns: 1fr; gap: 26px; }
+  #app .iconos__centro { order: -1; max-width: 300px; }
+  #app .iconos__col { gap: 26px; }
+  #app .recomendados__grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  #app .resenas__grid { columns: 2 150px; column-gap: 10px; }
+  #app .badge { font-size: 11.5px; }
+  #app .stat-item__circulo { width: 48px; height: 48px; }
+}
+
+/* Teléfonos chicos: títulos un punto menos y todo bien pegado al borde. */
+@media (max-width: 480px) {
+  #app .hero__titulo { font-size: 24px; }
+  #app h2 { font-size: 21px; }
+  #app .hero__miniaturas { gap: 7px; }
+  #app .hero__badges { gap: 4px; }
+  #app .tabla-comparativa th:first-child { width: 40%; }
+  #app .dupla p, #app .tabla p { font-size: 14px; }
+  #app .resena-destacada__avatar { width: 54px; height: 54px; }
 }
 
