@@ -227,39 +227,53 @@ main { max-width: 1180px; margin: 0 auto; padding: 28px 24px 60px; }
   display: flex; align-items: center; justify-content: space-between;
   gap: 16px; flex-wrap: wrap; margin-bottom: 18px;
 }
-.inicio-cabecera h1 { font-size: 22px; color: var(--negro); font-weight: 600; }
+.inicio-cabecera h1 { font-size: 20px; color: var(--negro); font-weight: 700; }
 .inicio-cabecera__acciones { display: flex; gap: 10px; flex-wrap: wrap; }
+.inicio-cabecera__acciones .btn { padding: 8px 14px; font-size: 13px; border-radius: 8px; }
 
+/* Banner de suscripción: tarjeta blanca con el ícono rojo, como PagePilot
+   (no un cartel rojo entero). */
 .banner-plan {
-  background: #fef2f2; border: 1px solid #fecaca; border-radius: var(--radio);
+  background: #fff; border: 1px solid var(--borde); border-radius: var(--radio);
   padding: 12px 16px; margin-bottom: 16px;
-  display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;
-  color: #b91c1c; font-size: 13px;
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  color: var(--texto); font-size: 13.5px;
 }
+.banner-plan__icono {
+  width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
+  background: #dc2626; color: #fff; font-weight: 800; font-size: 14px;
+  display: grid; place-items: center;
+}
+.banner-plan__texto { flex: 1; }
+.banner-plan__texto strong { text-decoration: underline; }
 
 .panel__cabecera {
   display: flex; align-items: flex-start; justify-content: space-between;
   gap: 16px; flex-wrap: wrap;
 }
 .panel__sub { font-size: 12.5px; color: var(--suave); margin: -10px 0 16px; }
-.panel__cabecera .panel__sub { margin: 2px 0 14px; }
+.panel__cabecera .panel__sub { margin: 3px 0 16px; }
 
-.progreso { text-align: right; font-size: 12px; color: var(--suave); min-width: 140px; }
+.progreso { text-align: right; font-size: 12px; color: var(--suave); min-width: 185px; }
 .progreso__barra {
-  height: 5px; border-radius: 4px; background: var(--borde); margin-top: 6px; overflow: hidden;
+  height: 4px; border-radius: 4px; background: var(--borde); margin-top: 8px; overflow: hidden;
 }
 .progreso__barra div { height: 100%; background: var(--negro); border-radius: 4px; transition: width .3s; }
 
-.pasos-grilla { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.pasos-grilla { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
 .paso-card {
-  border: 1px solid var(--borde); border-radius: var(--radio);
-  padding: 16px; display: flex; flex-direction: column; align-items: flex-start; gap: 8px;
+  border: 1px solid var(--borde); border-radius: 10px; background: #fff;
+  padding: 16px; display: flex; flex-direction: column; align-items: flex-start; gap: 9px;
 }
+/* Círculo punteado = paso pendiente; negro sólido = hecho. Igual que la
+   referencia: el estado se lee de un vistazo por el ícono. */
 .paso-card__icono {
-  width: 34px; height: 34px; border-radius: 50%;
-  border: 1px solid var(--borde); background: var(--fondo);
-  display: grid; place-items: center; font-size: 15px;
+  width: 36px; height: 36px; border-radius: 50%;
+  border: 1.5px dashed #c9c9c9; background: #fff; color: var(--negro);
+  display: grid; place-items: center; margin-bottom: 3px;
 }
+.paso-card__icono svg { width: 17px; height: 17px; display: block; }
+.paso-card__icono--hecho { background: var(--negro); border: none; color: #fff; }
 .paso-card__titulo { font-size: 13.5px; font-weight: 600; color: var(--negro); }
 .paso-card__texto { font-size: 12.5px; color: var(--suave); flex: 1; }
 

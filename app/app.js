@@ -123,9 +123,17 @@
     const hechos = (creadas > 0 ? 1 : 0) + (publicadas > 0 ? 1 : 0);
     const sinCupo = plan.plan !== "pro" && plan.usadas >= plan.limite;
 
-    const pasoCard = (icono, titulo, texto, cola) => `
+    // Íconos de línea monocromos, como PagePilot: círculo negro sólido si el
+    // paso está hecho, punteado si falta.
+    const ICONO_PASO = {
+      chispa: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M11 2l1.7 5.4L18 9l-5.3 1.6L11 16l-1.7-5.4L4 9l5.3-1.6z"/><path d="M18.5 14l.9 2.8 2.8.9-2.8.9-.9 2.8-.9-2.8-2.8-.9 2.8-.9z"/></svg>`,
+      publicar: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4"/><path d="M7 9l5-5 5 5"/><path d="M4 19h16"/></svg>`,
+      tienda: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9l1.2-4h13.6L20 9"/><path d="M4 9c0 1.4 1.2 2.5 2.7 2.5S9.3 10.4 9.3 9c0 1.4 1.2 2.5 2.7 2.5s2.7-1.1 2.7-2.5c0 1.4 1.2 2.5 2.7 2.5S20 10.4 20 9"/><path d="M5 11.5V20h14v-8.5"/><path d="M10 20v-5h4v5"/></svg>`
+    };
+
+    const pasoCard = (icono, titulo, texto, hecho, cola) => `
       <div class="paso-card">
-        <div class="paso-card__icono">${icono}</div>
+        <div class="paso-card__icono ${hecho ? "paso-card__icono--hecho" : ""}">${icono}</div>
         <div class="paso-card__titulo">${titulo}</div>
         <p class="paso-card__texto">${texto}</p>
         ${cola}
@@ -144,16 +152,17 @@
       <div class="inicio-cabecera">
         <h1>Bienvenido a TiendaIQ</h1>
         <div class="inicio-cabecera__acciones">
-          <button class="btn btn--fantasma" id="ir-paginas">◧ Ver mis páginas</button>
-          <button class="btn btn--acento" id="ir-crear">✨ Crear página de producto con IA</button>
+          <button class="btn btn--fantasma" id="ir-paginas">❐ Ver mis páginas</button>
+          <button class="btn" id="ir-crear">✦ Crear página de producto con IA</button>
         </div>
       </div>
 
       ${
         sinCupo
           ? `<div class="banner-plan">
-               <span>Usaste las ${plan.limite} páginas gratis de este mes. Pasate a Pro para generar sin límite.</span>
-               <button class="btn btn--acento" id="ir-plan">Actualizar plan</button>
+               <span class="banner-plan__icono">!</span>
+               <span class="banner-plan__texto">Necesitás una <strong>suscripción activa</strong> para crear más páginas de producto.</span>
+               <button class="btn btn--chico" id="ir-plan">Actualizar plan</button>
              </div>`
           : ""
       }
@@ -171,25 +180,28 @@
         </div>
         <div class="pasos-grilla">
           ${pasoCard(
-            "✨",
+            ICONO_PASO.chispa,
             "Crear página de producto",
             "Generá tu primera página de producto con IA.",
+            creadas > 0,
             creadas
               ? `<span class="chip-estado chip-estado--ok">Completado</span>`
               : `<button class="btn btn--chico" id="paso-crear">Crear página</button>`
           )}
           ${pasoCard(
-            "▲",
+            ICONO_PASO.publicar,
             "Publicar en la tienda",
             "Publicá una página de producto en tu tienda.",
+            publicadas > 0,
             publicadas
               ? `<span class="chip-estado chip-estado--ok">Completado</span>`
               : `<button class="btn btn--chico" id="paso-publicar">Publicar página</button>`
           )}
           ${pasoCard(
-            "🏪",
+            ICONO_PASO.tienda,
             "Crear tu tienda con IA",
             "Una tienda Shopify completa armada desde cero.",
+            false,
             `<span class="chip-estado chip-estado--pronto">Próximamente</span>`
           )}
         </div>
