@@ -3,6 +3,11 @@
    Todo lo visual vive acá. render.js no lleva estilos inline.
    ============================================================ */
 
+/* La tipografía de toda la plantilla (la misma que usa PagePilot).
+   Va acá y no en el Liquid: esta hoja viaja como asset del tema, así que
+   el import alcanza a la tienda y al preview por igual. */
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap");
+
 :root {
   --negro: #111111;
   --texto: #333333;
@@ -168,14 +173,17 @@
   margin-bottom: 26px;
 }
 
-/* Beneficios: alto uniforme, separación pareja, enmarcados arriba y abajo. */
-#app .hero__bullets { list-style: none; border-top: 1px solid var(--borde); border-bottom: 1px solid var(--borde); padding: 26px 0; margin-bottom: 30px; }
+/* Beneficios: alto uniforme, separación pareja, enmarcados arriba y abajo.
+   Tipografía calcada de PagePilot: Poppins 500, 15px, texto casi negro,
+   tick violeta grueso de trazo redondeado. */
+#app .hero__bullets { list-style: none; border-top: 1px solid var(--borde); border-bottom: 1px solid var(--borde); padding: 24px 0; margin-bottom: 30px; }
 #app .hero__bullets li {
-  display: flex; align-items: flex-start; gap: 12px;
-  font-size: 16px; color: var(--texto); margin-bottom: 15px;
+  display: flex; align-items: flex-start; gap: 10px;
+  font-size: 15px; font-weight: 500; line-height: 1.5;
+  color: #2b2b33; margin-bottom: 12px;
 }
 #app .hero__bullets li:last-child { margin-bottom: 0; }
-#app .hero__bullets .tick { width: 18px; height: 18px; color: var(--violeta); flex-shrink: 0; margin-top: 2px; }
+#app .hero__bullets .tick { width: 15px; height: 15px; color: var(--violeta); flex-shrink: 0; margin-top: 3px; }
 #app .hero__bullets .tick svg { width: 100%; height: 100%; display: block; }
 
 /* Variantes: cada grupo bien separado, label chico en mayúsculas. */
