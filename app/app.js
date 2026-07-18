@@ -192,6 +192,11 @@
           </div>
 
           <button class="btn btn--acento btn--grande" id="generar">✨ Crear página de producto con IA</button>
+          ${
+            p.estado
+              ? `<button class="btn btn--fantasma btn--grande" id="abrir" style="margin-top:10px">✎ Editar la página existente</button>`
+              : ""
+          }
         </div>
 
         <div class="tarjeta">
@@ -204,6 +209,8 @@
 
     $("volver").onclick = () => ir("lista");
     $("generar").onclick = generar;
+    const abrir = $("abrir");
+    if (abrir) abrir.onclick = abrirExistente;
 
     // La ficha se llena con lo que ya sabemos del producto en Shopify.
     try {
@@ -288,10 +295,323 @@
       </div>`;
   }
 
-  // ---------- 3. preview ----------
+  // ---------- abrir una página ya generada (sin gastar generación) ----------
+
+  async function abrirExistente() {
+    const id = estado.producto.id.split("/").pop();
+    vista.innerHTML = `<div class="generando"><div class="giro"></div><h2>Abriendo la página…</h2></div>`;
+    try {
+      estado.pagina = await api(`/paginas/${id}`);
+      ir("preview");
+    } catch (e) {
+      ir("informacion");
+      requestAnimationFrame(() =>
+        vista.insertAdjacentHTML("afterbegin", `<div class="error">✖ ${esc(e.message)}</div>`)
+      );
+    }
+  }
+
+  // ---------- 3. preview + editor ----------
+
+  // El editor no es WYSIWYG: es un formulario al lado del preview. Cada campo
+  // apunta a una ruta del JSON ("facetas.hero.titulo"); al tipear se actualiza
+  // el dato y el iframe se repinta. Guardar = PUT /api/paginas/:id.
+
+  let sucio = false; // hay cambios sin guardar
+  let timerPreview = null;
+
+  const leer = (obj, ruta) => ruta.split(".").reduce((o, k) => (o == null ? o : o[k]), obj);
+
+  function fijar(obj, ruta, valor) {
+    const partes = ruta.split(".");
+    let o = obj;
+    for (let i = 0; i < partes.length - 1; i++) o = o[partes[i]];
+    o[partes[partes.length - 1]] = valor;
+  }
+
+  // Campo de texto (o textarea si lleva filas). data-nulo: vacío se guarda
+  // como null — así un autor borrado vuelve a ser tarjeta guía.
+  function campo(ruta, etiqueta, filas, nulo) {
+    const v = leer(estado.pagina.data, ruta) ?? "";
+    const atributos = `data-ruta="${ruta}"${nulo ? ` data-nulo="1"` : ""}`;
+    return `
+      <div class="campo campo--editor">
+        <label>${etiqueta}</label>
+        ${
+          filas
+            ? `<textarea rows="${filas}" ${atributos}>${esc(v)}</textarea>`
+            : `<input type="text" ${atributos} value="${esc(v)}">`
+        }
+      </div>`;
+  }
+
+  function campoNumero(ruta, etiqueta) {
+    const v = leer(estado.pagina.data, ruta) ?? 0;
+    return `
+      <div class="campo campo--editor">
+        <label>${etiqueta}</label>
+        <input type="number" min="0" data-ruta="${ruta}" data-tipo="numero" value="${esc(v)}">
+      </div>`;
+  }
+
+  const selectorEstrellas = (ruta, v) =>
+    `<select data-ruta="${ruta}" data-tipo="numero">${[5, 4, 3, 2, 1]
+      .map((n) => `<option value="${n}" ${n === v ? "selected" : ""}>${"★".repeat(n)}${"☆".repeat(5 - n)}</option>`)
+      .join("")}</select>`;
+
+  function pintarEditor() {
+    const cont = $("editor");
+    // Qué secciones estaban abiertas, para no cerrarlas al repintar.
+    const abiertas = cont.querySelector("details")
+      ? new Set([...cont.querySelectorAll("details[open]")].map((x) => x.dataset.sec))
+      : new Set(["hero"]);
+    const S = (id, titulo, cuerpo) => `
+      <details class="seccion" data-sec="${id}" ${abiertas.has(id) ? "open" : ""}>
+        <summary>${titulo}</summary>
+        <div class="seccion__cuerpo">${cuerpo}</div>
+      </details>`;
+
+    const f = estado.pagina.data.facetas;
+
+    const tarjetasMuro = f.resenas.items
+      .map(
+        (r, i) => `
+        <fieldset class="resena-edit ${r.autor ? "" : "resena-edit--guia"}">
+          <legend>Tarjeta ${i + 1}${r.autor ? "" : " · guía"}</legend>
+          <div class="fila-doble">
+            <input type="text" placeholder="Nombre del cliente" data-nulo="1"
+                   data-ruta="facetas.resenas.items.${i}.autor" value="${esc(r.autor ?? "")}">
+            ${selectorEstrellas(`facetas.resenas.items.${i}.estrellas`, r.estrellas ?? 5)}
+          </div>
+          <textarea rows="2" placeholder="Texto de la reseña"
+                    data-ruta="facetas.resenas.items.${i}.texto">${esc(r.texto ?? "")}</textarea>
+        </fieldset>`
+      )
+      .join("");
+
+    cont.innerHTML = `
+      <div class="editor__titulo">Editar la página</div>
+      <div class="editor__ayuda">Los cambios se ven al instante en el preview. Guardá para no perderlos.</div>
+
+      ${S(
+        "hero",
+        "Encabezado",
+        campo("facetas.hero.titulo", "Título") +
+          campo("facetas.hero.subtitulo", "Subtítulo", 2) +
+          f.hero.bullets.map((_, i) => campo(`facetas.hero.bullets.${i}`, `Bullet ${i + 1}`)).join("") +
+          campoNumero("facetas.hero.resenas_count", "Cantidad de reseñas (junto a las estrellas)") +
+          campo("global.cta", "Texto del botón de compra")
+      )}
+
+      ${S(
+        "destacada",
+        "Reseña destacada",
+        `<div class="editor__nota">Es la reseña grande del hero. Pegá acá una reseña REAL de un cliente; sin texto, en la tienda no se muestra.</div>` +
+          campo("facetas.hero.resena_destacada.autor", "Nombre", 0, true) +
+          campo("facetas.hero.resena_destacada.texto", "Texto", 3, true) +
+          `<div class="campo campo--editor"><label>Estrellas</label>${selectorEstrellas(
+            "facetas.hero.resena_destacada.estrellas",
+            f.hero.resena_destacada.estrellas ?? 5
+          )}</div>`
+      )}
+
+      ${S(
+        "acordeones",
+        "Envío y devoluciones",
+        (f.hero.acordeones ?? [])
+          .map(
+            (_, i) =>
+              campo(`facetas.hero.acordeones.${i}.titulo`, `Acordeón ${i + 1} · título`) +
+              campo(`facetas.hero.acordeones.${i}.contenido`, `Acordeón ${i + 1} · contenido`, 2)
+          )
+          .join("")
+      )}
+
+      ${S(
+        "texto1",
+        "Texto + imagen 1",
+        campo("facetas.texto_img_1.titular", "Titular") + campo("facetas.texto_img_1.parrafo", "Párrafo", 4)
+      )}
+
+      ${S(
+        "iconos",
+        "Beneficios (íconos)",
+        campo("facetas.iconos.titular", "Titular") +
+          campo("facetas.iconos.subtitulo", "Subtítulo") +
+          f.iconos.items
+            .map(
+              (_, i) => `
+              <div class="fila-triple">
+                <input type="text" data-ruta="facetas.iconos.items.${i}.emoji" value="${esc(f.iconos.items[i].emoji)}" title="Emoji">
+                <input type="text" data-ruta="facetas.iconos.items.${i}.titulo" value="${esc(f.iconos.items[i].titulo)}" placeholder="Título">
+              </div>
+              <div class="campo campo--editor">
+                <textarea rows="2" data-ruta="facetas.iconos.items.${i}.frase" placeholder="Frase">${esc(f.iconos.items[i].frase)}</textarea>
+              </div>`
+            )
+            .join("")
+      )}
+
+      ${S(
+        "tabla",
+        "Tabla comparativa",
+        campo("facetas.tabla.titular", "Titular") +
+          campo("facetas.tabla.parrafo", "Párrafo", 2) +
+          f.tabla.filas.map((_, i) => campo(`facetas.tabla.filas.${i}`, `Fila ${i + 1} (1-2 palabras)`)).join("") +
+          campo("facetas.tabla.col_otros", "Nombre de la columna de la competencia")
+      )}
+
+      ${S(
+        "stats",
+        "Estadísticas",
+        `<div class="editor__nota">Los porcentajes son fijos de la plantilla; se editan solo las frases.</div>` +
+          campo("facetas.stats.titular", "Titular") +
+          f.stats.items
+            .map((s, i) => campo(`facetas.stats.items.${i}.frase`, `${s.pct}% — frase (sin números)`, 2))
+            .join("")
+      )}
+
+      ${S(
+        "texto2",
+        "Texto + imagen 2",
+        campo("facetas.texto_img_2.titular", "Titular") + campo("facetas.texto_img_2.parrafo", "Párrafo", 4)
+      )}
+
+      ${S(
+        "faq",
+        "Preguntas frecuentes",
+        campo("facetas.faq.titular", "Titular") +
+          f.faq.items
+            .map(
+              (_, i) =>
+                campo(`facetas.faq.items.${i}.pregunta`, `Pregunta ${i + 1}`) +
+                campo(`facetas.faq.items.${i}.respuesta`, `Respuesta ${i + 1}`, 2)
+            )
+            .join("")
+      )}
+
+      ${S(
+        "garantia",
+        "Garantía",
+        campo("facetas.garantia.titular", "Titular") + campo("facetas.garantia.parrafo", "Párrafo", 3)
+      )}
+
+      ${S(
+        "resenas",
+        "Muro de reseñas",
+        campo("facetas.resenas.titular", "Titular") +
+          campo("facetas.resenas.subtitulo", "Subtítulo") +
+          `
+          <div class="cargador">
+            <label>Cargar reseñas reales en lote</label>
+            <textarea id="lote" rows="6" placeholder="Una reseña por bloque, separadas por una línea en blanco.
+La primera línea es el nombre; el resto, el texto.
+
+María G.
+Me llegó en 3 días y funciona tal cual el video.
+
+Carla R.
+Al principio dudaba pero lo uso todos los días."></textarea>
+            <button class="btn btn--fantasma" id="btn-lote" type="button">↧ Volcar al muro</button>
+            <div class="ayuda">Van reemplazando las tarjetas guía desde la primera. Las guía que queden no se borran: son el molde para cuando tengas más reseñas.</div>
+          </div>` +
+          tarjetasMuro
+      )}`;
+  }
+
+  // ---- reacción a cada tecla ----
+
+  function actualizarDato(el) {
+    let v = el.value;
+    if (el.dataset.tipo === "numero") v = Number(v) || 0;
+    if (el.dataset.nulo === "1" && v.trim() === "") v = null;
+    fijar(estado.pagina.data, el.dataset.ruta, v);
+
+    if (el.dataset.ruta === "facetas.hero.titulo") {
+      const t = vista.querySelector(".preview-barra__titulo");
+      if (t) t.textContent = v ?? "";
+    }
+    marcarSucio();
+    clearTimeout(timerPreview);
+    timerPreview = setTimeout(repintarPreview, 250);
+  }
+
+  function repintarPreview() {
+    const marco = $("marco");
+    if (marco?.contentWindow)
+      marco.contentWindow.postMessage(
+        { tiendaiq: true, data: estado.pagina.data, urls: estado.pagina.urls },
+        "*"
+      );
+  }
+
+  function marcarSucio() {
+    sucio = true;
+    const b = $("guardar");
+    if (b) {
+      b.disabled = false;
+      b.textContent = "Guardar cambios";
+      b.classList.add("btn--acento");
+      b.classList.remove("btn--fantasma");
+    }
+    const h = $("hint-republicar");
+    if (h && estado.pagina.estado === "publicada") h.style.display = "";
+  }
+
+  function cargarLote() {
+    const caja = $("lote");
+    const crudo = (caja?.value ?? "").trim();
+    if (!crudo) return;
+
+    const items = estado.pagina.data.facetas.resenas.items;
+    const bloques = crudo.split(/\n\s*\n/).map((b) => b.trim()).filter(Boolean);
+    bloques.forEach((b, i) => {
+      const lineas = b.split("\n").map((l) => l.trim()).filter(Boolean);
+      // Con una sola línea no hay nombre: queda solo el texto y la tarjeta
+      // avisa "guía" hasta que le pongan autor.
+      const autor = lineas.length > 1 ? lineas[0] : null;
+      const texto = (lineas.length > 1 ? lineas.slice(1) : lineas).join(" ");
+      const item = { autor, estrellas: 5, imagen: null, texto };
+      if (i < items.length) items[i] = item;
+      else items.push(item);
+    });
+
+    marcarSucio();
+    pintarEditor();
+    repintarPreview();
+  }
+
+  async function guardarCambios() {
+    const b = $("guardar");
+    if (b) {
+      b.disabled = true;
+      b.textContent = "Guardando…";
+    }
+    try {
+      estado.pagina = await api(`/paginas/${estado.pagina.id}`, {
+        method: "PUT",
+        body: { data: estado.pagina.data }
+      });
+      sucio = false;
+      if (b) {
+        b.textContent = "✓ Guardado";
+        b.classList.remove("btn--acento");
+        b.classList.add("btn--fantasma");
+      }
+      return true;
+    } catch (e) {
+      if (b) {
+        b.disabled = false;
+        b.textContent = "Guardar cambios";
+      }
+      vista.insertAdjacentHTML("afterbegin", `<div class="error">✖ No se pudo guardar: ${esc(e.message)}</div>`);
+      return false;
+    }
+  }
 
   function pantallaPreview() {
     const pg = estado.pagina;
+    sucio = false;
     const publicada = pg.estado === "publicada";
 
     vista.innerHTML = `
@@ -320,28 +640,75 @@
           <div class="preview-barra__titulo">${esc(pg.data.facetas.hero.titulo)}</div>
           <div class="preview-barra__sub">${esc(pg.data.facetas.hero.subtitulo)}</div>
         </div>
+        <button class="btn btn--fantasma" id="guardar" disabled>✓ Guardado</button>
         <button class="btn btn--fantasma" id="regenerar">↻ Regenerar</button>
         <button class="btn ${publicada ? "btn--fantasma" : "btn--acento"}" id="publicar">
           ${publicada ? "↻ Volver a publicar" : "▲ Publicar página"}
         </button>
       </div>
 
-      <div class="marco">
-        <iframe id="marco" src="/preview/index.html?app=1&t=${Date.now()}"></iframe>
+      <div class="aviso-republicar" id="hint-republicar" style="display:none">
+        ⚠ Los cambios se guardan acá, pero en la tienda no se ven hasta que vuelvas a publicar.
+      </div>
+
+      <div class="taller">
+        <aside class="editor" id="editor"></aside>
+        <div class="marco">
+          <iframe id="marco" src="/preview/index.html?app=1&t=${Date.now()}"></iframe>
+        </div>
       </div>`;
+
+    pintarEditor();
+
+    // Un solo listener para todos los campos, presentes y futuros.
+    const editor = $("editor");
+    editor.oninput = (e) => {
+      if (e.target.dataset.ruta) actualizarDato(e.target);
+    };
+    editor.onclick = (e) => {
+      if (e.target.id === "btn-lote") cargarLote();
+    };
 
     // El iframe no lee ningún archivo global: recibe LOS DATOS DE ESTA página
     // por mensaje. Dos merchants generando a la vez no se pisan.
     const marco = $("marco");
-    marco.onload = () =>
-      marco.contentWindow.postMessage({ tiendaiq: true, data: pg.data, urls: pg.urls }, "*");
+    marco.onload = () => {
+      repintarPreview();
+      // Los lápices "✎ Editar" que ya dibuja la plantilla abren la sección
+      // del editor que corresponde. Mismo origen, delegado en el document
+      // para sobrevivir a cada repintado del iframe.
+      try {
+        marco.contentWindow.document.addEventListener("click", (e) => {
+          if (e.target.closest(".resenas__editar")) abrirSeccion("resenas");
+          if (e.target.closest(".resena-destacada__editar")) abrirSeccion("destacada");
+        });
+      } catch {}
+    };
 
-    $("volver").onclick = () => cargarLista();
-    $("regenerar").onclick = () => ir("informacion");
+    $("volver").onclick = () => {
+      if (sucio && !confirm("Hay cambios sin guardar. ¿Salir igual?")) return;
+      cargarLista();
+    };
+    $("regenerar").onclick = () => {
+      if (sucio && !confirm("Regenerar descarta los cambios sin guardar. ¿Seguir?")) return;
+      ir("informacion");
+    };
+    $("guardar").onclick = guardarCambios;
     $("publicar").onclick = publicar;
   }
 
+  function abrirSeccion(id) {
+    const d = vista.querySelector(`details[data-sec="${id}"]`);
+    if (!d) return;
+    d.open = true;
+    d.scrollIntoView({ behavior: "smooth", block: "start" });
+    d.querySelector("input, textarea")?.focus({ preventScroll: true });
+  }
+
   async function publicar() {
+    // Publicar con cambios sin guardar los guardaría a medias: primero el PUT.
+    if (sucio && !(await guardarCambios())) return;
+
     const b = $("publicar");
     b.disabled = true;
     b.textContent = "Publicando…";

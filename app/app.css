@@ -143,11 +143,12 @@ main { max-width: 1180px; margin: 0 auto; padding: 28px 24px 60px; }
 .campo:last-child { margin-bottom: 0; }
 .campo label { display: block; font-size: 13px; font-weight: 500; color: var(--negro); margin-bottom: 5px; }
 .campo .ayuda { font-size: 12px; color: var(--suave); margin-top: 5px; }
-.campo input[type="text"], .campo select {
+.campo input[type="text"], .campo input[type="number"], .campo select, .campo textarea {
   width: 100%; padding: 9px 12px; font-size: 13.5px; font-family: inherit;
   border: 1px solid var(--borde); border-radius: 8px; background: #fff; color: var(--texto);
 }
-.campo input:focus, .campo select:focus { outline: 2px solid var(--acento); outline-offset: -1px; }
+.campo textarea { resize: vertical; line-height: 1.45; }
+.campo input:focus, .campo select:focus, .campo textarea:focus { outline: 2px solid var(--acento); outline-offset: -1px; }
 
 .medios { display: flex; gap: 8px; flex-wrap: wrap; }
 .medio {
@@ -220,6 +221,79 @@ main { max-width: 1180px; margin: 0 auto; padding: 28px 24px 60px; }
 
 .vacio { text-align: center; padding: 70px 20px; color: var(--suave); }
 
+/* ---------- editor (formulario al lado del preview) ---------- */
+
+.taller { display: grid; grid-template-columns: 380px 1fr; gap: 14px; align-items: start; }
+
+.editor {
+  background: #fff; border: 1px solid var(--borde); border-radius: var(--radio);
+  height: 74vh; overflow-y: auto; padding: 14px;
+}
+.editor__titulo { font-size: 14px; font-weight: 600; color: var(--negro); }
+.editor__ayuda { font-size: 12px; color: var(--suave); margin: 3px 0 12px; }
+.editor__nota {
+  font-size: 12px; color: var(--suave); background: var(--fondo);
+  border-radius: 7px; padding: 8px 10px; margin-bottom: 10px;
+}
+
+.seccion { border: 1px solid var(--borde); border-radius: 8px; margin-bottom: 8px; }
+.seccion summary {
+  cursor: pointer; padding: 10px 12px; font-size: 13px; font-weight: 600;
+  color: var(--negro); list-style: none; display: flex; align-items: center; user-select: none;
+}
+.seccion summary::-webkit-details-marker { display: none; }
+.seccion summary::before { content: "▸"; margin-right: 8px; color: var(--suave); transition: transform .12s; }
+.seccion[open] summary::before { transform: rotate(90deg); }
+.seccion__cuerpo { padding: 4px 12px 12px; border-top: 1px solid var(--fondo); }
+
+.campo--editor { margin-bottom: 10px; }
+.campo--editor label { font-size: 12px; }
+.campo--editor input, .campo--editor textarea, .campo--editor select { font-size: 13px; padding: 8px 10px; }
+
+.fila-doble { display: grid; grid-template-columns: 1fr 116px; gap: 8px; margin-bottom: 8px; }
+.fila-triple { display: grid; grid-template-columns: 52px 1fr; gap: 8px; margin-bottom: 8px; }
+.fila-doble input, .fila-doble select, .fila-triple input {
+  width: 100%; padding: 8px 10px; font-size: 13px; font-family: inherit;
+  border: 1px solid var(--borde); border-radius: 8px; background: #fff; color: var(--texto);
+}
+.fila-doble input:focus, .fila-doble select:focus, .fila-triple input:focus {
+  outline: 2px solid var(--acento); outline-offset: -1px;
+}
+
+.resena-edit {
+  border: 1px solid var(--borde); border-radius: 8px;
+  padding: 10px; margin-bottom: 10px;
+}
+.resena-edit--guia { border-style: dashed; background: #fafafa; }
+.resena-edit legend { font-size: 11.5px; color: var(--suave); padding: 0 4px; }
+.resena-edit textarea {
+  width: 100%; padding: 8px 10px; font-size: 13px; font-family: inherit; resize: vertical;
+  border: 1px solid var(--borde); border-radius: 8px; background: #fff; color: var(--texto); line-height: 1.45;
+}
+.resena-edit textarea:focus { outline: 2px solid var(--acento); outline-offset: -1px; }
+
+.cargador {
+  background: var(--fondo); border-radius: 8px; padding: 10px; margin-bottom: 12px;
+}
+.cargador label { display: block; font-size: 12px; font-weight: 600; color: var(--negro); margin-bottom: 6px; }
+.cargador textarea {
+  width: 100%; padding: 8px 10px; font-size: 12.5px; font-family: inherit; resize: vertical;
+  border: 1px solid var(--borde); border-radius: 8px; background: #fff; color: var(--texto); line-height: 1.45;
+}
+.cargador textarea:focus { outline: 2px solid var(--acento); outline-offset: -1px; }
+.cargador .btn { margin-top: 8px; }
+.cargador .ayuda { font-size: 11.5px; color: var(--suave); margin-top: 6px; }
+
+.aviso-republicar {
+  background: #fffbeb; border: 1px solid #fde68a; border-radius: var(--radio);
+  padding: 10px 16px; margin-bottom: 14px; font-size: 12.5px; color: var(--aviso);
+}
+
+@media (max-width: 1000px) {
+  .taller { grid-template-columns: 1fr; }
+  .editor { height: auto; max-height: 46vh; }
+}
+
 @media (max-width: 860px) {
   .dos-columnas { grid-template-columns: 1fr; }
   .pasos { display: none; }
@@ -253,3 +327,4 @@ main { max-width: 1180px; margin: 0 auto; padding: 28px 24px 60px; }
 /* El preview adentro de un iframe adentro de otro iframe queda muy chato:
    se le da más aire porque el alto del admin ya viene recortado. */
 .embebida .marco { height: 78vh; }
+.embebida .editor { height: 78vh; }
