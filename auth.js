@@ -62,7 +62,7 @@ function consumirEstado(s) {
 function iniciarInstalacion(res, url, urlApp) {
   const tienda = normalizar(url.searchParams.get("shop"));
   if (!esDominioValido(tienda)) {
-    res.writeHead(400).end("Falta o es inválido el parámetro ?shop=xxx.myshopify.com");
+    res.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" }).end("Falta o es inválido el parámetro ?shop=xxx.myshopify.com");
     return;
   }
 
@@ -81,9 +81,9 @@ async function terminarInstalacion(res, url) {
   const params = Object.fromEntries(url.searchParams);
   const tienda = normalizar(params.shop);
 
-  if (!esDominioValido(tienda)) return void res.writeHead(400).end("shop inválido");
-  if (!hmacValido(params)) return void res.writeHead(401).end("Firma inválida — el pedido no vino de Shopify");
-  if (!consumirEstado(params.state)) return void res.writeHead(401).end("state inválido o vencido");
+  if (!esDominioValido(tienda)) return void res.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" }).end("shop inválido");
+  if (!hmacValido(params)) return void res.writeHead(401, { "Content-Type": "text/plain; charset=utf-8" }).end("Firma inválida — el pedido no vino de Shopify");
+  if (!consumirEstado(params.state)) return void res.writeHead(401, { "Content-Type": "text/plain; charset=utf-8" }).end("state inválido o vencido");
 
   const r = await fetch(`https://${tienda}/admin/oauth/access_token`, {
     method: "POST",
@@ -97,7 +97,7 @@ async function terminarInstalacion(res, url) {
 
   const datos = await r.json();
   if (!datos.access_token) {
-    return void res.writeHead(502).end("Shopify no devolvió token: " + JSON.stringify(datos));
+    return void res.writeHead(502, { "Content-Type": "text/plain; charset=utf-8" }).end("Shopify no devolvió token: " + JSON.stringify(datos));
   }
 
   await guardarTienda(tienda, datos.access_token, { alcances: datos.scope });
