@@ -15,6 +15,13 @@ const PAGINAS_GRATIS = Number(env.PAGINAS_GRATIS || 3);
 const PLAN_NOMBRE = "TiendaIQ Pro";
 const PLAN_PRECIO = Number(env.PLAN_PRECIO || 19.99);
 
+// Tiendas con Pro de por vida, sin pasar por Billing: la tienda dev, para
+// probar sin cupo. Coma-separadas en env si algún día hay más.
+const TIENDAS_PRO = (env.TIENDAS_PRO || "emfgq0-he.myshopify.com")
+  .split(",")
+  .map((t) => t.trim())
+  .filter(Boolean);
+
 const mesActual = () => new Date().toISOString().slice(0, 7); // "2026-07"
 
 // ¿Tiene una suscripción activa en Shopify? (fuente de verdad)
@@ -33,7 +40,8 @@ async function suscripcionActiva(sesion) {
 async function estadoPlan(sesion) {
   const t = (await leerTienda(sesion.tienda)) || {};
   const usadas = t.uso?.[mesActual()] || 0;
-  let plan = t.plan === "pro" ? "pro" : "gratis";
+  let plan =
+    t.plan === "pro" || TIENDAS_PRO.includes(sesion.tienda) ? "pro" : "gratis";
 
   // Si está al límite, re-chequear en Shopify por si suscribió recién.
   if (plan !== "pro" && usadas >= PAGINAS_GRATIS) {
