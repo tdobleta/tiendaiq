@@ -27,6 +27,11 @@ function leerEnv() {
       if (m) env[m[1]] = m[2].trim();
     }
   }
+  // Espacios y saltos de línea colados al pegar en el panel del host rompen
+  // OAuth y firmas de forma silenciosa. Se recortan todos.
+  for (const k of Object.keys(env)) {
+    if (typeof env[k] === "string") env[k] = env[k].trim();
+  }
   return env;
 }
 
