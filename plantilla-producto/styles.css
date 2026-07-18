@@ -43,7 +43,9 @@
   padding: 0 24px;
 }
 
-#app section { padding: 56px 0; }
+/* 48px y no 56: con Poppins la página respiraba de más y las secciones
+   quedaban desconectadas entre sí. */
+#app section { padding: 48px 0; }
 
 #app h1, #app h2, #app h3 { color: var(--negro); line-height: 1.25; font-weight: 700; }
 #app h2 { font-size: 28px; }
@@ -72,12 +74,12 @@
 #app .cta--full {
   display: block;
   width: 100%;
-  padding: 19px 24px;
-  font-size: 16.5px;
+  padding: 16px 24px;
+  font-size: 16px;
   border-radius: 10px;
-  margin: 4px 0 26px;
+  margin: 2px 0 18px;
 }
-#app form[action="/cart/add"] { margin: 4px 0 26px; }
+#app form[action="/cart/add"] { margin: 2px 0 18px; }
 #app form[action="/cart/add"] .cta--full { margin: 0; }
 #app .cta-centro { text-align: center; margin-top: 32px; }
 
@@ -103,7 +105,7 @@
 /* ============================================================
    HERO
    ============================================================ */
-#app .hero { padding-top: 52px; }
+#app .hero { padding-top: 40px; }
 /* El hero es más ancho que el resto de la página (como PagePilot): la galería
    domina y las dos columnas tienen aire de sobra. Solo acá, no en las secciones
    de abajo. */
@@ -147,11 +149,12 @@
 #app .hero__mini.activa { border: 2px solid var(--negro); }
 
 /* Rating: chico, introductorio, poco espacio abajo. */
-#app .hero__resenas { display: flex; align-items: center; gap: 9px; font-size: 13.5px; color: var(--texto-suave); font-weight: 500; }
-#app .hero__resenas .estrellas { font-size: 16px; letter-spacing: 1px; }
+#app .hero__resenas { display: flex; align-items: center; gap: 9px; font-size: 14px; color: var(--texto-suave); font-weight: 500; }
+#app .hero__resenas .estrellas { font-size: 17px; letter-spacing: 1px; }
 
-/* Título: el elemento dominante. Sigue siendo el más grande de lejos. */
-#app .hero__titulo { font-size: 40px; line-height: 1.14; margin: 12px 0 16px; }
+/* Título: el elemento dominante, pero en 600 como PagePilot — el 700 de
+   Poppins lo hacía ver pesado y desbalanceaba la columna. */
+#app .hero__titulo { font-size: 38px; font-weight: 600; line-height: 1.16; margin: 10px 0 12px; }
 
 /* Precio: pesado pero SIN competir con el título. 23px lo deja como segunda
    jerarquía clara, no como un segundo título. */
@@ -159,28 +162,28 @@
 #app .hero__precio { font-size: 23px; font-weight: 800; color: var(--negro); }
 #app .hero__comparativo { font-size: 15px; color: #9ca3af; text-decoration: line-through; }
 
-#app .hero__impuestos { font-size: 12.5px; color: var(--texto-suave); margin-bottom: 24px; }
+#app .hero__impuestos { font-size: 12.5px; color: var(--texto-suave); margin-bottom: 14px; }
 
 /* Subtítulo: va DEBAJO del precio y en negrita (no es un texto secundario,
    es la promesa del producto). Lo genera la IA por producto. */
 /* Descripción: ancho acotado, más separada del precio. */
 #app .hero__subtitulo {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
   color: var(--negro);
-  line-height: 1.55;
+  line-height: 1.5;
   max-width: 42ch;
-  margin-bottom: 26px;
+  margin-bottom: 16px;
 }
 
 /* Beneficios: alto uniforme, separación pareja, enmarcados arriba y abajo.
    Tipografía calcada de PagePilot: Poppins 500, 15px, texto casi negro,
    tick violeta grueso de trazo redondeado. */
-#app .hero__bullets { list-style: none; border-top: 1px solid var(--borde); border-bottom: 1px solid var(--borde); padding: 24px 0; margin-bottom: 30px; }
+#app .hero__bullets { list-style: none; border-top: 1px solid var(--borde); border-bottom: 1px solid var(--borde); padding: 16px 0; margin-bottom: 20px; }
 #app .hero__bullets li {
   display: flex; align-items: flex-start; gap: 10px;
-  font-size: 15px; font-weight: 500; line-height: 1.5;
-  color: #2b2b33; margin-bottom: 12px;
+  font-size: 15.5px; font-weight: 500; line-height: 1.5;
+  color: #2b2b33; margin-bottom: 11px;
 }
 #app .hero__bullets li:last-child { margin-bottom: 0; }
 #app .hero__bullets .tick { width: 15px; height: 15px; color: var(--violeta); flex-shrink: 0; margin-top: 3px; }
@@ -190,11 +193,11 @@
 #app .hero__variantes { margin-bottom: 24px; }
 #app .hero__variantes label { display: block; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--texto-suave); margin-bottom: 9px; }
 
-#app .hero__cantidad { margin-bottom: 28px; }
-#app .hero__cantidad label { display: block; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--texto-suave); margin-bottom: 9px; }
+#app .hero__cantidad { margin-bottom: 18px; }
+#app .hero__cantidad label { display: block; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--texto-suave); margin-bottom: 7px; }
 #app .selector-cantidad { display: inline-flex; border: 1px solid var(--borde); border-radius: 8px; overflow: hidden; }
-#app .selector-cantidad button { width: 42px; height: 42px; border: none; background: #fff; font-size: 18px; cursor: pointer; }
-#app .selector-cantidad input { width: 50px; text-align: center; border: none; border-left: 1px solid var(--borde); border-right: 1px solid var(--borde); font-size: 14px; }
+#app .selector-cantidad button { width: 36px; height: 36px; border: none; background: #fff; font-size: 16px; cursor: pointer; }
+#app .selector-cantidad input { width: 44px; text-align: center; border: none; border-left: 1px solid var(--borde); border-right: 1px solid var(--borde); font-size: 14px; }
 #app .chip {
   display: inline-block; border: 1px solid var(--borde); border-radius: 8px;
   padding: 9px 16px; font-size: 13px; font-family: inherit;
@@ -205,7 +208,7 @@
 #app .chip.activa { border-color: var(--negro); border-width: 2px; padding: 8px 15px; color: var(--negro); font-weight: 500; }
 
 /* Bloque de envío/garantía/devoluciones: 3 columnas centradas, ícono arriba. */
-#app .hero__badges { display: flex; justify-content: space-between; gap: 8px; border-top: 1px solid var(--borde); border-bottom: 1px solid var(--borde); padding: 24px 0; }
+#app .hero__badges { display: flex; justify-content: space-between; gap: 8px; border-top: 1px solid var(--borde); border-bottom: 1px solid var(--borde); padding: 16px 0; }
 /* border:0 fuerza planos: el recuadro venía del tema, PagePilot los tiene sin caja. */
 #app .badge { flex: 1; text-align: center; font-size: 12.5px; font-weight: 500; color: var(--negro); line-height: 1.35; border: 0; background: none; padding: 0; }
 #app .badge__icono { display: block; margin: 0 auto 8px; width: 24px; height: 24px; color: var(--negro); }
@@ -214,7 +217,7 @@
 /* Reseña destacada: prueba social elegante, con aire arriba y abajo. */
 #app .resena-destacada {
   display: flex; gap: 18px; align-items: flex-start;
-  padding: 24px 0; border-bottom: 1px solid var(--borde);
+  padding: 18px 0; border-bottom: 1px solid var(--borde);
 }
 #app .resena-destacada__foto { position: relative; flex-shrink: 0; }
 #app .resena-destacada__avatar {
@@ -240,7 +243,7 @@ body.publicada #app .resena-destacada__editar { display: none; }
 
 #app .resena-destacada__cuerpo { padding-top: 2px; }
 #app .resena-destacada__cuerpo .estrellas { font-size: 14px; color: var(--estrella); }
-#app .resena-destacada__texto { font-size: 13.5px; color: var(--texto); margin-top: 6px; line-height: 1.6; }
+#app .resena-destacada__texto { font-size: 14px; color: var(--texto); margin-top: 6px; line-height: 1.6; }
 #app .resena-destacada__autor {
   display: flex; align-items: center; gap: 7px;
   font-size: 13px; font-weight: 500; color: var(--negro); margin-top: 9px;
@@ -253,7 +256,7 @@ body.publicada #app .resena-destacada__editar { display: none; }
 #app .acordeon { border-bottom: 1px solid var(--borde); }
 #app .acordeon summary {
   display: flex; justify-content: space-between; align-items: center;
-  padding: 19px 0; font-size: 14px; font-weight: 500; cursor: pointer; list-style: none;
+  padding: 15px 0; font-size: 14px; font-weight: 500; cursor: pointer; list-style: none;
 }
 #app .acordeon summary::-webkit-details-marker { display: none; }
 #app .acordeon__titulo { display: flex; align-items: center; gap: 10px; }
