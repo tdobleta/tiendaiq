@@ -278,6 +278,18 @@ const servidor = http.createServer(async (req, res) => {
     // --- webhooks de Shopify (desinstalación + privacidad) ---
     if (req.method === "POST" && url.pathname === "/webhooks") return await webhooks(req, res);
 
+    // Diagnóstico temporal: huella de credenciales (no expone el secret).
+    if (url.pathname === "/debug-credenciales") {
+      const crypto = require("crypto");
+      const s = env.SHOPIFY_CLIENT_SECRET || "";
+      return json(res, 200, {
+        client_id: env.SHOPIFY_CLIENT_ID || null,
+        secret_largo: s.length,
+        secret_inicio: s.slice(0, 6),
+        secret_huella: crypto.createHash("sha256").update(s).digest("hex").slice(0, 12)
+      });
+    }
+
     // --- app ---
     if (url.pathname.startsWith("/api/")) return await api(req, res, url);
 
