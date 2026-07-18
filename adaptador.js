@@ -524,7 +524,7 @@ function ensamblar(fuente, salida, { idioma, angulo }) {
       },
       recomendados: { modo: "placeholder", items: [] }
     },
-    global: { cta: "Lo Quiero Ahora", idioma, angulo }
+    global: { cta: "Agregar al carrito", idioma, angulo }
   };
 }
 

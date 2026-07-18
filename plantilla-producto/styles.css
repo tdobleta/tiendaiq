@@ -78,7 +78,29 @@
   font-size: 16px;
   border-radius: 10px;
   margin: 2px 0 18px;
+  position: relative;
+  overflow: hidden;
 }
+/* Brillo de lujo: una franja blanca en diagonal que barre el botón en loop.
+   Va en un ::after absoluto con pointer-events:none, así no interfiere ni
+   con el click ni con el texto. Barre en ~1.4s y descansa el resto del ciclo. */
+#app .cta--full::after {
+  content: "";
+  position: absolute;
+  top: 0; bottom: 0;
+  width: 55%;
+  left: -80%;
+  background: linear-gradient(105deg, transparent 0%, rgba(255, 255, 255, .3) 50%, transparent 100%);
+  transform: skewX(-20deg);
+  animation: tiendaiq-brillo 3s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes tiendaiq-brillo {
+  0%   { left: -80%; }
+  48%  { left: 135%; }
+  100% { left: 135%; }
+}
+#app .cta--full:disabled { opacity: .75; cursor: default; }
 #app form[action="/cart/add"] { margin: 2px 0 18px; }
 #app form[action="/cart/add"] .cta--full { margin: 0; }
 #app .cta-centro { text-align: center; margin-top: 32px; }
@@ -148,9 +170,9 @@
 #app .hero__mini img { width: 100%; height: 100%; object-fit: cover; }
 #app .hero__mini.activa { border: 2px solid var(--negro); }
 
-/* Rating: chico, introductorio, poco espacio abajo. */
-#app .hero__resenas { display: flex; align-items: center; gap: 9px; font-size: 14px; color: var(--texto-suave); font-weight: 500; }
-#app .hero__resenas .estrellas { font-size: 17px; letter-spacing: 1px; }
+/* Rating: presente y prolijo — estrellas grandes, texto a la par. */
+#app .hero__resenas { display: flex; align-items: center; gap: 10px; font-size: 15.5px; color: var(--texto-suave); font-weight: 500; }
+#app .hero__resenas .estrellas { font-size: 21px; letter-spacing: 1.5px; }
 
 /* Título: el elemento dominante, pero en 600 como PagePilot — el 700 de
    Poppins lo hacía ver pesado y desbalanceaba la columna. */

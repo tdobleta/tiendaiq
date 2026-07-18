@@ -81,16 +81,31 @@
   const cta = (global, extra = "") =>
     `<button class="cta ${extra}">${esc(global.cta)}</button>`;
 
-  // En la tienda el botón principal agrega al carrito de verdad (POST al
-  // endpoint /cart/add de Shopify con la variante que dejó la plantilla).
+  // Símbolo y lado por divisa. Lo que no figure cae a "$" adelante, que es
+  // lo correcto en casi toda LatAm. El código (ARS, MXN…) no se muestra.
+  const DIVISAS = {
+    USD: "$", ARS: "$", MXN: "$", CLP: "$", COP: "$", UYU: "$",
+    PEN: "S/ ", BRL: "R$ ", BOB: "Bs ", PYG: "₲ ", GTQ: "Q ",
+    DOP: "RD$ ", CRC: "₡ ", VES: "Bs ", GBP: "£",
+    EUR: { simbolo: " €", despues: true }
+  };
+  const precioBonito = (moneda, valor) => {
+    const d = DIVISAS[moneda] ?? "$";
+    if (typeof d === "object" && d.despues) return `${valor}${d.simbolo}`;
+    return `${d}${valor}`;
+  };
+
+  // En la tienda el botón principal agrega al carrito de verdad, pero por
+  // AJAX (/cart/add.js): el cliente se queda en la página en vez de irse
+  // al carrito. El form clásico queda como fallback si el fetch falla.
   // En el preview local sigue siendo un botón muerto.
   const botonComprar = (global) => {
     const variante = EN_TIENDA ? window.TIENDAIQ_VARIANT : null;
     if (!variante) return cta(global, "cta--full");
     return `
-      <form method="post" action="/cart/add">
+      <form method="post" action="/cart/add" onsubmit="return tiendaiqAgregar(event)">
         <input type="hidden" name="id" value="${esc(variante)}">
-        <input type="hidden" name="quantity" value="1">
+        <input type="hidden" name="quantity" value="1" id="tiendaiq-cantidad-form">
         <button type="submit" class="cta cta--full">${esc(global.cta)}</button>
       </form>`;
   };
@@ -114,7 +129,7 @@
       .join("");
 
     const comparativo = fuente.precio_comparativo
-      ? `<span class="hero__comparativo">${esc(fuente.moneda)} ${esc(fuente.precio_comparativo)}</span>`
+      ? `<span class="hero__comparativo">${esc(precioBonito(fuente.moneda, fuente.precio_comparativo))}</span>`
       : "";
 
     const bullets = (h.bullets ?? [])
@@ -167,7 +182,7 @@
             <div class="hero__resenas">${estrellas(5)} <span>${esc(h.resenas_count)} reseñas</span></div>
             <h1 class="hero__titulo">${esc(h.titulo)}</h1>
             <div class="hero__precios">
-              <span class="hero__precio">${esc(fuente.moneda)} ${esc(fuente.precio)}</span>
+              <span class="hero__precio">${esc(precioBonito(fuente.moneda, fuente.precio))}</span>
               ${comparativo}
             </div>
             <p class="hero__impuestos">Impuestos incluidos.</p>
@@ -176,7 +191,7 @@
             <div class="hero__cantidad">
               <label>Cantidad</label>
               <div class="selector-cantidad">
-                <button type="button">−</button><input value="1" readonly><button type="button">+</button>
+                <button type="button" onclick="tiendaiqCantidad(-1)">−</button><input id="tiendaiq-cantidad" value="1" readonly><button type="button" onclick="tiendaiqCantidad(1)">+</button>
               </div>
             </div>
             ${variantes}
@@ -419,6 +434,57 @@
     document.getElementById("imagen-principal").innerHTML = img(mediaId);
     document.querySelectorAll(".hero__mini").forEach((m) => m.classList.remove("activa"));
     boton.classList.add("activa");
+  };
+
+  // selector de cantidad: 1 a 99, y mantiene sincronizado el hidden del form
+  window.tiendaiqCantidad = function (delta) {
+    const visible = document.getElementById("tiendaiq-cantidad");
+    if (!visible) return;
+    const valor = Math.min(99, Math.max(1, (parseInt(visible.value, 10) || 1) + delta));
+    visible.value = valor;
+    const oculto = document.getElementById("tiendaiq-cantidad-form");
+    if (oculto) oculto.value = valor;
+  };
+
+  // Agregar al carrito sin salir de la página: POST a /cart/add.js (la API
+  // AJAX de Shopify), feedback en el botón y aviso al tema por si tiene
+  // contador de carrito. Si el fetch falla, cae al POST clásico del form.
+  window.tiendaiqAgregar = function (ev) {
+    ev.preventDefault();
+    const form = ev.target;
+    const boton = form.querySelector("button[type=submit]");
+    const cantidad = parseInt(document.getElementById("tiendaiq-cantidad")?.value, 10) || 1;
+    const textoOriginal = boton.textContent;
+    boton.disabled = true;
+
+    fetch("/cart/add.js", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: Number(form.querySelector("input[name=id]").value),
+        quantity: cantidad
+      })
+    })
+      .then((r) => {
+        if (!r.ok) throw new Error("cart/add.js " + r.status);
+        return r.json();
+      })
+      .then(() => {
+        boton.textContent = "✓ Agregado al carrito";
+        document.documentElement.dispatchEvent(
+          new CustomEvent("cart:refresh", { bubbles: true })
+        );
+        setTimeout(() => {
+          boton.textContent = textoOriginal;
+          boton.disabled = false;
+        }, 2000);
+      })
+      .catch(() => {
+        // sin AJAX no dejamos al cliente colgado: flujo clásico de Shopify
+        boton.disabled = false;
+        form.submit();
+      });
+    return false;
   };
 
   function montar(datos) {
