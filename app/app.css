@@ -849,3 +849,53 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
 }
 .cod-layout > * { min-width: 0; }
 .fila-doble-cod > * { min-width: 0; }
+
+/* ============================================================
+   Inicio radiante — chips de color e íconos con gradiente
+   ============================================================ */
+
+.inicio-cabecera .saludo { font-size: 22px; }
+
+.btn--marca { background: var(--gradiente-marca); border: none; }
+.btn--marca:hover:not(:disabled) { background: linear-gradient(135deg, #3db260 0%, #1a81c2 100%); }
+
+/* pasos con identidad de color: chip cuadrado redondeado, gradiente al completar */
+.paso-card__icono { border-radius: 9px; border: none; width: 34px; height: 34px; }
+.paso-card__icono svg { width: 16px; height: 16px; }
+.paso-card--violeta .paso-card__icono { background: #eef2ff; color: #4f46e5; }
+.paso-card--verde   .paso-card__icono { background: #e7f8ee; color: #16a34a; }
+.paso-card--azul    .paso-card__icono { background: #e6f4fd; color: #1e8fd5; }
+.paso-card--violeta .paso-card__icono--hecho { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: #fff; box-shadow: 0 4px 12px rgba(99, 102, 241, .35); }
+.paso-card--verde   .paso-card__icono--hecho { background: linear-gradient(135deg, #22c55e, #10b981); color: #fff; box-shadow: 0 4px 12px rgba(34, 197, 94, .35); }
+.paso-card--azul    .paso-card__icono--hecho { background: linear-gradient(135deg, #38bdf8, #2563eb); color: #fff; box-shadow: 0 4px 12px rgba(56, 189, 248, .35); }
+.paso-card { transition: box-shadow .15s ease, transform .15s ease; }
+.paso-card:hover { box-shadow: var(--sombra-m); transform: translateY(-1px); }
+
+/* métricas: cuatro tintes suaves con gradiente limpio */
+.metrica--violeta { background: linear-gradient(135deg, #eef2ff 0%, #f5f3ff 100%); border-color: var(--ia-borde); }
+.metrica--verde   { background: linear-gradient(135deg, #e7f8ee 0%, #ecfdf5 100%); border-color: #d5f5df; }
+.metrica--ambar   { background: linear-gradient(135deg, #fff5e0 0%, #fffbeb 100%); border-color: #f5e6c8; }
+.metrica--azul    { background: linear-gradient(135deg, #e6f4fd 0%, #eff8ff 100%); border-color: #d7ecfa; }
+.metrica--ambar .metrica__icono { color: #d97706; }
+.metrica--azul  .metrica__icono { color: var(--marca-azul); }
+.metrica--ambar .metrica__valor { color: #b45309; }
+.metrica--azul  .metrica__valor { color: #1a6fa8; }
+.metrica--verde .metrica__valor { color: #157f3d; }
+
+/* interruptor maestro del COD */
+.cod-switch { display: inline-flex; align-items: center; gap: 10px; cursor: pointer; user-select: none; }
+.cod-switch input { position: absolute; opacity: 0; pointer-events: none; }
+.cod-switch__pista {
+  width: 40px; height: 22px; border-radius: 999px;
+  background: #d3d3d9; position: relative; flex-shrink: 0;
+  transition: background .15s ease;
+}
+.cod-switch__pista::after {
+  content: ""; position: absolute; top: 2px; left: 2px;
+  width: 18px; height: 18px; border-radius: 50%;
+  background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.25);
+  transition: left .15s ease;
+}
+.cod-switch input:checked + .cod-switch__pista { background: var(--ok); }
+.cod-switch input:checked + .cod-switch__pista::after { left: 20px; }
+.cod-switch__texto { font-size: 13.5px; font-weight: 600; color: var(--negro); }

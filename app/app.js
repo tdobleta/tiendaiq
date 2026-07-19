@@ -133,8 +133,8 @@
       tienda: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9l1.2-4h13.6L20 9"/><path d="M4 9c0 1.4 1.2 2.5 2.7 2.5S9.3 10.4 9.3 9c0 1.4 1.2 2.5 2.7 2.5s2.7-1.1 2.7-2.5c0 1.4 1.2 2.5 2.7 2.5S20 10.4 20 9"/><path d="M5 11.5V20h14v-8.5"/><path d="M10 20v-5h4v5"/></svg>`
     };
 
-    const pasoCard = (icono, titulo, texto, hecho, cola) => `
-      <div class="paso-card">
+    const pasoCard = (icono, titulo, texto, hecho, cola, tinte) => `
+      <div class="paso-card paso-card--${tinte}">
         <div class="paso-card__icono ${hecho ? "paso-card__icono--hecho" : ""}">${icono}</div>
         <div class="paso-card__titulo">${titulo}</div>
         <p class="paso-card__texto">${texto}</p>
@@ -161,10 +161,10 @@
 
     vista.innerHTML = `
       <div class="inicio-cabecera">
-        <h1>Bienvenido a TiendaIQ</h1>
+        <h1>Bienvenido a TiendaIQ <span class="saludo">👋</span></h1>
         <div class="inicio-cabecera__acciones">
           <button class="btn btn--fantasma" id="ir-paginas">❐ Ver mis páginas</button>
-          <button class="btn" id="ir-crear">✦ Crear página de producto con IA</button>
+          <button class="btn btn--marca" id="ir-crear">✦ Crear página de producto con IA</button>
         </div>
       </div>
 
@@ -197,7 +197,8 @@
             creadas > 0,
             creadas
               ? `<span class="chip-estado chip-estado--ok">Completado</span>`
-              : `<button class="btn btn--chico" id="paso-crear">Crear página</button>`
+              : `<button class="btn btn--chico" id="paso-crear">Crear página</button>`,
+            "violeta"
           )}
           ${pasoCard(
             ICONO_PASO.publicar,
@@ -206,14 +207,16 @@
             publicadas > 0,
             publicadas
               ? `<span class="chip-estado chip-estado--ok">Completado</span>`
-              : `<button class="btn btn--chico" id="paso-publicar">Publicar página</button>`
+              : `<button class="btn btn--chico" id="paso-publicar">Publicar página</button>`,
+            "verde"
           )}
           ${pasoCard(
             ICONO_PASO.tienda,
             "Crear tu tienda con IA",
             "Una tienda Shopify completa armada desde cero.",
             false,
-            `<span class="chip-estado chip-estado--pronto">Próximamente</span>`
+            `<span class="chip-estado chip-estado--pronto">Próximamente</span>`,
+            "azul"
           )}
         </div>
       </div>
@@ -224,11 +227,12 @@
         <div class="metricas">
           ${metrica(ICONO_METRICA.pagina, "Páginas creadas", creadas, "violeta")}
           ${metrica(ICONO_METRICA.check, "Publicadas", publicadas, "verde")}
-          ${metrica(ICONO_METRICA.lapiz, "Borradores", creadas - publicadas)}
+          ${metrica(ICONO_METRICA.lapiz, "Borradores", creadas - publicadas, "ambar")}
           ${metrica(
             ICONO_METRICA.estrella,
             "Plan",
-            plan.plan === "pro" ? "Pro · sin límite" : `${plan.usadas} de ${plan.limite}`
+            plan.plan === "pro" ? "Pro · sin límite" : `${plan.usadas} de ${plan.limite}`,
+            "azul"
           )}
         </div>
       </div>
@@ -417,7 +421,7 @@
       <div class="inicio-cabecera">
         <h1><button class="volver-flecha" id="volver-inicio">←</button> Páginas de producto</h1>
         <div class="inicio-cabecera__acciones">
-          <button class="btn" id="ir-crear">✦ Crear página de producto con IA</button>
+          <button class="btn btn--marca" id="ir-crear">✦ Crear página de producto con IA</button>
         </div>
       </div>
 
@@ -659,19 +663,24 @@
       <div class="inicio-cabecera">
         <h1><button class="volver-flecha" id="volver-inicio">←</button> Formulario contra reembolso</h1>
         <div class="inicio-cabecera__acciones">
-          <label class="cod-check cod-check--activo">
-            <input type="checkbox" id="cod-activo" ${c.activo ? "checked" : ""}> Formulario activo
+          <label class="cod-switch" title="Prende o apaga el formulario en tu tienda. Se guarda solo.">
+            <input type="checkbox" id="cod-activo" ${c.activo ? "checked" : ""}>
+            <span class="cod-switch__pista"></span>
+            <span class="cod-switch__texto">${c.activo ? "Formulario activo" : "Formulario apagado"}</span>
           </label>
           <button class="btn ${estado.cod.sucio ? "btn--acento" : "btn--fantasma"}" id="cod-guardar" ${estado.cod.sucio ? "" : "disabled"}>${estado.cod.sucio ? "Guardar cambios" : "✓ Guardado"}</button>
         </div>
       </div>
 
       ${
-        inst
-          ? `<div class="cod-banner cod-banner--ok">✓ Inyectado en el tema <strong>${esc(inst.tema)}</strong> · ${esc(fechaCorta(inst.fecha))}
+        inst && !c.activo
+          ? `<div class="cod-banner cod-banner--aviso">⚠ Está inyectado en <strong>${esc(inst.tema)}</strong> pero el formulario está <strong>apagado</strong>: el botón no aparece en tu tienda. Prendé el interruptor de arriba.
                <button class="btn btn--fantasma btn--chico" id="cod-instalar">↻ Volver a inyectar</button></div>`
-          : `<div class="cod-banner cod-banner--aviso">⚠ Todavía no está inyectado en tu tema: el botón no aparece en la tienda.
-               <button class="btn btn--chico" id="cod-instalar">▲ Inyectar en el tema</button></div>`
+          : inst
+            ? `<div class="cod-banner cod-banner--ok">✓ Inyectado y activo en el tema <strong>${esc(inst.tema)}</strong> · ${esc(fechaCorta(inst.fecha))}
+                 <button class="btn btn--fantasma btn--chico" id="cod-instalar">↻ Volver a inyectar</button></div>`
+            : `<div class="cod-banner cod-banner--aviso">⚠ Todavía no está inyectado en tu tema: el botón no aparece en la tienda.
+                 <button class="btn btn--chico" id="cod-instalar">▲ Inyectar en el tema</button></div>`
       }
 
       <div class="cod-tabs">
@@ -759,9 +768,14 @@
       pintarCod();
     });
 
-    $("cod-activo").onchange = (e) => {
+    // El interruptor maestro se guarda SOLO al tocarlo (y re-sube el snippet
+    // si ya está inyectado). Así nunca queda inyectado-pero-apagado por
+    // olvidarse de apretar Guardar.
+    $("cod-activo").onchange = async (e) => {
       estado.cod.config.activo = e.target.checked;
       marcarSucioCod();
+      await guardarCod();
+      pintarCod();
     };
 
     $("cod-guardar").onclick = guardarCod;
