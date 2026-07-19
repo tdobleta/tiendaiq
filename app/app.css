@@ -817,3 +817,35 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
 /* mini-preview de la herramienta COD en el inicio */
 .herramienta__preview--cod { background: linear-gradient(135deg, #ecfdf3 0%, #e0f2fe 100%); }
 .mini-cta--cod { background: var(--negro); }
+
+/* vista previa inline editable (pestaña "Vista previa" del COD) */
+.cod-layout--vista { grid-template-columns: 1fr; }
+.cod-vista-inline #tiq-cod-modal {
+  position: static;
+  inset: auto;
+  padding: 0;
+  background: transparent;
+  overflow: visible;
+  display: block;
+}
+.cod-vista-inline .tiq-cod-caja {
+  max-width: 100%;
+  box-shadow: none;
+  border: 1px solid var(--borde);
+  animation: none;
+}
+.cod-editable { cursor: text; border-radius: 4px; transition: box-shadow .1s; }
+.cod-editable:hover { box-shadow: 0 0 0 1.5px var(--acento); }
+.cod-editable:focus { outline: none; box-shadow: 0 0 0 2px var(--acento); background: var(--ia-fondo); }
+
+/* responsive de la pantalla COD */
+@media (max-width: 700px) {
+  .cod-banner { flex-wrap: wrap; }
+  .cod-banner .btn { margin-left: 0; }
+  .cod-campo-fila { grid-template-columns: 1fr; gap: 6px; }
+  .cod-tarifa-fila { grid-template-columns: 1fr 90px auto; }
+  .cod-tier-fila { grid-template-columns: 60px 60px 1fr auto; }
+  .fila-doble-cod { grid-template-columns: 1fr; }
+}
+.cod-layout > * { min-width: 0; }
+.fila-doble-cod > * { min-width: 0; }

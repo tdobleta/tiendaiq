@@ -375,10 +375,11 @@
   // ---------- integración con la tienda ----------
 
   async function leerProducto() {
-    const m = location.pathname.match(/\/products\/([^/?#]+)/);
+    // Se conserva el prefijo de idioma (/es/products/...) si el tema lo usa.
+    const m = location.pathname.match(/^(.*\/products\/[^/?#]+)/);
     if (!m) return null;
     try {
-      const r = await fetch(`/products/${m[1]}.js`);
+      const r = await fetch(`${m[1]}.js`);
       if (!r.ok) return null;
       const p = await r.json();
       return {
@@ -400,6 +401,20 @@
     return input ? input.value : null;
   }
 
+  // Algunos temas (y nuestras propias landings TiendaIQ) arman el form de
+  // compra con JS después del load: se espera hasta 6 segundos antes de caer
+  // al final de la página.
+  function esperarFormCompra(intentos = 20) {
+    return new Promise((resolver) => {
+      const buscar = (n) => {
+        const f = document.querySelector('form[action*="/cart/add"]');
+        if (f || n <= 0) return resolver(f || null);
+        setTimeout(() => buscar(n - 1), 300);
+      };
+      buscar(intentos);
+    });
+  }
+
   async function iniciar() {
     const c = window.TIENDAIQ_COD;
     if (!c || !c.activo) return;
@@ -416,7 +431,8 @@
     }
 
     // Botón principal, después del formulario de compra del tema.
-    const formCompra = document.querySelector('form[action*="/cart/add"]');
+    const formCompra = await esperarFormCompra();
+    if (document.querySelector(".tiq-cod-boton")) return; // otro llamado ganó la carrera
     const boton = armarBoton(c);
     boton.addEventListener("click", abrir);
     if (formCompra) formCompra.insertAdjacentElement("afterend", boton);

@@ -487,7 +487,7 @@
   async function pantallaCod() {
     vista.innerHTML = `<div class="generando"><div class="giro"></div><h2>Leyendo la configuración…</h2></div>`;
     try {
-      estado.cod = { config: await api("/cod"), tab: estado.cod?.tab || "boton", sucio: false };
+      estado.cod = { config: await api("/cod"), tab: estado.cod?.tab || "vista", sucio: false };
     } catch (e) {
       vista.innerHTML = `<div class="error">✖ No se pudo leer la configuración: ${esc(e.message)}</div>`;
       return;
@@ -497,6 +497,7 @@
   }
 
   const TABS_COD = [
+    { id: "vista", texto: "Vista previa" },
     { id: "boton", texto: "Botón de compra" },
     { id: "campos", texto: "Campos del formulario" },
     { id: "estilo", texto: "Estilo" },
@@ -527,6 +528,16 @@
   function tabCod() {
     const c = estado.cod.config;
     const op = (val, texto, actual) => `<option value="${val}" ${actual === val ? "selected" : ""}>${texto}</option>`;
+
+    if (estado.cod.tab === "vista")
+      return `
+        <div class="editor__nota">Este es el formulario tal cual lo ve tu cliente. <strong>Hacé clic sobre los textos</strong> (título, etiquetas, tarifas, ofertas) para editarlos acá mismo. El resto se ajusta en las otras pestañas.</div>
+        <div class="cod-vista-inline" id="cod-vista"></div>
+        <div class="cod-separador"></div>
+        <div class="fila-doble-cod">
+          ${campoCod("textos.cta", "Botón de enviar — {total} se reemplaza por el total")}
+          ${campoCod("textos.subtitulo", "Subtítulo del formulario")}
+        </div>`;
 
     if (estado.cod.tab === "boton")
       return `
@@ -651,7 +662,7 @@
           <label class="cod-check cod-check--activo">
             <input type="checkbox" id="cod-activo" ${c.activo ? "checked" : ""}> Formulario activo
           </label>
-          <button class="btn btn--fantasma" id="cod-guardar" ${estado.cod.sucio ? "" : "disabled"}>${estado.cod.sucio ? "Guardar cambios" : "✓ Guardado"}</button>
+          <button class="btn ${estado.cod.sucio ? "btn--acento" : "btn--fantasma"}" id="cod-guardar" ${estado.cod.sucio ? "" : "disabled"}>${estado.cod.sucio ? "Guardar cambios" : "✓ Guardado"}</button>
         </div>
       </div>
 
@@ -669,28 +680,33 @@
         ).join("")}
       </div>
 
-      <div class="cod-layout">
+      <div class="cod-layout ${estado.cod.tab === "vista" ? "cod-layout--vista" : ""}">
         <div class="tarjeta" id="cod-panel">${tabCod()}</div>
-        <aside class="tarjeta cod-preview">
-          <div class="tarjeta__titulo">Vista previa</div>
-          <div class="panel__sub">Así se ve en tu página de producto</div>
-          <div class="cod-preview__marco">
-            <div class="cod-preview__prod">
-              <div class="cod-preview__foto">🛍</div>
-              <div>
-                <div class="cod-preview__nombre">${esc(PRODUCTO_DEMO.titulo)}</div>
-                <div class="cod-preview__precio">$ 39,99</div>
-              </div>
-            </div>
-            <div class="cod-preview__addto">Agregar al carrito</div>
-            <div id="cod-preview-boton"></div>
-          </div>
-          <button class="btn btn--acento" id="cod-ver-form" style="width:100%;margin-top:14px">Ver el formulario completo</button>
-        </aside>
+        ${
+          estado.cod.tab === "vista"
+            ? ""
+            : `<aside class="tarjeta cod-preview">
+                 <div class="tarjeta__titulo">Vista previa</div>
+                 <div class="panel__sub">Así se ve en tu página de producto</div>
+                 <div class="cod-preview__marco">
+                   <div class="cod-preview__prod">
+                     <div class="cod-preview__foto">🛍</div>
+                     <div>
+                       <div class="cod-preview__nombre">${esc(PRODUCTO_DEMO.titulo)}</div>
+                       <div class="cod-preview__precio">$ 39,99</div>
+                     </div>
+                   </div>
+                   <div class="cod-preview__addto">Agregar al carrito</div>
+                   <div id="cod-preview-boton"></div>
+                 </div>
+                 <button class="btn btn--acento" id="cod-ver-form" style="width:100%;margin-top:14px">Ver el formulario completo</button>
+               </aside>`
+        }
       </div>`;
 
     $("volver-inicio").onclick = () => salirCod("inicio");
     pintarBotonPreview();
+    montarVistaCod();
 
     // --- tabs ---
     vista.querySelectorAll("[data-tab]").forEach((b) => {
@@ -712,6 +728,19 @@
       if (e.target.type === "color") e.target.parentElement.querySelector("code").textContent = v;
       marcarSucioCod();
       pintarBotonPreview();
+      // en la vista previa, los textos de abajo se reflejan al instante
+      const capaVista = $("cod-vista")?.querySelector("#tiq-cod-modal");
+      if (capaVista) {
+        if (ruta === "textos.cta") {
+          const total = capaVista.querySelector('[data-zona="total"]')?.textContent || "";
+          const cta = capaVista.querySelector('[data-zona="cta"]');
+          if (cta) cta.textContent = String(v).replace("{total}", total);
+        }
+        if (ruta === "textos.subtitulo") {
+          const sub = capaVista.querySelector(".tiq-cod-sub");
+          if (sub) sub.textContent = v;
+        }
+      }
       // mostrar/ocultar la URL de términos exige repintar el tab
       if (ruta === "extras.terminos") pintarCod();
     });
@@ -736,11 +765,74 @@
     };
 
     $("cod-guardar").onclick = guardarCod;
-    $("cod-instalar").onclick = instalarCod;
-    $("cod-ver-form").onclick = () => {
-      const capa = window.TiendaIQCOD.armarModal(estado.cod.config, PRODUCTO_DEMO, { preview: true });
-      document.body.appendChild(capa);
+    $("cod-instalar").onclick = instalarCodTema;
+    const verForm = $("cod-ver-form");
+    if (verForm)
+      verForm.onclick = () => {
+        const capa = window.TiendaIQCOD.armarModal(estado.cod.config, PRODUCTO_DEMO, { preview: true });
+        document.body.appendChild(capa);
+      };
+  }
+
+  // La vista previa editable: monta el formulario REAL (mismo script que la
+  // tienda) adentro del panel y hace editables los textos con contenteditable.
+  // Cada edición pega directo en la config; Guardar hace el PUT como siempre.
+  function montarVistaCod() {
+    const cont = $("cod-vista");
+    if (!cont || !window.TiendaIQCOD) return;
+    const c = estado.cod.config;
+
+    cont.innerHTML = "";
+    const capa = window.TiendaIQCOD.armarModal(c, PRODUCTO_DEMO, { preview: true });
+    capa.querySelector(".tiq-cod-cerrar")?.remove();
+    cont.appendChild(capa);
+
+    const editable = (el, aplicar, obtener) => {
+      if (!el) return;
+      el.setAttribute("contenteditable", "plaintext-only");
+      // Firefox no soporta plaintext-only: cae a true.
+      if (!el.isContentEditable) el.setAttribute("contenteditable", "true");
+      el.classList.add("cod-editable");
+      el.addEventListener("input", () => {
+        aplicar(el.textContent.replace(/\n/g, " ").trim());
+        marcarSucioCod();
+      });
+      // Si lo dejan vacío, vuelve el valor guardado (nada queda sin texto).
+      el.addEventListener("blur", () => {
+        if (!el.textContent.trim()) el.textContent = obtener();
+      });
     };
+
+    editable(capa.querySelector(".tiq-cod-cab__titulo"), (v) => { if (v) c.textos.titulo = v; }, () => c.textos.titulo);
+    editable(capa.querySelector(".tiq-cod-sub"), (v) => { if (v) c.textos.subtitulo = v; }, () => c.textos.subtitulo);
+
+    // Etiquetas de los campos: se re-envuelven en un span editable para no
+    // arrastrar el asterisco de obligatorio adentro de la edición.
+    capa.querySelectorAll("[data-campo]").forEach((div) => {
+      const campo = c.campos.find((x) => x.id === div.dataset.campo);
+      const label = div.querySelector("label");
+      if (!campo || !label) return;
+      const obligatorio = !!label.querySelector(".tiq-req");
+      label.innerHTML = `<span class="cod-etq">${esc(campo.etiqueta)}</span>${obligatorio ? ' <span class="tiq-req">*</span>' : ""}`;
+      editable(
+        label.querySelector(".cod-etq"),
+        (v) => {
+          if (!v) return;
+          campo.etiqueta = v;
+          const entrada = div.querySelector("input,textarea");
+          if (entrada) entrada.placeholder = v;
+        },
+        () => campo.etiqueta
+      );
+    });
+
+    // Nombres de tarifas y etiquetas de ofertas (ya son spans propios).
+    capa.querySelectorAll(".tiq-cod-envio__nombre").forEach((el, i) => {
+      editable(el, (v) => { if (v && c.tarifas[i]) c.tarifas[i].nombre = v; }, () => c.tarifas[i]?.nombre || "");
+    });
+    capa.querySelectorAll(".tiq-cod-oferta__nombre").forEach((el, i) => {
+      editable(el, (v) => { if (v && c.ofertas.tiers[i]) c.ofertas.tiers[i].etiqueta = v; }, () => c.ofertas.tiers[i]?.etiqueta || "");
+    });
   }
 
   function pintarBotonPreview() {
@@ -771,16 +863,18 @@
       b.textContent = "✓ Guardado";
       b.classList.remove("btn--acento");
       b.classList.add("btn--fantasma");
+      return true;
     } catch (e) {
       b.disabled = false;
       b.textContent = "Guardar cambios";
       vista.insertAdjacentHTML("afterbegin", `<div class="error">✖ No se pudo guardar: ${esc(e.message)}</div>`);
+      return false;
     }
   }
 
-  async function instalarCod() {
+  async function instalarCodTema() {
     // Instalar con cambios sin guardar los perdería: primero el PUT.
-    if (estado.cod.sucio) await guardarCod();
+    if (estado.cod.sucio && !(await guardarCod())) return;
     const b = $("cod-instalar");
     b.disabled = true;
     b.textContent = "Inyectando…";

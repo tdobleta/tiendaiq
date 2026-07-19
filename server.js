@@ -100,7 +100,15 @@ async function webhooks(req, res) {
 function leerCuerpo(req) {
   return new Promise((resolve, reject) => {
     let d = "";
-    req.on("data", (c) => (d += c));
+    // Tope de 1 MB: /cod/pedido es público y sin esto cualquiera nos infla
+    // la memoria a cuerpos gigantes. Ningún uso legítimo se acerca.
+    req.on("data", (c) => {
+      d += c;
+      if (d.length > 1_000_000) {
+        reject(Object.assign(new Error("Cuerpo demasiado grande"), { status: 413 }));
+        req.destroy();
+      }
+    });
     req.on("end", () => {
       try {
         resolve(d ? JSON.parse(d) : {});
@@ -240,7 +248,13 @@ async function api(req, res, url) {
     if (!config) return json(res, 400, { error: "Falta config" });
     config.instalado = (await leerConfigCod(sesion.tienda)).instalado; // no se pisa desde el browser
     await guardarConfigCod(sesion.tienda, config);
-    if (config.instalado) await actualizarSnippet(sesion, config, URL_APP);
+    if (config.instalado) {
+      await actualizarSnippet(sesion, config, URL_APP);
+      // Footgun conocido: guardar desde un server local re-sube el snippet
+      // apuntando al APP_URL local. En la tienda REAL tiene que ser el de
+      // producción — este log lo hace visible al instante.
+      if (env.DEV_MODE === "1") console.log(`  ⚠ snippet COD re-subido apuntando a ${URL_APP} (server local)`);
+    }
     return json(res, 200, config);
   }
 
@@ -374,18 +388,6 @@ const servidor = http.createServer(async (req, res) => {
 
     // --- webhooks de Shopify (desinstalación + privacidad) ---
     if (req.method === "POST" && url.pathname === "/webhooks") return await webhooks(req, res);
-
-    // Diagnóstico temporal: huella de credenciales (no expone el secret).
-    if (url.pathname === "/debug-credenciales") {
-      const crypto = require("crypto");
-      const s = env.SHOPIFY_CLIENT_SECRET || "";
-      return json(res, 200, {
-        client_id: env.SHOPIFY_CLIENT_ID || null,
-        secret_largo: s.length,
-        secret_inicio: s.slice(0, 6),
-        secret_huella: crypto.createHash("sha256").update(s).digest("hex").slice(0, 12)
-      });
-    }
 
     // --- pedido COD desde la tienda del merchant (público, con CORS) ---
     if (url.pathname === "/cod/pedido") return await pedidoCod(req, res);
