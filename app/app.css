@@ -899,3 +899,115 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
 .cod-switch input:checked + .cod-switch__pista { background: var(--ok); }
 .cod-switch input:checked + .cod-switch__pista::after { left: 20px; }
 .cod-switch__texto { font-size: 13.5px; font-weight: 600; color: var(--negro); }
+
+/* ============================================================
+   Editor sobre el preview (estilo PagePilot): preview a pantalla
+   completa + modal por bloque + selector de imágenes
+   ============================================================ */
+
+.editor-hint {
+  font-size: 13px;
+  color: var(--suave);
+  background: var(--ia-fondo);
+  border: 1px solid var(--ia-borde);
+  border-radius: var(--radio-s);
+  padding: 9px 14px;
+  margin-bottom: 12px;
+}
+.editor-hint strong { color: var(--ia); }
+
+.marco--full { width: 100%; }
+.marco--full iframe {
+  width: 100%;
+  height: 78vh;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  background: #fff;
+}
+
+/* modal de edición por bloque, como el "Editar" de PagePilot */
+.editor-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 4000;
+  background: rgba(15, 17, 20, .45);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 6vh 16px;
+  overflow-y: auto;
+}
+.editor-modal__caja {
+  width: 100%;
+  max-width: 860px;
+  background: var(--superficie);
+  border-radius: var(--radio-l);
+  box-shadow: var(--sombra-l);
+  animation: modal-entrada .16s ease;
+  display: flex;
+  flex-direction: column;
+  max-height: 86vh;
+}
+@keyframes modal-entrada { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: none; } }
+.editor-modal__cab {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 22px;
+  border-bottom: 1px solid var(--borde-suave);
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--negro);
+  background: var(--fondo);
+  border-radius: var(--radio-l) var(--radio-l) 0 0;
+}
+.editor-modal__x {
+  background: none; border: 0;
+  font-size: 22px; line-height: 1;
+  color: var(--suave); cursor: pointer;
+  padding: 2px 6px;
+}
+.editor-modal__x:hover { color: var(--negro); }
+.editor-modal__cuerpo { padding: 20px 22px; overflow-y: auto; }
+.editor-modal__pie {
+  display: flex;
+  justify-content: flex-end;
+  padding: 14px 22px;
+  border-top: 1px solid var(--borde-suave);
+}
+
+/* selector de imágenes del pool */
+.galeria-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.galeria-picker--chica { grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); }
+.galeria-picker__img {
+  position: relative;
+  aspect-ratio: 1;
+  border: 2px solid var(--borde);
+  border-radius: 10px;
+  background: var(--fondo);
+  padding: 0;
+  cursor: pointer;
+  overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px;
+  transition: border-color .12s ease, transform .12s ease;
+}
+.galeria-picker__img:hover { border-color: #b9b9c2; transform: scale(1.02); }
+.galeria-picker__img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.galeria-picker__img.elegida { border-color: var(--ia); box-shadow: 0 0 0 2px var(--ia-fondo); }
+.galeria-picker__orden {
+  position: absolute;
+  top: 6px; left: 6px;
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: var(--ia);
+  color: #fff;
+  font-size: 12px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 1px 4px rgba(0,0,0,.25);
+}

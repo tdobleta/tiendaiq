@@ -1176,18 +1176,58 @@
       .map((n) => `<option value="${n}" ${n === v ? "selected" : ""}>${"★".repeat(n)}${"☆".repeat(5 - n)}</option>`)
       .join("")}</select>`;
 
-  function pintarEditor() {
-    const cont = $("editor");
-    // Qué secciones estaban abiertas, para no cerrarlas al repintar.
-    const abiertas = cont.querySelector("details")
-      ? new Set([...cont.querySelectorAll("details[open]")].map((x) => x.dataset.sec))
-      : new Set(["hero"]);
-    const S = (id, titulo, cuerpo) => `
-      <details class="seccion" data-sec="${id}" ${abiertas.has(id) ? "open" : ""}>
-        <summary>${titulo}</summary>
-        <div class="seccion__cuerpo">${cuerpo}</div>
-      </details>`;
+  // ---- edición sobre el preview, estilo PagePilot ----
+  //
+  // Nada de formulario lateral: al pasar el mouse por un bloque de la página
+  // aparece un botón "✎ Editar" flotando sobre él; al tocarlo se abre un
+  // modal con SOLO los campos de ese bloque (o la galería de imágenes).
+  // Los cambios pegan en vivo por postMessage; Guardar hace el PUT.
 
+  // Selector de imágenes múltiple y ordenado (galería del hero): clic para
+  // sacar/agregar; el número es la posición, la 1 es la principal.
+  function selectorImagenes(ruta) {
+    const urls = estado.pagina.urls || {};
+    const pool = (estado.pagina.data.pool_imagenes || []).map((p) => p.media_id);
+    const elegidas = leer(estado.pagina.data, ruta) || [];
+    return (
+      `<div class="galeria-picker">` +
+      pool
+        .map((id) => {
+          const pos = elegidas.indexOf(id);
+          return `<button type="button" class="galeria-picker__img ${pos > -1 ? "elegida" : ""}"
+            data-img-multi="${ruta}" data-id="${esc(id)}">
+            ${urls[id] ? `<img src="${esc(urls[id])}" alt="">` : "🖼"}
+            ${pos > -1 ? `<span class="galeria-picker__orden">${pos + 1}</span>` : ""}
+          </button>`;
+        })
+        .join("") +
+      `</div>
+      <div class="ayuda">Hacé clic para agregar o sacar. El número es el orden; la 1 es la imagen principal.</div>`
+    );
+  }
+
+  // Selector de UNA imagen (dupla, stats, íconos).
+  function selectorImagenUno(ruta, etiqueta) {
+    const urls = estado.pagina.urls || {};
+    const pool = (estado.pagina.data.pool_imagenes || []).map((p) => p.media_id);
+    const actual = leer(estado.pagina.data, ruta);
+    return (
+      `<div class="campo campo--editor"><label>${etiqueta}</label></div>
+      <div class="galeria-picker galeria-picker--chica">` +
+      pool
+        .map(
+          (id) => `<button type="button" class="galeria-picker__img ${id === actual ? "elegida" : ""}"
+            data-img-uno="${ruta}" data-id="${esc(id)}">
+            ${urls[id] ? `<img src="${esc(urls[id])}" alt="">` : "🖼"}
+          </button>`
+        )
+        .join("") +
+      `</div>`
+    );
+  }
+
+  // Cada bloque editable de la página: título del modal + sus campos.
+  function seccionesPagina() {
     const f = estado.pagina.data.facetas;
 
     const tarjetasMuro = f.resenas.items
@@ -1206,54 +1246,53 @@
       )
       .join("");
 
-    cont.innerHTML = `
-      <div class="editor__titulo">Editar la página</div>
-      <div class="editor__ayuda">Los cambios se ven al instante en el preview. Guardá para no perderlos.</div>
-
-      ${S(
-        "hero",
-        "Encabezado",
-        campo("facetas.hero.titulo", "Título") +
+    return {
+      galeria: { titulo: "Editar galería de imágenes", html: () => selectorImagenes("facetas.hero.galeria") },
+      encabezado: {
+        titulo: "Encabezado",
+        html: () =>
+          campo("facetas.hero.titulo", "Título") +
           campo("facetas.hero.subtitulo", "Subtítulo", 2) +
-          f.hero.bullets.map((_, i) => campo(`facetas.hero.bullets.${i}`, `Bullet ${i + 1}`)).join("") +
           campoNumero("facetas.hero.resenas_count", "Cantidad de reseñas (junto a las estrellas)") +
           campo("global.cta", "Texto del botón de compra")
-      )}
-
-      ${S(
-        "destacada",
-        "Reseña destacada",
-        `<div class="editor__nota">Es la reseña grande del hero. Pegá acá una reseña REAL de un cliente; sin texto, en la tienda no se muestra.</div>` +
+      },
+      bullets: {
+        titulo: "Beneficios del producto",
+        html: () => f.hero.bullets.map((_, i) => campo(`facetas.hero.bullets.${i}`, `Bullet ${i + 1}`)).join("")
+      },
+      destacada: {
+        titulo: "Reseña destacada",
+        html: () =>
+          `<div class="editor__nota">Es la reseña grande del hero. Pegá acá una reseña REAL de un cliente; sin texto, en la tienda no se muestra.</div>` +
           campo("facetas.hero.resena_destacada.autor", "Nombre", 0, true) +
           campo("facetas.hero.resena_destacada.texto", "Texto", 3, true) +
           `<div class="campo campo--editor"><label>Estrellas</label>${selectorEstrellas(
             "facetas.hero.resena_destacada.estrellas",
             f.hero.resena_destacada.estrellas ?? 5
           )}</div>`
-      )}
-
-      ${S(
-        "acordeones",
-        "Envío y devoluciones",
-        (f.hero.acordeones ?? [])
-          .map(
-            (_, i) =>
-              campo(`facetas.hero.acordeones.${i}.titulo`, `Acordeón ${i + 1} · título`) +
-              campo(`facetas.hero.acordeones.${i}.contenido`, `Acordeón ${i + 1} · contenido`, 2)
-          )
-          .join("")
-      )}
-
-      ${S(
-        "texto1",
-        "Texto + imagen 1",
-        campo("facetas.texto_img_1.titular", "Titular") + campo("facetas.texto_img_1.parrafo", "Párrafo", 4)
-      )}
-
-      ${S(
-        "iconos",
-        "Beneficios (íconos)",
-        campo("facetas.iconos.titular", "Titular") +
+      },
+      acordeones: {
+        titulo: "Envío y devoluciones",
+        html: () =>
+          (f.hero.acordeones ?? [])
+            .map(
+              (_, i) =>
+                campo(`facetas.hero.acordeones.${i}.titulo`, `Acordeón ${i + 1} · título`) +
+                campo(`facetas.hero.acordeones.${i}.contenido`, `Acordeón ${i + 1} · contenido`, 2)
+            )
+            .join("")
+      },
+      texto1: {
+        titulo: "Texto + imagen 1",
+        html: () =>
+          campo("facetas.texto_img_1.titular", "Titular") +
+          campo("facetas.texto_img_1.parrafo", "Párrafo", 4) +
+          selectorImagenUno("facetas.texto_img_1.imagen", "Imagen del bloque")
+      },
+      iconos: {
+        titulo: "Beneficios (íconos)",
+        html: () =>
+          campo("facetas.iconos.titular", "Titular") +
           campo("facetas.iconos.subtitulo", "Subtítulo") +
           f.iconos.items
             .map(
@@ -1266,38 +1305,38 @@
                 <textarea rows="2" data-ruta="facetas.iconos.items.${i}.frase" placeholder="Frase">${esc(f.iconos.items[i].frase)}</textarea>
               </div>`
             )
-            .join("")
-      )}
-
-      ${S(
-        "tabla",
-        "Tabla comparativa",
-        campo("facetas.tabla.titular", "Titular") +
+            .join("") +
+          selectorImagenUno("facetas.iconos.imagen_central", "Imagen central")
+      },
+      tabla: {
+        titulo: "Tabla comparativa",
+        html: () =>
+          campo("facetas.tabla.titular", "Titular") +
           campo("facetas.tabla.parrafo", "Párrafo", 2) +
           f.tabla.filas.map((_, i) => campo(`facetas.tabla.filas.${i}`, `Fila ${i + 1} (1-2 palabras)`)).join("") +
           campo("facetas.tabla.col_otros", "Nombre de la columna de la competencia")
-      )}
-
-      ${S(
-        "stats",
-        "Estadísticas",
-        `<div class="editor__nota">Los porcentajes son fijos de la plantilla; se editan solo las frases.</div>` +
+      },
+      stats: {
+        titulo: "Estadísticas",
+        html: () =>
+          `<div class="editor__nota">Los porcentajes son fijos de la plantilla; se editan solo las frases.</div>` +
           campo("facetas.stats.titular", "Titular") +
           f.stats.items
-            .map((s, i) => campo(`facetas.stats.items.${i}.frase`, `${s.pct}% — frase (sin números)`, 2))
-            .join("")
-      )}
-
-      ${S(
-        "texto2",
-        "Texto + imagen 2",
-        campo("facetas.texto_img_2.titular", "Titular") + campo("facetas.texto_img_2.parrafo", "Párrafo", 4)
-      )}
-
-      ${S(
-        "faq",
-        "Preguntas frecuentes",
-        campo("facetas.faq.titular", "Titular") +
+            .map((x, i) => campo(`facetas.stats.items.${i}.frase`, `${x.pct}% — frase (sin números)`, 2))
+            .join("") +
+          selectorImagenUno("facetas.stats.imagen", "Imagen del bloque")
+      },
+      texto2: {
+        titulo: "Texto + imagen 2",
+        html: () =>
+          campo("facetas.texto_img_2.titular", "Titular") +
+          campo("facetas.texto_img_2.parrafo", "Párrafo", 4) +
+          selectorImagenUno("facetas.texto_img_2.imagen", "Imagen del bloque")
+      },
+      faq: {
+        titulo: "Preguntas frecuentes",
+        html: () =>
+          campo("facetas.faq.titular", "Titular") +
           f.faq.items
             .map(
               (_, i) =>
@@ -1305,18 +1344,15 @@
                 campo(`facetas.faq.items.${i}.respuesta`, `Respuesta ${i + 1}`, 2)
             )
             .join("")
-      )}
-
-      ${S(
-        "garantia",
-        "Garantía",
-        campo("facetas.garantia.titular", "Titular") + campo("facetas.garantia.parrafo", "Párrafo", 3)
-      )}
-
-      ${S(
-        "resenas",
-        "Muro de reseñas",
-        campo("facetas.resenas.titular", "Titular") +
+      },
+      garantia: {
+        titulo: "Garantía",
+        html: () => campo("facetas.garantia.titular", "Titular") + campo("facetas.garantia.parrafo", "Párrafo", 3)
+      },
+      resenas: {
+        titulo: "Muro de reseñas",
+        html: () =>
+          campo("facetas.resenas.titular", "Titular") +
           campo("facetas.resenas.subtitulo", "Subtítulo") +
           `
           <div class="cargador">
@@ -1333,7 +1369,169 @@ Al principio dudaba pero lo uso todos los días."></textarea>
             <div class="ayuda">Van reemplazando las tarjetas guía desde la primera. Las guía que queden no se borran: son el molde para cuando tengas más reseñas.</div>
           </div>` +
           tarjetasMuro
-      )}`;
+      }
+    };
+  }
+
+  // ---- el modal de edición ----
+
+  let modalSec = null; // sección abierta
+
+  function cerrarModalEdicion() {
+    document.getElementById("editor-modal")?.remove();
+    modalSec = null;
+  }
+
+  function refrescarModal() {
+    const cuerpo = document.getElementById("editor-modal-cuerpo");
+    if (cuerpo && modalSec) cuerpo.innerHTML = seccionesPagina()[modalSec].html();
+  }
+
+  function toggleImagenGaleria(ruta, id) {
+    const arr = leer(estado.pagina.data, ruta) || [];
+    const i = arr.indexOf(id);
+    if (i > -1) arr.splice(i, 1);
+    else arr.push(id);
+    marcarSucio();
+    clearTimeout(timerPreview);
+    timerPreview = setTimeout(repintarPreview, 150);
+  }
+
+  function abrirModalEdicion(id) {
+    cerrarModalEdicion();
+    const def = seccionesPagina()[id];
+    if (!def) return;
+    modalSec = id;
+
+    const m = document.createElement("div");
+    m.className = "editor-modal";
+    m.id = "editor-modal";
+    m.innerHTML = `
+      <div class="editor-modal__caja">
+        <div class="editor-modal__cab">
+          <span>${def.titulo}</span>
+          <button class="editor-modal__x" type="button" aria-label="Cerrar">×</button>
+        </div>
+        <div class="editor-modal__cuerpo" id="editor-modal-cuerpo">${def.html()}</div>
+        <div class="editor-modal__pie">
+          <button class="btn btn--acento" id="editor-modal-guardar" type="button">Guardar</button>
+        </div>
+      </div>`;
+    document.body.appendChild(m);
+
+    m.addEventListener("input", (e) => {
+      if (e.target.dataset.ruta) actualizarDato(e.target);
+    });
+    m.addEventListener("click", async (e) => {
+      if (e.target === m || e.target.closest(".editor-modal__x")) return cerrarModalEdicion();
+      if (e.target.id === "editor-modal-guardar") {
+        await guardarCambios();
+        cerrarModalEdicion();
+        return;
+      }
+      if (e.target.id === "btn-lote") return cargarLote();
+      const multi = e.target.closest("[data-img-multi]");
+      if (multi) {
+        toggleImagenGaleria(multi.dataset.imgMulti, multi.dataset.id);
+        refrescarModal();
+        return;
+      }
+      const uno = e.target.closest("[data-img-uno]");
+      if (uno) {
+        fijar(estado.pagina.data, uno.dataset.imgUno, uno.dataset.id);
+        marcarSucio();
+        repintarPreview();
+        refrescarModal();
+      }
+    });
+  }
+
+  // ---- el botón "✎ Editar" flotante adentro del iframe ----
+
+  // A qué modal lleva cada bloque de la página. El orden importa: gana el
+  // primer selector que matchee con closest().
+  const ZONAS_EDICION = [
+    { sel: ".hero__galeria", id: "galeria" },
+    { sel: ".hero__bullets", id: "bullets" },
+    { sel: ".hero__resenas, .hero__titulo, .hero__subtitulo, .hero__precios, .hero__cantidad", id: "encabezado" },
+    { sel: ".acordeon", id: "acordeones" },
+    { sel: ".resena-destacada", id: "destacada" },
+    { sel: ".iconos", id: "iconos" },
+    { sel: ".tabla", id: "tabla" },
+    { sel: ".stats", id: "stats" },
+    { sel: ".faq", id: "faq" },
+    { sel: ".garantia", id: "garantia" },
+    { sel: ".resenas", id: "resenas" },
+    { sel: ".dupla", id: null } // texto1 o texto2 según posición
+  ];
+
+  function montarEdicionEnIframe(marco) {
+    let doc;
+    try {
+      doc = marco.contentWindow.document;
+    } catch {
+      return;
+    }
+    if (doc.getElementById("tiq-edit-btn")) return; // ya montado
+
+    const st = doc.createElement("style");
+    st.textContent = `
+      #tiq-edit-btn { position: absolute; z-index: 99999; display: none; align-items: center; gap: 6px;
+        background: #fff; border: 1px solid #d9d9de; border-radius: 9px; box-shadow: 0 4px 14px rgba(0,0,0,.16);
+        padding: 8px 14px; font: 600 13px/1 Inter, -apple-system, sans-serif; color: #1a1a1a; cursor: pointer; }
+      #tiq-edit-btn:hover { background: #f6f6f7; }
+      .tiq-zona-hover { outline: 2px dashed #4f46e5; outline-offset: 5px; border-radius: 4px; }`;
+    doc.head.appendChild(st);
+
+    const btn = doc.createElement("button");
+    btn.id = "tiq-edit-btn";
+    btn.type = "button";
+    btn.textContent = "✎ Editar";
+    doc.body.appendChild(btn);
+
+    let zonaEl = null;
+
+    const limpiar = () => {
+      btn.style.display = "none";
+      if (zonaEl) zonaEl.classList.remove("tiq-zona-hover");
+      zonaEl = null;
+    };
+
+    doc.addEventListener("mouseover", (e) => {
+      if (e.target === btn || btn.contains(e.target)) return; // no soltar el botón
+
+      let hit = null;
+      for (const z of ZONAS_EDICION) {
+        const el = e.target.closest?.(z.sel);
+        if (el) {
+          let id = z.id;
+          if (!id) id = [...doc.querySelectorAll(".dupla")].indexOf(el) === 0 ? "texto1" : "texto2";
+          hit = { el, id };
+          break;
+        }
+      }
+      if (!hit) return limpiar();
+      if (hit.el === zonaEl) return;
+
+      if (zonaEl) zonaEl.classList.remove("tiq-zona-hover");
+      zonaEl = hit.el;
+      zonaEl.classList.add("tiq-zona-hover");
+
+      const r = zonaEl.getBoundingClientRect();
+      const scrollY = doc.defaultView.scrollY;
+      btn.dataset.sec = hit.id;
+      btn.style.display = "flex";
+      btn.style.top = `${scrollY + r.top + r.height / 2 - 17}px`;
+      btn.style.left = `${Math.max(10, Math.min(r.right - 104, doc.documentElement.clientWidth - 118))}px`;
+    });
+
+    btn.addEventListener("click", () => abrirModalEdicion(btn.dataset.sec));
+
+    // Los lápices que ya dibuja la plantilla abren su modal.
+    doc.addEventListener("click", (e) => {
+      if (e.target.closest(".resenas__editar")) abrirModalEdicion("resenas");
+      if (e.target.closest(".resena-destacada__editar")) abrirModalEdicion("destacada");
+    });
   }
 
   // ---- reacción a cada tecla ----
@@ -1394,7 +1592,7 @@ Al principio dudaba pero lo uso todos los días."></textarea>
     });
 
     marcarSucio();
-    pintarEditor();
+    refrescarModal();
     repintarPreview();
   }
 
@@ -1470,38 +1668,19 @@ Al principio dudaba pero lo uso todos los días."></textarea>
         ⚠ Los cambios se guardan acá, pero en la tienda no se ven hasta que vuelvas a publicar.
       </div>
 
-      <div class="taller">
-        <aside class="editor" id="editor"></aside>
-        <div class="marco">
-          <iframe id="marco" src="/preview/index.html?app=1&t=${Date.now()}"></iframe>
-        </div>
+      <div class="editor-hint">✎ Pasá el mouse por cualquier bloque de la página y tocá <strong>Editar</strong> para cambiarlo.</div>
+
+      <div class="marco marco--full">
+        <iframe id="marco" src="/preview/index.html?app=1&t=${Date.now()}"></iframe>
       </div>`;
 
-    pintarEditor();
-
-    // Un solo listener para todos los campos, presentes y futuros.
-    const editor = $("editor");
-    editor.oninput = (e) => {
-      if (e.target.dataset.ruta) actualizarDato(e.target);
-    };
-    editor.onclick = (e) => {
-      if (e.target.id === "btn-lote") cargarLote();
-    };
-
     // El iframe no lee ningún archivo global: recibe LOS DATOS DE ESTA página
-    // por mensaje. Dos merchants generando a la vez no se pisan.
+    // por mensaje. Dos merchants generando a la vez no se pisan. El botón
+    // "✎ Editar" flotante y los lápices se montan una vez por carga.
     const marco = $("marco");
     marco.onload = () => {
       repintarPreview();
-      // Los lápices "✎ Editar" que ya dibuja la plantilla abren la sección
-      // del editor que corresponde. Mismo origen, delegado en el document
-      // para sobrevivir a cada repintado del iframe.
-      try {
-        marco.contentWindow.document.addEventListener("click", (e) => {
-          if (e.target.closest(".resenas__editar")) abrirSeccion("resenas");
-          if (e.target.closest(".resena-destacada__editar")) abrirSeccion("destacada");
-        });
-      } catch {}
+      montarEdicionEnIframe(marco);
     };
 
     $("volver").onclick = () => {
@@ -1515,14 +1694,6 @@ Al principio dudaba pero lo uso todos los días."></textarea>
     };
     $("guardar").onclick = guardarCambios;
     $("publicar").onclick = publicar;
-  }
-
-  function abrirSeccion(id) {
-    const d = vista.querySelector(`details[data-sec="${id}"]`);
-    if (!d) return;
-    d.open = true;
-    d.scrollIntoView({ behavior: "smooth", block: "start" });
-    d.querySelector("input, textarea")?.focus({ preventScroll: true });
   }
 
   async function publicar() {
