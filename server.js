@@ -320,9 +320,9 @@ const servidor = http.createServer(async (req, res) => {
       return servirEstatico(res, DIR_PLANTILLA, rel);
     }
 
-    // /paginas es una ruta del frontend (el menú lateral del admin navega
-    // ahí): sirve la misma app, que rutea por pathname.
-    if (url.pathname === "/" || url.pathname === "/index.html" || url.pathname === "/paginas")
+    // /paginas y /crear son rutas del frontend (el menú lateral del admin
+    // navega por URL): sirven la misma app, que rutea por pathname.
+    if (["/", "/index.html", "/paginas", "/crear"].includes(url.pathname))
       return servirIndex(res);
 
     return servirEstatico(res, DIR_APP, url.pathname);

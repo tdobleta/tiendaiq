@@ -162,7 +162,7 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
 .btn--acento { background: var(--ia); }
 .btn--acento:hover:not(:disabled) { background: #4338ca; }
 .btn--grande { height: 44px; padding: 0 24px; font-size: 14px; }
-.btn--chico { height: 32px; padding: 0 14px; font-size: 12.5px; }
+.btn--chico { height: 30px; padding: 0 12px; font-size: 12.5px; }
 
 /* ---------- 1. lista de productos ---------- */
 
@@ -331,7 +331,7 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
 .tarjeta__titulo + .panel__sub { margin: -14px 0 20px; }
 .panel__sub { font-size: 13px; color: var(--suave); }
 
-.progreso { text-align: right; font-size: 12px; color: var(--suave); min-width: 200px; }
+.progreso { text-align: right; font-size: 12px; color: var(--suave); min-width: 160px; }
 .progreso__barra {
   height: 5px; border-radius: 999px; background: var(--borde-suave); margin-top: 8px; overflow: hidden;
 }
@@ -342,25 +342,28 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
 
 .pasos-grilla { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
 .paso-card {
-  border: 1px solid var(--borde); border-radius: var(--radio); background: #fff;
-  padding: 20px; display: flex; flex-direction: column; align-items: flex-start; gap: 8px;
+  border: 1px solid var(--borde); border-radius: var(--radio); background: var(--superficie);
+  padding: 18px; display: flex; flex-direction: column; align-items: flex-start; gap: 0;
 }
 /* Círculo punteado = paso pendiente; negro sólido = hecho. Igual que la
    referencia: el estado se lee de un vistazo por el ícono. */
 .paso-card__icono {
   width: 28px; height: 28px; border-radius: 50%;
-  border: 1.3px dashed #c4c4c4; background: #fff; color: var(--negro);
-  display: grid; place-items: center; margin-bottom: 12px;
+  border: 1.3px dashed #cfcfd4; background: var(--superficie); color: var(--negro);
+  display: grid; place-items: center; margin-bottom: 12px; flex-shrink: 0;
 }
-.paso-card__icono svg { width: 14px; height: 14px; display: block; }
+.paso-card__icono svg { width: 13px; height: 13px; display: block; }
 .paso-card__icono--hecho { background: var(--negro); border: none; color: #fff; }
-.paso-card__titulo { font-size: 13px; font-weight: 600; color: var(--negro); }
-.paso-card__texto { font-size: 13px; color: var(--suave); flex: 1; margin-bottom: 6px; }
+.paso-card__titulo { font-size: 13px; font-weight: 600; color: var(--negro); line-height: 1.4; }
+.paso-card__texto {
+  font-size: 12.5px; color: var(--suave); line-height: 1.45;
+  margin: 3px 0 12px; flex: 1;
+}
 
-/* Badges: un solo lenguaje para todos los estados. */
+/* Badges: un solo lenguaje para todos los estados. Altura fija de 24px. */
 .chip-estado {
   display: inline-flex; align-items: center; font-size: 12px; font-weight: 500;
-  padding: 4px 11px; border-radius: 999px; line-height: 1.4;
+  height: 24px; padding: 0 10px; border-radius: 999px; line-height: 1;
 }
 .chip-estado--ok { background: var(--ok-fondo); color: #157f3d; }
 .chip-estado--pronto { background: var(--fondo); color: var(--suave); border: 1px dashed #d6d6dc; }

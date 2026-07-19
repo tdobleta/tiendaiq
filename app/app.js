@@ -1093,8 +1093,20 @@ Al principio dudaba pero lo uso todos los días."></textarea>
     preview: pantallaPreview
   };
 
+  // La URL del iframe refleja la pantalla. Sin esto, el menú del admin no
+  // puede navegar: si la app queda siempre en "/", tocar "TiendaIQ" desde
+  // el flujo es "navegar a donde ya estás" y Shopify no hace nada.
+  function sincronizarURL(pantalla) {
+    const ruta =
+      pantalla === "paginas" ? "/paginas" : pantalla === "inicio" ? "/" : "/crear";
+    if (location.pathname !== ruta) {
+      history.pushState({ pantalla }, "", ruta + location.search);
+    }
+  }
+
   function ir(pantalla) {
     estado.pantalla = pantalla;
+    sincronizarURL(pantalla);
     pintarPasos();
     PANTALLAS[pantalla]();
     window.scrollTo(0, 0);
@@ -1120,6 +1132,13 @@ Al principio dudaba pero lo uso todos los días."></textarea>
     marca.onclick = () => ir("inicio");
   }
 
-  // Ruteo por URL: el menú lateral del admin navega a /paginas.
-  ir(location.pathname.replace(/\/$/, "") === "/paginas" ? "paginas" : "inicio");
+  // Ruteo por URL: el menú lateral del admin navega por estas rutas.
+  function rutear() {
+    const ruta = location.pathname.replace(/\/$/, "");
+    if (ruta === "/paginas") ir("paginas");
+    else if (ruta === "/crear") cargarLista();
+    else ir("inicio");
+  }
+  window.addEventListener("popstate", rutear);
+  rutear();
 })();
