@@ -307,12 +307,19 @@
             <p>Elegí un producto y la IA arma la landing completa.</p>
             <button class="btn btn--chico" id="herr-crear">Crear página de producto</button>
             <div class="herramienta__preview herramienta__preview--paginas">
-              <div class="mini-card">
-                <div class="mini-media"></div>
-                <div class="mini-linea mini-linea--ancha"></div>
-                <div class="mini-linea"></div>
-                <div class="mini-boton"></div>
+              <div class="mini-app">
+                <div class="mini-app__barra"><span></span><span></span><span></span></div>
+                <div class="mini-app__cuerpo">
+                  <div class="mini-app__media"></div>
+                  <div class="mini-app__col">
+                    <div class="mini-linea mini-linea--titulo"></div>
+                    <div class="mini-linea"></div>
+                    <div class="mini-linea mini-linea--corta"></div>
+                    <div class="mini-cta"></div>
+                  </div>
+                </div>
               </div>
+              <span class="mini-chip-ia">✦ IA</span>
             </div>
           </div>
           <div class="herramienta">
@@ -320,12 +327,12 @@
             <p>Una tienda completa armada por IA desde cero.</p>
             <button class="btn btn--chico btn--fantasma" disabled>Próximamente</button>
             <div class="herramienta__preview herramienta__preview--tienda">
-              <div class="mini-card">
-                <div class="mini-media mini-media--verde"></div>
-                <div class="mini-linea mini-linea--ancha"></div>
-                <div class="mini-linea"></div>
-                <div class="mini-boton"></div>
+              <div class="mini-app">
+                <div class="mini-app__barra"><span></span><span></span><span></span></div>
+                <div class="mini-hero"></div>
+                <div class="mini-grid"><span></span><span></span><span></span></div>
               </div>
+              <span class="mini-chip-ia">✦ IA</span>
             </div>
           </div>
         </div>

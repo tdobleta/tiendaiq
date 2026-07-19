@@ -3,20 +3,58 @@
    Look de panel de admin: gris, sobrio, denso. No es la landing.
    ============================================================ */
 
-/* Design system: UN radio para todas las cards, UNA paleta 95% neutra
-   (blanco/gris/negro; el color solo comunica estado), TRES tamaños de texto
-   (20 título de página / 14 título de sección / 13 cuerpo). */
+/* ============================================================
+   DESIGN SYSTEM — la única fuente de verdad visual.
+
+   Identidad derivada del logo: bolsa con gradiente verde→azul (marca)
+   y tile índigo de analytics (color IA). 90% blanco, 8% gris, 2% color;
+   el color solo comunica significado.
+
+   Escala de espaciado (única): 4 8 12 16 20 24 32 40 48.
+   Tipografía (3 niveles): 20/700 página · 14/600 sección · 13 cuerpo.
+   ============================================================ */
 :root {
+  /* texto */
   --negro: #1a1a1a;
   --texto: #303030;
   --suave: #6b7280;
-  --borde: #e6e6ea;
+
+  /* superficies y bordes */
   --fondo: #f6f6f7;
-  --acento: #7c5cd6;
+  --superficie: #ffffff;
+  --borde: #e6e6ea;
+  --borde-suave: #f0f0f2;
+
+  /* marca (del logo) */
+  --marca-verde: #45c26a;
+  --marca-azul: #1e8fd5;
+  --gradiente-marca: linear-gradient(135deg, #45c26a 0%, #1e8fd5 100%);
+
+  /* IA (tile índigo del logo). --acento es el alias histórico. */
+  --ia: #4f46e5;
+  --ia-fondo: #eef2ff;
+  --ia-borde: #dfe3f8;
+  --acento: #4f46e5;
+
+  /* estado */
   --ok: #16a34a;
+  --ok-fondo: #e7f8ee;
   --aviso: #b45309;
-  --radio: 12px;   /* cards, todas */
-  --radio-ui: 8px; /* botones e inputs */
+  --aviso-fondo: #fdf1dc;
+  --peligro: #dc2626;
+  --peligro-fondo: #fdeaea;
+  --info: #1e8fd5;
+
+  /* radios */
+  --radio-s: 8px;   /* botones, inputs, elementos chicos */
+  --radio: 12px;    /* cards, todas */
+  --radio-l: 16px;  /* contenedores destacados */
+  --radio-ui: 8px;  /* alias */
+
+  /* sombras — tres niveles, muy suaves, estilo Shopify */
+  --sombra-s: 0 1px 2px rgba(23, 24, 28, .04);
+  --sombra-m: 0 2px 8px rgba(23, 24, 28, .06);
+  --sombra-l: 0 8px 24px rgba(23, 24, 28, .10);
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -32,6 +70,10 @@ body {
 
 button { font-family: inherit; cursor: pointer; }
 img { display: block; max-width: 100%; }
+
+/* Cada pantalla aparece con un fade mínimo (150ms, ease-out). Nada llamativo. */
+@keyframes aparecer { from { opacity: 0; transform: translateY(3px); } }
+#vista > * { animation: aparecer .15s ease-out both; }
 
 /* ---------- barra ---------- */
 
@@ -50,8 +92,15 @@ img { display: block; max-width: 100%; }
   top: 0;
   z-index: 10;
 }
-.barra__marca { font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 8px; }
-.barra__logo { color: var(--acento); font-size: 17px; }
+.barra__marca { font-weight: 600; font-size: 14px; color: var(--negro); display: flex; align-items: center; gap: 10px; }
+/* La marca: tile con el gradiente del logo y la T en blanco. */
+.barra__logo {
+  width: 26px; height: 26px; border-radius: var(--radio-s);
+  background: var(--gradiente-marca); color: #fff;
+  display: grid; place-items: center;
+  font-size: 13px; font-weight: 800; letter-spacing: 0;
+  box-shadow: var(--sombra-s);
+}
 
 .pasos { display: flex; gap: 8px; align-items: center; font-size: 12px; }
 .paso { color: var(--suave); display: flex; align-items: center; gap: 7px; font-weight: 500; }
@@ -82,12 +131,12 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
 /* Card de sección: el contenedor grande; adentro viven las cards chicas.
    Borde suave, sin sombras fuertes, radio único. */
 .tarjeta {
-  background: #fff;
+  background: var(--superficie);
   border: 1px solid var(--borde);
   border-radius: var(--radio);
   padding: 24px;
   margin-bottom: 24px;
-  box-shadow: 0 1px 2px rgba(22, 22, 26, .03);
+  box-shadow: var(--sombra-s);
 }
 .tarjeta__titulo { font-size: 14px; font-weight: 600; color: var(--negro); margin-bottom: 16px; }
 
@@ -97,29 +146,33 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
 
 .btn {
   background: var(--negro); color: #fff; border: none;
-  border-radius: var(--radio-ui);
+  border-radius: var(--radio-s);
   height: 36px; padding: 0 16px;
   font-size: 13px; font-weight: 500;
   display: inline-flex; align-items: center; justify-content: center; gap: 7px;
-  transition: background .12s, border-color .12s;
+  transition: background .15s ease-out, border-color .15s ease-out,
+              box-shadow .15s ease-out, transform .15s ease-out;
 }
 .btn:hover:not(:disabled) { background: #2e2e33; }
+.btn:active:not(:disabled) { transform: scale(.985); }
+.btn:focus-visible { outline: 2px solid var(--ia); outline-offset: 2px; }
 .btn:disabled { opacity: .45; cursor: not-allowed; }
-.btn--fantasma { background: #fff; color: var(--negro); border: 1px solid var(--borde); }
+.btn--fantasma { background: var(--superficie); color: var(--negro); border: 1px solid var(--borde); }
 .btn--fantasma:hover:not(:disabled) { background: var(--fondo); border-color: #d6d6dc; }
-.btn--acento { background: var(--acento); }
-.btn--acento:hover:not(:disabled) { background: #6b4cc4; }
+.btn--acento { background: var(--ia); }
+.btn--acento:hover:not(:disabled) { background: #4338ca; }
 .btn--grande { height: 44px; padding: 0 24px; font-size: 14px; }
 .btn--chico { height: 32px; padding: 0 14px; font-size: 12.5px; }
 
 /* ---------- 1. lista de productos ---------- */
 
 .buscador {
-  width: 100%; padding: 10px 14px; font-size: 14px; font-family: inherit;
-  border: 1px solid var(--borde); border-radius: 8px; background: #fff;
+  width: 100%; padding: 10px 14px; font-size: 13px; font-family: inherit;
+  border: 1px solid var(--borde); border-radius: var(--radio-s); background: var(--superficie);
   margin-bottom: 16px;
+  transition: border-color .15s ease-out, box-shadow .15s ease-out;
 }
-.buscador:focus { outline: 2px solid var(--acento); outline-offset: -1px; }
+.buscador:focus { outline: none; border-color: var(--ia); box-shadow: 0 0 0 3px var(--ia-fondo); }
 
 .grilla {
   display: grid;
@@ -128,11 +181,12 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
 }
 
 .producto {
-  background: #fff; border: 1px solid var(--borde); border-radius: var(--radio);
+  background: var(--superficie); border: 1px solid var(--borde); border-radius: var(--radio);
   overflow: hidden; text-align: left; padding: 0;
-  transition: border-color .12s, transform .12s;
+  transition: border-color .15s ease-out, transform .15s ease-out, box-shadow .15s ease-out;
 }
-.producto:hover { border-color: var(--acento); transform: translateY(-2px); }
+.producto:hover { border-color: #d6d6dc; transform: translateY(-2px); box-shadow: var(--sombra-m); }
+.producto:focus-visible { outline: 2px solid var(--ia); outline-offset: 2px; }
 .producto__foto {
   aspect-ratio: 1; background: var(--fondo);
   display: grid; place-items: center; color: #c3c3c3; font-size: 24px;
@@ -146,11 +200,11 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
 
 .etiqueta {
   display: inline-block; font-size: 10.5px; font-weight: 600;
-  padding: 2px 7px; border-radius: 20px; margin-top: 7px;
+  padding: 2px 8px; border-radius: 999px; margin-top: 7px;
   text-transform: uppercase; letter-spacing: .3px;
 }
-.etiqueta--borrador { background: #fef3c7; color: var(--aviso); }
-.etiqueta--publicada { background: #dcfce7; color: var(--ok); }
+.etiqueta--borrador { background: var(--aviso-fondo); color: var(--aviso); }
+.etiqueta--publicada { background: var(--ok-fondo); color: #157f3d; }
 
 /* ---------- 2. información del producto ---------- */
 
@@ -160,12 +214,17 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
 .campo:last-child { margin-bottom: 0; }
 .campo label { display: block; font-size: 13px; font-weight: 500; color: var(--negro); margin-bottom: 5px; }
 .campo .ayuda { font-size: 12px; color: var(--suave); margin-top: 5px; }
+/* Sistema de inputs: mismo borde, mismo radio, mismo focus ring en todos. */
 .campo input[type="text"], .campo input[type="number"], .campo select, .campo textarea {
-  width: 100%; padding: 9px 12px; font-size: 13.5px; font-family: inherit;
-  border: 1px solid var(--borde); border-radius: 8px; background: #fff; color: var(--texto);
+  width: 100%; padding: 9px 12px; font-size: 13px; font-family: inherit;
+  border: 1px solid var(--borde); border-radius: var(--radio-s);
+  background: var(--superficie); color: var(--texto);
+  transition: border-color .15s ease-out, box-shadow .15s ease-out;
 }
 .campo textarea { resize: vertical; line-height: 1.45; }
-.campo input:focus, .campo select:focus, .campo textarea:focus { outline: 2px solid var(--acento); outline-offset: -1px; }
+.campo input:focus, .campo select:focus, .campo textarea:focus {
+  outline: none; border-color: var(--ia); box-shadow: 0 0 0 3px var(--ia-fondo);
+}
 
 .medios { display: flex; gap: 8px; flex-wrap: wrap; }
 .medio {
@@ -218,22 +277,22 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
 .marco iframe { width: 100%; height: 100%; border: none; display: block; }
 
 .avisos {
-  background: #fffbeb; border: 1px solid #fde68a; border-radius: var(--radio);
-  padding: 12px 16px; margin-bottom: 14px; font-size: 12.5px; color: var(--aviso);
+  background: var(--aviso-fondo); border: 1px solid #f3dfb9; border-radius: var(--radio);
+  padding: 12px 16px; margin-bottom: 16px; font-size: 12.5px; color: var(--aviso);
 }
 .avisos strong { display: block; margin-bottom: 5px; }
 .avisos ul { margin: 0; padding-left: 18px; }
 
 .exito {
-  background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: var(--radio);
-  padding: 14px 16px; margin-bottom: 14px;
+  background: var(--ok-fondo); border: 1px solid #c4ecd2; border-radius: var(--radio);
+  padding: 14px 16px; margin-bottom: 16px;
 }
 .exito__titulo { font-weight: 600; color: var(--ok); font-size: 13.5px; margin-bottom: 3px; }
 .exito a { color: var(--ok); font-size: 12.5px; word-break: break-all; }
 
 .error {
-  background: #fef2f2; border: 1px solid #fecaca; border-radius: var(--radio);
-  padding: 12px 16px; margin-bottom: 14px; color: #b91c1c; font-size: 13px;
+  background: var(--peligro-fondo); border: 1px solid #f6c9c9; border-radius: var(--radio);
+  padding: 12px 16px; margin-bottom: 16px; color: #b91c1c; font-size: 13px;
 }
 
 .vacio { text-align: center; padding: 70px 20px; color: var(--suave); }
@@ -250,15 +309,15 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
 /* Banner de suscripción: tarjeta blanca con el ícono rojo, como PagePilot
    (no un cartel rojo entero). */
 .banner-plan {
-  background: #fff; border: 1px solid var(--borde); border-radius: var(--radio);
+  background: var(--superficie); border: 1px solid var(--borde); border-radius: var(--radio);
   padding: 14px 20px; margin-bottom: 24px;
   display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
   color: var(--texto); font-size: 13px;
-  box-shadow: 0 1px 2px rgba(22, 22, 26, .03);
+  box-shadow: var(--sombra-s);
 }
 .banner-plan__icono {
   width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
-  background: #dc2626; color: #fff; font-weight: 800; font-size: 14px;
+  background: var(--peligro); color: #fff; font-weight: 800; font-size: 14px;
   display: grid; place-items: center;
 }
 .banner-plan__texto { flex: 1; }
@@ -274,9 +333,12 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
 
 .progreso { text-align: right; font-size: 12px; color: var(--suave); min-width: 200px; }
 .progreso__barra {
-  height: 4px; border-radius: 4px; background: #ececf0; margin-top: 8px; overflow: hidden;
+  height: 5px; border-radius: 999px; background: var(--borde-suave); margin-top: 8px; overflow: hidden;
 }
-.progreso__barra div { height: 100%; background: var(--negro); border-radius: 4px; transition: width .3s; }
+.progreso__barra div {
+  height: 100%; background: var(--gradiente-marca); border-radius: 999px;
+  transition: width .2s ease-out;
+}
 
 .pasos-grilla { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
 .paso-card {
@@ -295,56 +357,93 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
 .paso-card__titulo { font-size: 13px; font-weight: 600; color: var(--negro); }
 .paso-card__texto { font-size: 13px; color: var(--suave); flex: 1; margin-bottom: 6px; }
 
+/* Badges: un solo lenguaje para todos los estados. */
 .chip-estado {
-  display: inline-block; font-size: 12px; font-weight: 500;
-  padding: 4px 11px; border-radius: 20px;
+  display: inline-flex; align-items: center; font-size: 12px; font-weight: 500;
+  padding: 4px 11px; border-radius: 999px; line-height: 1.4;
 }
-.chip-estado--ok { background: #dcfce7; color: #157f3d; }
+.chip-estado--ok { background: var(--ok-fondo); color: #157f3d; }
 .chip-estado--pronto { background: var(--fondo); color: var(--suave); border: 1px dashed #d6d6dc; }
+.chip-estado--ia { background: var(--ia-fondo); color: var(--ia); }
 
 /* Tiles de métrica al estilo PagePilot: fila ícono+label, valor grande
    debajo alineado con el label; primer tile violeta, segundo verde. */
+/* Métricas: el número es el protagonista, el ícono acompaña en gris. */
 .metricas { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
 .metrica {
-  border: 1px solid var(--borde); border-radius: var(--radio); background: #fff;
-  padding: 14px 18px 15px;
+  border: 1px solid var(--borde); border-radius: var(--radio); background: var(--superficie);
+  padding: 16px 18px;
+  transition: box-shadow .15s ease-out;
 }
-.metrica--violeta { background: #f6f3fe; border-color: #e6ddf9; }
-.metrica--verde { background: #f0fdf4; border-color: #d5f5df; }
+.metrica:hover { box-shadow: var(--sombra-m); }
+.metrica--violeta { background: var(--ia-fondo); border-color: var(--ia-borde); }
+.metrica--verde { background: var(--ok-fondo); border-color: #d5f5df; }
 .metrica__fila { display: flex; align-items: center; gap: 9px; }
-.metrica__icono { width: 19px; height: 19px; flex-shrink: 0; color: var(--negro); }
-.metrica--violeta .metrica__icono { color: var(--acento); }
+.metrica__icono { width: 17px; height: 17px; flex-shrink: 0; color: var(--suave); }
+.metrica--violeta .metrica__icono { color: var(--ia); }
 .metrica--verde .metrica__icono { color: var(--ok); }
 .metrica__icono svg { width: 100%; height: 100%; display: block; }
 .metrica__nombre { font-size: 13px; color: var(--texto); font-weight: 500; }
-.metrica__valor { font-size: 20px; font-weight: 700; color: var(--negro); line-height: 1.2; margin: 6px 0 0 28px; letter-spacing: -.2px; }
-.metrica--violeta .metrica__valor { color: var(--acento); }
+.metrica__valor { font-size: 22px; font-weight: 700; color: var(--negro); line-height: 1.2; margin: 8px 0 0 26px; letter-spacing: -.3px; }
+.metrica--violeta .metrica__valor { color: var(--ia); }
 
 /* Herramientas: título, texto, botón y una vista en miniatura decorativa,
    como las tarjetas con captura de PagePilot. */
 .herramientas { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
 .herramienta {
   border: 1px solid var(--borde); border-radius: var(--radio); padding: 20px;
-  background: #fff;
+  background: var(--superficie);
   display: flex; flex-direction: column; align-items: flex-start; gap: 8px;
+  transition: box-shadow .15s ease-out;
 }
+.herramienta:hover { box-shadow: var(--sombra-m); }
 .herramienta__nombre { font-size: 13px; font-weight: 600; color: var(--negro); }
 .herramienta p { font-size: 13px; color: var(--suave); margin-bottom: 4px; }
+/* Mini assets: capturas estilizadas del propio software, no ilustraciones.
+   Todos comparten lenguaje: mucho blanco, fondos suaves derivados del logo,
+   sombra media, elementos flotando. Placeholders listos para reemplazarse
+   por renders finales sin tocar el layout. */
 .herramienta__preview {
-  width: 100%; height: 140px; border-radius: var(--radio-ui); margin-top: 12px;
+  position: relative;
+  width: 100%; height: 150px; border-radius: var(--radio-s); margin-top: 12px;
   display: grid; place-items: center; overflow: hidden;
 }
-.herramienta__preview--paginas { background: linear-gradient(135deg, #ede9fe, #dbeafe); }
-.herramienta__preview--tienda { background: linear-gradient(135deg, #dcfce7, #d1fae5); }
-.mini-card {
-  width: 150px; background: #fff; border-radius: 8px; padding: 10px;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, .10);
+.herramienta__preview--paginas { background: linear-gradient(135deg, #e9f8ee 0%, #e7f2fc 100%); }
+.herramienta__preview--tienda { background: linear-gradient(135deg, #e7f2fc 0%, #e9f8ee 100%); }
+
+.mini-app {
+  width: 190px; background: var(--superficie); border-radius: 10px;
+  box-shadow: var(--sombra-l); overflow: hidden;
+  transform: translateY(4px);
 }
-.mini-media { height: 44px; border-radius: 5px; background: #e9e4fb; margin-bottom: 8px; }
-.mini-media--verde { background: #d9f3e1; }
-.mini-linea { height: 6px; border-radius: 3px; background: #ececec; margin-bottom: 5px; width: 60%; }
-.mini-linea--ancha { width: 85%; }
-.mini-boton { height: 12px; border-radius: 4px; background: var(--negro); margin-top: 7px; width: 45%; }
+.mini-app__barra {
+  display: flex; gap: 4px; align-items: center;
+  padding: 6px 8px; border-bottom: 1px solid var(--borde-suave);
+}
+.mini-app__barra span { width: 5px; height: 5px; border-radius: 50%; background: #dcdce1; }
+.mini-app__cuerpo { display: flex; gap: 8px; padding: 9px; }
+.mini-app__media {
+  width: 62px; height: 62px; border-radius: 6px; flex-shrink: 0;
+  background: linear-gradient(135deg, #d9f0e0, #d4e8f8);
+}
+.mini-app__col { flex: 1; padding-top: 2px; }
+.mini-linea { height: 5px; border-radius: 999px; background: #ececef; margin-bottom: 5px; width: 70%; }
+.mini-linea--titulo { width: 90%; height: 6px; background: #dcdce1; }
+.mini-linea--corta { width: 45%; }
+.mini-cta { height: 13px; border-radius: 4px; background: var(--negro); margin-top: 8px; width: 80%; }
+
+.mini-hero { height: 42px; background: linear-gradient(135deg, #d9f0e0, #d4e8f8); margin: 0; }
+.mini-grid { display: flex; gap: 6px; padding: 8px; }
+.mini-grid span { flex: 1; height: 34px; border-radius: 5px; background: var(--fondo); border: 1px solid var(--borde-suave); }
+
+/* La chapita IA flota sobre el asset con el gradiente de marca. */
+.mini-chip-ia {
+  position: absolute; top: 10px; right: 10px;
+  background: var(--gradiente-marca); color: #fff;
+  font-size: 10.5px; font-weight: 600; letter-spacing: .2px;
+  padding: 3px 9px; border-radius: 999px;
+  box-shadow: var(--sombra-m);
+}
 
 /* ---------- resumen de rendimiento ---------- */
 
@@ -356,8 +455,8 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
 .resumen-card__titulo { font-size: 13px; font-weight: 600; color: var(--negro); }
 .resumen-card__sub { font-size: 13px; color: var(--suave); margin: 1px 0 16px; }
 
-.mini-barra { height: 4px; border-radius: 4px; background: #ececf0; overflow: hidden; }
-.mini-barra div { height: 100%; background: var(--negro); border-radius: 4px; }
+.mini-barra { height: 4px; border-radius: 999px; background: var(--borde-suave); overflow: hidden; }
+.mini-barra div { height: 100%; background: var(--gradiente-marca); border-radius: 999px; transition: width .2s ease-out; }
 
 .embudo-fila { margin-bottom: 14px; }
 .embudo-fila:last-child { margin-bottom: 0; }
@@ -419,7 +518,12 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
   font-size: 12px; color: var(--suave); font-weight: 500;
   padding: 10px 0; border-bottom: 1px solid var(--borde);
 }
-.pagina-fila { padding: 12px 0; border-bottom: 1px solid var(--borde); }
+.pagina-fila {
+  padding: 12px 8px; margin: 0 -8px; border-radius: var(--radio-s);
+  border-bottom: 1px solid var(--borde-suave);
+  transition: background .15s ease-out;
+}
+.pagina-fila:hover { background: #fafafb; }
 .pagina-fila:last-child { border-bottom: none; }
 .pagina-fila__foto {
   width: 44px; height: 44px; border-radius: 8px; overflow: hidden;
