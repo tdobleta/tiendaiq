@@ -3,16 +3,20 @@
    Look de panel de admin: gris, sobrio, denso. No es la landing.
    ============================================================ */
 
+/* Design system: UN radio para todas las cards, UNA paleta 95% neutra
+   (blanco/gris/negro; el color solo comunica estado), TRES tamaños de texto
+   (20 título de página / 14 título de sección / 13 cuerpo). */
 :root {
   --negro: #1a1a1a;
-  --texto: #3d3d3d;
+  --texto: #303030;
   --suave: #6b7280;
-  --borde: #e3e3e3;
+  --borde: #e6e6ea;
   --fondo: #f6f6f7;
   --acento: #7c5cd6;
   --ok: #16a34a;
   --aviso: #b45309;
-  --radio: 10px;
+  --radio: 12px;   /* cards, todas */
+  --radio-ui: 8px; /* botones e inputs */
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -21,8 +25,8 @@ body {
   font-family: "Inter", -apple-system, "Segoe UI", system-ui, sans-serif;
   background: var(--fondo);
   color: var(--texto);
-  font-size: 13.5px;
-  line-height: 1.5;
+  font-size: 13px;
+  line-height: 1.55;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -31,69 +35,82 @@ img { display: block; max-width: 100%; }
 
 /* ---------- barra ---------- */
 
+/* Header claro: marca a la izquierda, pasos a la derecha, cero ruido. */
 .barra {
-  background: var(--negro);
-  color: #fff;
-  padding: 0 24px;
+  background: #fff;
+  color: var(--negro);
+  border-bottom: 1px solid var(--borde);
+  padding: 0 32px;
   height: 56px;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 32px;
   position: sticky;
   top: 0;
   z-index: 10;
 }
-.barra__marca { font-weight: 600; font-size: 15px; display: flex; align-items: center; gap: 8px; }
-.barra__logo { color: var(--acento); font-size: 18px; }
+.barra__marca { font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 8px; }
+.barra__logo { color: var(--acento); font-size: 17px; }
 
-.pasos { display: flex; gap: 6px; align-items: center; font-size: 12.5px; }
-.paso { color: #8b8b8b; display: flex; align-items: center; gap: 6px; }
+.pasos { display: flex; gap: 8px; align-items: center; font-size: 12px; }
+.paso { color: var(--suave); display: flex; align-items: center; gap: 7px; font-weight: 500; }
 .paso__n {
-  width: 19px; height: 19px; border-radius: 50%;
-  background: #3a3a3a; color: #8b8b8b;
+  width: 20px; height: 20px; border-radius: 50%;
+  background: #ececf0; color: var(--suave);
   display: grid; place-items: center; font-size: 11px; font-weight: 600;
 }
-.paso--activo { color: #fff; }
-.paso--activo .paso__n { background: var(--acento); color: #fff; }
+.paso--activo { color: var(--negro); }
+.paso--activo .paso__n { background: var(--negro); color: #fff; }
 .paso--hecho .paso__n { background: var(--ok); color: #fff; }
-.paso__sep { color: #4a4a4a; }
+.paso__sep { color: #d1d1d6; }
 
 /* ---------- layout ---------- */
 
-main { max-width: 1180px; margin: 0 auto; padding: 28px 24px 60px; }
+main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
 
-.cabecera { margin-bottom: 20px; }
-.cabecera h1 { font-size: 22px; color: var(--negro); font-weight: 600; }
-.cabecera p { color: var(--suave); margin-top: 3px; }
+.cabecera { margin-bottom: 28px; }
+.cabecera h1 { font-size: 20px; color: var(--negro); font-weight: 700; letter-spacing: -.2px; }
+.cabecera p { color: var(--suave); margin-top: 4px; }
 
 .volver {
   background: none; border: none; color: var(--suave);
-  font-size: 13px; padding: 0 0 10px; display: inline-flex; gap: 6px;
+  font-size: 13px; padding: 0 0 14px; display: inline-flex; gap: 6px;
 }
 .volver:hover { color: var(--negro); }
 
+/* Card de sección: el contenedor grande; adentro viven las cards chicas.
+   Borde suave, sin sombras fuertes, radio único. */
 .tarjeta {
   background: #fff;
   border: 1px solid var(--borde);
   border-radius: var(--radio);
-  padding: 20px;
-  margin-bottom: 16px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 1px 2px rgba(22, 22, 26, .03);
 }
-.tarjeta__titulo { font-size: 14px; font-weight: 600; color: var(--negro); margin-bottom: 14px; }
+.tarjeta__titulo { font-size: 14px; font-weight: 600; color: var(--negro); margin-bottom: 16px; }
 
-/* ---------- botones ---------- */
+/* ---------- botones: un solo sistema ----------
+   Primario negro / secundario blanco. Misma altura, mismo radio, mismo
+   padding, mismo peso. Nada suelto. */
 
 .btn {
   background: var(--negro); color: #fff; border: none;
-  border-radius: 8px; padding: 10px 18px;
-  font-size: 13.5px; font-weight: 500;
-  display: inline-flex; align-items: center; gap: 8px;
+  border-radius: var(--radio-ui);
+  height: 36px; padding: 0 16px;
+  font-size: 13px; font-weight: 500;
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  transition: background .12s, border-color .12s;
 }
-.btn:hover:not(:disabled) { opacity: .88; }
+.btn:hover:not(:disabled) { background: #2e2e33; }
 .btn:disabled { opacity: .45; cursor: not-allowed; }
 .btn--fantasma { background: #fff; color: var(--negro); border: 1px solid var(--borde); }
+.btn--fantasma:hover:not(:disabled) { background: var(--fondo); border-color: #d6d6dc; }
 .btn--acento { background: var(--acento); }
-.btn--grande { padding: 12px 26px; font-size: 14px; }
+.btn--acento:hover:not(:disabled) { background: #6b4cc4; }
+.btn--grande { height: 44px; padding: 0 24px; font-size: 14px; }
+.btn--chico { height: 32px; padding: 0 14px; font-size: 12.5px; }
 
 /* ---------- 1. lista de productos ---------- */
 
@@ -107,7 +124,7 @@ main { max-width: 1180px; margin: 0 auto; padding: 28px 24px 60px; }
 .grilla {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 14px;
+  gap: 16px;
 }
 
 .producto {
@@ -225,19 +242,19 @@ main { max-width: 1180px; margin: 0 auto; padding: 28px 24px 60px; }
 
 .inicio-cabecera {
   display: flex; align-items: center; justify-content: space-between;
-  gap: 16px; flex-wrap: wrap; margin-bottom: 18px;
+  gap: 16px; flex-wrap: wrap; margin-bottom: 28px;
 }
-.inicio-cabecera h1 { font-size: 20px; color: var(--negro); font-weight: 700; }
+.inicio-cabecera h1 { font-size: 20px; color: var(--negro); font-weight: 700; letter-spacing: -.2px; }
 .inicio-cabecera__acciones { display: flex; gap: 10px; flex-wrap: wrap; }
-.inicio-cabecera__acciones .btn { padding: 8px 14px; font-size: 13px; border-radius: 8px; }
 
 /* Banner de suscripción: tarjeta blanca con el ícono rojo, como PagePilot
    (no un cartel rojo entero). */
 .banner-plan {
   background: #fff; border: 1px solid var(--borde); border-radius: var(--radio);
-  padding: 12px 16px; margin-bottom: 16px;
-  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-  color: var(--texto); font-size: 13.5px;
+  padding: 14px 20px; margin-bottom: 24px;
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  color: var(--texto); font-size: 13px;
+  box-shadow: 0 1px 2px rgba(22, 22, 26, .03);
 }
 .banner-plan__icono {
   width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
@@ -252,47 +269,45 @@ main { max-width: 1180px; margin: 0 auto; padding: 28px 24px 60px; }
   gap: 16px; flex-wrap: wrap;
 }
 /* El subtítulo va PEGADO al título de sección (2-3px), como PagePilot. */
-.tarjeta__titulo + .panel__sub { margin: -12px 0 16px; }
-.panel__sub { font-size: 12.5px; color: var(--suave); }
+.tarjeta__titulo + .panel__sub { margin: -14px 0 20px; }
+.panel__sub { font-size: 13px; color: var(--suave); }
 
-.progreso { text-align: right; font-size: 12px; color: var(--suave); min-width: 185px; }
+.progreso { text-align: right; font-size: 12px; color: var(--suave); min-width: 200px; }
 .progreso__barra {
-  height: 4px; border-radius: 4px; background: var(--borde); margin-top: 8px; overflow: hidden;
+  height: 4px; border-radius: 4px; background: #ececf0; margin-top: 8px; overflow: hidden;
 }
 .progreso__barra div { height: 100%; background: var(--negro); border-radius: 4px; transition: width .3s; }
 
-.pasos-grilla { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.pasos-grilla { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
 .paso-card {
-  border: 1px solid var(--borde); border-radius: 10px; background: #fff;
-  padding: 15px 16px; display: flex; flex-direction: column; align-items: flex-start; gap: 6px;
+  border: 1px solid var(--borde); border-radius: var(--radio); background: #fff;
+  padding: 20px; display: flex; flex-direction: column; align-items: flex-start; gap: 8px;
 }
 /* Círculo punteado = paso pendiente; negro sólido = hecho. Igual que la
    referencia: el estado se lee de un vistazo por el ícono. */
 .paso-card__icono {
   width: 28px; height: 28px; border-radius: 50%;
   border: 1.3px dashed #c4c4c4; background: #fff; color: var(--negro);
-  display: grid; place-items: center; margin-bottom: 8px;
+  display: grid; place-items: center; margin-bottom: 12px;
 }
 .paso-card__icono svg { width: 14px; height: 14px; display: block; }
 .paso-card__icono--hecho { background: var(--negro); border: none; color: #fff; }
-.paso-card__titulo { font-size: 13.5px; font-weight: 600; color: var(--negro); }
-.paso-card__texto { font-size: 12.5px; color: var(--suave); flex: 1; }
+.paso-card__titulo { font-size: 13px; font-weight: 600; color: var(--negro); }
+.paso-card__texto { font-size: 13px; color: var(--suave); flex: 1; margin-bottom: 6px; }
 
 .chip-estado {
-  display: inline-block; font-size: 11px; font-weight: 600;
-  padding: 4px 10px; border-radius: 20px;
+  display: inline-block; font-size: 12px; font-weight: 500;
+  padding: 4px 11px; border-radius: 20px;
 }
-.chip-estado--ok { background: #dcfce7; color: var(--ok); }
-.chip-estado--pronto { background: var(--fondo); color: var(--suave); border: 1px dashed var(--borde); }
-
-.btn--chico { padding: 7px 14px; font-size: 12.5px; }
+.chip-estado--ok { background: #dcfce7; color: #157f3d; }
+.chip-estado--pronto { background: var(--fondo); color: var(--suave); border: 1px dashed #d6d6dc; }
 
 /* Tiles de métrica al estilo PagePilot: fila ícono+label, valor grande
    debajo alineado con el label; primer tile violeta, segundo verde. */
-.metricas { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.metricas { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
 .metrica {
-  border: 1px solid var(--borde); border-radius: 10px; background: #fff;
-  padding: 13px 16px 14px;
+  border: 1px solid var(--borde); border-radius: var(--radio); background: #fff;
+  padding: 14px 18px 15px;
 }
 .metrica--violeta { background: #f6f3fe; border-color: #e6ddf9; }
 .metrica--verde { background: #f0fdf4; border-color: #d5f5df; }
@@ -301,22 +316,22 @@ main { max-width: 1180px; margin: 0 auto; padding: 28px 24px 60px; }
 .metrica--violeta .metrica__icono { color: var(--acento); }
 .metrica--verde .metrica__icono { color: var(--ok); }
 .metrica__icono svg { width: 100%; height: 100%; display: block; }
-.metrica__nombre { font-size: 12.5px; color: var(--texto); font-weight: 500; }
-.metrica__valor { font-size: 20px; font-weight: 700; color: var(--negro); line-height: 1.2; margin: 5px 0 0 28px; }
+.metrica__nombre { font-size: 13px; color: var(--texto); font-weight: 500; }
+.metrica__valor { font-size: 20px; font-weight: 700; color: var(--negro); line-height: 1.2; margin: 6px 0 0 28px; letter-spacing: -.2px; }
 .metrica--violeta .metrica__valor { color: var(--acento); }
 
 /* Herramientas: título, texto, botón y una vista en miniatura decorativa,
    como las tarjetas con captura de PagePilot. */
-.herramientas { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+.herramientas { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
 .herramienta {
-  border: 1px solid var(--borde); border-radius: 10px; padding: 15px 16px;
+  border: 1px solid var(--borde); border-radius: var(--radio); padding: 20px;
   background: #fff;
-  display: flex; flex-direction: column; align-items: flex-start; gap: 7px;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 8px;
 }
-.herramienta__nombre { font-size: 13.5px; font-weight: 600; color: var(--negro); }
-.herramienta p { font-size: 12.5px; color: var(--suave); }
+.herramienta__nombre { font-size: 13px; font-weight: 600; color: var(--negro); }
+.herramienta p { font-size: 13px; color: var(--suave); margin-bottom: 4px; }
 .herramienta__preview {
-  width: 100%; height: 130px; border-radius: 8px; margin-top: 8px;
+  width: 100%; height: 140px; border-radius: var(--radio-ui); margin-top: 12px;
   display: grid; place-items: center; overflow: hidden;
 }
 .herramienta__preview--paginas { background: linear-gradient(135deg, #ede9fe, #dbeafe); }
@@ -422,14 +437,15 @@ main { max-width: 1180px; margin: 0 auto; padding: 28px 24px 60px; }
    ============================================================ */
 
 .embebida { background: transparent; }
-.embebida main { padding: 4px 0 40px; max-width: none; }
+.embebida main { padding: 8px 28px 64px; max-width: 1440px; margin: 0 auto; }
 
 /* La barra negra y el logo sobran (Shopify ya los pone), pero los pasos no:
    son la orientación del flujo. Queda solo eso, sin fondo. */
 .embebida .barra {
   background: transparent;
+  border-bottom: none;
   height: auto;
-  padding: 14px 0 0;
+  padding: 14px 28px 0;
   position: static;
 }
 .embebida .barra__marca { display: none; }
