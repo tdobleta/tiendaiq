@@ -161,7 +161,7 @@
 
     vista.innerHTML = `
       <div class="inicio-cabecera">
-        <h1>Bienvenido a TiendaIQ <span class="saludo">👋</span></h1>
+        <h1>Bienvenido a TiendaIQ</h1>
         <div class="inicio-cabecera__acciones">
           <button class="btn btn--fantasma" id="ir-paginas">❐ Ver mis páginas</button>
           <button class="btn btn--marca" id="ir-crear">✦ Crear página de producto con IA</button>
@@ -228,12 +228,11 @@
         <div class="metricas">
           ${metrica(ICONO_METRICA.pagina, "Páginas creadas", creadas, "violeta")}
           ${metrica(ICONO_METRICA.check, "Publicadas", publicadas, "verde")}
-          ${metrica(ICONO_METRICA.lapiz, "Borradores", creadas - publicadas, "ambar")}
+          ${metrica(ICONO_METRICA.lapiz, "Borradores", creadas - publicadas)}
           ${metrica(
             ICONO_METRICA.estrella,
             "Plan",
-            plan.plan === "pro" ? "Pro · sin límite" : `${plan.usadas} de ${plan.limite}`,
-            "azul"
+            plan.plan === "pro" ? "Pro · sin límite" : `${plan.usadas} de ${plan.limite}`
           )}
         </div>
       </section>
