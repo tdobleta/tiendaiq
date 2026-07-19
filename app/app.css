@@ -1081,3 +1081,39 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
   /* buscador y grilla de productos */
   .grilla { grid-template-columns: repeat(2, 1fr); gap: 10px; }
 }
+
+/* ============================================================
+   Refinamiento visual (brief a11y/minimal): pasteles ultra
+   suaves con borde a juego, CTA esmeralda, focus rings,
+   paso deshabilitado, alturas del resumen
+   ============================================================ */
+
+/* métricas: fondo pastel plano (~10%), borde a juego, número nítido oscuro */
+.metrica--violeta { background: #f5f6ff; border-color: #e2e5f9; }
+.metrica--verde   { background: #f0faf4; border-color: #d5eede; }
+.metrica--ambar   { background: #fdf8ec; border-color: #f1e5c6; }
+.metrica--azul    { background: #f0f7fd; border-color: #d9eaf8; }
+.metrica--violeta .metrica__valor { color: #3730a3; }
+.metrica--verde   .metrica__valor { color: #166534; }
+.metrica--ambar   .metrica__valor { color: #92400e; }
+.metrica--azul    .metrica__valor { color: #1e5f8f; }
+
+/* CTA principal: esmeralda sólido, moderno y con contraste AA */
+.btn--marca { background: #059669; }
+.btn--marca:hover:not(:disabled) { background: #047857; }
+
+/* accesibilidad: anillo de foco visible en TODO lo interactivo */
+a:focus-visible, button:focus-visible, input:focus-visible,
+select:focus-visible, textarea:focus-visible, [contenteditable]:focus-visible,
+summary:focus-visible, label:focus-visible {
+  outline: 2px solid var(--ia);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* paso "Próximamente": deshabilitado visual, sin interacción implícita */
+.paso-card--off { opacity: .55; }
+.paso-card--off:hover { box-shadow: none; transform: none; }
+
+/* resumen: aire garantizado para los gráficos */
+.resumen-card { min-height: 200px; }

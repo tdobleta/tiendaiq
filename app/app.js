@@ -133,13 +133,13 @@
       tienda: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9l1.2-4h13.6L20 9"/><path d="M4 9c0 1.4 1.2 2.5 2.7 2.5S9.3 10.4 9.3 9c0 1.4 1.2 2.5 2.7 2.5s2.7-1.1 2.7-2.5c0 1.4 1.2 2.5 2.7 2.5S20 10.4 20 9"/><path d="M5 11.5V20h14v-8.5"/><path d="M10 20v-5h4v5"/></svg>`
     };
 
-    const pasoCard = (icono, titulo, texto, hecho, cola, tinte) => `
-      <div class="paso-card paso-card--${tinte}">
+    const pasoCard = (icono, titulo, texto, hecho, cola, tinte, off) => `
+      <article class="paso-card paso-card--${tinte} ${off ? "paso-card--off" : ""}" ${off ? 'aria-disabled="true"' : ""}>
         <div class="paso-card__icono ${hecho ? "paso-card__icono--hecho" : ""}">${icono}</div>
         <div class="paso-card__titulo">${titulo}</div>
         <p class="paso-card__texto">${texto}</p>
         ${cola}
-      </div>`;
+      </article>`;
 
     // Tiles de métrica al estilo PagePilot: ícono + label arriba, valor
     // grande abajo alineado con el label.
@@ -178,7 +178,7 @@
           : ""
       }
 
-      <div class="tarjeta">
+      <section class="tarjeta">
         <div class="panel__cabecera">
           <div>
             <div class="tarjeta__titulo">Primeros pasos</div>
@@ -216,12 +216,13 @@
             "Una tienda Shopify completa armada desde cero.",
             false,
             `<span class="chip-estado chip-estado--pronto">Próximamente</span>`,
-            "azul"
+            "azul",
+            true
           )}
         </div>
-      </div>
+      </section>
 
-      <div class="tarjeta">
+      <section class="tarjeta">
         <div class="tarjeta__titulo">Tus números</div>
         <div class="panel__sub">Sincronizado con tu tienda, en tiempo real</div>
         <div class="metricas">
@@ -235,9 +236,9 @@
             "azul"
           )}
         </div>
-      </div>
+      </section>
 
-      <div class="tarjeta">
+      <section class="tarjeta">
         <div class="tarjeta__titulo">Resumen de rendimiento</div>
         <div class="panel__sub">Tu embudo, hitos y mejores páginas de producto</div>
         <div class="resumen-grilla">
@@ -301,9 +302,9 @@
             }
           </div>
         </div>
-      </div>
+      </section>
 
-      <div class="tarjeta">
+      <section class="tarjeta">
         <div class="tarjeta__titulo">Herramientas</div>
         <div class="panel__sub">Explorá lo que TiendaIQ puede hacer por tu tienda.</div>
         <div class="herramientas">
@@ -361,7 +362,7 @@
             </div>
           </div>
         </div>
-      </div>`;
+      </section>`;
 
     const aLista = () => cargarLista();
     ["ir-crear", "paso-crear", "herr-crear", "resumen-crear"].forEach((id) => {
