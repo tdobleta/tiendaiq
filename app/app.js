@@ -29,6 +29,7 @@
     producto: null, // el elegido
     pagina: null, // el registro que devuelve el server
     volverA: "lista", // desde dónde se abrió el editor: "lista" o "paginas"
+    cod: null, // { config, tab, sucio } de la pantalla COD
     error: null
   };
 
@@ -78,7 +79,7 @@
 
   function pintarPasos() {
     // El inicio y la tabla de páginas son paneles, no pasos del flujo.
-    if (estado.pantalla === "inicio" || estado.pantalla === "paginas") {
+    if (["inicio", "paginas", "cod"].includes(estado.pantalla)) {
       $("pasos").innerHTML = "";
       return;
     }
@@ -323,6 +324,26 @@
             </div>
           </div>
           <div class="herramienta">
+            <div class="herramienta__nombre">Formulario contra reembolso (COD)</div>
+            <p>Tus clientes piden y pagan al recibir: el formulario crea el pedido en Shopify.</p>
+            <button class="btn btn--chico" id="herr-cod">Configurar COD</button>
+            <div class="herramienta__preview herramienta__preview--cod">
+              <div class="mini-app">
+                <div class="mini-app__barra"><span></span><span></span><span></span></div>
+                <div class="mini-app__cuerpo">
+                  <div class="mini-app__col">
+                    <div class="mini-linea mini-linea--titulo"></div>
+                    <div class="mini-linea"></div>
+                    <div class="mini-linea"></div>
+                    <div class="mini-linea mini-linea--corta"></div>
+                    <div class="mini-cta mini-cta--cod"></div>
+                  </div>
+                </div>
+              </div>
+              <span class="mini-chip-ia">🛵 COD</span>
+            </div>
+          </div>
+          <div class="herramienta">
             <div class="herramienta__nombre">Tienda Shopify con IA</div>
             <p>Una tienda completa armada por IA desde cero.</p>
             <button class="btn btn--chico btn--fantasma" disabled>Próximamente</button>
@@ -350,6 +371,8 @@
     });
     const bPlan = $("ir-plan");
     if (bPlan) bPlan.onclick = irASuscripcion;
+    const bCod = $("herr-cod");
+    if (bCod) bCod.onclick = () => ir("cod");
   }
 
   // ---------- 0b. mis páginas (tabla de páginas generadas) ----------
@@ -445,6 +468,335 @@
         vista.insertAdjacentHTML("afterbegin", `<div class="error">✖ ${esc(e.message)}</div>`)
       );
     }
+  }
+
+  // ---------- 0c. formulario COD (pago contra reembolso) ----------
+  //
+  // Página especializada, estilo Releasit: el merchant configura el botón,
+  // los campos, las tarifas y las ofertas; "Inyectar en el tema" sube el
+  // script a su tienda. El preview usa EL MISMO js/css que la tienda
+  // (window.TiendaIQCOD), así lo que se ve acá es lo que ve el cliente.
+
+  const PRODUCTO_DEMO = {
+    titulo: "Producto de ejemplo",
+    imagen: null,
+    moneda: "USD",
+    variantes: [{ id: 1, titulo: "Default", precio: 3999, disponible: true }]
+  };
+
+  async function pantallaCod() {
+    vista.innerHTML = `<div class="generando"><div class="giro"></div><h2>Leyendo la configuración…</h2></div>`;
+    try {
+      estado.cod = { config: await api("/cod"), tab: estado.cod?.tab || "boton", sucio: false };
+    } catch (e) {
+      vista.innerHTML = `<div class="error">✖ No se pudo leer la configuración: ${esc(e.message)}</div>`;
+      return;
+    }
+    if (estado.pantalla !== "cod") return;
+    pintarCod();
+  }
+
+  const TABS_COD = [
+    { id: "boton", texto: "Botón de compra" },
+    { id: "campos", texto: "Campos del formulario" },
+    { id: "estilo", texto: "Estilo" },
+    { id: "tarifas", texto: "Tarifas de envío" },
+    { id: "ofertas", texto: "Ofertas de cantidad" },
+    { id: "textos", texto: "Textos" }
+  ];
+
+  // Campo genérico atado a una ruta de la config: data-cfg. Al tipear se
+  // actualiza la config y el preview; Guardar hace el PUT.
+  function campoCod(ruta, etiqueta, tipo = "text", extra = "") {
+    const v = leer(estado.cod.config, ruta);
+    if (tipo === "color")
+      return `<div class="campo campo--editor cod-color"><label>${etiqueta}</label>
+        <span class="cod-color__fila"><input type="color" data-cfg="${ruta}" value="${esc(v || "#000000")}">
+        <code>${esc(v || "#000000")}</code></span></div>`;
+    if (tipo === "check")
+      return `<label class="cod-check"><input type="checkbox" data-cfg="${ruta}" data-tipo="bool" ${v ? "checked" : ""}> ${etiqueta}</label>`;
+    if (tipo === "numero")
+      return `<div class="campo campo--editor"><label>${etiqueta}</label>
+        <input type="number" data-cfg="${ruta}" data-tipo="numero" value="${esc(v ?? 0)}" ${extra}></div>`;
+    if (tipo === "select")
+      return `<div class="campo campo--editor"><label>${etiqueta}</label><select data-cfg="${ruta}">${extra}</select></div>`;
+    return `<div class="campo campo--editor"><label>${etiqueta}</label>
+      <input type="text" data-cfg="${ruta}" value="${esc(v ?? "")}"></div>`;
+  }
+
+  function tabCod() {
+    const c = estado.cod.config;
+    const op = (val, texto, actual) => `<option value="${val}" ${actual === val ? "selected" : ""}>${texto}</option>`;
+
+    if (estado.cod.tab === "boton")
+      return `
+        ${campoCod("boton.texto", "Texto del botón")}
+        ${campoCod("boton.subtitulo", "Subtítulo (opcional)")}
+        <div class="fila-doble-cod">
+          ${campoCod("boton.icono", "Ícono", "select",
+            op("billete", "Billete", c.boton.icono) + op("carrito", "Carrito", c.boton.icono) +
+            op("camion", "Camión", c.boton.icono) + op("casa", "Casa", c.boton.icono) + op("ninguno", "Sin ícono", c.boton.icono))}
+          ${campoCod("boton.animacion", "Animación", "select",
+            op("ninguna", "Ninguna", c.boton.animacion) + op("latido", "Latido", c.boton.animacion) + op("sacudida", "Sacudida", c.boton.animacion))}
+        </div>
+        <div class="fila-doble-cod">
+          ${campoCod("boton.color_fondo", "Color de fondo", "color")}
+          ${campoCod("boton.color_texto", "Color del texto", "color")}
+        </div>
+        <div class="fila-doble-cod">
+          ${campoCod("boton.tamano", "Tamaño del texto (px)", "numero", 'min="12" max="26"')}
+          ${campoCod("boton.radio", "Radio del borde (px)", "numero", 'min="0" max="40"')}
+        </div>
+        <div class="fila-doble-cod">
+          ${campoCod("boton.borde_ancho", "Ancho del borde (px)", "numero", 'min="0" max="6"')}
+          ${campoCod("boton.sombra", "Sombra (0 = sin sombra)", "numero", 'min="0" max="12"')}
+        </div>
+        ${campoCod("boton.borde_color", "Color del borde", "color")}
+        ${campoCod("boton.sticky", "Botón adhesivo abajo en móviles", "check")}`;
+
+    if (estado.cod.tab === "campos")
+      return `
+        <div class="editor__nota">Elegí qué datos pide el formulario. La etiqueta se puede reescribir (p. ej. "Cédula" o "Barrio").</div>
+        ${c.campos
+          .map(
+            (x, i) => `
+            <div class="cod-campo-fila">
+              <input type="text" data-cfg="campos.${i}.etiqueta" value="${esc(x.etiqueta)}">
+              <label><input type="checkbox" data-cfg="campos.${i}.visible" data-tipo="bool" ${x.visible !== false ? "checked" : ""}> Visible</label>
+              <label><input type="checkbox" data-cfg="campos.${i}.obligatorio" data-tipo="bool" ${x.obligatorio ? "checked" : ""}> Obligatorio</label>
+            </div>`
+          )
+          .join("")}
+        <div class="cod-separador"></div>
+        ${campoCod("extras.boletin", "Mostrar casilla de suscripción al boletín", "check")}
+        ${campoCod("extras.terminos", "Exigir aceptar términos y condiciones", "check")}
+        ${c.extras.terminos ? campoCod("extras.terminos_url", "URL de los términos y condiciones") : ""}`;
+
+    if (estado.cod.tab === "estilo")
+      return `
+        <div class="editor__nota">El estilo del formulario que se abre al tocar el botón.</div>
+        <div class="fila-doble-cod">
+          ${campoCod("formulario.fondo", "Fondo del formulario", "color")}
+          ${campoCod("formulario.texto", "Color del texto", "color")}
+        </div>
+        <div class="fila-doble-cod">
+          ${campoCod("formulario.radio", "Radio del formulario (px)", "numero", 'min="0" max="30"')}
+          ${campoCod("formulario.campo_radio", "Radio de los campos (px)", "numero", 'min="0" max="30"')}
+        </div>
+        <div class="fila-doble-cod">
+          ${campoCod("formulario.campo_fondo", "Fondo de los campos", "color")}
+          ${campoCod("formulario.campo_borde", "Borde de los campos", "color")}
+        </div>
+        <div class="fila-doble-cod">
+          ${campoCod("formulario.borde_ancho", "Borde del formulario (px)", "numero", 'min="0" max="6"')}
+          ${campoCod("formulario.borde_color", "Color del borde", "color")}
+        </div>`;
+
+    if (estado.cod.tab === "tarifas")
+      return `
+        <div class="editor__nota">Las opciones de envío que el cliente elige en el formulario. El precio se suma al total y queda en el pedido de Shopify.</div>
+        ${c.tarifas
+          .map(
+            (t, i) => `
+            <div class="cod-tarifa-fila">
+              <input type="text" placeholder="Nombre (ej: Envío estándar)" data-cfg="tarifas.${i}.nombre" value="${esc(t.nombre)}">
+              <input type="number" min="0" step="0.01" placeholder="Precio" data-cfg="tarifas.${i}.precio" data-tipo="numero" value="${esc(t.precio)}">
+              <button class="btn btn--fantasma btn--chico" data-accion="tarifa-borrar" data-i="${i}" ${c.tarifas.length <= 1 ? "disabled" : ""}>✕</button>
+            </div>`
+          )
+          .join("")}
+        <button class="btn btn--fantasma btn--chico" data-accion="tarifa-agregar">＋ Añadir tarifa</button>
+        <div class="ayuda" style="margin-top:8px">Precio 0 se muestra como "${esc(c.textos.gratis)}".</div>`;
+
+    if (estado.cod.tab === "ofertas")
+      return `
+        ${campoCod("ofertas.activo", "Activar ofertas de cantidad (reemplazan al selector de cantidad)", "check")}
+        <div class="editor__nota">El cliente elige cuántas unidades lleva y el descuento se aplica solo en el pedido. Ideal para subir el ticket promedio.</div>
+        ${c.ofertas.tiers
+          .map(
+            (t, i) => `
+            <div class="cod-tier-fila">
+              <input type="number" min="1" max="10" title="Cantidad" data-cfg="ofertas.tiers.${i}.cantidad" data-tipo="numero" value="${esc(t.cantidad)}">
+              <input type="number" min="0" max="90" title="Descuento %" data-cfg="ofertas.tiers.${i}.descuento" data-tipo="numero" value="${esc(t.descuento)}">
+              <input type="text" placeholder="Etiqueta (ej: 2 unidades — la más elegida)" data-cfg="ofertas.tiers.${i}.etiqueta" value="${esc(t.etiqueta)}">
+              <button class="btn btn--fantasma btn--chico" data-accion="tier-borrar" data-i="${i}" ${c.ofertas.tiers.length <= 1 ? "disabled" : ""}>✕</button>
+            </div>`
+          )
+          .join("")}
+        <button class="btn btn--fantasma btn--chico" data-accion="tier-agregar">＋ Añadir oferta</button>
+        <div class="ayuda" style="margin-top:8px">Columnas: cantidad · % de descuento · etiqueta.</div>`;
+
+    // textos
+    return `
+      ${campoCod("textos.titulo", "Título del formulario")}
+      ${campoCod("textos.subtitulo", "Subtítulo")}
+      ${campoCod("textos.cta", "Botón de enviar — {total} se reemplaza por el total")}
+      <div class="cod-separador"></div>
+      ${campoCod("textos.exito_titulo", "Éxito · título")}
+      ${campoCod("textos.exito_texto", "Éxito · mensaje")}
+      ${campoCod("textos.exito_boton", "Éxito · botón")}
+      <div class="cod-separador"></div>
+      ${campoCod("textos.boletin", "Texto de la casilla del boletín")}
+      ${campoCod("textos.gratis", "Cómo se muestra el envío gratis")}`;
+  }
+
+  function pintarCod() {
+    const c = estado.cod.config;
+    const inst = c.instalado;
+
+    vista.innerHTML = `
+      <div class="inicio-cabecera">
+        <h1><button class="volver-flecha" id="volver-inicio">←</button> Formulario contra reembolso</h1>
+        <div class="inicio-cabecera__acciones">
+          <label class="cod-check cod-check--activo">
+            <input type="checkbox" id="cod-activo" ${c.activo ? "checked" : ""}> Formulario activo
+          </label>
+          <button class="btn btn--fantasma" id="cod-guardar" ${estado.cod.sucio ? "" : "disabled"}>${estado.cod.sucio ? "Guardar cambios" : "✓ Guardado"}</button>
+        </div>
+      </div>
+
+      ${
+        inst
+          ? `<div class="cod-banner cod-banner--ok">✓ Inyectado en el tema <strong>${esc(inst.tema)}</strong> · ${esc(fechaCorta(inst.fecha))}
+               <button class="btn btn--fantasma btn--chico" id="cod-instalar">↻ Volver a inyectar</button></div>`
+          : `<div class="cod-banner cod-banner--aviso">⚠ Todavía no está inyectado en tu tema: el botón no aparece en la tienda.
+               <button class="btn btn--chico" id="cod-instalar">▲ Inyectar en el tema</button></div>`
+      }
+
+      <div class="cod-tabs">
+        ${TABS_COD.map(
+          (t) => `<button class="cod-tab ${estado.cod.tab === t.id ? "cod-tab--activa" : ""}" data-tab="${t.id}">${t.texto}</button>`
+        ).join("")}
+      </div>
+
+      <div class="cod-layout">
+        <div class="tarjeta" id="cod-panel">${tabCod()}</div>
+        <aside class="tarjeta cod-preview">
+          <div class="tarjeta__titulo">Vista previa</div>
+          <div class="panel__sub">Así se ve en tu página de producto</div>
+          <div class="cod-preview__marco">
+            <div class="cod-preview__prod">
+              <div class="cod-preview__foto">🛍</div>
+              <div>
+                <div class="cod-preview__nombre">${esc(PRODUCTO_DEMO.titulo)}</div>
+                <div class="cod-preview__precio">$ 39,99</div>
+              </div>
+            </div>
+            <div class="cod-preview__addto">Agregar al carrito</div>
+            <div id="cod-preview-boton"></div>
+          </div>
+          <button class="btn btn--acento" id="cod-ver-form" style="width:100%;margin-top:14px">Ver el formulario completo</button>
+        </aside>
+      </div>`;
+
+    $("volver-inicio").onclick = () => salirCod("inicio");
+    pintarBotonPreview();
+
+    // --- tabs ---
+    vista.querySelectorAll("[data-tab]").forEach((b) => {
+      b.onclick = () => {
+        estado.cod.tab = b.dataset.tab;
+        pintarCod();
+      };
+    });
+
+    // --- edición: un listener para todos los campos data-cfg ---
+    const panel = $("cod-panel");
+    panel.addEventListener("input", (e) => {
+      const ruta = e.target.dataset.cfg;
+      if (!ruta) return;
+      let v = e.target.type === "checkbox" ? e.target.checked : e.target.value;
+      if (e.target.dataset.tipo === "numero") v = Number(v) || 0;
+      fijar(estado.cod.config, ruta, v);
+      // el código junto al selector de color refleja el valor
+      if (e.target.type === "color") e.target.parentElement.querySelector("code").textContent = v;
+      marcarSucioCod();
+      pintarBotonPreview();
+      // mostrar/ocultar la URL de términos exige repintar el tab
+      if (ruta === "extras.terminos") pintarCod();
+    });
+
+    panel.addEventListener("click", (e) => {
+      const accion = e.target.dataset.accion;
+      if (!accion) return;
+      const cfg = estado.cod.config;
+      const i = Number(e.target.dataset.i);
+      if (accion === "tarifa-agregar") cfg.tarifas.push({ id: "t" + Date.now(), nombre: "", precio: 0 });
+      if (accion === "tarifa-borrar" && cfg.tarifas.length > 1) cfg.tarifas.splice(i, 1);
+      if (accion === "tier-agregar" && cfg.ofertas.tiers.length < 5)
+        cfg.ofertas.tiers.push({ cantidad: cfg.ofertas.tiers.length + 1, descuento: 0, etiqueta: "" });
+      if (accion === "tier-borrar" && cfg.ofertas.tiers.length > 1) cfg.ofertas.tiers.splice(i, 1);
+      marcarSucioCod();
+      pintarCod();
+    });
+
+    $("cod-activo").onchange = (e) => {
+      estado.cod.config.activo = e.target.checked;
+      marcarSucioCod();
+    };
+
+    $("cod-guardar").onclick = guardarCod;
+    $("cod-instalar").onclick = instalarCod;
+    $("cod-ver-form").onclick = () => {
+      const capa = window.TiendaIQCOD.armarModal(estado.cod.config, PRODUCTO_DEMO, { preview: true });
+      document.body.appendChild(capa);
+    };
+  }
+
+  function pintarBotonPreview() {
+    const cont = $("cod-preview-boton");
+    if (!cont || !window.TiendaIQCOD) return;
+    cont.innerHTML = "";
+    cont.appendChild(window.TiendaIQCOD.armarBoton(estado.cod.config));
+  }
+
+  function marcarSucioCod() {
+    estado.cod.sucio = true;
+    const b = $("cod-guardar");
+    if (b) {
+      b.disabled = false;
+      b.textContent = "Guardar cambios";
+      b.classList.add("btn--acento");
+      b.classList.remove("btn--fantasma");
+    }
+  }
+
+  async function guardarCod() {
+    const b = $("cod-guardar");
+    b.disabled = true;
+    b.textContent = "Guardando…";
+    try {
+      estado.cod.config = await api("/cod", { method: "PUT", body: { config: estado.cod.config } });
+      estado.cod.sucio = false;
+      b.textContent = "✓ Guardado";
+      b.classList.remove("btn--acento");
+      b.classList.add("btn--fantasma");
+    } catch (e) {
+      b.disabled = false;
+      b.textContent = "Guardar cambios";
+      vista.insertAdjacentHTML("afterbegin", `<div class="error">✖ No se pudo guardar: ${esc(e.message)}</div>`);
+    }
+  }
+
+  async function instalarCod() {
+    // Instalar con cambios sin guardar los perdería: primero el PUT.
+    if (estado.cod.sucio) await guardarCod();
+    const b = $("cod-instalar");
+    b.disabled = true;
+    b.textContent = "Inyectando…";
+    try {
+      estado.cod.config = await api("/cod/instalar", { method: "POST" });
+      pintarCod();
+    } catch (e) {
+      b.disabled = false;
+      b.textContent = "▲ Inyectar en el tema";
+      vista.insertAdjacentHTML("afterbegin", `<div class="error">✖ ${esc(e.message)}</div>`);
+    }
+  }
+
+  function salirCod(destino) {
+    if (estado.cod?.sucio && !confirm("Hay cambios sin guardar. ¿Salir igual?")) return;
+    ir(destino);
   }
 
   // ---------- 1. lista ----------
@@ -1087,6 +1439,7 @@ Al principio dudaba pero lo uso todos los días."></textarea>
   const PANTALLAS = {
     inicio: pantallaInicio,
     paginas: pantallaPaginas,
+    cod: pantallaCod,
     lista: pantallaLista,
     informacion: pantallaInformacion,
     generando: pantallaGenerando,
@@ -1098,7 +1451,9 @@ Al principio dudaba pero lo uso todos los días."></textarea>
   // el flujo es "navegar a donde ya estás" y Shopify no hace nada.
   function sincronizarURL(pantalla) {
     const ruta =
-      pantalla === "paginas" ? "/paginas" : pantalla === "inicio" ? "/" : "/crear";
+      pantalla === "paginas" ? "/paginas"
+      : pantalla === "cod" ? "/cod"
+      : pantalla === "inicio" ? "/" : "/crear";
     if (location.pathname !== ruta) {
       history.pushState({ pantalla }, "", ruta + location.search);
     }
@@ -1136,6 +1491,7 @@ Al principio dudaba pero lo uso todos los días."></textarea>
   function rutear() {
     const ruta = location.pathname.replace(/\/$/, "");
     if (ruta === "/paginas") ir("paginas");
+    else if (ruta === "/cod") ir("cod");
     else if (ruta === "/crear") cargarLista();
     else ir("inicio");
   }

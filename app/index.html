@@ -23,6 +23,7 @@
   <ui-nav-menu style="display:none">
     <a href="/" rel="home">Inicio</a>
     <a href="/paginas">Páginas de producto con IA</a>
+    <a href="/cod">Formulario COD</a>
   </ui-nav-menu>
 
   <!-- Adentro del admin, Shopify ya pone su propio header: el nuestro sobra.
@@ -35,6 +36,11 @@
   </header>
 
   <main id="vista"></main>
+
+  <!-- El MISMO script/css que se inyecta en la tienda, para que el preview
+       del formulario COD sea idéntico a lo que ve el cliente final. -->
+  <link rel="stylesheet" href="/cod-form/tiendaiq-cod.css">
+  <script src="/cod-form/tiendaiq-cod.js"></script>
 
   <script src="app.js"></script>
 </body>

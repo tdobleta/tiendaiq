@@ -16,7 +16,10 @@ const crypto = require("crypto");
 const { env } = require("./shopify");
 const { guardarTienda, normalizar, esDominioValido } = require("./tiendas");
 
-const ALCANCES = "read_products,write_products,read_themes,write_themes";
+// write_orders: lo usa el formulario COD para crear pedidos contra reembolso.
+// OJO: al agregar un alcance, las tiendas ya instaladas tienen que volver a
+// pasar por /auth?shop=... para autorizarlo.
+const ALCANCES = "read_products,write_products,read_themes,write_themes,write_orders";
 
 // Comparación en tiempo constante: comparar firmas con === filtra el secreto
 // de a un carácter por vez.

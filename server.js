@@ -28,11 +28,13 @@ const { sesionDe, borrarTienda, listarTiendas } = require("./tiendas");
 const { guardarPaginaDB, leerPaginaDB, listarPaginasDB } = require("./db");
 const { iniciarInstalacion, terminarInstalacion, tiendaDelPase } = require("./auth");
 const { estadoPlan, exigirCupo, contarUso, crearSuscripcion } = require("./facturacion");
+const { leerConfigCod, guardarConfigCod, instalarCod, actualizarSnippet, crearPedidoCod } = require("./cod");
 
 // Render (y cualquier host) fija el puerto por env; local usa 4321.
 const PUERTO = Number(env.PORT || process.env.PORT || 4321);
 const DIR_APP = path.join(__dirname, "app");
 const DIR_PLANTILLA = path.join(__dirname, "plantilla-producto");
+const DIR_COD = path.join(__dirname, "cod-form");
 
 // La URL pública por la que Shopify nos alcanza. En producción es la de Render;
 // en local, el túnel. Sin esto el OAuth no puede volver.
@@ -226,6 +228,31 @@ async function api(req, res, url) {
     return p ? json(res, 200, p) : json(res, 404, { error: "No existe esa página" });
   }
 
+  // GET /api/cod — la config del formulario contra reembolso
+  if (req.method === "GET" && ruta === "/api/cod") {
+    return json(res, 200, await leerConfigCod(sesion.tienda));
+  }
+
+  // PUT /api/cod — guardar la config. Si ya está inyectado en el tema,
+  // re-sube el snippet (la config viaja adentro) para que la tienda la vea.
+  if (req.method === "PUT" && ruta === "/api/cod") {
+    const { config } = await leerCuerpo(req);
+    if (!config) return json(res, 400, { error: "Falta config" });
+    config.instalado = (await leerConfigCod(sesion.tienda)).instalado; // no se pisa desde el browser
+    await guardarConfigCod(sesion.tienda, config);
+    if (config.instalado) await actualizarSnippet(sesion, config, URL_APP);
+    return json(res, 200, config);
+  }
+
+  // POST /api/cod/instalar — inyecta (o re-inyecta) el formulario en el tema
+  if (req.method === "POST" && ruta === "/api/cod/instalar") {
+    const config = await leerConfigCod(sesion.tienda);
+    const { tema } = await instalarCod(sesion, config, URL_APP);
+    config.instalado = { tema, fecha: new Date().toISOString() };
+    await guardarConfigCod(sesion.tienda, config);
+    return json(res, 200, config);
+  }
+
   // GET /api/plan — estado del plan para la UI
   if (req.method === "GET" && ruta === "/api/plan") {
     return json(res, 200, await estadoPlan(sesion));
@@ -287,6 +314,54 @@ async function api(req, res, url) {
   return json(res, 404, { error: "Ruta desconocida" });
 }
 
+// ---------- pedido COD (público, viene de la tienda del merchant) ----------
+
+// Rate limit mínimo: por IP+tienda, 10 pedidos cada 10 minutos. Suficiente
+// para frenar un script tonto sin molestar a una tienda real.
+const ventanaCod = new Map();
+function pasaRateLimit(clave) {
+  const ahora = Date.now();
+  const marcas = (ventanaCod.get(clave) || []).filter((t) => ahora - t < 10 * 60 * 1000);
+  if (marcas.length >= 10) return false;
+  marcas.push(ahora);
+  ventanaCod.set(clave, marcas);
+  if (ventanaCod.size > 5000) ventanaCod.clear(); // que no crezca infinito
+  return true;
+}
+
+const CORS_COD = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type"
+};
+
+async function pedidoCod(req, res) {
+  if (req.method === "OPTIONS") {
+    return void res.writeHead(204, CORS_COD).end();
+  }
+  const responder = (codigo, cuerpo) => {
+    res.writeHead(codigo, { "Content-Type": "application/json; charset=utf-8", ...CORS_COD });
+    res.end(JSON.stringify(cuerpo));
+  };
+  try {
+    const pedido = await leerCuerpo(req);
+    const tienda = String(pedido.tienda || "");
+    const sesion = await sesionDe(tienda); // tira si la tienda no está instalada
+
+    const ip = req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || req.socket.remoteAddress || "?";
+    if (!pasaRateLimit(`${sesion.tienda}|${ip}`)) {
+      return responder(429, { ok: false, error: "Demasiados intentos. Probá de nuevo en unos minutos." });
+    }
+
+    const { orden } = await crearPedidoCod(sesion, pedido);
+    console.log(`  🛵 pedido COD ${orden} · ${sesion.tienda}`);
+    return responder(200, { ok: true, orden });
+  } catch (e) {
+    console.error("✖ pedido COD:", e.message);
+    return responder(400, { ok: false, error: e.message });
+  }
+}
+
 // ---------- servidor ----------
 
 const servidor = http.createServer(async (req, res) => {
@@ -312,8 +387,16 @@ const servidor = http.createServer(async (req, res) => {
       });
     }
 
+    // --- pedido COD desde la tienda del merchant (público, con CORS) ---
+    if (url.pathname === "/cod/pedido") return await pedidoCod(req, res);
+
     // --- app ---
     if (url.pathname.startsWith("/api/")) return await api(req, res, url);
+
+    // Assets del formulario COD (la app del admin los usa para el preview).
+    if (url.pathname.startsWith("/cod-form/")) {
+      return servirEstatico(res, DIR_COD, url.pathname.replace(/^\/cod-form\/?/, ""));
+    }
 
     if (url.pathname.startsWith("/preview")) {
       const rel = url.pathname.replace(/^\/preview\/?/, "") || "index.html";
@@ -322,7 +405,7 @@ const servidor = http.createServer(async (req, res) => {
 
     // /paginas y /crear son rutas del frontend (el menú lateral del admin
     // navega por URL): sirven la misma app, que rutea por pathname.
-    if (["/", "/index.html", "/paginas", "/crear"].includes(url.pathname))
+    if (["/", "/index.html", "/paginas", "/crear", "/cod"].includes(url.pathname))
       return servirIndex(res);
 
     return servirEstatico(res, DIR_APP, url.pathname);
