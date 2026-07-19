@@ -23,11 +23,12 @@
   const estado = {
     pantalla: "inicio",
     productos: [],
-    paginas: [], // resumen de páginas para el inicio
+    paginas: [], // resumen de páginas para el inicio y la tabla
     plan: null,
     filtro: "",
     producto: null, // el elegido
     pagina: null, // el registro que devuelve el server
+    volverA: "lista", // desde dónde se abrió el editor: "lista" o "paginas"
     error: null
   };
 
@@ -76,8 +77,8 @@
   // ---------- barra de pasos ----------
 
   function pintarPasos() {
-    // El inicio es un panel, no un paso del flujo: sin barra.
-    if (estado.pantalla === "inicio") {
+    // El inicio y la tabla de páginas son paneles, no pasos del flujo.
+    if (estado.pantalla === "inicio" || estado.pantalla === "paginas") {
       $("pasos").innerHTML = "";
       return;
     }
@@ -232,6 +233,72 @@
       </div>
 
       <div class="tarjeta">
+        <div class="tarjeta__titulo">Resumen de rendimiento</div>
+        <div class="panel__sub">Tu embudo, hitos y mejores páginas de producto</div>
+        <div class="resumen-grilla">
+          <div class="resumen-card">
+            <div class="resumen-card__titulo">Embudo de conversión</div>
+            <div class="resumen-card__sub">De la visita a la compra</div>
+            <div class="embudo-fila">
+              <div class="embudo-fila__cab"><span>Vistas de página</span></div>
+              <div class="embudo-fila__valor">0</div>
+              <div class="mini-barra"><div style="width:0%"></div></div>
+            </div>
+            <div class="embudo-fila">
+              <div class="embudo-fila__cab"><span>Añadido al carrito</span><span class="embudo-fila__pct">0.0%<small>de las vistas de página</small></span></div>
+              <div class="embudo-fila__valor">0</div>
+              <div class="mini-barra"><div style="width:0%"></div></div>
+            </div>
+            <div class="embudo-fila">
+              <div class="embudo-fila__cab"><span>Compras</span><span class="embudo-fila__pct">0.0%<small>de las vistas de página</small></span></div>
+              <div class="embudo-fila__valor">0</div>
+              <div class="mini-barra"><div style="width:0%"></div></div>
+            </div>
+          </div>
+
+          <div class="resumen-card">
+            <div class="resumen-card__titulo">Hitos</div>
+            <div class="resumen-card__sub">Desbloqueá hitos a medida que crecés</div>
+            ${["Primera venta", "Primeros 100 $ de ingresos", "Primeros 1.000 $ de ingresos", "Primeros 100 pedidos"]
+              .map(
+                (h) => `
+                <div class="hito-fila">
+                  <div class="hito-fila__cab"><span>${h}</span><span>0%</span></div>
+                  <div class="mini-barra"><div style="width:0%"></div></div>
+                </div>`
+              )
+              .join("")}
+          </div>
+
+          <div class="resumen-card">
+            <div class="resumen-card__titulo">Páginas de producto principales</div>
+            <div class="resumen-card__sub">Tus últimas páginas publicadas</div>
+            ${
+              publicadas
+                ? estado.paginas
+                    .filter((p) => p.estado === "publicada")
+                    .slice(0, 4)
+                    .map(
+                      (p) => `
+                      <div class="pagina-mini">
+                        <div class="pagina-mini__foto">${p.imagen ? `<img src="${esc(p.imagen)}" alt="" loading="lazy">` : "🖼"}</div>
+                        <div class="pagina-mini__titulo">${esc(p.titulo || "Sin título")}</div>
+                        ${p.url_publica ? `<a href="${esc(p.url_publica)}" target="_blank">Ver</a>` : ""}
+                      </div>`
+                    )
+                    .join("")
+                : `<div class="resumen-vacio">
+                     <div class="resumen-vacio__icono">◧</div>
+                     <div class="resumen-vacio__titulo">Aún no hay datos de productos</div>
+                     <p>Creá tu primera página de producto con IA para empezar a registrar ingresos acá.</p>
+                     <button class="btn btn--chico" id="resumen-crear">＋ Crear página de producto con IA</button>
+                   </div>`
+            }
+          </div>
+        </div>
+      </div>
+
+      <div class="tarjeta">
         <div class="tarjeta__titulo">Herramientas</div>
         <div class="panel__sub">Explorá lo que TiendaIQ puede hacer por tu tienda.</div>
         <div class="herramientas">
@@ -265,12 +332,112 @@
       </div>`;
 
     const aLista = () => cargarLista();
-    ["ir-crear", "ir-paginas", "paso-crear", "paso-publicar", "herr-crear"].forEach((id) => {
+    ["ir-crear", "paso-crear", "herr-crear", "resumen-crear"].forEach((id) => {
       const b = $(id);
       if (b) b.onclick = aLista;
     });
+    // Ver/gestionar páginas → la tabla de páginas (ahí se publica y edita).
+    ["ir-paginas", "paso-publicar"].forEach((id) => {
+      const b = $(id);
+      if (b) b.onclick = () => ir("paginas");
+    });
     const bPlan = $("ir-plan");
     if (bPlan) bPlan.onclick = irASuscripcion;
+  }
+
+  // ---------- 0b. mis páginas (tabla de páginas generadas) ----------
+
+  const fechaCorta = (iso) => {
+    if (!iso) return "";
+    const f = new Date(iso);
+    return isNaN(f) ? "" : f.toLocaleDateString("es-AR", { day: "numeric", month: "short", year: "numeric" });
+  };
+
+  async function pantallaPaginas() {
+    vista.innerHTML = `<div class="generando"><div class="giro"></div><h2>Leyendo tus páginas…</h2></div>`;
+    try {
+      estado.paginas = await api("/paginas");
+    } catch (e) {
+      vista.innerHTML = `<div class="error">✖ No se pudieron leer las páginas: ${esc(e.message)}</div>`;
+      return;
+    }
+    if (estado.pantalla !== "paginas") return;
+
+    const paginas = [...estado.paginas].sort((a, b) =>
+      (b.actualizado || "").localeCompare(a.actualizado || "")
+    );
+
+    const fila = (p) => `
+      <div class="pagina-fila" data-id="${esc(p.id)}">
+        <div class="pagina-fila__foto">${p.imagen ? `<img src="${esc(p.imagen)}" alt="" loading="lazy">` : "🖼"}</div>
+        <div class="pagina-fila__info">
+          <div class="pagina-fila__titulo">${esc(p.titulo || "Sin título")}</div>
+          <div class="pagina-fila__fecha">${esc(fechaCorta(p.actualizado))}</div>
+        </div>
+        <span class="etiqueta etiqueta--${esc(p.estado)}">${esc(p.estado)}</span>
+        ${
+          p.url_publica
+            ? `<a class="pagina-fila__link" href="${esc(p.url_publica)}" target="_blank">Ver en la tienda</a>`
+            : `<span class="pagina-fila__link pagina-fila__link--vacio"></span>`
+        }
+        <button class="btn btn--fantasma btn--chico" data-editar="${esc(p.id)}">✎ Editar y publicar</button>
+      </div>`;
+
+    vista.innerHTML = `
+      <div class="inicio-cabecera">
+        <h1><button class="volver-flecha" id="volver-inicio">←</button> Páginas de producto</h1>
+        <div class="inicio-cabecera__acciones">
+          <button class="btn" id="ir-crear">✦ Crear página de producto con IA</button>
+        </div>
+      </div>
+
+      <div class="tarjeta">
+        <div class="tarjeta__titulo">Páginas de producto</div>
+        <div class="panel__sub">Administrá tus páginas de producto generadas por IA</div>
+        ${
+          paginas.length
+            ? `<div class="pagina-tabla">
+                 <div class="pagina-tabla__cabecera">
+                   <span></span><span>Producto</span><span>Estado</span><span>Tienda</span><span></span>
+                 </div>
+                 ${paginas.map(fila).join("")}
+               </div>`
+            : `<div class="vacio">
+                 Todavía no generaste ninguna página.<br><br>
+                 <button class="btn" id="vacio-crear">✦ Crear página de producto con IA</button>
+               </div>`
+        }
+      </div>`;
+
+    $("volver-inicio").onclick = () => ir("inicio");
+    const crear = $("ir-crear") || $("vacio-crear");
+    if (crear) crear.onclick = () => cargarLista();
+    const vacioCrear = $("vacio-crear");
+    if (vacioCrear) vacioCrear.onclick = () => cargarLista();
+    vista.querySelectorAll("[data-editar]").forEach((b) => {
+      b.onclick = () => abrirDesdeTabla(b.dataset.editar);
+    });
+  }
+
+  async function abrirDesdeTabla(id) {
+    const resumen = estado.paginas.find((p) => p.id === id);
+    vista.innerHTML = `<div class="generando"><div class="giro"></div><h2>Abriendo la página…</h2></div>`;
+    try {
+      estado.pagina = await api(`/paginas/${id}`);
+      estado.producto = {
+        id: estado.pagina.shopify_product_id,
+        titulo: resumen?.titulo || estado.pagina.data?.fuente?.titulo_crudo || "",
+        imagen: resumen?.imagen || null,
+        estado: estado.pagina.estado
+      };
+      estado.volverA = "paginas";
+      ir("preview");
+    } catch (e) {
+      ir("paginas");
+      requestAnimationFrame(() =>
+        vista.insertAdjacentHTML("afterbegin", `<div class="error">✖ ${esc(e.message)}</div>`)
+      );
+    }
   }
 
   // ---------- 1. lista ----------
@@ -798,7 +965,9 @@ Al principio dudaba pero lo uso todos los días."></textarea>
     const publicada = pg.estado === "publicada";
 
     vista.innerHTML = `
-      <button class="volver" id="volver">← Volver a los productos</button>
+      <button class="volver" id="volver">← ${
+        estado.volverA === "paginas" ? "Volver a mis páginas" : "Volver a los productos"
+      }</button>
 
       ${
         publicada && pg.url_publica
@@ -870,7 +1039,8 @@ Al principio dudaba pero lo uso todos los días."></textarea>
 
     $("volver").onclick = () => {
       if (sucio && !confirm("Hay cambios sin guardar. ¿Salir igual?")) return;
-      cargarLista();
+      if (estado.volverA === "paginas") ir("paginas");
+      else cargarLista();
     };
     $("regenerar").onclick = () => {
       if (sucio && !confirm("Regenerar descarta los cambios sin guardar. ¿Seguir?")) return;
@@ -909,6 +1079,7 @@ Al principio dudaba pero lo uso todos los días."></textarea>
 
   const PANTALLAS = {
     inicio: pantallaInicio,
+    paginas: pantallaPaginas,
     lista: pantallaLista,
     informacion: pantallaInformacion,
     generando: pantallaGenerando,
@@ -923,6 +1094,7 @@ Al principio dudaba pero lo uso todos los días."></textarea>
   }
 
   async function cargarLista() {
+    estado.volverA = "lista";
     estado.pantalla = "lista";
     pintarPasos();
     vista.innerHTML = `<div class="generando"><div class="giro"></div><h2>Leyendo tu tienda…</h2></div>`;
@@ -941,5 +1113,6 @@ Al principio dudaba pero lo uso todos los días."></textarea>
     marca.onclick = () => ir("inicio");
   }
 
-  ir("inicio");
+  // Ruteo por URL: el menú lateral del admin navega a /paginas.
+  ir(location.pathname.replace(/\/$/, "") === "/paginas" ? "paginas" : "inicio");
 })();

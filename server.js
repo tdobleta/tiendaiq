@@ -197,19 +197,25 @@ async function api(req, res, url) {
     );
   }
 
-  // GET /api/paginas — resumen para el inicio (no toca Shopify, solo DB)
+  // GET /api/paginas — resumen para el inicio y la tabla de páginas
+  // (no toca Shopify, solo DB)
   if (req.method === "GET" && ruta === "/api/paginas") {
     const ps = await listarPaginas(sesion.tienda);
     return json(
       res,
       200,
-      ps.map((p) => ({
-        id: p.id,
-        estado: p.estado,
-        url_publica: p.url_publica || null,
-        titulo: p.data?.facetas?.hero?.titulo || null,
-        actualizado: p.actualizado || null
-      }))
+      ps.map((p) => {
+        const galeria = p.data?.facetas?.hero?.galeria || [];
+        return {
+          id: p.id,
+          shopify_product_id: p.shopify_product_id || null,
+          estado: p.estado,
+          url_publica: p.url_publica || null,
+          titulo: p.data?.facetas?.hero?.titulo || null,
+          imagen: (galeria.length && p.urls?.[galeria[0]]) || null,
+          actualizado: p.actualizado || null
+        };
+      })
     );
   }
 
@@ -314,7 +320,10 @@ const servidor = http.createServer(async (req, res) => {
       return servirEstatico(res, DIR_PLANTILLA, rel);
     }
 
-    if (url.pathname === "/" || url.pathname === "/index.html") return servirIndex(res);
+    // /paginas es una ruta del frontend (el menú lateral del admin navega
+    // ahí): sirve la misma app, que rutea por pathname.
+    if (url.pathname === "/" || url.pathname === "/index.html" || url.pathname === "/paginas")
+      return servirIndex(res);
 
     return servirEstatico(res, DIR_APP, url.pathname);
   } catch (e) {
