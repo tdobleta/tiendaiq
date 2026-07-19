@@ -1183,6 +1183,15 @@
   // modal con SOLO los campos de ese bloque (o la galería de imágenes).
   // Los cambios pegan en vivo por postMessage; Guardar hace el PUT.
 
+  // Tile "＋ Subir": mete una foto de la compu al producto (media de Shopify)
+  // y la deja elegida en el selector desde el que se subió.
+  const tileSubir = (destino, ruta) => `
+    <label class="galeria-picker__img galeria-picker__subir" title="Subir una imagen desde tu computadora">
+      <span class="galeria-picker__subir-mas">＋</span>
+      <span class="galeria-picker__subir-txt">Subir</span>
+      <input type="file" accept="image/*" hidden data-subir="${destino}" data-ruta-subir="${ruta}">
+    </label>`;
+
   // Selector de imágenes múltiple y ordenado (galería del hero): clic para
   // sacar/agregar; el número es la posición, la 1 es la principal.
   function selectorImagenes(ruta) {
@@ -1201,19 +1210,25 @@
           </button>`;
         })
         .join("") +
+      tileSubir("multi", ruta) +
       `</div>
-      <div class="ayuda">Hacé clic para agregar o sacar. El número es el orden; la 1 es la imagen principal.</div>`
+      <div class="ayuda">Hacé clic para agregar o sacar. El número es el orden; la 1 es la imagen principal. Con ＋ subís una foto nueva desde tu computadora.</div>`
     );
   }
 
-  // Selector de UNA imagen (dupla, stats, íconos).
-  function selectorImagenUno(ruta, etiqueta) {
+  // Selector de UNA imagen (dupla, stats, íconos, foto de reseña).
+  // `nulo` agrega la opción "Sin foto" (guarda null).
+  function selectorImagenUno(ruta, etiqueta, nulo) {
     const urls = estado.pagina.urls || {};
     const pool = (estado.pagina.data.pool_imagenes || []).map((p) => p.media_id);
     const actual = leer(estado.pagina.data, ruta);
     return (
-      `<div class="campo campo--editor"><label>${etiqueta}</label></div>
-      <div class="galeria-picker galeria-picker--chica">` +
+      (etiqueta ? `<div class="campo campo--editor"><label>${etiqueta}</label></div>` : "") +
+      `<div class="galeria-picker galeria-picker--chica">` +
+      (nulo
+        ? `<button type="button" class="galeria-picker__img galeria-picker__quitar ${actual ? "" : "elegida"}"
+             data-img-quitar="${ruta}">✕<span>Sin foto</span></button>`
+        : "") +
       pool
         .map(
           (id) => `<button type="button" class="galeria-picker__img ${id === actual ? "elegida" : ""}"
@@ -1222,8 +1237,48 @@
           </button>`
         )
         .join("") +
+      tileSubir("uno", ruta) +
       `</div>`
     );
+  }
+
+  // Lee el archivo, lo manda al server (que lo sube a Shopify como media del
+  // producto) y lo deja elegido donde corresponda.
+  async function subirImagenNueva(archivo, destino, ruta, inp) {
+    const tile = inp.closest("label");
+    tile.classList.add("galeria-picker__subir--ocupado");
+    tile.querySelector(".galeria-picker__subir-txt").textContent = "Subiendo…";
+    try {
+      const base64 = await new Promise((res, rej) => {
+        const fr = new FileReader();
+        fr.onload = () => res(String(fr.result).split(",")[1]);
+        fr.onerror = () => rej(new Error("No se pudo leer el archivo"));
+        fr.readAsDataURL(archivo);
+      });
+      const r = await api(`/paginas/${estado.pagina.id}/imagenes`, {
+        method: "POST",
+        body: { nombre: archivo.name, mime: archivo.type, base64 }
+      });
+      estado.pagina.data.pool_imagenes = estado.pagina.data.pool_imagenes || [];
+      if (!estado.pagina.data.pool_imagenes.some((p) => p.media_id === r.media_id)) {
+        estado.pagina.data.pool_imagenes.push({ media_id: r.media_id, tipo: "producto_limpio" });
+      }
+      estado.pagina.urls = { ...(estado.pagina.urls || {}), [r.media_id]: r.url };
+      if (destino === "multi") {
+        const arr = leer(estado.pagina.data, ruta) || [];
+        if (!arr.includes(r.media_id)) arr.push(r.media_id);
+      } else {
+        fijar(estado.pagina.data, ruta, r.media_id);
+      }
+      marcarSucio();
+      repintarPreview();
+      refrescarModal();
+    } catch (e) {
+      tile.classList.remove("galeria-picker__subir--ocupado");
+      tile.querySelector(".galeria-picker__subir-txt").textContent = "Subir";
+      const cuerpo = document.getElementById("editor-modal-cuerpo");
+      cuerpo?.insertAdjacentHTML("afterbegin", `<div class="error">✖ No se pudo subir la imagen: ${esc(e.message)}</div>`);
+    }
   }
 
   // Cada bloque editable de la página: título del modal + sus campos.
@@ -1242,6 +1297,10 @@
           </div>
           <textarea rows="2" placeholder="Texto de la reseña"
                     data-ruta="facetas.resenas.items.${i}.texto">${esc(r.texto ?? "")}</textarea>
+          <details class="resena-edit__foto">
+            <summary>🖼 Foto del cliente${r.imagen ? " · elegida" : ""}</summary>
+            ${selectorImagenUno(`facetas.resenas.items.${i}.imagen`, "", true)}
+          </details>
         </fieldset>`
       )
       .join("");
@@ -1357,16 +1416,10 @@
           `
           <div class="cargador">
             <label>Cargar reseñas reales en lote</label>
-            <textarea id="lote" rows="6" placeholder="Una reseña por bloque, separadas por una línea en blanco.
-La primera línea es el nombre; el resto, el texto.
-
-María G.
-Me llegó en 3 días y funciona tal cual el video.
-
-Carla R.
-Al principio dudaba pero lo uso todos los días."></textarea>
+            <textarea id="lote" rows="6" placeholder="María G.
+Me llegó en 3 días y funciona tal cual el video."></textarea>
             <button class="btn btn--fantasma" id="btn-lote" type="button">↧ Volcar al muro</button>
-            <div class="ayuda">Van reemplazando las tarjetas guía desde la primera. Las guía que queden no se borran: son el molde para cuando tengas más reseñas.</div>
+            <div class="ayuda">Una reseña por bloque, separadas por una línea en blanco: la primera línea es el nombre y el resto el texto. Van reemplazando las tarjetas guía desde la primera.</div>
           </div>` +
           tarjetasMuro
       }
@@ -1442,6 +1495,19 @@ Al principio dudaba pero lo uso todos los días."></textarea>
         marcarSucio();
         repintarPreview();
         refrescarModal();
+        return;
+      }
+      const quitar = e.target.closest("[data-img-quitar]");
+      if (quitar) {
+        fijar(estado.pagina.data, quitar.dataset.imgQuitar, null);
+        marcarSucio();
+        repintarPreview();
+        refrescarModal();
+      }
+    });
+    m.addEventListener("change", (e) => {
+      if (e.target.dataset.subir && e.target.files?.length) {
+        subirImagenNueva(e.target.files[0], e.target.dataset.subir, e.target.dataset.rutaSubir, e.target);
       }
     });
   }

@@ -97,14 +97,14 @@ async function webhooks(req, res) {
   res.writeHead(200).end();
 }
 
-function leerCuerpo(req) {
+function leerCuerpo(req, limite = 1_000_000) {
   return new Promise((resolve, reject) => {
     let d = "";
-    // Tope de 1 MB: /cod/pedido es público y sin esto cualquiera nos infla
-    // la memoria a cuerpos gigantes. Ningún uso legítimo se acerca.
+    // Tope de 1 MB por defecto: /cod/pedido es público y sin esto cualquiera
+    // nos infla la memoria. La subida de imágenes pasa un límite mayor.
     req.on("data", (c) => {
       d += c;
-      if (d.length > 1_000_000) {
+      if (d.length > limite) {
         reject(Object.assign(new Error("Cuerpo demasiado grande"), { status: 413 }));
         req.destroy();
       }
@@ -311,6 +311,28 @@ async function api(req, res, url) {
     existente.data = data;
     await guardarPagina(sesion.tienda, existente);
     return json(res, 200, existente);
+  }
+
+  // POST /api/paginas/:id/imagenes — subir una foto de la compu al producto.
+  // Entra al pool de la página y a Shopify como media del producto, así el
+  // Liquid publicado la resuelve igual que a cualquier otra foto.
+  const mImg = ruta.match(/^\/api\/paginas\/([^/]+)\/imagenes$/);
+  if (req.method === "POST" && mImg) {
+    const registro = await leerPagina(sesion.tienda, mImg[1]);
+    if (!registro) return json(res, 404, { error: "No existe esa página" });
+    const { nombre, mime, base64 } = await leerCuerpo(req, 15_000_000);
+    if (!base64) return json(res, 400, { error: "Falta la imagen" });
+
+    const { subirImagenProducto } = require("./imagenes");
+    const { media_id, url } = await subirImagenProducto(
+      sesion, registro.shopify_product_id, nombre, mime || "image/jpeg", base64
+    );
+
+    registro.data.pool_imagenes = registro.data.pool_imagenes || [];
+    registro.data.pool_imagenes.push({ media_id, tipo: "producto_limpio" });
+    registro.urls = { ...(registro.urls || {}), [media_id]: url };
+    await guardarPagina(sesion.tienda, registro);
+    return json(res, 200, { media_id, url });
   }
 
   // POST /api/paginas/:id/publicar

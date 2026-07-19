@@ -1011,3 +1011,73 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
   display: flex; align-items: center; justify-content: center;
   box-shadow: 0 1px 4px rgba(0,0,0,.25);
 }
+
+/* tiles de subir / quitar en el selector de imágenes */
+.galeria-picker__subir {
+  flex-direction: column;
+  gap: 2px;
+  border-style: dashed;
+  color: var(--suave);
+  font-size: 12px;
+  cursor: pointer;
+}
+.galeria-picker__subir-mas { font-size: 22px; line-height: 1; color: var(--ia); }
+.galeria-picker__subir:hover { border-color: var(--ia); color: var(--ia); }
+.galeria-picker__subir--ocupado { opacity: .55; pointer-events: none; }
+.galeria-picker__quitar {
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12px;
+  color: var(--suave);
+}
+.galeria-picker__quitar.elegida { border-color: var(--ia); color: var(--ia); }
+.resena-edit__foto { margin-top: 8px; }
+.resena-edit__foto summary { font-size: 12.5px; color: var(--suave); cursor: pointer; user-select: none; }
+.resena-edit__foto[open] summary { margin-bottom: 8px; }
+
+/* ============================================================
+   Móvil integral — que TODO lo del escritorio se pueda hacer
+   cómodo a 375px. min-width:0 en hijos de grid (el clásico) +
+   ajustes por pantalla.
+   ============================================================ */
+
+.pasos-grilla > *, .resumen-grilla > *, .metricas > *, .herramientas > *,
+.dos-columnas > *, .grilla > * { min-width: 0; }
+
+@media (max-width: 700px) {
+  main { padding: 20px 14px 60px; }
+
+  /* cabeceras: título arriba, acciones abajo a lo ancho */
+  .inicio-cabecera { flex-direction: column; align-items: stretch; gap: 12px; }
+  .inicio-cabecera__acciones { display: flex; flex-wrap: wrap; gap: 8px; }
+  .inicio-cabecera__acciones .btn { flex: 1 1 auto; }
+
+  .metricas { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .panel__cabecera { flex-direction: column; align-items: stretch; gap: 10px; }
+  .progreso { text-align: left; min-width: 0; }
+
+  /* tabla de páginas: la fila envuelve, el link pasa abajo */
+  .pagina-fila { grid-template-columns: 44px 1fr; gap: 8px 10px; }
+  .pagina-fila > .etiqueta { justify-self: start; }
+  .pagina-fila .btn { grid-column: 1 / -1; }
+
+  /* información del producto: una columna */
+  .dos-columnas { grid-template-columns: 1fr; }
+
+  /* preview: la barra apila y los botones ocupan el ancho */
+  .preview-barra { flex-wrap: wrap; gap: 8px; }
+  .preview-barra__info { flex: 1 1 100%; }
+  .preview-barra .btn { flex: 1 1 auto; }
+  .marco--full iframe { height: 68vh; }
+
+  /* modal de edición: hoja completa */
+  .editor-modal { padding: 0; }
+  .editor-modal__caja { max-height: 100vh; min-height: 100vh; border-radius: 0; }
+  .editor-modal__cab { border-radius: 0; position: sticky; top: 0; z-index: 2; }
+  .editor-modal__pie { position: sticky; bottom: 0; background: var(--superficie); }
+  .galeria-picker { grid-template-columns: repeat(3, 1fr); gap: 9px; }
+  .galeria-picker--chica { grid-template-columns: repeat(4, 1fr); }
+
+  /* buscador y grilla de productos */
+  .grilla { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+}
