@@ -53,6 +53,16 @@
     ciudad: "pin", codigo_postal: "pin", email: "arroba", nota: "nota"
   };
 
+  // El orden de la columna de campos: claves "c:<campo>" y "e:<elemento>".
+  // Si el merchant nunca reordenó, es el orden natural. Se filtra lo que ya
+  // no existe y se agrega al final lo nuevo.
+  function ordenResuelto(c) {
+    const base = (c.campos || []).map((x) => "c:" + x.id).concat((c.elementos || []).map((x) => "e:" + x.id));
+    const orden = Array.isArray(c.orden) ? c.orden.filter((k) => base.includes(k)) : [];
+    for (const k of base) if (!orden.includes(k)) orden.push(k);
+    return orden;
+  }
+
   // ---------- armado del modal ----------
 
   // config  → la que edita el merchant en la app
@@ -75,9 +85,8 @@
       oferta: null // tier elegido de ofertas de cantidad
     };
 
-    const campos = (c.campos || []).filter((x) => x.visible !== false);
-
     const campoHTML = (x) => {
+      if (x.visible === false) return "";
       const icono = ICONOS[ICONO_CAMPO[x.id] || "nota"];
       const req = x.obligatorio ? `<span class="tiq-req">*</span>` : "";
       const ancho = x.id === "nota" ? " tiq-cod-campo--ancho" : "";
@@ -91,27 +100,86 @@
                 codigo_postal: "postal-code", email: "email" }[x.id] || "on"
             }">`;
       return `
-        <div class="tiq-cod-campo${ancho}" data-campo="${esc(x.id)}" data-obligatorio="${x.obligatorio ? 1 : 0}">
+        <div class="tiq-cod-campo${ancho}" data-item="c:${esc(x.id)}" data-campo="${esc(x.id)}" data-obligatorio="${x.obligatorio ? 1 : 0}">
           <label>${esc(x.etiqueta)} ${req}</label>
           <div class="tiq-cod-entrada">${icono}${entrada}</div>
           <span class="tiq-cod-campo__error">Completá este campo</span>
         </div>`;
     };
 
+    // Elementos agregados por el merchant. Todos ocupan el ancho completo.
+    const elementoHTML = (el) => {
+      const marca = `data-item="e:${esc(el.id)}"`;
+      if (el.tipo === "titulo")
+        return `<div class="tiq-cod-el tiq-cod-el--titulo tiq-cod-campo--ancho" ${marca}><h3>${esc(el.texto || "Título")}</h3></div>`;
+      if (el.tipo === "texto")
+        return `<div class="tiq-cod-el tiq-cod-el--texto tiq-cod-campo--ancho" ${marca}><p>${esc(el.texto || "")}</p></div>`;
+      if (el.tipo === "imagen")
+        return `<div class="tiq-cod-el tiq-cod-el--imagen tiq-cod-campo--ancho" ${marca}>${
+          el.url ? `<img src="${esc(el.url)}" alt="">` : `<span class="tiq-cod-el__ph">Imagen sin cargar</span>`
+        }</div>`;
+      if (el.tipo === "whatsapp") {
+        const num = String(el.numero || "").replace(/\D/g, "");
+        const href = num ? `https://wa.me/${num}${el.mensaje ? "?text=" + encodeURIComponent(el.mensaje) : ""}` : "#";
+        return `<div class="tiq-cod-el tiq-cod-campo--ancho" ${marca}>
+          <a class="tiq-cod-el__wsp" href="${esc(href)}" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 00-8.6 15.1L2 22l5.1-1.3A10 10 0 1012 2zm5.7 14.2c-.2.7-1.3 1.3-1.9 1.4-.5.1-1.1.1-1.8-.1-.4-.1-.9-.3-1.6-.6-2.9-1.2-4.7-4.1-4.9-4.3-.1-.2-1.1-1.5-1.1-2.9s.7-2 .9-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.4l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.1.1-.2.3-.1.5.2.3.8 1.3 1.7 2.1 1.2 1.1 2.2 1.4 2.5 1.5.3.1.5.1.7-.1l.9-1c.2-.2.4-.3.7-.2l2.1.9c.3.1.5.2.6.4 0 .1 0 .5-.2 1.2z"/></svg>
+            ${esc(el.texto || "Consultanos por WhatsApp")}
+          </a>
+        </div>`;
+      }
+      if (el.tipo === "enlace")
+        return `<div class="tiq-cod-el tiq-cod-campo--ancho" ${marca}>
+          <a class="tiq-cod-el__enlace" href="${esc(el.url || "#")}" target="_blank" rel="noopener">${esc(el.texto || "Más información")}</a>
+        </div>`;
+      if (el.tipo === "campo") {
+        const req = el.obligatorio ? `<span class="tiq-req">*</span>` : "";
+        return `
+        <div class="tiq-cod-campo tiq-cod-campo--ancho" ${marca} data-campo="x:${esc(el.id)}" data-obligatorio="${el.obligatorio ? 1 : 0}">
+          <label>${esc(el.etiqueta || "Campo")} ${req}</label>
+          <div class="tiq-cod-entrada">${ICONOS.nota}<input type="text" name="x_${esc(el.id)}" placeholder="${esc(el.etiqueta || "")}"></div>
+          <span class="tiq-cod-campo__error">Completá este campo</span>
+        </div>`;
+      }
+      return "";
+    };
+
+    const mapaCampos = Object.fromEntries((c.campos || []).map((x) => [x.id, x]));
+    const mapaElementos = Object.fromEntries((c.elementos || []).map((x) => [x.id, x]));
+    const cuerpoCampos = ordenResuelto(c)
+      .map((k) => {
+        if (k.startsWith("c:")) return mapaCampos[k.slice(2)] ? campoHTML(mapaCampos[k.slice(2)]) : "";
+        return mapaElementos[k.slice(2)] ? elementoHTML(mapaElementos[k.slice(2)]) : "";
+      })
+      .join("");
+
+    // Ofertas de cantidad: tarjetas con precio final, precio tachado, ahorro
+    // por unidad y cinta de "más popular". Los números salen del precio de la
+    // variante (solo para mostrar: el server recalcula todo al comprar).
     const tiers = c.ofertas?.activo ? c.ofertas.tiers || [] : [];
+    const tierHTML = (t, i) => {
+      const cant = Math.max(1, Number(t.cantidad) || 1);
+      const desc = Number(t.descuento) || 0;
+      const unitario = Math.round(variante.precio * (1 - desc / 100));
+      const total = unitario * cant;
+      const lleno = variante.precio * cant;
+      const nombre = t.etiqueta || `${cant} unidad${cant > 1 ? "es" : ""}`;
+      return `
+        <label class="tiq-cod-oferta${i === 0 ? " tiq-cod-oferta--activa" : ""}${t.popular ? " tiq-cod-oferta--popular" : ""}">
+          ${t.popular ? `<span class="tiq-cod-oferta__cinta">${esc(c.textos?.popular || "Más popular")}</span>` : ""}
+          <input type="radio" name="tiq-oferta" value="${i}" ${i === 0 ? "checked" : ""}>
+          <span class="tiq-cod-oferta__info">
+            <span class="tiq-cod-oferta__nombre">${esc(nombre)}${desc ? ` <span class="tiq-cod-oferta__chip">-${esc(desc)}%</span>` : ""}</span>
+            ${desc ? `<span class="tiq-cod-oferta__detalle">${plata(unitario, producto.moneda)} c/u · ${esc(c.textos?.ahorras || "ahorrás")} ${plata(lleno - total, producto.moneda)}</span>` : ""}
+          </span>
+          <span class="tiq-cod-oferta__precios">
+            <span class="tiq-cod-oferta__precio">${plata(total, producto.moneda)}</span>
+            ${desc ? `<span class="tiq-cod-oferta__tachado">${plata(lleno, producto.moneda)}</span>` : ""}
+          </span>
+        </label>`;
+    };
     const ofertasHTML = tiers.length
-      ? `<div class="tiq-cod-ofertas" data-zona="ofertas">
-          ${tiers
-            .map(
-              (t, i) => `
-              <label class="tiq-cod-oferta${i === 0 ? " tiq-cod-oferta--activa" : ""}">
-                <input type="radio" name="tiq-oferta" value="${i}" ${i === 0 ? "checked" : ""}>
-                <span class="tiq-cod-oferta__nombre">${esc(t.etiqueta || `${t.cantidad} unidad${t.cantidad > 1 ? "es" : ""}`)}</span>
-                ${t.descuento ? `<span class="tiq-cod-oferta__chip">-${esc(t.descuento)}%</span>` : ""}
-              </label>`
-            )
-            .join("")}
-        </div>`
+      ? `<div class="tiq-cod-ofertas" data-zona="ofertas">${tiers.map(tierHTML).join("")}</div>`
       : "";
 
     const tarifasHTML = (c.tarifas || []).length
@@ -152,7 +220,7 @@
           <div class="tiq-cod-cuerpo">
             <div>
               <p class="tiq-cod-sub">${esc(c.textos?.subtitulo || "Ingresá tus datos de envío")}</p>
-              <div class="tiq-cod-campos">${campos.map(campoHTML).join("")}</div>
+              <div class="tiq-cod-campos">${cuerpoCampos}</div>
               <div class="tiq-cod-checks">${checksHTML}</div>
               <input class="tiq-cod-hp" type="text" name="sitio_web" tabindex="-1" autocomplete="off">
             </div>
@@ -275,8 +343,11 @@
       }
 
       const datos = {};
+      const datosExtra = {};
       capa.querySelectorAll("[data-campo]").forEach((div) => {
-        datos[div.dataset.campo] = div.querySelector("input,textarea,select").value.trim();
+        const valor = div.querySelector("input,textarea,select").value.trim();
+        if (div.dataset.campo.startsWith("x:")) datosExtra[div.dataset.campo.slice(2)] = valor;
+        else datos[div.dataset.campo] = valor;
       });
 
       const t = totales();
@@ -296,6 +367,7 @@
             oferta: estado.oferta ? tiers.indexOf(estado.oferta) : null,
             tarifa_id: estado.tarifa?.id || null,
             campos: datos,
+            extras: datosExtra,
             boletin: !!q('input[name="boletin"]')?.checked,
             hp: q('input[name="sitio_web"]').value
           })
@@ -450,7 +522,7 @@
   }
 
   // API para el preview de la app del admin.
-  window.TiendaIQCOD = { armarModal, armarBoton };
+  window.TiendaIQCOD = { armarModal, armarBoton, ordenResuelto };
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", iniciar);
   else iniciar();

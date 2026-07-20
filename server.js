@@ -258,6 +258,15 @@ async function api(req, res, url) {
     return json(res, 200, config);
   }
 
+  // POST /api/cod/imagen — imagen para un elemento del formulario COD
+  // (va a Files de la tienda; devuelve la URL del CDN de Shopify)
+  if (req.method === "POST" && ruta === "/api/cod/imagen") {
+    const { nombre, mime, base64 } = await leerCuerpo(req, 15_000_000);
+    if (!base64) return json(res, 400, { error: "Falta la imagen" });
+    const { subirImagenTienda } = require("./imagenes");
+    return json(res, 200, await subirImagenTienda(sesion, nombre, mime || "image/jpeg", base64));
+  }
+
   // POST /api/cod/instalar — inyecta (o re-inyecta) el formulario en el tema
   if (req.method === "POST" && ruta === "/api/cod/instalar") {
     const config = await leerConfigCod(sesion.tienda);

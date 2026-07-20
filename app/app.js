@@ -502,6 +502,7 @@
 
   const TABS_COD = [
     { id: "vista", texto: "Vista previa" },
+    { id: "modo", texto: "Modo edición" },
     { id: "boton", texto: "Botón de compra" },
     { id: "campos", texto: "Campos del formulario" },
     { id: "estilo", texto: "Estilo" },
@@ -535,12 +536,36 @@
 
     if (estado.cod.tab === "vista")
       return `
-        <div class="editor__nota">Este es el formulario tal cual lo ve tu cliente. <strong>Hacé clic sobre los textos</strong> (título, etiquetas, tarifas, ofertas) para editarlos acá mismo. El resto se ajusta en las otras pestañas.</div>
+        <div class="cod-vista-barra">
+          <div class="editor__nota" style="margin:0;flex:1">Así lo ve tu cliente. <strong>Hacé clic sobre los textos</strong> para editarlos acá mismo. Para mover o configurar piezas, usá <strong>Modo edición</strong>.</div>
+          <div class="cod-agregar">
+            <button class="btn btn--chico" id="cod-agregar-btn" type="button">＋ Agregar elemento</button>
+            <div class="cod-agregar__menu" id="cod-agregar-menu" hidden>
+              <div class="cod-agregar__grupo">Contenido</div>
+              <button type="button" data-el="titulo"><strong>T</strong> Título o texto destacado</button>
+              <button type="button" data-el="texto">¶ Párrafo de texto</button>
+              <button type="button" data-el="imagen">🖼 Imagen</button>
+              <div class="cod-agregar__grupo">Campos</div>
+              <button type="button" data-el="campo">▭ Campo de texto</button>
+              <div class="cod-agregar__grupo">Botones</div>
+              <button type="button" data-el="whatsapp">✆ Botón de WhatsApp</button>
+              <button type="button" data-el="enlace">🔗 Botón con enlace</button>
+            </div>
+          </div>
+        </div>
         <div class="cod-vista-inline" id="cod-vista"></div>
         <div class="cod-separador"></div>
         <div class="fila-doble-cod">
           ${campoCod("textos.cta", "Botón de enviar — {total} se reemplaza por el total")}
           ${campoCod("textos.subtitulo", "Subtítulo del formulario")}
+        </div>`;
+
+    if (estado.cod.tab === "modo")
+      return `
+        <div class="editor__nota">Hacé clic en cualquier pieza del formulario para seleccionarla: la podés <strong>mover</strong> con ↑ ↓, configurar sus opciones o eliminarla (los elementos agregados). Los cambios se ven al instante.</div>
+        <div class="cod-modo-layout">
+          <div class="cod-vista-inline" id="cod-modo"></div>
+          <aside class="cod-props" id="cod-props"></aside>
         </div>`;
 
     if (estado.cod.tab === "boton")
@@ -623,23 +648,31 @@
         <button class="btn btn--fantasma btn--chico" data-accion="tarifa-agregar">＋ Añadir tarifa</button>
         <div class="ayuda" style="margin-top:8px">Precio 0 se muestra como "${esc(c.textos.gratis)}".</div>`;
 
-    if (estado.cod.tab === "ofertas")
+    if (estado.cod.tab === "ofertas") {
+      const precioDemo = PRODUCTO_DEMO.variantes[0].precio; // solo para la vista de precios
+      const filaTier = (t, i) => {
+        const cant = Math.max(1, Number(t.cantidad) || 1);
+        const desc = Number(t.descuento) || 0;
+        const unit = Math.round(precioDemo * (1 - desc / 100));
+        return `
+          <div class="cod-tier-fila">
+            <input type="number" min="1" max="10" data-cfg="ofertas.tiers.${i}.cantidad" data-tipo="numero" value="${esc(t.cantidad)}">
+            <input type="number" min="0" max="90" data-cfg="ofertas.tiers.${i}.descuento" data-tipo="numero" value="${esc(t.descuento)}">
+            <input type="text" placeholder="Ej: 2 unidades" data-cfg="ofertas.tiers.${i}.etiqueta" value="${esc(t.etiqueta)}">
+            <label class="cod-tier-pop" title="Cinta 'Más popular' sobre la tarjeta">
+              <input type="checkbox" data-cfg="ofertas.tiers.${i}.popular" data-tipo="bool" ${t.popular ? "checked" : ""}>
+            </label>
+            <span class="cod-tier-calc">${cant} × $${(unit / 100).toFixed(2)} = <strong>$${((unit * cant) / 100).toFixed(2)}</strong></span>
+            <button class="btn btn--fantasma btn--chico" data-accion="tier-borrar" data-i="${i}" ${c.ofertas.tiers.length <= 1 ? "disabled" : ""}>✕</button>
+          </div>`;
+      };
       return `
         ${campoCod("ofertas.activo", "Activar ofertas de cantidad (reemplazan al selector de cantidad)", "check")}
-        <div class="editor__nota">El cliente elige cuántas unidades lleva y el descuento se aplica solo en el pedido. Ideal para subir el ticket promedio.</div>
-        ${c.ofertas.tiers
-          .map(
-            (t, i) => `
-            <div class="cod-tier-fila">
-              <input type="number" min="1" max="10" title="Cantidad" data-cfg="ofertas.tiers.${i}.cantidad" data-tipo="numero" value="${esc(t.cantidad)}">
-              <input type="number" min="0" max="90" title="Descuento %" data-cfg="ofertas.tiers.${i}.descuento" data-tipo="numero" value="${esc(t.descuento)}">
-              <input type="text" placeholder="Etiqueta (ej: 2 unidades — la más elegida)" data-cfg="ofertas.tiers.${i}.etiqueta" value="${esc(t.etiqueta)}">
-              <button class="btn btn--fantasma btn--chico" data-accion="tier-borrar" data-i="${i}" ${c.ofertas.tiers.length <= 1 ? "disabled" : ""}>✕</button>
-            </div>`
-          )
-          .join("")}
-        <button class="btn btn--fantasma btn--chico" data-accion="tier-agregar">＋ Añadir oferta</button>
-        <div class="ayuda" style="margin-top:8px">Columnas: cantidad · % de descuento · etiqueta.</div>`;
+        <div class="editor__nota">El cliente ve cada oferta como una tarjeta con el precio final, el precio tachado y cuánto ahorra. El descuento se aplica en el pedido real. Mirá el resultado en <strong>Vista previa</strong>.</div>
+        <div class="cod-tier-cab"><span>Cantidad</span><span>Desc. %</span><span>Etiqueta</span><span>Popular</span><span>Precio (demo)</span><span></span></div>
+        ${c.ofertas.tiers.map(filaTier).join("")}
+        <button class="btn btn--fantasma btn--chico" data-accion="tier-agregar">＋ Añadir oferta</button>`;
+    }
 
     // textos
     return `
@@ -716,6 +749,20 @@
     $("volver-inicio").onclick = () => salirCod("inicio");
     pintarBotonPreview();
     montarVistaCod();
+    montarModoCod();
+
+    // menú "＋ Agregar elemento" (pestaña Vista previa)
+    const btnAgregar = $("cod-agregar-btn");
+    if (btnAgregar) {
+      btnAgregar.onclick = (e) => {
+        e.stopPropagation();
+        $("cod-agregar-menu").hidden = !$("cod-agregar-menu").hidden;
+      };
+      document.addEventListener("click", () => {
+        const m = $("cod-agregar-menu");
+        if (m) m.hidden = true;
+      }, { once: true });
+    }
 
     // --- tabs ---
     vista.querySelectorAll("[data-tab]").forEach((b) => {
@@ -755,17 +802,54 @@
     });
 
     panel.addEventListener("click", (e) => {
+      const cfg = estado.cod.config;
+
+      // agregar elemento desde el menú de la vista previa
+      const nuevoEl = e.target.closest("[data-el]");
+      if (nuevoEl) {
+        agregarElementoCod(nuevoEl.dataset.el);
+        return;
+      }
+      // mover / borrar la pieza seleccionada (Modo edición)
+      const mover = e.target.closest("[data-mover]");
+      if (mover && !mover.disabled) {
+        moverPiezaCod(Number(mover.dataset.mover));
+        return;
+      }
+      if (e.target.closest("[data-borrar-el]")) {
+        const i = cfg.elementos.findIndex((x) => "e:" + x.id === modoSel);
+        if (i > -1) {
+          cfg.elementos.splice(i, 1);
+          cfg.orden = (cfg.orden || []).filter((k) => k !== modoSel);
+          modoSel = null;
+          marcarSucioCod();
+          montarModoCod();
+        }
+        return;
+      }
+
       const accion = e.target.dataset.accion;
       if (!accion) return;
-      const cfg = estado.cod.config;
       const i = Number(e.target.dataset.i);
       if (accion === "tarifa-agregar") cfg.tarifas.push({ id: "t" + Date.now(), nombre: "", precio: 0 });
       if (accion === "tarifa-borrar" && cfg.tarifas.length > 1) cfg.tarifas.splice(i, 1);
       if (accion === "tier-agregar" && cfg.ofertas.tiers.length < 5)
-        cfg.ofertas.tiers.push({ cantidad: cfg.ofertas.tiers.length + 1, descuento: 0, etiqueta: "" });
+        cfg.ofertas.tiers.push({ cantidad: cfg.ofertas.tiers.length + 1, descuento: 0, etiqueta: "", popular: false });
       if (accion === "tier-borrar" && cfg.ofertas.tiers.length > 1) cfg.ofertas.tiers.splice(i, 1);
       marcarSucioCod();
       pintarCod();
+    });
+
+    // Al salir de un campo (change): el preview del modo edición y los
+    // precios calculados de ofertas se refrescan sin robar el foco al tipear.
+    panel.addEventListener("change", (e) => {
+      if (e.target.dataset.imagenEl !== undefined && e.target.files?.length) {
+        subirImagenElementoCod(e.target.files[0], Number(e.target.dataset.imagenEl));
+        return;
+      }
+      if (!e.target.dataset.cfg) return;
+      if (estado.cod.tab === "modo") montarModoCod();
+      if (estado.cod.tab === "ofertas" && e.target.type === "number") pintarCod();
     });
 
     // El interruptor maestro se guarda SOLO al tocarlo (y re-sube el snippet
@@ -844,9 +928,192 @@
     capa.querySelectorAll(".tiq-cod-envio__nombre").forEach((el, i) => {
       editable(el, (v) => { if (v && c.tarifas[i]) c.tarifas[i].nombre = v; }, () => c.tarifas[i]?.nombre || "");
     });
-    capa.querySelectorAll(".tiq-cod-oferta__nombre").forEach((el, i) => {
-      editable(el, (v) => { if (v && c.ofertas.tiers[i]) c.ofertas.tiers[i].etiqueta = v; }, () => c.ofertas.tiers[i]?.etiqueta || "");
+    capa.querySelectorAll(".tiq-cod-oferta").forEach((tarjeta, i) => {
+      // solo el nombre (sin el chip de descuento) es editable
+      const nombre = tarjeta.querySelector(".tiq-cod-oferta__nombre");
+      const chip = nombre?.querySelector(".tiq-cod-oferta__chip");
+      if (!nombre) return;
+      if (chip) {
+        nombre.innerHTML = `<span class="cod-etq">${esc(c.ofertas.tiers[i]?.etiqueta || "")}</span>`;
+        nombre.appendChild(chip);
+        editable(nombre.querySelector(".cod-etq"), (v) => { if (v && c.ofertas.tiers[i]) c.ofertas.tiers[i].etiqueta = v; }, () => c.ofertas.tiers[i]?.etiqueta || "");
+      } else {
+        editable(nombre, (v) => { if (v && c.ofertas.tiers[i]) c.ofertas.tiers[i].etiqueta = v; }, () => c.ofertas.tiers[i]?.etiqueta || "");
+      }
     });
+
+    // Elementos agregados: texto editable donde aplica + ⚙ que salta al
+    // Modo edición con la pieza ya seleccionada.
+    capa.querySelectorAll('[data-item^="e:"]').forEach((div) => {
+      const el = c.elementos.find((x) => "e:" + x.id === div.dataset.item);
+      if (!el) return;
+      const textual = div.querySelector("h3, p, .tiq-cod-el__wsp, .tiq-cod-el__enlace");
+      if (textual && (el.tipo === "titulo" || el.tipo === "texto")) {
+        editable(textual, (v) => { if (v) el.texto = v; }, () => el.texto || "");
+      }
+      const engranaje = document.createElement("button");
+      engranaje.type = "button";
+      engranaje.className = "cod-engranaje";
+      engranaje.title = "Configurar y mover en Modo edición";
+      engranaje.textContent = "⚙";
+      engranaje.onclick = (e) => {
+        e.preventDefault();
+        modoSel = div.dataset.item;
+        estado.cod.tab = "modo";
+        pintarCod();
+      };
+      div.style.position = "relative";
+      div.appendChild(engranaje);
+    });
+  }
+
+  // ---- elementos agregables + modo edición ----
+
+  let modoSel = null; // pieza seleccionada en Modo edición ("c:..." | "e:...")
+
+  function agregarElementoCod(tipo) {
+    const c = estado.cod.config;
+    const defaults = {
+      titulo: { texto: "Título destacado" },
+      texto: { texto: "Escribí acá el texto que quieras mostrar." },
+      campo: { etiqueta: "Campo personalizado", obligatorio: false },
+      imagen: { url: null },
+      whatsapp: { numero: "", mensaje: "", texto: "Consultanos por WhatsApp" },
+      enlace: { url: "", texto: "Más información" }
+    };
+    if (!defaults[tipo]) return;
+    const el = { id: "el" + Date.now(), tipo, ...defaults[tipo] };
+    c.elementos = c.elementos || [];
+    c.elementos.push(el);
+    c.orden = window.TiendaIQCOD.ordenResuelto(c); // el nuevo queda al final
+    modoSel = "e:" + el.id;
+    marcarSucioCod();
+    // imagen/whatsapp/enlace necesitan configuración: directo al Modo edición
+    if (tipo === "imagen" || tipo === "whatsapp" || tipo === "enlace") estado.cod.tab = "modo";
+    pintarCod();
+  }
+
+  function moverPiezaCod(dir) {
+    const c = estado.cod.config;
+    const orden = window.TiendaIQCOD.ordenResuelto(c);
+    const i = orden.indexOf(modoSel);
+    const j = i + dir;
+    if (i < 0 || j < 0 || j >= orden.length) return;
+    [orden[i], orden[j]] = [orden[j], orden[i]];
+    c.orden = orden;
+    marcarSucioCod();
+    montarModoCod();
+  }
+
+  function montarModoCod() {
+    const cont = $("cod-modo");
+    if (!cont || !window.TiendaIQCOD) return;
+    const c = estado.cod.config;
+
+    cont.innerHTML = "";
+    const capa = window.TiendaIQCOD.armarModal(c, PRODUCTO_DEMO, { preview: true });
+    capa.querySelector(".tiq-cod-cerrar")?.remove();
+    cont.appendChild(capa);
+
+    capa.querySelectorAll("[data-item]").forEach((el) => {
+      el.classList.add("cod-mov");
+      if (el.dataset.item === modoSel) el.classList.add("cod-mov--sel");
+    });
+
+    cont.onclick = (e) => {
+      const it = e.target.closest("[data-item]");
+      if (!it) return;
+      e.preventDefault();
+      if (modoSel !== it.dataset.item) {
+        modoSel = it.dataset.item;
+        capa.querySelectorAll(".cod-mov--sel").forEach((x) => x.classList.remove("cod-mov--sel"));
+        it.classList.add("cod-mov--sel");
+        pintarPropsCod();
+      }
+    };
+
+    pintarPropsCod();
+  }
+
+  const TIPO_ELEMENTO = {
+    titulo: "Título", texto: "Párrafo", campo: "Campo de texto",
+    imagen: "Imagen", whatsapp: "Botón de WhatsApp", enlace: "Botón con enlace"
+  };
+
+  function pintarPropsCod() {
+    const panel = $("cod-props");
+    if (!panel) return;
+    const c = estado.cod.config;
+
+    if (!modoSel) {
+      panel.innerHTML = `<div class="cod-props__vacio">👆 Hacé clic en cualquier pieza del formulario para moverla o configurarla.</div>`;
+      return;
+    }
+
+    const orden = window.TiendaIQCOD.ordenResuelto(c);
+    const idx = orden.indexOf(modoSel);
+    const esElemento = modoSel.startsWith("e:");
+    let titulo = "";
+    let campos = "";
+
+    if (!esElemento) {
+      const i = c.campos.findIndex((x) => "c:" + x.id === modoSel);
+      if (i < 0) return void (panel.innerHTML = "");
+      titulo = `Campo · ${c.campos[i].etiqueta}`;
+      campos =
+        campoCod(`campos.${i}.etiqueta`, "Etiqueta") +
+        campoCod(`campos.${i}.visible`, "Visible en el formulario", "check") +
+        campoCod(`campos.${i}.obligatorio`, "Obligatorio", "check");
+    } else {
+      const i = c.elementos.findIndex((x) => "e:" + x.id === modoSel);
+      if (i < 0) return void (panel.innerHTML = "");
+      const el = c.elementos[i];
+      titulo = TIPO_ELEMENTO[el.tipo] || "Elemento";
+      if (el.tipo === "titulo" || el.tipo === "texto") campos = campoCod(`elementos.${i}.texto`, "Texto");
+      if (el.tipo === "campo")
+        campos = campoCod(`elementos.${i}.etiqueta`, "Etiqueta") + campoCod(`elementos.${i}.obligatorio`, "Obligatorio", "check");
+      if (el.tipo === "imagen")
+        campos = `<label class="btn btn--fantasma btn--chico" style="cursor:pointer">🖼 ${el.url ? "Cambiar imagen" : "Subir imagen"}<input type="file" accept="image/*" hidden data-imagen-el="${i}"></label>
+          ${el.url ? `<div class="ayuda" style="margin-top:6px">Imagen cargada ✓</div>` : `<div class="ayuda" style="margin-top:6px">Todavía no cargaste la imagen.</div>`}`;
+      if (el.tipo === "whatsapp")
+        campos =
+          campoCod(`elementos.${i}.numero`, "Número con código de país (ej: 5491122334455)") +
+          campoCod(`elementos.${i}.mensaje`, "Mensaje precargado (opcional)") +
+          campoCod(`elementos.${i}.texto`, "Texto del botón");
+      if (el.tipo === "enlace")
+        campos = campoCod(`elementos.${i}.url`, "URL de destino") + campoCod(`elementos.${i}.texto`, "Texto del botón");
+    }
+
+    panel.innerHTML = `
+      <div class="cod-props__cab">${esc(titulo)}</div>
+      <div class="cod-props__acciones">
+        <button class="btn btn--fantasma btn--chico" data-mover="-1" ${idx <= 0 ? "disabled" : ""}>↑ Subir</button>
+        <button class="btn btn--fantasma btn--chico" data-mover="1" ${idx >= orden.length - 1 ? "disabled" : ""}>↓ Bajar</button>
+        ${esElemento ? `<button class="btn btn--fantasma btn--chico cod-props__borrar" data-borrar-el="1">🗑 Eliminar</button>` : ""}
+      </div>
+      ${campos}`;
+  }
+
+  async function subirImagenElementoCod(archivo, i) {
+    const c = estado.cod.config;
+    if (!c.elementos?.[i]) return;
+    const panel = $("cod-props");
+    panel?.insertAdjacentHTML("beforeend", `<div class="ayuda" id="cod-subiendo">Subiendo imagen…</div>`);
+    try {
+      const base64 = await new Promise((res, rej) => {
+        const fr = new FileReader();
+        fr.onload = () => res(String(fr.result).split(",")[1]);
+        fr.onerror = () => rej(new Error("No se pudo leer el archivo"));
+        fr.readAsDataURL(archivo);
+      });
+      const r = await api("/cod/imagen", { method: "POST", body: { nombre: archivo.name, mime: archivo.type, base64 } });
+      c.elementos[i].url = r.url;
+      marcarSucioCod();
+      montarModoCod();
+    } catch (e) {
+      $("cod-subiendo")?.remove();
+      panel?.insertAdjacentHTML("beforeend", `<div class="error">✖ ${esc(e.message)}</div>`);
+    }
   }
 
   function pintarBotonPreview() {

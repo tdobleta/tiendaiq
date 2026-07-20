@@ -68,11 +68,18 @@ function configDefault() {
     ofertas: {
       activo: false,
       tiers: [
-        { cantidad: 1, descuento: 0, etiqueta: "1 unidad" },
-        { cantidad: 2, descuento: 10, etiqueta: "2 unidades" },
-        { cantidad: 3, descuento: 15, etiqueta: "3 unidades" }
+        { cantidad: 1, descuento: 0, etiqueta: "1 unidad", popular: false },
+        { cantidad: 2, descuento: 10, etiqueta: "2 unidades", popular: true },
+        { cantidad: 3, descuento: 15, etiqueta: "3 unidades", popular: false }
       ]
     },
+    // Elementos agregados por el merchant (título, texto, campo, imagen,
+    // botón de WhatsApp, botón con enlace). Se renderizan en la columna de
+    // campos según `orden`.
+    elementos: [],
+    // Orden de la columna de campos: claves "c:<campo>" y "e:<elemento>".
+    // null = orden natural (campos y después elementos).
+    orden: null,
     extras: { boletin: true, terminos: false, terminos_url: "" },
     textos: {
       titulo: "Pago contra reembolso",
@@ -265,6 +272,17 @@ async function crearPedidoCod(sesion, pedido) {
     }
   }
 
+  // Campos personalizados (elementos tipo "campo"): mismo criterio, el
+  // obligatorio se valida acá con la config, no con lo que diga el browser.
+  const extras = [];
+  const valoresExtra = pedido.extras || {}; // { <id elemento>: valor }
+  for (const el of config.elementos || []) {
+    if (el.tipo !== "campo") continue;
+    const valor = String(valoresExtra[el.id] || "").trim();
+    if (el.obligatorio && !valor) throw new Error(`Falta el campo obligatorio: ${el.etiqueta}`);
+    if (valor) extras.push({ etiqueta: String(el.etiqueta || "Campo").slice(0, 250), valor: valor.slice(0, 250) });
+  }
+
   // Cantidad y oferta: la oferta manda si está activa.
   let cantidad = Math.max(1, Math.min(10, Number(pedido.cantidad) || 1));
   let descuento = 0;
@@ -319,6 +337,7 @@ async function crearPedidoCod(sesion, pedido) {
   if (provincia) notas.push(`Provincia: ${provincia}`);
   if (String(campos.nota || "").trim()) notas.push(`Nota del cliente: ${String(campos.nota).trim()}`);
   if (etiquetaOferta) notas.push(`Oferta aplicada: ${etiquetaOferta} (-${descuento}%)`);
+  for (const x of extras) notas.push(`${x.etiqueta}: ${x.valor}`);
   notas.push("Pedido contra reembolso creado por TiendaIQ COD.");
 
   const linea = { variantId: variante.id, quantity: cantidad };
@@ -337,7 +356,8 @@ async function crearPedidoCod(sesion, pedido) {
     tags: ["TiendaIQ COD", "Contra reembolso"],
     customAttributes: [
       { key: "Método de pago", value: "Contra reembolso (COD)" },
-      ...(provincia ? [{ key: "Provincia", value: provincia }] : [])
+      ...(provincia ? [{ key: "Provincia", value: provincia }] : []),
+      ...extras.map((x) => ({ key: x.etiqueta, value: x.valor }))
     ]
   };
   if (emailValido) order.email = emailValido;

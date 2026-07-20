@@ -1120,3 +1120,106 @@ summary:focus-visible, label:focus-visible {
 .metrica--verde   .metrica__valor { color: #1a8a48; }
 .metrica--violeta .metrica__icono { color: #4f46e5; }
 .metrica--verde   .metrica__icono { color: #1a8a48; }
+
+/* ============================================================
+   COD: agregar elementos + modo edición + ofertas rediseñadas
+   ============================================================ */
+
+.cod-vista-barra { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.cod-agregar { position: relative; flex: 0 0 auto; }
+.cod-agregar__menu {
+  position: absolute;
+  right: 0; top: calc(100% + 6px);
+  z-index: 50;
+  width: 240px;
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  box-shadow: var(--sombra-l);
+  padding: 6px;
+}
+.cod-agregar__grupo {
+  font-size: 11px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: .04em;
+  color: var(--suave);
+  padding: 8px 10px 4px;
+}
+.cod-agregar__menu button {
+  display: flex; align-items: center; gap: 8px;
+  width: 100%;
+  border: 0; background: none;
+  padding: 8px 10px;
+  font-size: 13px; font-family: inherit;
+  color: var(--negro);
+  border-radius: var(--radio-s);
+  cursor: pointer;
+  text-align: left;
+}
+.cod-agregar__menu button:hover { background: var(--fondo); }
+
+/* modo edición: preview + panel de propiedades */
+.cod-modo-layout {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 16px;
+  align-items: start;
+}
+@media (max-width: 900px) { .cod-modo-layout { grid-template-columns: 1fr; } }
+.cod-modo-layout > * { min-width: 0; }
+
+.cod-mov { cursor: pointer; border-radius: 6px; transition: box-shadow .1s ease; }
+.cod-mov:hover { box-shadow: 0 0 0 1.5px #b9b9c2; }
+.cod-mov--sel { box-shadow: 0 0 0 2px var(--ia) !important; }
+
+.cod-props {
+  position: sticky; top: 16px;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  background: var(--fondo);
+  padding: 14px;
+}
+.cod-props__cab { font-size: 13.5px; font-weight: 600; color: var(--negro); margin-bottom: 10px; }
+.cod-props__acciones { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+.cod-props__borrar { color: var(--peligro); }
+.cod-props__vacio { font-size: 13px; color: var(--suave); padding: 10px 4px; }
+
+.cod-engranaje {
+  position: absolute;
+  top: 4px; right: 4px;
+  width: 26px; height: 26px;
+  border: 1px solid var(--borde);
+  border-radius: 7px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+  box-shadow: var(--sombra-s);
+}
+.cod-engranaje:hover { background: var(--fondo); }
+
+/* diseñador de ofertas con cabeceras */
+.cod-tier-cab, .cod-tier-fila { grid-template-columns: 72px 72px 1fr 56px 150px auto; }
+.cod-tier-cab {
+  display: grid;
+  gap: 10px;
+  font-size: 11.5px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: .03em;
+  color: var(--suave);
+  padding: 0 0 6px;
+}
+.cod-tier-pop { display: flex; align-items: center; justify-content: center; }
+.cod-tier-pop input { width: 16px; height: 16px; accent-color: var(--negro); cursor: pointer; }
+.cod-tier-calc { font-size: 12px; color: var(--suave); white-space: nowrap; }
+.cod-tier-calc strong { color: var(--negro); }
+@media (max-width: 700px) {
+  .cod-tier-cab { display: none; }
+  .cod-tier-fila { grid-template-columns: 60px 60px 1fr auto; }
+  .cod-tier-calc, .cod-tier-pop { display: none; }
+  .cod-vista-barra { flex-direction: column; align-items: stretch; }
+}
+@media (max-width: 700px) {
+  .cod-tier-fila, .cod-tarifa-fila { gap: 8px; }
+  .cod-tier-fila { grid-template-columns: 52px 52px 1fr auto; }
+  .cod-tier-fila > *, .cod-tarifa-fila > * { min-width: 0; }
+  .cod-tier-fila input, .cod-tarifa-fila input { width: 100%; padding: 0 8px; }
+}

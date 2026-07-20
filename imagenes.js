@@ -100,4 +100,66 @@ async function subirImagenProducto(sesion, productoGid, nombre, mime, base64) {
   throw new Error("La imagen quedó procesándose; probá recargar en unos segundos.");
 }
 
-module.exports = { subirImagenProducto };
+// ---------- imágenes sueltas de la tienda (Files API) ----------
+//
+// Para el formulario COD no hay producto de contexto: la imagen se sube a
+// Files de la tienda (fileCreate) y se usa su URL pública del CDN.
+
+const M_FILE = `mutation($files: [FileCreateInput!]!) {
+  fileCreate(files: $files) {
+    files { id fileStatus }
+    userErrors { field message }
+  }
+}`;
+
+const Q_FILE = `query($id: ID!) {
+  node(id: $id) {
+    ... on MediaImage { id fileStatus preview { image { url } } }
+  }
+}`;
+
+async function subirImagenTienda(sesion, nombre, mime, base64) {
+  if (!/^image\//.test(mime)) throw new Error("Solo se pueden subir imágenes.");
+  const buf = Buffer.from(base64, "base64");
+  if (buf.length > 10 * 1024 * 1024) throw new Error("La imagen supera los 10 MB.");
+  const archivo = String(nombre || "imagen.jpg").replace(/[^\w.\-]+/g, "-").slice(-80);
+
+  const r1 = await gql(
+    M_STAGED,
+    {
+      input: [{ filename: archivo, mimeType: mime, httpMethod: "POST", resource: "FILE", fileSize: String(buf.length) }]
+    },
+    sesion
+  );
+  if (r1.stagedUploadsCreate.userErrors?.length) {
+    throw new Error("Subida: " + JSON.stringify(r1.stagedUploadsCreate.userErrors));
+  }
+  const destino = r1.stagedUploadsCreate.stagedTargets[0];
+
+  const form = new FormData();
+  for (const p of destino.parameters) form.append(p.name, p.value);
+  form.append("file", new Blob([buf], { type: mime }), archivo);
+  const r2 = await fetch(destino.url, { method: "POST", body: form });
+  if (!r2.ok) throw new Error(`El bucket de Shopify rechazó la subida (HTTP ${r2.status}).`);
+
+  const r3 = await gql(
+    M_FILE,
+    { files: [{ originalSource: destino.resourceUrl, contentType: "IMAGE", alt: "" }] },
+    sesion
+  );
+  if (r3.fileCreate.userErrors?.length) {
+    throw new Error("Archivo: " + JSON.stringify(r3.fileCreate.userErrors));
+  }
+  const fileId = r3.fileCreate.files[0]?.id;
+  if (!fileId) throw new Error("Shopify no devolvió el archivo creado.");
+
+  for (let i = 0; i < 15; i++) {
+    const n = (await gql(Q_FILE, { id: fileId }, sesion)).node;
+    if (n?.fileStatus === "READY" && n.preview?.image?.url) return { url: n.preview.image.url };
+    if (n?.fileStatus === "FAILED") throw new Error("Shopify no pudo procesar la imagen.");
+    await dormir(1000);
+  }
+  throw new Error("La imagen quedó procesándose; probá de nuevo en unos segundos.");
+}
+
+module.exports = { subirImagenProducto, subirImagenTienda };

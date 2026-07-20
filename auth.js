@@ -19,7 +19,8 @@ const { guardarTienda, normalizar, esDominioValido } = require("./tiendas");
 // write_orders: lo usa el formulario COD para crear pedidos contra reembolso.
 // OJO: al agregar un alcance, las tiendas ya instaladas tienen que volver a
 // pasar por /auth?shop=... para autorizarlo.
-const ALCANCES = "read_products,write_products,read_themes,write_themes,write_orders";
+// write_files: imágenes que el merchant sube al formulario COD (Files API).
+const ALCANCES = "read_products,write_products,read_themes,write_themes,write_orders,read_files,write_files";
 
 // Comparación en tiempo constante: comparar firmas con === filtra el secreto
 // de a un carácter por vez.
