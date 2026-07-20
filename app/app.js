@@ -223,6 +223,66 @@
       </section>
 
       <section class="tarjeta">
+        <div class="tarjeta__titulo">Herramientas</div>
+        <div class="panel__sub">Explorá lo que TiendaIQ puede hacer por tu tienda.</div>
+        <div class="herramientas">
+          <div class="herramienta">
+            <div class="herramienta__nombre">Páginas de producto con IA</div>
+            <p>Elegí un producto y la IA arma la landing completa.</p>
+            <button class="btn btn--chico" id="herr-crear">Crear página de producto</button>
+            <div class="herramienta__preview herramienta__preview--paginas">
+              <div class="mini-app">
+                <div class="mini-app__barra"><span></span><span></span><span></span></div>
+                <div class="mini-app__cuerpo">
+                  <div class="mini-app__media"></div>
+                  <div class="mini-app__col">
+                    <div class="mini-linea mini-linea--titulo"></div>
+                    <div class="mini-linea"></div>
+                    <div class="mini-linea mini-linea--corta"></div>
+                    <div class="mini-cta"></div>
+                  </div>
+                </div>
+              </div>
+              <span class="mini-chip-ia">✦ IA</span>
+            </div>
+          </div>
+          <div class="herramienta">
+            <div class="herramienta__nombre">Formulario contra reembolso (COD)</div>
+            <p>Tus clientes piden y pagan al recibir: el formulario crea el pedido en Shopify.</p>
+            <button class="btn btn--chico" id="herr-cod">Configurar COD</button>
+            <div class="herramienta__preview herramienta__preview--cod">
+              <div class="mini-app">
+                <div class="mini-app__barra"><span></span><span></span><span></span></div>
+                <div class="mini-app__cuerpo">
+                  <div class="mini-app__col">
+                    <div class="mini-linea mini-linea--titulo"></div>
+                    <div class="mini-linea"></div>
+                    <div class="mini-linea"></div>
+                    <div class="mini-linea mini-linea--corta"></div>
+                    <div class="mini-cta mini-cta--cod"></div>
+                  </div>
+                </div>
+              </div>
+              <span class="mini-chip-ia">🛵 COD</span>
+            </div>
+          </div>
+          <div class="herramienta">
+            <div class="herramienta__nombre">Tienda Shopify con IA</div>
+            <p>Una tienda completa armada por IA desde cero.</p>
+            <button class="btn btn--chico btn--fantasma" disabled>Próximamente</button>
+            <div class="herramienta__preview herramienta__preview--tienda">
+              <div class="mini-app">
+                <div class="mini-app__barra"><span></span><span></span><span></span></div>
+                <div class="mini-hero"></div>
+                <div class="mini-grid"><span></span><span></span><span></span></div>
+              </div>
+              <span class="mini-chip-ia">✦ IA</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="tarjeta">
         <div class="tarjeta__titulo">Tus números</div>
         <div class="panel__sub">Sincronizado con tu tienda, en tiempo real</div>
         <div class="metricas">
@@ -299,66 +359,6 @@
                      <button class="btn btn--chico" id="resumen-crear">＋ Crear página de producto con IA</button>
                    </div>`
             }
-          </div>
-        </div>
-      </section>
-
-      <section class="tarjeta">
-        <div class="tarjeta__titulo">Herramientas</div>
-        <div class="panel__sub">Explorá lo que TiendaIQ puede hacer por tu tienda.</div>
-        <div class="herramientas">
-          <div class="herramienta">
-            <div class="herramienta__nombre">Páginas de producto con IA</div>
-            <p>Elegí un producto y la IA arma la landing completa.</p>
-            <button class="btn btn--chico" id="herr-crear">Crear página de producto</button>
-            <div class="herramienta__preview herramienta__preview--paginas">
-              <div class="mini-app">
-                <div class="mini-app__barra"><span></span><span></span><span></span></div>
-                <div class="mini-app__cuerpo">
-                  <div class="mini-app__media"></div>
-                  <div class="mini-app__col">
-                    <div class="mini-linea mini-linea--titulo"></div>
-                    <div class="mini-linea"></div>
-                    <div class="mini-linea mini-linea--corta"></div>
-                    <div class="mini-cta"></div>
-                  </div>
-                </div>
-              </div>
-              <span class="mini-chip-ia">✦ IA</span>
-            </div>
-          </div>
-          <div class="herramienta">
-            <div class="herramienta__nombre">Formulario contra reembolso (COD)</div>
-            <p>Tus clientes piden y pagan al recibir: el formulario crea el pedido en Shopify.</p>
-            <button class="btn btn--chico" id="herr-cod">Configurar COD</button>
-            <div class="herramienta__preview herramienta__preview--cod">
-              <div class="mini-app">
-                <div class="mini-app__barra"><span></span><span></span><span></span></div>
-                <div class="mini-app__cuerpo">
-                  <div class="mini-app__col">
-                    <div class="mini-linea mini-linea--titulo"></div>
-                    <div class="mini-linea"></div>
-                    <div class="mini-linea"></div>
-                    <div class="mini-linea mini-linea--corta"></div>
-                    <div class="mini-cta mini-cta--cod"></div>
-                  </div>
-                </div>
-              </div>
-              <span class="mini-chip-ia">🛵 COD</span>
-            </div>
-          </div>
-          <div class="herramienta">
-            <div class="herramienta__nombre">Tienda Shopify con IA</div>
-            <p>Una tienda completa armada por IA desde cero.</p>
-            <button class="btn btn--chico btn--fantasma" disabled>Próximamente</button>
-            <div class="herramienta__preview herramienta__preview--tienda">
-              <div class="mini-app">
-                <div class="mini-app__barra"><span></span><span></span><span></span></div>
-                <div class="mini-hero"></div>
-                <div class="mini-grid"><span></span><span></span><span></span></div>
-              </div>
-              <span class="mini-chip-ia">✦ IA</span>
-            </div>
           </div>
         </div>
       </section>`;
