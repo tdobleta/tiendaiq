@@ -536,23 +536,7 @@
 
     if (estado.cod.tab === "vista")
       return `
-        <div class="cod-vista-barra">
-          <div class="editor__nota" style="margin:0;flex:1">Así lo ve tu cliente. <strong>Hacé clic sobre los textos</strong> para editarlos acá mismo. Para mover o configurar piezas, usá <strong>Modo edición</strong>.</div>
-          <div class="cod-agregar">
-            <button class="btn btn--chico" id="cod-agregar-btn" type="button">＋ Agregar elemento</button>
-            <div class="cod-agregar__menu" id="cod-agregar-menu" hidden>
-              <div class="cod-agregar__grupo">Contenido</div>
-              <button type="button" data-el="titulo"><strong>T</strong> Título o texto destacado</button>
-              <button type="button" data-el="texto">¶ Párrafo de texto</button>
-              <button type="button" data-el="imagen">🖼 Imagen</button>
-              <div class="cod-agregar__grupo">Campos</div>
-              <button type="button" data-el="campo">▭ Campo de texto</button>
-              <div class="cod-agregar__grupo">Botones</div>
-              <button type="button" data-el="whatsapp">✆ Botón de WhatsApp</button>
-              <button type="button" data-el="enlace">🔗 Botón con enlace</button>
-            </div>
-          </div>
-        </div>
+        <div class="editor__nota">Así lo ve tu cliente. <strong>Hacé clic sobre los textos</strong> para editarlos acá mismo. Para agregar, mover o configurar piezas, usá <strong>Modo edición</strong>.</div>
         <div class="cod-vista-inline" id="cod-vista"></div>
         <div class="cod-separador"></div>
         <div class="fila-doble-cod">
@@ -562,7 +546,32 @@
 
     if (estado.cod.tab === "modo")
       return `
-        <div class="editor__nota">Hacé clic en cualquier pieza del formulario para seleccionarla: la podés <strong>mover</strong> con ↑ ↓, configurar sus opciones o eliminarla (los elementos agregados). Los cambios se ven al instante.</div>
+        <div class="cod-vista-barra">
+          <div class="editor__nota" style="margin:0;flex:1">Hacé clic en cualquier pieza para seleccionarla: <strong>movela</strong> con ↑ ↓, configurala en el panel o eliminala. Los elementos nuevos se agregan al final.</div>
+          <div class="cod-agregar">
+            <button class="btn btn--chico" id="cod-agregar-btn" type="button">＋ Agregar elemento</button>
+            <div class="cod-agregar__menu" id="cod-agregar-menu" hidden>
+              <div class="cod-agregar__grupo">Texto</div>
+              <button type="button" data-el="titulo"><strong>T</strong> Título o texto destacado</button>
+              <button type="button" data-el="texto">¶ Párrafo de texto</button>
+              <div class="cod-agregar__grupo">Imagen</div>
+              <button type="button" data-el="imagen">🖼 Imagen o GIF</button>
+              <div class="cod-agregar__grupo">Campos</div>
+              <button type="button" data-el="campo">▭ Campo de texto</button>
+              <button type="button" data-el="desplegable">▾ Campo desplegable</button>
+              <button type="button" data-el="seleccion">◉ Selección única</button>
+              <button type="button" data-el="casilla">☑ Casilla de selección</button>
+              <button type="button" data-el="fecha">📅 Selector de fecha</button>
+              <div class="cod-agregar__grupo">Botones</div>
+              <button type="button" data-el="pago_shopify">💳 Botón de pago de Shopify</button>
+              <button type="button" data-el="whatsapp">✆ Botón de WhatsApp</button>
+              <button type="button" data-el="enlace">🔗 Botón con enlace</button>
+              <div class="cod-agregar__grupo">Otros</div>
+              <button type="button" data-el="cantidad">± Selector de cantidad</button>
+              <button type="button" data-el="timer">⏰ Timer de urgencia</button>
+            </div>
+          </div>
+        </div>
         <div class="cod-modo-layout">
           <div class="cod-vista-inline" id="cod-modo"></div>
           <aside class="cod-props" id="cod-props"></aside>
@@ -847,6 +856,17 @@
         subirImagenElementoCod(e.target.files[0], Number(e.target.dataset.imagenEl));
         return;
       }
+      // opciones de desplegable/selección: una por línea → array
+      if (e.target.dataset.opciones !== undefined) {
+        const i = Number(e.target.dataset.opciones);
+        if (estado.cod.config.elementos?.[i]) {
+          estado.cod.config.elementos[i].opciones = e.target.value
+            .split("\n").map((x) => x.trim()).filter(Boolean);
+          marcarSucioCod();
+          montarModoCod();
+        }
+        return;
+      }
       if (!e.target.dataset.cfg) return;
       if (estado.cod.tab === "modo") montarModoCod();
       if (estado.cod.tab === "ofertas" && e.target.type === "number") pintarCod();
@@ -977,9 +997,16 @@
       titulo: { texto: "Título destacado" },
       texto: { texto: "Escribí acá el texto que quieras mostrar." },
       campo: { etiqueta: "Campo personalizado", obligatorio: false },
-      imagen: { url: null },
-      whatsapp: { numero: "", mensaje: "", texto: "Consultanos por WhatsApp" },
-      enlace: { url: "", texto: "Más información" }
+      desplegable: { etiqueta: "Elegí una opción", opciones: ["Opción 1", "Opción 2", "Opción 3"], obligatorio: false },
+      seleccion: { etiqueta: "Elegí una opción", opciones: ["Opción 1", "Opción 2", "Opción 3"], obligatorio: false },
+      casilla: { etiqueta: "", texto_casilla: "Quiero que me llamen antes de enviar", obligatorio: false },
+      fecha: { etiqueta: "Fecha de entrega preferida", obligatorio: false },
+      imagen: { url: null, tamano: 100 },
+      whatsapp: { numero: "", mensaje: "¡Hola! Quiero hacer un pedido: {page_url}", texto: "Consultanos por WhatsApp" },
+      enlace: { url: "", texto: "Más información" },
+      pago_shopify: { texto: "Pagar con tarjeta", subtitulo: "" },
+      cantidad: { etiqueta: "Cantidad" },
+      timer: { texto: "Oferta especial: tu pedido queda reservado por", minutos: 10 }
     };
     if (!defaults[tipo]) return;
     const el = { id: "el" + Date.now(), tipo, ...defaults[tipo] };
@@ -988,9 +1015,11 @@
     c.orden = window.TiendaIQCOD.ordenResuelto(c); // el nuevo queda al final
     modoSel = "e:" + el.id;
     marcarSucioCod();
-    // imagen/whatsapp/enlace necesitan configuración: directo al Modo edición
-    if (tipo === "imagen" || tipo === "whatsapp" || tipo === "enlace") estado.cod.tab = "modo";
     pintarCod();
+    // que se vea la pieza nueva (queda al final del formulario)
+    requestAnimationFrame(() => {
+      $("cod-modo")?.querySelector(".cod-mov--sel")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
   }
 
   function moverPiezaCod(dir) {
@@ -1037,7 +1066,10 @@
 
   const TIPO_ELEMENTO = {
     titulo: "Título", texto: "Párrafo", campo: "Campo de texto",
-    imagen: "Imagen", whatsapp: "Botón de WhatsApp", enlace: "Botón con enlace"
+    desplegable: "Campo desplegable", seleccion: "Selección única",
+    casilla: "Casilla de selección", fecha: "Selector de fecha",
+    imagen: "Imagen o GIF", whatsapp: "Botón de WhatsApp", enlace: "Botón con enlace",
+    pago_shopify: "Botón de pago de Shopify", cantidad: "Selector de cantidad", timer: "Timer de urgencia"
   };
 
   function pintarPropsCod() {
@@ -1072,9 +1104,37 @@
       if (el.tipo === "titulo" || el.tipo === "texto") campos = campoCod(`elementos.${i}.texto`, "Texto");
       if (el.tipo === "campo")
         campos = campoCod(`elementos.${i}.etiqueta`, "Etiqueta") + campoCod(`elementos.${i}.obligatorio`, "Obligatorio", "check");
+      if (el.tipo === "desplegable" || el.tipo === "seleccion")
+        campos =
+          campoCod(`elementos.${i}.etiqueta`, "Etiqueta") +
+          `<div class="campo campo--editor"><label>Opciones (una por línea)</label>
+             <textarea rows="4" data-opciones="${i}">${esc((el.opciones || []).join("\n"))}</textarea></div>` +
+          campoCod(`elementos.${i}.obligatorio`, "Obligatorio", "check");
+      if (el.tipo === "casilla")
+        campos =
+          campoCod(`elementos.${i}.etiqueta`, "Etiqueta (opcional, arriba de la casilla)") +
+          campoCod(`elementos.${i}.texto_casilla`, "Texto de la casilla") +
+          campoCod(`elementos.${i}.obligatorio`, "Obligatoria (hay que marcarla para comprar)", "check");
+      if (el.tipo === "fecha")
+        campos = campoCod(`elementos.${i}.etiqueta`, "Etiqueta") + campoCod(`elementos.${i}.obligatorio`, "Obligatorio", "check");
       if (el.tipo === "imagen")
         campos = `<label class="btn btn--fantasma btn--chico" style="cursor:pointer">🖼 ${el.url ? "Cambiar imagen" : "Subir imagen"}<input type="file" accept="image/*" hidden data-imagen-el="${i}"></label>
-          ${el.url ? `<div class="ayuda" style="margin-top:6px">Imagen cargada ✓</div>` : `<div class="ayuda" style="margin-top:6px">Todavía no cargaste la imagen.</div>`}`;
+          ${el.url ? `<div class="ayuda" style="margin:6px 0 10px">Imagen cargada ✓</div>` : `<div class="ayuda" style="margin:6px 0 10px">Subí un archivo o pegá una URL.</div>`}
+          ${campoCod(`elementos.${i}.url`, "…o URL de la imagen / GIF")}
+          ${campoCod(`elementos.${i}.tamano`, "Tamaño (% del ancho)", "numero", 'min="10" max="100"')}`;
+      if (el.tipo === "pago_shopify")
+        campos =
+          `<div class="editor__nota">Lleva al cliente al checkout normal de Shopify (paga con tarjeta) con el producto y la cantidad elegida.</div>` +
+          campoCod(`elementos.${i}.texto`, "Texto del botón") +
+          campoCod(`elementos.${i}.subtitulo`, "Subtítulo (opcional)");
+      if (el.tipo === "cantidad")
+        campos =
+          `<div class="editor__nota">Con las ofertas de cantidad activas este selector se oculta: mandan las ofertas.</div>` +
+          campoCod(`elementos.${i}.etiqueta`, "Etiqueta");
+      if (el.tipo === "timer")
+        campos =
+          campoCod(`elementos.${i}.texto`, "Texto del timer") +
+          campoCod(`elementos.${i}.minutos`, "Minutos de cuenta regresiva", "numero", 'min="1" max="120"');
       if (el.tipo === "whatsapp")
         campos =
           campoCod(`elementos.${i}.numero`, "Número con código de país (ej: 5491122334455)") +

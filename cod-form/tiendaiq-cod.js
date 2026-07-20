@@ -116,11 +116,14 @@
         return `<div class="tiq-cod-el tiq-cod-el--texto tiq-cod-campo--ancho" ${marca}><p>${esc(el.texto || "")}</p></div>`;
       if (el.tipo === "imagen")
         return `<div class="tiq-cod-el tiq-cod-el--imagen tiq-cod-campo--ancho" ${marca}>${
-          el.url ? `<img src="${esc(el.url)}" alt="">` : `<span class="tiq-cod-el__ph">Imagen sin cargar</span>`
+          el.url
+            ? `<img src="${esc(el.url)}" alt="" style="width:${Math.min(100, Math.max(10, Number(el.tamano) || 100))}%">`
+            : `<span class="tiq-cod-el__ph">Imagen sin cargar</span>`
         }</div>`;
       if (el.tipo === "whatsapp") {
         const num = String(el.numero || "").replace(/\D/g, "");
-        const href = num ? `https://wa.me/${num}${el.mensaje ? "?text=" + encodeURIComponent(el.mensaje) : ""}` : "#";
+        const mensaje = String(el.mensaje || "").replace("{page_url}", location.href);
+        const href = num ? `https://wa.me/${num}${mensaje ? "?text=" + encodeURIComponent(mensaje) : ""}` : "#";
         return `<div class="tiq-cod-el tiq-cod-campo--ancho" ${marca}>
           <a class="tiq-cod-el__wsp" href="${esc(href)}" target="_blank" rel="noopener">
             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 00-8.6 15.1L2 22l5.1-1.3A10 10 0 1012 2zm5.7 14.2c-.2.7-1.3 1.3-1.9 1.4-.5.1-1.1.1-1.8-.1-.4-.1-.9-.3-1.6-.6-2.9-1.2-4.7-4.1-4.9-4.3-.1-.2-1.1-1.5-1.1-2.9s.7-2 .9-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.4l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.1.1-.2.3-.1.5.2.3.8 1.3 1.7 2.1 1.2 1.1 2.2 1.4 2.5 1.5.3.1.5.1.7-.1l.9-1c.2-.2.4-.3.7-.2l2.1.9c.3.1.5.2.6.4 0 .1 0 .5-.2 1.2z"/></svg>
@@ -141,17 +144,77 @@
           <span class="tiq-cod-campo__error">Completá este campo</span>
         </div>`;
       }
+      if (el.tipo === "desplegable" || el.tipo === "fecha") {
+        const req = el.obligatorio ? `<span class="tiq-req">*</span>` : "";
+        const entrada =
+          el.tipo === "fecha"
+            ? `<input type="date" name="x_${esc(el.id)}">`
+            : `<select name="x_${esc(el.id)}">
+                 <option value="">${esc(el.etiqueta || "Elegí una opción")}</option>
+                 ${(el.opciones || []).map((o) => `<option value="${esc(o)}">${esc(o)}</option>`).join("")}
+               </select>`;
+        return `
+        <div class="tiq-cod-campo tiq-cod-campo--ancho" ${marca} data-campo="x:${esc(el.id)}" data-obligatorio="${el.obligatorio ? 1 : 0}">
+          <label>${esc(el.etiqueta || "Campo")} ${req}</label>
+          <div class="tiq-cod-entrada">${ICONOS.nota}${entrada}</div>
+          <span class="tiq-cod-campo__error">Completá este campo</span>
+        </div>`;
+      }
+      if (el.tipo === "seleccion") {
+        const req = el.obligatorio ? `<span class="tiq-req">*</span>` : "";
+        return `
+        <div class="tiq-cod-campo tiq-cod-campo--ancho" ${marca} data-campo="x:${esc(el.id)}" data-obligatorio="${el.obligatorio ? 1 : 0}">
+          <label>${esc(el.etiqueta || "Elegí una opción")} ${req}</label>
+          <div class="tiq-cod-radios">
+            ${(el.opciones || [])
+              .map(
+                (o, j) => `<label class="tiq-cod-radio"><input type="radio" name="x_${esc(el.id)}" value="${esc(o)}" ${j === 0 ? "checked" : ""}> ${esc(o)}</label>`
+              )
+              .join("")}
+          </div>
+          <span class="tiq-cod-campo__error">Elegí una opción</span>
+        </div>`;
+      }
+      if (el.tipo === "casilla") {
+        const req = el.obligatorio ? `<span class="tiq-req">*</span>` : "";
+        return `
+        <div class="tiq-cod-campo tiq-cod-campo--ancho" ${marca} data-campo="x:${esc(el.id)}" data-obligatorio="${el.obligatorio ? 1 : 0}">
+          ${el.etiqueta ? `<label>${esc(el.etiqueta)} ${req}</label>` : ""}
+          <label class="tiq-cod-check"><input type="checkbox" name="x_${esc(el.id)}" data-si="${esc(el.texto_casilla || "Sí")}"> ${esc(el.texto_casilla || "Casilla de selección")}</label>
+          <span class="tiq-cod-campo__error">Marcá esta casilla</span>
+        </div>`;
+      }
+      if (el.tipo === "cantidad") {
+        // Con ofertas de cantidad activas el selector sobra: mandan los tiers.
+        if (tiers.length) return "";
+        return `
+        <div class="tiq-cod-el tiq-cod-el--cantidad tiq-cod-campo--ancho" ${marca}>
+          <label>${esc(el.etiqueta || "Cantidad")}</label>
+          <span class="tiq-cod-cant tiq-cod-cant--grande">
+            <button type="button" data-cant="-1">−</button>
+            <span data-zona="cantidad">1</span>
+            <button type="button" data-cant="1">+</button>
+          </span>
+        </div>`;
+      }
+      if (el.tipo === "timer") {
+        return `
+        <div class="tiq-cod-el tiq-cod-el--timer tiq-cod-campo--ancho" ${marca} data-timer="${Math.max(1, Number(el.minutos) || 10)}">
+          <span>⏰ ${esc(el.texto || "Oferta especial: tu pedido queda reservado por")}</span>
+          <span class="tiq-cod-el__timer-reloj">${String(Math.max(1, Number(el.minutos) || 10)).padStart(2, "0")}:00</span>
+        </div>`;
+      }
+      if (el.tipo === "pago_shopify") {
+        return `
+        <div class="tiq-cod-el tiq-cod-campo--ancho" ${marca}>
+          <button type="button" class="tiq-cod-el__pago" data-pago-shopify="1">
+            ${esc(el.texto || "Pagar con tarjeta")}
+            ${el.subtitulo ? `<span class="tiq-cod-el__pago-sub">${esc(el.subtitulo)}</span>` : ""}
+          </button>
+        </div>`;
+      }
       return "";
     };
-
-    const mapaCampos = Object.fromEntries((c.campos || []).map((x) => [x.id, x]));
-    const mapaElementos = Object.fromEntries((c.elementos || []).map((x) => [x.id, x]));
-    const cuerpoCampos = ordenResuelto(c)
-      .map((k) => {
-        if (k.startsWith("c:")) return mapaCampos[k.slice(2)] ? campoHTML(mapaCampos[k.slice(2)]) : "";
-        return mapaElementos[k.slice(2)] ? elementoHTML(mapaElementos[k.slice(2)]) : "";
-      })
-      .join("");
 
     // Ofertas de cantidad: tarjetas con precio final, precio tachado, ahorro
     // por unidad y cinta de "más popular". Los números salen del precio de la
@@ -181,6 +244,17 @@
     const ofertasHTML = tiers.length
       ? `<div class="tiq-cod-ofertas" data-zona="ofertas">${tiers.map(tierHTML).join("")}</div>`
       : "";
+
+    // El cuerpo de campos se arma acá (después de `tiers`: el elemento
+    // "selector de cantidad" necesita saber si hay ofertas activas).
+    const mapaCampos = Object.fromEntries((c.campos || []).map((x) => [x.id, x]));
+    const mapaElementos = Object.fromEntries((c.elementos || []).map((x) => [x.id, x]));
+    const cuerpoCampos = ordenResuelto(c)
+      .map((k) => {
+        if (k.startsWith("c:")) return mapaCampos[k.slice(2)] ? campoHTML(mapaCampos[k.slice(2)]) : "";
+        return mapaElementos[k.slice(2)] ? elementoHTML(mapaElementos[k.slice(2)]) : "";
+      })
+      .join("");
 
     const tarifasHTML = (c.tarifas || []).length
       ? `<div class="tiq-cod-envio" data-zona="tarifas">
@@ -269,12 +343,21 @@
       return { cant, unitario, subtotal, envio, total: subtotal + envio };
     }
 
+    // El valor de un campo, sea cual sea su tipo de entrada.
+    function valorDe(div) {
+      const radio = div.querySelector('input[type="radio"]:checked');
+      if (radio) return radio.value;
+      const chk = div.querySelector('input[type="checkbox"]');
+      if (chk) return chk.checked ? chk.dataset.si || "Sí" : "";
+      const e = div.querySelector("input,textarea,select");
+      return e ? e.value.trim() : "";
+    }
+
     function repintar() {
       const t = totales();
       q('[data-zona="precio-unitario"]').textContent =
         plata(t.unitario, producto.moneda) + (t.cant > 1 ? ` × ${t.cant}` : "");
-      const zc = q('[data-zona="cantidad"]');
-      if (zc) zc.textContent = t.cant;
+      capa.querySelectorAll('[data-zona="cantidad"]').forEach((z) => (z.textContent = t.cant));
       q('[data-zona="subtotal"]').textContent = plata(t.subtotal, producto.moneda);
       q('[data-zona="total"]').textContent = plata(t.total, producto.moneda);
       q('[data-zona="cta"]').textContent = (c.textos?.cta || "Completá tu compra — {total}")
@@ -288,6 +371,30 @@
         estado.cantidad = Math.min(10, Math.max(1, estado.cantidad + Number(btnCant.dataset.cant)));
         repintar();
       }
+      // Botón de pago de Shopify: permalink de carrito → directo al checkout.
+      if (e.target.closest("[data-pago-shopify]")) {
+        if (preview) {
+          const zonaError = q('[data-zona="error"]');
+          zonaError.style.display = "block";
+          zonaError.style.background = "#eef4ff";
+          zonaError.style.color = "#1d4ed8";
+          zonaError.textContent = "Vista previa: este botón lleva al checkout normal de Shopify.";
+          return;
+        }
+        const idNum = String(variante.id).replace(/\D/g, "");
+        location.href = `/cart/${idNum}:${totales().cant}`;
+      }
+    });
+
+    // Timers de urgencia: cuentan para atrás en vivo mientras el modal viva.
+    capa.querySelectorAll("[data-timer]").forEach((el) => {
+      let seg = Math.max(1, Number(el.dataset.timer) || 10) * 60;
+      const reloj = el.querySelector(".tiq-cod-el__timer-reloj");
+      const tick = setInterval(() => {
+        if (!capa.isConnected) return clearInterval(tick);
+        seg = Math.max(0, seg - 1);
+        reloj.textContent = `${String(Math.floor(seg / 60)).padStart(2, "0")}:${String(seg % 60).padStart(2, "0")}`;
+      }, 1000);
     });
 
     capa.addEventListener("change", (e) => {
@@ -319,8 +426,7 @@
 
       let valido = true;
       capa.querySelectorAll("[data-campo]").forEach((div) => {
-        const entrada = div.querySelector("input,textarea,select");
-        const malo = div.dataset.obligatorio === "1" && !entrada.value.trim();
+        const malo = div.dataset.obligatorio === "1" && !valorDe(div);
         div.classList.toggle("tiq-cod-campo--invalido", malo);
         if (malo) valido = false;
       });
@@ -345,7 +451,7 @@
       const datos = {};
       const datosExtra = {};
       capa.querySelectorAll("[data-campo]").forEach((div) => {
-        const valor = div.querySelector("input,textarea,select").value.trim();
+        const valor = valorDe(div);
         if (div.dataset.campo.startsWith("x:")) datosExtra[div.dataset.campo.slice(2)] = valor;
         else datos[div.dataset.campo] = valor;
       });

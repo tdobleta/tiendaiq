@@ -152,7 +152,12 @@ function servirEstatico(res, base, rel) {
     res.writeHead(404).end("no encontrado");
     return;
   }
-  res.writeHead(200, { "Content-Type": TIPOS[path.extname(archivo).toLowerCase()] || "application/octet-stream" });
+  res.writeHead(200, {
+    "Content-Type": TIPOS[path.extname(archivo).toLowerCase()] || "application/octet-stream",
+    // Sin esto el navegador se queda con app.js/css viejos después de un
+    // deploy y "los cambios no aparecen". no-cache = revalidar siempre.
+    "Cache-Control": "no-cache"
+  });
   fs.createReadStream(archivo).pipe(res);
 }
 

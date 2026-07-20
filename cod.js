@@ -272,12 +272,14 @@ async function crearPedidoCod(sesion, pedido) {
     }
   }
 
-  // Campos personalizados (elementos tipo "campo"): mismo criterio, el
-  // obligatorio se valida acá con la config, no con lo que diga el browser.
+  // Campos personalizados (campo, desplegable, selección, casilla, fecha):
+  // mismo criterio, el obligatorio se valida acá con la config, no con lo
+  // que diga el browser.
+  const TIPOS_CAMPO = ["campo", "desplegable", "seleccion", "casilla", "fecha"];
   const extras = [];
   const valoresExtra = pedido.extras || {}; // { <id elemento>: valor }
   for (const el of config.elementos || []) {
-    if (el.tipo !== "campo") continue;
+    if (!TIPOS_CAMPO.includes(el.tipo)) continue;
     const valor = String(valoresExtra[el.id] || "").trim();
     if (el.obligatorio && !valor) throw new Error(`Falta el campo obligatorio: ${el.etiqueta}`);
     if (valor) extras.push({ etiqueta: String(el.etiqueta || "Campo").slice(0, 250), valor: valor.slice(0, 250) });
