@@ -452,37 +452,40 @@
   const FLECHA_DER = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>`;
   const PLAY = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>`;
 
-  const carruselMarco = (clase, cuerpo) => `
-        <div class="tiq-carrusel">
-          <button class="tiq-carrusel__flecha tiq-carrusel__flecha--izq" type="button" onclick="tiqCarrusel(this,-1)" aria-label="Anterior">${FLECHA_IZQ}</button>
-          <div class="tiq-carrusel__track ${clase}">${cuerpo}</div>
-          <button class="tiq-carrusel__flecha tiq-carrusel__flecha--der" type="button" onclick="tiqCarrusel(this,1)" aria-label="Siguiente">${FLECHA_DER}</button>
-        </div>`;
-
+  // Videos: carrusel CENTRADO. Un video protagonista en el medio, los vecinos
+  // asomando a los costados; las flechas pasan de a uno (posición fija).
   function seccionVideos(s) {
     const items = (s.items || []).filter((i) => i.url);
-    const cuerpo = items.length
-      ? items
-          .map(
-            (i) => `
-          <div class="tiq-video" data-embed="${esc(videoEmbed(i.url))}">
-            <div class="tiq-video__poster" onclick="tiqVideoPlay(this)">
-              ${posterVideo(i)}
-              <button class="tiq-video__play" type="button" aria-label="Reproducir">${PLAY}</button>
-            </div>
-          </div>`
-          )
-          .join("")
-      : `<div class="tiq-sec__vacio">Tocá <b>Editar</b> y pegá los enlaces de tus videos (YouTube, Vimeo o MP4).</div>`;
+    if (!items.length) {
+      return `
+    <section class="tiq-sec tiq-sec--videos" data-seccion="${esc(s.id)}">
+      <div class="contenedor"><div class="tiq-sec__vacio">Tocá <b>Editar</b> y sumá videos: pegá un enlace (YouTube, Vimeo o MP4) o subí un archivo.</div></div>
+    </section>`;
+    }
+    const cards = items
+      .map(
+        (i) => `
+        <div class="tiq-video" data-embed="${esc(videoEmbed(i.url))}">
+          <div class="tiq-video__poster" onclick="tiqVideoPlay(this)">
+            ${posterVideo(i)}
+            <button class="tiq-video__play" type="button" aria-label="Reproducir">${PLAY}</button>
+          </div>
+        </div>`
+      )
+      .join("");
     return `
     <section class="tiq-sec tiq-sec--videos" data-seccion="${esc(s.id)}">
       <div class="contenedor">
-        ${s.titulo ? `<h2 class="tiq-sec__titulo">${esc(s.titulo)}</h2>` : ""}
-        ${carruselMarco("tiq-carrusel__track--videos", cuerpo)}
+        <div class="tiq-vcar" data-idx="0">
+          <button class="tiq-vcar__flecha tiq-vcar__flecha--izq" type="button" onclick="tiqVideoNav(this,-1)" aria-label="Anterior">${FLECHA_IZQ}</button>
+          <div class="tiq-vcar__viewport"><div class="tiq-vcar__pista">${cards}</div></div>
+          <button class="tiq-vcar__flecha tiq-vcar__flecha--der" type="button" onclick="tiqVideoNav(this,1)" aria-label="Siguiente">${FLECHA_DER}</button>
+        </div>
       </div>
     </section>`;
   }
 
+  // Fotos: carrusel a lo largo (apaisadas) en fila deslizable, flechas afuera.
   function seccionCarrusel(s) {
     const items = (s.items || []).filter((i) => i.media_id || i.url);
     const cuerpo = items.length
@@ -501,8 +504,11 @@
     return `
     <section class="tiq-sec tiq-sec--carrusel" data-seccion="${esc(s.id)}">
       <div class="contenedor">
-        ${s.titulo ? `<h2 class="tiq-sec__titulo">${esc(s.titulo)}</h2>` : ""}
-        ${carruselMarco("tiq-carrusel__track--imagenes", cuerpo)}
+        <div class="tiq-carrusel">
+          <button class="tiq-carrusel__flecha tiq-carrusel__flecha--izq" type="button" onclick="tiqCarrusel(this,-1)" aria-label="Anterior">${FLECHA_IZQ}</button>
+          <div class="tiq-carrusel__track tiq-carrusel__track--imagenes">${cuerpo}</div>
+          <button class="tiq-carrusel__flecha tiq-carrusel__flecha--der" type="button" onclick="tiqCarrusel(this,1)" aria-label="Siguiente">${FLECHA_DER}</button>
+        </div>
       </div>
     </section>`;
   }
@@ -513,6 +519,7 @@
     return "";
   }
 
+  // Fotos: scroll de a un paso por flecha.
   window.tiqCarrusel = function (boton, dir) {
     const track = boton.parentElement.querySelector(".tiq-carrusel__track");
     if (!track) return;
@@ -521,9 +528,45 @@
     track.scrollBy({ left: dir * paso, behavior: "smooth" });
   };
 
+  // Videos: centra el activo desplazando la pista (coverflow).
+  function centrarVideo(car) {
+    const pista = car.querySelector(".tiq-vcar__pista");
+    const items = [...pista.children];
+    if (!items.length) return;
+    const idx = Math.max(0, Math.min(items.length - 1, +car.dataset.idx || 0));
+    car.dataset.idx = idx;
+    items.forEach((it, i) => it.classList.toggle("activo", i === idx));
+    const activo = items[idx];
+    const vp = car.querySelector(".tiq-vcar__viewport");
+    const desplazamiento = vp.clientWidth / 2 - (activo.offsetLeft + activo.offsetWidth / 2);
+    pista.style.transform = `translateX(${desplazamiento}px)`;
+    car.querySelector(".tiq-vcar__flecha--izq").disabled = idx === 0;
+    car.querySelector(".tiq-vcar__flecha--der").disabled = idx === items.length - 1;
+  }
+  window.tiqVideoNav = function (boton, dir) {
+    const car = boton.closest(".tiq-vcar");
+    car.dataset.idx = (+car.dataset.idx || 0) + dir;
+    centrarVideo(car);
+  };
+  function iniciarVcar() {
+    document.querySelectorAll(".tiq-vcar").forEach(centrarVideo);
+  }
+  window.addEventListener("resize", iniciarVcar);
+
   window.tiqVideoPlay = function (el) {
     const cont = el.closest(".tiq-video");
-    if (cont && cont.dataset.embed) {
+    if (!cont || cont.classList.contains("tiq-video--play")) return;
+    // reproducir SOLO si es el activo; si no, primero lo centra
+    const car = cont.closest(".tiq-vcar");
+    if (car) {
+      const items = [...car.querySelectorAll(".tiq-video")];
+      const i = items.indexOf(cont);
+      if (i !== +car.dataset.idx) {
+        car.dataset.idx = i;
+        return centrarVideo(car);
+      }
+    }
+    if (cont.dataset.embed) {
       cont.classList.add("tiq-video--play");
       cont.innerHTML = cont.dataset.embed;
     }
@@ -678,6 +721,7 @@
   function montar(datos) {
     if (EN_TIENDA) document.body.classList.add("publicada");
     document.getElementById("app").innerHTML = render(datos);
+    iniciarVcar(); // centra los carruseles de video
     // Solo en la tienda: el preview no tiene storefront al que preguntarle.
     if (EN_TIENDA) cargarRecomendados(datos?.fuente?.moneda);
   }

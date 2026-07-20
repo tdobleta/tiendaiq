@@ -162,4 +162,60 @@ async function subirImagenTienda(sesion, nombre, mime, base64) {
   throw new Error("La imagen quedó procesándose; probá de nuevo en unos segundos.");
 }
 
-module.exports = { subirImagenProducto, subirImagenTienda };
+// ---------- subida directa de archivos grandes (video) ----------
+//
+// El binario NO pasa por nuestro server (un mp4 en base64 reventaría el body):
+// el server solo pide el destino temporal (paso 1) y finaliza el archivo una
+// vez que el browser subió los bytes directo al bucket de Shopify (paso 3).
+
+async function crearDestinoArchivo(sesion, nombre, mime, size) {
+  const archivo = String(nombre || "video.mp4").replace(/[^\w.\-]+/g, "-").slice(-80);
+  const r = await gql(
+    M_STAGED,
+    { input: [{ filename: archivo, mimeType: mime, httpMethod: "POST", resource: "FILE", fileSize: String(size) }] },
+    sesion
+  );
+  if (r.stagedUploadsCreate.userErrors?.length) {
+    throw new Error("Subida: " + JSON.stringify(r.stagedUploadsCreate.userErrors));
+  }
+  return r.stagedUploadsCreate.stagedTargets[0]; // { url, resourceUrl, parameters }
+}
+
+const M_FILE_GEN = `mutation($files: [FileCreateInput!]!) {
+  fileCreate(files: $files) {
+    files { id fileStatus ... on GenericFile { url } ... on Video { originalSource { url } } }
+    userErrors { field message }
+  }
+}`;
+
+const Q_FILE_GEN = `query($id: ID!) {
+  node(id: $id) {
+    ... on GenericFile { id fileStatus url }
+    ... on Video { id fileStatus originalSource { url } }
+  }
+}`;
+
+// Finaliza: convierte el archivo subido en un File de la tienda y espera su URL.
+async function finalizarArchivo(sesion, resourceUrl, mime) {
+  const r = await gql(
+    M_FILE_GEN,
+    { files: [{ originalSource: resourceUrl, contentType: /^video\//.test(mime || "") ? "FILE" : "FILE", alt: "" }] },
+    sesion
+  );
+  if (r.fileCreate.userErrors?.length) throw new Error("Archivo: " + JSON.stringify(r.fileCreate.userErrors));
+  const f = r.fileCreate.files[0];
+  const urlYa = f?.url || f?.originalSource?.url;
+  if (urlYa) return { url: urlYa };
+  const id = f?.id;
+  if (!id) throw new Error("Shopify no devolvió el archivo creado.");
+  for (let i = 0; i < 20; i++) {
+    const n = (await gql(Q_FILE_GEN, { id }, sesion)).node;
+    const u = n?.url || n?.originalSource?.url;
+    if (n?.fileStatus === "READY" && u) return { url: u };
+    if (n?.fileStatus === "FAILED") throw new Error("Shopify no pudo procesar el archivo.");
+    await dormir(1000);
+  }
+  throw new Error("El archivo quedó procesándose; probá de nuevo en unos segundos.");
+}
+
+module.exports = { subirImagenProducto, subirImagenTienda, crearDestinoArchivo, finalizarArchivo };

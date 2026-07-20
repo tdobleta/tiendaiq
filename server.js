@@ -349,6 +349,28 @@ async function api(req, res, url) {
     return json(res, 200, { media_id, url });
   }
 
+  // Subida directa de video (2 pasos, el binario no pasa por acá):
+  // POST /api/paginas/:id/archivo-inicio → destino temporal en Shopify
+  const mArchIni = ruta.match(/^\/api\/paginas\/([^/]+)\/archivo-inicio$/);
+  if (req.method === "POST" && mArchIni) {
+    const { nombre, mime, size } = await leerCuerpo(req);
+    if (!mime || !size) return json(res, 400, { error: "Faltan datos del archivo" });
+    if (!/^video\//.test(mime)) return json(res, 400, { error: "Solo se pueden subir videos." });
+    if (Number(size) > 200 * 1024 * 1024) return json(res, 400, { error: "El video supera los 200 MB." });
+    const { crearDestinoArchivo } = require("./imagenes");
+    const destino = await crearDestinoArchivo(sesion, nombre, mime, size);
+    return json(res, 200, destino);
+  }
+
+  // POST /api/paginas/:id/archivo-fin → finaliza y devuelve la URL del CDN
+  const mArchFin = ruta.match(/^\/api\/paginas\/([^/]+)\/archivo-fin$/);
+  if (req.method === "POST" && mArchFin) {
+    const { resourceUrl, mime } = await leerCuerpo(req);
+    if (!resourceUrl) return json(res, 400, { error: "Falta resourceUrl" });
+    const { finalizarArchivo } = require("./imagenes");
+    return json(res, 200, await finalizarArchivo(sesion, resourceUrl, mime));
+  }
+
   // POST /api/paginas/:id/publicar
   const mPub = ruta.match(/^\/api\/paginas\/([^/]+)\/publicar$/);
   if (req.method === "POST" && mPub) {

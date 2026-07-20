@@ -1808,7 +1808,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
           ).join("")}
         </select>
       </div>`;
-    const cabecera = campo(`${base}.titulo`, "Título de la sección", 0, true) + ubicacion;
+    const cabecera = ubicacion;
 
     let items = "";
     if (s.tipo === "videos") {
@@ -1818,6 +1818,10 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
           <fieldset class="sec-item">
             <legend>Video ${j + 1}${manijasItem(i, j, s.items.length)}</legend>
             ${campo(`${base}.items.${j}.url`, "Enlace del video (YouTube, Vimeo o MP4)")}
+            <label class="btn btn--fantasma btn--chico sec-subir-video" style="cursor:pointer">⬆ Subir video de tu computadora
+              <input type="file" accept="video/*" hidden data-video-el="${i}:${j}">
+            </label>
+            ${it.url && /^https?:\/\/cdn\.shopify/.test(it.url) ? `<div class="ayuda" style="margin-top:6px">Video subido ✓</div>` : ""}
             <details class="resena-edit__foto">
               <summary>🖼 Miniatura (opcional)${it.poster ? " · elegida" : ""}</summary>
               ${selectorImagenUno(`${base}.items.${j}.poster`, "", true)}
@@ -1971,7 +1975,58 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       if (e.target.dataset.subir && e.target.files?.length) {
         subirImagenNueva(e.target.files[0], e.target.dataset.subir, e.target.dataset.rutaSubir, e.target);
       }
+      if (e.target.dataset.videoEl && e.target.files?.length) {
+        subirVideoNuevo(e.target.files[0], e.target.dataset.videoEl, e.target);
+      }
     });
+  }
+
+  // Sube un video directo a Shopify (browser → bucket) y pone su URL en el item.
+  async function subirVideoNuevo(archivo, ref, inp) {
+    const [i, j] = ref.split(":").map(Number);
+    const label = inp.closest("label");
+    const textoOrig = label.firstChild.textContent;
+    label.firstChild.textContent = "Subiendo… 0%";
+    label.style.pointerEvents = "none";
+    try {
+      const pid = estado.pagina.id;
+      // 1) destino temporal
+      const destino = await api(`/paginas/${pid}/archivo-inicio`, {
+        method: "POST",
+        body: { nombre: archivo.name, mime: archivo.type, size: archivo.size }
+      });
+      // 2) subir los bytes directo al bucket con progreso
+      const fd = new FormData();
+      for (const p of destino.parameters) fd.append(p.name, p.value);
+      fd.append("file", archivo);
+      await new Promise((res, rej) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", destino.url);
+        xhr.upload.onprogress = (ev) => {
+          if (ev.lengthComputable) label.firstChild.textContent = `Subiendo… ${Math.round((ev.loaded / ev.total) * 100)}%`;
+        };
+        xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? res() : rej(new Error("El bucket rechazó la subida (" + xhr.status + ").")));
+        xhr.onerror = () => rej(new Error("Error de red subiendo el video."));
+        xhr.send(fd);
+      });
+      label.firstChild.textContent = "Procesando…";
+      // 3) finalizar → URL del CDN
+      const { url } = await api(`/paginas/${pid}/archivo-fin`, {
+        method: "POST",
+        body: { resourceUrl: destino.resourceUrl, mime: archivo.type }
+      });
+      fijar(estado.pagina.data, `secciones.${i}.items.${j}.url`, url);
+      marcarSucio();
+      repintarPreview();
+      refrescarModal();
+    } catch (e) {
+      label.firstChild.textContent = textoOrig;
+      label.style.pointerEvents = "";
+      document.getElementById("editor-modal-cuerpo")?.insertAdjacentHTML(
+        "afterbegin",
+        `<div class="error">✖ No se pudo subir el video: ${esc(e.message)}</div>`
+      );
+    }
   }
 
   // ---- el botón "✎ Editar" flotante adentro del iframe ----
