@@ -518,3 +518,74 @@ body.publicada #app .resena-destacada__editar { display: none; }
   #app .resena-destacada__avatar { width: 54px; height: 54px; }
 }
 
+
+/* ============================================================
+   Sections incrustables — carruseles de video e imágenes
+   ============================================================ */
+#app .tiq-sec { padding: 48px 0; }
+#app .tiq-sec__titulo { font-size: 26px; font-weight: 700; margin-bottom: 24px; }
+#app .tiq-sec__vacio {
+  color: var(--texto-suave); font-size: 14px; text-align: center;
+  padding: 34px 24px; border: 1px dashed var(--borde); border-radius: var(--radio);
+  background: var(--fondo-suave);
+}
+#app .tiq-carrusel { position: relative; }
+#app .tiq-carrusel__track {
+  display: flex; gap: 16px; overflow-x: auto;
+  scroll-snap-type: x mandatory; scrollbar-width: none;
+  -webkit-overflow-scrolling: touch; padding: 4px 2px 6px;
+}
+#app .tiq-carrusel__track::-webkit-scrollbar { display: none; }
+#app .tiq-carrusel__track > * { scroll-snap-align: start; flex: 0 0 auto; }
+#app .tiq-carrusel__flecha {
+  position: absolute; top: 50%; transform: translateY(-50%); z-index: 3;
+  width: 40px; height: 40px; border-radius: 50%;
+  border: 1px solid var(--borde); background: #fff;
+  box-shadow: 0 4px 14px rgba(0,0,0,.12);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: var(--negro);
+}
+#app .tiq-carrusel__flecha svg { width: 20px; height: 20px; }
+#app .tiq-carrusel__flecha--izq { left: -8px; }
+#app .tiq-carrusel__flecha--der { right: -8px; }
+#app .tiq-carrusel__flecha:hover { background: var(--fondo-suave); }
+
+/* videos verticales 9:16 (estilo reels) */
+#app .tiq-video {
+  width: 232px; aspect-ratio: 9 / 16; border-radius: var(--radio);
+  overflow: hidden; position: relative; background: #000;
+}
+#app .tiq-video__poster { width: 100%; height: 100%; position: relative; cursor: pointer; }
+#app .tiq-video__poster img, #app .tiq-video__ph { width: 100%; height: 100%; object-fit: cover; }
+#app .tiq-video__ph { background: linear-gradient(135deg, #2c2c2c, #101010); }
+#app .tiq-video__play {
+  position: absolute; inset: 0; margin: auto;
+  width: 58px; height: 58px; border-radius: 50%;
+  border: 0; background: rgba(255,255,255,.92); color: #111;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; box-shadow: 0 4px 16px rgba(0,0,0,.3);
+  transition: transform .12s ease;
+}
+#app .tiq-video__poster:hover .tiq-video__play { transform: scale(1.08); }
+#app .tiq-video__play svg { width: 24px; height: 24px; margin-left: 3px; }
+#app .tiq-video__player { width: 100%; height: 100%; border: 0; object-fit: cover; display: block; }
+
+/* carrusel de imágenes */
+#app .tiq-imagen {
+  width: 260px; border-radius: var(--radio); overflow: hidden;
+  position: relative; display: block; background: var(--fondo-suave);
+}
+#app .tiq-imagen img { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; }
+#app .tiq-imagen__caption {
+  position: absolute; left: 10px; bottom: 10px;
+  background: rgba(255,255,255,.95); color: var(--negro);
+  font-size: 12px; font-weight: 600; padding: 5px 10px; border-radius: 99px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.15);
+}
+
+@media (max-width: 749px) {
+  #app .tiq-sec__titulo { font-size: 21px; }
+  #app .tiq-video { width: 168px; }
+  #app .tiq-imagen { width: 74vw; max-width: 290px; }
+  #app .tiq-carrusel__flecha { display: none; }
+}

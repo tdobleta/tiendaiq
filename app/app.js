@@ -1760,11 +1760,136 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   function cerrarModalEdicion() {
     document.getElementById("editor-modal")?.remove();
     modalSec = null;
+    modalDef = null;
   }
+
+  let modalDef = null; // def activa del modal (bloque fijo o section)
 
   function refrescarModal() {
     const cuerpo = document.getElementById("editor-modal-cuerpo");
-    if (cuerpo && modalSec) cuerpo.innerHTML = seccionesPagina()[modalSec].html();
+    if (cuerpo && modalDef) cuerpo.innerHTML = modalDef.html();
+  }
+
+  // ---- editor de una section incrustada ----
+
+  const ANCLAS_UBICACION = [
+    ["top", "Al principio de la página"],
+    ["hero", "Después del encabezado"],
+    ["texto1", "Después de Texto + imagen 1"],
+    ["iconos", "Después de los beneficios"],
+    ["tabla", "Después de la tabla"],
+    ["stats", "Después de las estadísticas"],
+    ["texto2", "Después de Texto + imagen 2"],
+    ["faq", "Después de las preguntas"],
+    ["garantia", "Después de la garantía"],
+    ["resenas", "Después de las reseñas"],
+    ["recomendados", "Al final de la página"]
+  ];
+
+  function defSeccion(secId) {
+    const secs = estado.pagina.data.secciones || [];
+    const i = secs.findIndex((s) => s.id === secId);
+    if (i < 0) return null;
+    const s = secs[i];
+    return {
+      titulo: s.tipo === "videos" ? "Videos de producto" : "Carrusel de imágenes",
+      html: () => htmlSeccion(secs[i], i)
+    };
+  }
+
+  function htmlSeccion(s, i) {
+    const base = `secciones.${i}`;
+    const ubicacion = `
+      <div class="campo campo--editor">
+        <label>Ubicación en la página</label>
+        <select data-ruta="${base}.ancla">
+          ${ANCLAS_UBICACION.map(
+            ([v, t]) => `<option value="${v}" ${(s.ancla || "top") === v ? "selected" : ""}>${t}</option>`
+          ).join("")}
+        </select>
+      </div>`;
+    const cabecera = campo(`${base}.titulo`, "Título de la sección", 0, true) + ubicacion;
+
+    let items = "";
+    if (s.tipo === "videos") {
+      items = (s.items || [])
+        .map(
+          (it, j) => `
+          <fieldset class="sec-item">
+            <legend>Video ${j + 1}${manijasItem(i, j, s.items.length)}</legend>
+            ${campo(`${base}.items.${j}.url`, "Enlace del video (YouTube, Vimeo o MP4)")}
+            <details class="resena-edit__foto">
+              <summary>🖼 Miniatura (opcional)${it.poster ? " · elegida" : ""}</summary>
+              ${selectorImagenUno(`${base}.items.${j}.poster`, "", true)}
+            </details>
+          </fieldset>`
+        )
+        .join("");
+      items += `<button class="btn btn--fantasma" type="button" data-sec-add="${i}:video">＋ Agregar video</button>`;
+    } else {
+      items = (s.items || [])
+        .map(
+          (it, j) => `
+          <fieldset class="sec-item">
+            <legend>Imagen ${j + 1}${manijasItem(i, j, s.items.length)}</legend>
+            ${selectorImagenUno(`${base}.items.${j}.media_id`, "Imagen", false)}
+            ${campo(`${base}.items.${j}.caption`, "Texto sobre la imagen (opcional)", 0, true)}
+            ${campo(`${base}.items.${j}.link`, "Enlace al tocar (opcional)", 0, true)}
+          </fieldset>`
+        )
+        .join("");
+      items += `<button class="btn btn--fantasma" type="button" data-sec-add="${i}:imagen">＋ Agregar imagen</button>`;
+    }
+
+    return (
+      cabecera +
+      `<div class="cod-separador"></div>` +
+      items +
+      `<div class="cod-separador"></div>
+       <button class="btn btn--fantasma sec-borrar" type="button" data-sec-borrar="${s.id}">🗑 Eliminar esta sección</button>`
+    );
+  }
+
+  // ↑↓ y ✕ de cada item de una section
+  const manijasItem = (i, j, total) => `
+    <span class="sec-item__manijas">
+      <button type="button" data-sec-mov="${i}:${j}:-1" ${j === 0 ? "disabled" : ""}>↑</button>
+      <button type="button" data-sec-mov="${i}:${j}:1" ${j === total - 1 ? "disabled" : ""}>↓</button>
+      <button type="button" data-sec-item-del="${i}:${j}">✕</button>
+    </span>`;
+
+  function accionSeccion(target) {
+    const secs = estado.pagina.data.secciones;
+    const add = target.closest("[data-sec-add]");
+    if (add) {
+      const [i, tipo] = add.dataset.secAdd.split(":");
+      secs[+i].items.push(tipo === "video" ? { url: "", poster: null } : { media_id: null, caption: "", link: "" });
+      return true;
+    }
+    const del = target.closest("[data-sec-item-del]");
+    if (del) {
+      const [i, j] = del.dataset.secItemDel.split(":").map(Number);
+      secs[i].items.splice(j, 1);
+      return true;
+    }
+    const mov = target.closest("[data-sec-mov]");
+    if (mov) {
+      const [i, j, d] = mov.dataset.secMov.split(":").map(Number);
+      const arr = secs[i].items;
+      const k = j + d;
+      if (k >= 0 && k < arr.length) [arr[j], arr[k]] = [arr[k], arr[j]];
+      return true;
+    }
+    const borrar = target.closest("[data-sec-borrar]");
+    if (borrar) {
+      const idx = secs.findIndex((s) => s.id === borrar.dataset.secBorrar);
+      if (idx > -1) secs.splice(idx, 1);
+      cerrarModalEdicion();
+      marcarSucio();
+      repintarPreview();
+      return "cerrado";
+    }
+    return false;
   }
 
   function toggleImagenGaleria(ruta, id) {
@@ -1779,9 +1904,10 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
 
   function abrirModalEdicion(id) {
     cerrarModalEdicion();
-    const def = seccionesPagina()[id];
+    const def = id.startsWith("sec:") ? defSeccion(id.slice(4)) : seccionesPagina()[id];
     if (!def) return;
     modalSec = id;
+    modalDef = def;
 
     const m = document.createElement("div");
     m.className = "editor-modal";
@@ -1810,6 +1936,15 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         return;
       }
       if (e.target.id === "btn-lote") return cargarLote();
+      // acciones de section (agregar/quitar/mover items, borrar section)
+      const accion = accionSeccion(e.target);
+      if (accion === "cerrado") return;
+      if (accion) {
+        marcarSucio();
+        repintarPreview();
+        refrescarModal();
+        return;
+      }
       const multi = e.target.closest("[data-img-multi]");
       if (multi) {
         toggleImagenGaleria(multi.dataset.imgMulti, multi.dataset.id);
@@ -1894,13 +2029,19 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       if (e.target === btn || btn.contains(e.target)) return; // no soltar el botón
 
       let hit = null;
-      for (const z of ZONAS_EDICION) {
-        const el = e.target.closest?.(z.sel);
-        if (el) {
-          let id = z.id;
-          if (!id) id = [...doc.querySelectorAll(".dupla")].indexOf(el) === 0 ? "texto1" : "texto2";
-          hit = { el, id };
-          break;
+      // Las sections incrustadas ganan: su editor es propio.
+      const sec = e.target.closest?.("[data-seccion]");
+      if (sec) {
+        hit = { el: sec, id: "sec:" + sec.dataset.seccion };
+      } else {
+        for (const z of ZONAS_EDICION) {
+          const el = e.target.closest?.(z.sel);
+          if (el) {
+            let id = z.id;
+            if (!id) id = [...doc.querySelectorAll(".dupla")].indexOf(el) === 0 ? "texto1" : "texto2";
+            hit = { el, id };
+            break;
+          }
         }
       }
       if (!hit) return limpiar();
@@ -1925,6 +2066,110 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       if (e.target.closest(".resenas__editar")) abrirModalEdicion("resenas");
       if (e.target.closest(".resena-destacada__editar")) abrirModalEdicion("destacada");
     });
+  }
+
+  // ---- arrastrar sections del panel al preview ----
+  //
+  // El iframe es same-origin: durante el drag pongo un overlay que captura el
+  // puntero y calculo, contra los bloques fijos (data-fijo), el hueco donde
+  // caería la section. Un indicador dentro del iframe marca la posición.
+
+  const NOMBRE_BLOQUE = {
+    top: "el principio", hero: "el encabezado", texto1: "Texto + imagen 1",
+    iconos: "los beneficios", tabla: "la tabla", stats: "las estadísticas",
+    texto2: "Texto + imagen 2", faq: "las preguntas", garantia: "la garantía",
+    resenas: "las reseñas", recomendados: "los recomendados"
+  };
+
+  function montarDragSections(marco) {
+    const panel = $("panel-sections");
+    if (!panel) return;
+    panel.querySelectorAll(".section-card").forEach((card) => {
+      card.addEventListener("pointerdown", (e) => iniciarDragSection(e, card, marco));
+    });
+  }
+
+  function iniciarDragSection(ev, card, marco) {
+    ev.preventDefault();
+    const tipo = card.dataset.nueva;
+    let doc;
+    try { doc = marco.contentWindow.document; } catch { return; }
+
+    // fantasma que sigue el cursor
+    const ghost = card.cloneNode(true);
+    ghost.className = "section-card section-card--ghost";
+    document.body.appendChild(ghost);
+    card.classList.add("section-card--arrastrando");
+
+    // indicador de inserción, dentro del iframe
+    const linea = doc.createElement("div");
+    linea.className = "tiq-drop-line";
+    linea.style.cssText =
+      "position:absolute;left:0;right:0;height:3px;background:#4f46e5;z-index:100000;display:none;box-shadow:0 0 0 4px rgba(79,70,229,.15);border-radius:2px;pointer-events:none";
+    doc.body.appendChild(linea);
+
+    let ancla = null; // dónde caería
+
+    const mover = (x, y) => {
+      ghost.style.left = x + 12 + "px";
+      ghost.style.top = y + 12 + "px";
+      const r = marco.getBoundingClientRect();
+      const dentro = x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
+      if (!dentro) {
+        linea.style.display = "none";
+        ancla = null;
+        return;
+      }
+      // Y del cursor en el viewport del iframe → contra el centro de cada fijo
+      const yIframe = y - r.top;
+      const fijos = [...doc.querySelectorAll("[data-fijo]")];
+      let nuevoAncla = "top";
+      let posY = 0;
+      for (const b of fijos) {
+        const br = b.getBoundingClientRect();
+        if (yIframe > br.top + br.height / 2) {
+          nuevoAncla = b.dataset.bloque;
+          posY = br.bottom + doc.defaultView.scrollY;
+        } else break;
+      }
+      if (nuevoAncla === "top") {
+        const primero = fijos[0]?.getBoundingClientRect();
+        posY = (primero ? primero.top : 0) + doc.defaultView.scrollY;
+      }
+      ancla = nuevoAncla;
+      linea.style.top = posY - 1 + "px";
+      linea.style.display = "block";
+    };
+
+    const overlay = document.createElement("div");
+    overlay.style.cssText = "position:fixed;inset:0;z-index:99997;cursor:grabbing";
+    document.body.appendChild(overlay);
+
+    mover(ev.clientX, ev.clientY);
+    const onMove = (e) => mover(e.clientX, e.clientY);
+    const onUp = () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      overlay.remove();
+      ghost.remove();
+      linea.remove();
+      card.classList.remove("section-card--arrastrando");
+      if (ancla) soltarSection(tipo, ancla);
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+  }
+
+  function soltarSection(tipo, ancla) {
+    const nueva =
+      tipo === "videos"
+        ? { id: "s" + Date.now(), tipo: "videos", ancla, titulo: "Videos del producto", items: [{ url: "", poster: null }] }
+        : { id: "s" + Date.now(), tipo: "carrusel", ancla, titulo: "Galería", items: [] };
+    estado.pagina.data.secciones.push(nueva);
+    marcarSucio();
+    repintarPreview();
+    // dar tiempo a que el iframe repinte y abrir el editor de la nueva section
+    setTimeout(() => abrirModalEdicion("sec:" + nueva.id), 320);
   }
 
   // ---- reacción a cada tecla ----
@@ -2017,9 +2262,26 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     }
   }
 
+  // Catálogo de sections arrastrables. Cada una tiene su mini-ilustración.
+  const SECTIONS_DISPONIBLES = [
+    {
+      tipo: "videos",
+      nombre: "Videos de producto",
+      desc: "Carrusel de videos (YouTube, Vimeo o MP4)",
+      mini: `<div class="section-card__mini section-card__mini--videos"><span></span><span></span><span></span></div>`
+    },
+    {
+      tipo: "carrusel",
+      nombre: "Carrusel de imágenes",
+      desc: "Galería deslizable de fotos",
+      mini: `<div class="section-card__mini section-card__mini--imgs"><span></span><span></span><span></span><span></span></div>`
+    }
+  ];
+
   function pantallaPreview() {
     const pg = estado.pagina;
     sucio = false;
+    if (!Array.isArray(pg.data.secciones)) pg.data.secciones = [];
     const publicada = pg.estado === "publicada";
 
     vista.innerHTML = `
@@ -2061,10 +2323,28 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         ⚠ Los cambios se guardan acá, pero en la tienda no se ven hasta que vuelvas a publicar.
       </div>
 
-      <div class="editor-hint">✎ Pasá el mouse por cualquier bloque de la página y tocá <strong>Editar</strong> para cambiarlo.</div>
+      <div class="editor-hint">✎ Pasá el mouse por cualquier bloque y tocá <strong>Editar</strong>. Arrastrá una <strong>sección</strong> del panel izquierdo a la página para sumarla.</div>
 
-      <div class="marco marco--full">
-        <iframe id="marco" src="/preview/index.html?app=1&t=${Date.now()}"></iframe>
+      <div class="constructor">
+        <aside class="panel-sections" id="panel-sections">
+          <div class="panel-sections__titulo">Secciones</div>
+          <div class="panel-sections__ayuda">Arrastralas a la página</div>
+          ${SECTIONS_DISPONIBLES.map(
+            (s) => `
+            <div class="section-card" data-nueva="${s.tipo}" title="Arrastrar a la página">
+              ${s.mini}
+              <div class="section-card__txt">
+                <div class="section-card__nombre">${s.nombre}</div>
+                <div class="section-card__desc">${s.desc}</div>
+              </div>
+              <span class="section-card__grip">⠿</span>
+            </div>`
+          ).join("")}
+        </aside>
+
+        <div class="marco marco--full">
+          <iframe id="marco" src="/preview/index.html?app=1&t=${Date.now()}"></iframe>
+        </div>
       </div>`;
 
     // El iframe no lee ningún archivo global: recibe LOS DATOS DE ESTA página
@@ -2074,6 +2354,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     marco.onload = () => {
       repintarPreview();
       montarEdicionEnIframe(marco);
+      montarDragSections(marco);
     };
 
     $("volver").onclick = () => {

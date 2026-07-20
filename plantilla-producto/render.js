@@ -410,23 +410,158 @@
     </section>`;
   }
 
+  // ---------- sections incrustables (carruseles) ----------
+  //
+  // El merchant las arrastra desde el editor y las intercala entre los bloques
+  // fijos. Viven en data.secciones[] con { id, tipo, ancla, ...contenido }.
+  // Mismo HTML en la tienda y en el preview; la interactividad es window.tiq*.
+
+  const idYouTube = (url) => {
+    const m = String(url).match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/))([\w-]{11})/);
+    return m ? m[1] : null;
+  };
+  const idVimeo = (url) => {
+    const m = String(url).match(/vimeo\.com\/(?:video\/)?(\d+)/);
+    return m ? m[1] : null;
+  };
+
+  // La URL del reproductor embebido, con autoplay al tocar el poster.
+  function videoEmbed(url) {
+    const yt = idYouTube(url);
+    if (yt)
+      return `<iframe class="tiq-video__player" src="https://www.youtube.com/embed/${yt}?autoplay=1&rel=0&playsinline=1" title="" frameborder="0" allow="autoplay; encrypted-media; fullscreen" allowfullscreen></iframe>`;
+    const vm = idVimeo(url);
+    if (vm)
+      return `<iframe class="tiq-video__player" src="https://player.vimeo.com/video/${vm}?autoplay=1" title="" frameborder="0" allow="autoplay; fullscreen" allowfullscreen></iframe>`;
+    return `<video class="tiq-video__player" src="${esc(url)}" controls autoplay playsinline></video>`;
+  }
+
+  // El poster: el que puso el merchant (media_id o url), o el thumbnail
+  // automático de YouTube, o un fondo oscuro con el play.
+  function posterVideo(item) {
+    if (item.poster) {
+      const src = /^https?:/.test(item.poster) ? item.poster : urlImagen(item.poster);
+      return `<img src="${esc(src)}" alt="" loading="lazy">`;
+    }
+    const yt = idYouTube(item.url);
+    if (yt) return `<img src="https://i.ytimg.com/vi/${yt}/hqdefault.jpg" alt="" loading="lazy">`;
+    return `<div class="tiq-video__ph"></div>`;
+  }
+
+  const FLECHA_IZQ = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>`;
+  const FLECHA_DER = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>`;
+  const PLAY = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>`;
+
+  const carruselMarco = (clase, cuerpo) => `
+        <div class="tiq-carrusel">
+          <button class="tiq-carrusel__flecha tiq-carrusel__flecha--izq" type="button" onclick="tiqCarrusel(this,-1)" aria-label="Anterior">${FLECHA_IZQ}</button>
+          <div class="tiq-carrusel__track ${clase}">${cuerpo}</div>
+          <button class="tiq-carrusel__flecha tiq-carrusel__flecha--der" type="button" onclick="tiqCarrusel(this,1)" aria-label="Siguiente">${FLECHA_DER}</button>
+        </div>`;
+
+  function seccionVideos(s) {
+    const items = (s.items || []).filter((i) => i.url);
+    const cuerpo = items.length
+      ? items
+          .map(
+            (i) => `
+          <div class="tiq-video" data-embed="${esc(videoEmbed(i.url))}">
+            <div class="tiq-video__poster" onclick="tiqVideoPlay(this)">
+              ${posterVideo(i)}
+              <button class="tiq-video__play" type="button" aria-label="Reproducir">${PLAY}</button>
+            </div>
+          </div>`
+          )
+          .join("")
+      : `<div class="tiq-sec__vacio">Tocá <b>Editar</b> y pegá los enlaces de tus videos (YouTube, Vimeo o MP4).</div>`;
+    return `
+    <section class="tiq-sec tiq-sec--videos" data-seccion="${esc(s.id)}">
+      <div class="contenedor">
+        ${s.titulo ? `<h2 class="tiq-sec__titulo">${esc(s.titulo)}</h2>` : ""}
+        ${carruselMarco("tiq-carrusel__track--videos", cuerpo)}
+      </div>
+    </section>`;
+  }
+
+  function seccionCarrusel(s) {
+    const items = (s.items || []).filter((i) => i.media_id || i.url);
+    const cuerpo = items.length
+      ? items
+          .map((i) => {
+            const src = i.url ? i.url : urlImagen(i.media_id);
+            const inner = `<img src="${esc(src)}" alt="${esc(i.caption || "")}" loading="lazy">${
+              i.caption ? `<span class="tiq-imagen__caption">${esc(i.caption)}</span>` : ""
+            }`;
+            return i.link
+              ? `<a class="tiq-imagen" href="${esc(i.link)}" target="_blank" rel="noopener">${inner}</a>`
+              : `<div class="tiq-imagen">${inner}</div>`;
+          })
+          .join("")
+      : `<div class="tiq-sec__vacio">Tocá <b>Editar</b> y sumá imágenes de tu producto o subí las tuyas.</div>`;
+    return `
+    <section class="tiq-sec tiq-sec--carrusel" data-seccion="${esc(s.id)}">
+      <div class="contenedor">
+        ${s.titulo ? `<h2 class="tiq-sec__titulo">${esc(s.titulo)}</h2>` : ""}
+        ${carruselMarco("tiq-carrusel__track--imagenes", cuerpo)}
+      </div>
+    </section>`;
+  }
+
+  function seccionHTML(s) {
+    if (s.tipo === "videos") return seccionVideos(s);
+    if (s.tipo === "carrusel") return seccionCarrusel(s);
+    return "";
+  }
+
+  window.tiqCarrusel = function (boton, dir) {
+    const track = boton.parentElement.querySelector(".tiq-carrusel__track");
+    if (!track) return;
+    const card = track.querySelector(":scope > *");
+    const paso = card ? card.getBoundingClientRect().width + 16 : track.clientWidth * 0.8;
+    track.scrollBy({ left: dir * paso, behavior: "smooth" });
+  };
+
+  window.tiqVideoPlay = function (el) {
+    const cont = el.closest(".tiq-video");
+    if (cont && cont.dataset.embed) {
+      cont.classList.add("tiq-video--play");
+      cont.innerHTML = cont.dataset.embed;
+    }
+  };
+
   // ---------- ensamblado ----------
 
   function render(data) {
     const f = data.facetas;
     const g = data.global;
-    return [
-      hero(f, data.fuente, g),
-      dupla(f.texto_img_1, g, false),
-      iconos(f.iconos),
-      tabla(f.tabla, f.hero.titulo, g),
-      stats(f.stats, g),
-      dupla(f.texto_img_2, g, true),
-      faq(f.faq, g),
-      garantia(f.garantia, g),
-      resenas(f.resenas),
-      recomendados(f.recomendados)
-    ].join("\n");
+    // Bloques fijos, cada uno con su id: las sections del merchant se
+    // intercalan según su `ancla` (= id del bloque tras el cual va).
+    const fijos = [
+      ["hero", hero(f, data.fuente, g)],
+      ["texto1", dupla(f.texto_img_1, g, false)],
+      ["iconos", iconos(f.iconos)],
+      ["tabla", tabla(f.tabla, f.hero.titulo, g)],
+      ["stats", stats(f.stats, g)],
+      ["texto2", dupla(f.texto_img_2, g, true)],
+      ["faq", faq(f.faq, g)],
+      ["garantia", garantia(f.garantia, g)],
+      ["resenas", resenas(f.resenas)],
+      ["recomendados", recomendados(f.recomendados)]
+    ];
+    // Marca cada bloque fijo para que el editor sepa dónde soltar sections.
+    const marcar = (id, html) => html.replace(/<section/, `<section data-bloque="${id}" data-fijo="1"`);
+
+    const secciones = Array.isArray(data.secciones) ? data.secciones : [];
+    const grupos = {};
+    for (const s of secciones) (grupos[s.ancla || "top"] ||= []).push(seccionHTML(s));
+
+    const out = [];
+    if (grupos.top) out.push(...grupos.top);
+    for (const [id, html] of fijos) {
+      out.push(marcar(id, html));
+      if (grupos[id]) out.push(...grupos[id]);
+    }
+    return out.join("\n");
   }
 
   // Recomendados en vivo: en la tienda se piden a la API de recomendaciones
