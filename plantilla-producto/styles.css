@@ -610,6 +610,21 @@ body.publicada #app .resena-destacada__editar { display: none; }
   box-shadow: 0 2px 8px rgba(0,0,0,.15);
 }
 
+/* espacios vacíos + clic-para-elegir (solo editor) */
+#app .tiq-clicable { cursor: pointer; }
+#app .tiq-clicable:hover { outline: 2px solid var(--violeta); outline-offset: 2px; }
+#app .tiq-video--vacio, #app .tiq-imagen--vacio {
+  background: var(--fondo-suave);
+  border: 1.5px dashed #cfcfd4;
+  display: flex; align-items: center; justify-content: center;
+}
+#app .tiq-video__add, #app .tiq-imagen__add {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  color: var(--texto-suave); font-size: 12.5px; font-weight: 500; text-align: center;
+}
+#app .tiq-video__add svg, #app .tiq-imagen__add svg { width: 30px; height: 30px; color: var(--violeta); }
+#app .tiq-imagen--vacio { border-radius: var(--radio); }
+
 @media (max-width: 749px) {
   #app .tiq-video { width: 208px; }
   #app .tiq-imagen { width: 82vw; max-width: 340px; }

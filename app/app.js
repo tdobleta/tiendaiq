@@ -2059,18 +2059,24 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
 
     const st = doc.createElement("style");
     st.textContent = `
-      #tiq-edit-btn { position: absolute; z-index: 99999; display: none; align-items: center; gap: 6px;
+      #tiq-edit-bar { position: absolute; z-index: 99999; display: none; gap: 6px;
+        font: 600 13px/1 Inter, -apple-system, sans-serif; }
+      #tiq-edit-bar button { display: flex; align-items: center; gap: 6px;
         background: #fff; border: 1px solid #d9d9de; border-radius: 9px; box-shadow: 0 4px 14px rgba(0,0,0,.16);
-        padding: 8px 14px; font: 600 13px/1 Inter, -apple-system, sans-serif; color: #1a1a1a; cursor: pointer; }
-      #tiq-edit-btn:hover { background: #f6f6f7; }
+        padding: 8px 12px; color: #1a1a1a; cursor: pointer; font: inherit; }
+      #tiq-edit-bar button:hover { background: #f6f6f7; }
+      #tiq-edit-bar .tiq-del { color: #dc2626; }
+      #tiq-edit-bar .tiq-del:hover { background: #fdeaea; }
       .tiq-zona-hover { outline: 2px dashed #4f46e5; outline-offset: 5px; border-radius: 4px; }`;
     doc.head.appendChild(st);
 
-    const btn = doc.createElement("button");
-    btn.id = "tiq-edit-btn";
-    btn.type = "button";
-    btn.textContent = "✎ Editar";
-    doc.body.appendChild(btn);
+    const bar = doc.createElement("div");
+    bar.id = "tiq-edit-bar";
+    bar.innerHTML = `<button class="tiq-editar" type="button">✎ Editar</button><button class="tiq-del" type="button" title="Eliminar sección" style="display:none">🗑</button>`;
+    doc.body.appendChild(bar);
+    const btn = bar; // el contenedor hace de "botón" posicionable
+    const btnEditar = bar.querySelector(".tiq-editar");
+    const btnDel = bar.querySelector(".tiq-del");
 
     let zonaEl = null;
 
@@ -2109,18 +2115,84 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       const r = zonaEl.getBoundingClientRect();
       const scrollY = doc.defaultView.scrollY;
       btn.dataset.sec = hit.id;
+      btnDel.style.display = hit.id.startsWith("sec:") ? "flex" : "none"; // borrar solo sections
       btn.style.display = "flex";
-      btn.style.top = `${scrollY + r.top + r.height / 2 - 17}px`;
-      btn.style.left = `${Math.max(10, Math.min(r.right - 104, doc.documentElement.clientWidth - 118))}px`;
+      btn.style.top = `${scrollY + r.top + 12}px`;
+      btn.style.left = `${Math.max(10, Math.min(r.right - 150, doc.documentElement.clientWidth - 160))}px`;
     });
 
-    btn.addEventListener("click", () => abrirModalEdicion(btn.dataset.sec));
+    btnEditar.addEventListener("click", () => abrirModalEdicion(btn.dataset.sec));
+    btnDel.addEventListener("click", () => {
+      const id = btn.dataset.sec;
+      if (!id.startsWith("sec:")) return;
+      if (!confirm("¿Eliminar esta sección de la página?")) return;
+      const secs = estado.pagina.data.secciones;
+      const idx = secs.findIndex((s) => s.id === id.slice(4));
+      if (idx > -1) secs.splice(idx, 1);
+      limpiar();
+      marcarSucio();
+      repintarPreview();
+    });
 
-    // Los lápices que ya dibuja la plantilla abren su modal.
+    // Clics dentro del preview: lápices de la plantilla + espacios de imagen.
     doc.addEventListener("click", (e) => {
-      if (e.target.closest(".resenas__editar")) abrirModalEdicion("resenas");
-      if (e.target.closest(".resena-destacada__editar")) abrirModalEdicion("destacada");
+      if (e.target.closest(".resenas__editar")) return abrirModalEdicion("resenas");
+      if (e.target.closest(".resena-destacada__editar")) return abrirModalEdicion("destacada");
+      // clic directo en un espacio de imagen → selector de archivos
+      const slot = e.target.closest("[data-imgclick]");
+      if (slot) return void elegirImagenSlot(slot.dataset.imgclick, slot);
+      // clic en un espacio de video → modal de esa section
+      const vslot = e.target.closest("[data-vslot]");
+      if (vslot) return void abrirModalEdicion("sec:" + vslot.dataset.vslot.split(":")[0]);
     });
+  }
+
+  // Traduce el marcador del slot a la ruta del dato en estado.pagina.data.
+  function rutaDeSlot(clave) {
+    if (clave.startsWith("res:")) return `facetas.resenas.items.${clave.slice(4)}.imagen`;
+    if (clave.startsWith("sec:")) {
+      const [, secId, j] = clave.split(":");
+      const idx = (estado.pagina.data.secciones || []).findIndex((s) => s.id === secId);
+      return idx > -1 ? `secciones.${idx}.items.${j}.media_id` : null;
+    }
+    return null;
+  }
+
+  // Clic en un espacio de imagen del preview → file picker → sube → incrusta.
+  function elegirImagenSlot(clave, slotEl) {
+    const ruta = rutaDeSlot(clave);
+    if (!ruta) return;
+    const inp = document.createElement("input");
+    inp.type = "file";
+    inp.accept = "image/*";
+    inp.onchange = async () => {
+      const archivo = inp.files?.[0];
+      if (!archivo) return;
+      try {
+        slotEl.classList.add("tiq-subiendo");
+        const base64 = await new Promise((res, rej) => {
+          const fr = new FileReader();
+          fr.onload = () => res(String(fr.result).split(",")[1]);
+          fr.onerror = () => rej(new Error("No se pudo leer el archivo"));
+          fr.readAsDataURL(archivo);
+        });
+        const r = await api(`/paginas/${estado.pagina.id}/imagenes`, {
+          method: "POST",
+          body: { nombre: archivo.name, mime: archivo.type, base64 }
+        });
+        estado.pagina.data.pool_imagenes = estado.pagina.data.pool_imagenes || [];
+        if (!estado.pagina.data.pool_imagenes.some((p) => p.media_id === r.media_id)) {
+          estado.pagina.data.pool_imagenes.push({ media_id: r.media_id, tipo: "producto_limpio" });
+        }
+        estado.pagina.urls = { ...(estado.pagina.urls || {}), [r.media_id]: r.url };
+        fijar(estado.pagina.data, ruta, r.media_id);
+        marcarSucio();
+        repintarPreview();
+      } catch (e) {
+        vista.insertAdjacentHTML("afterbegin", `<div class="error">✖ No se pudo subir la imagen: ${esc(e.message)}</div>`);
+      }
+    };
+    inp.click();
   }
 
   // ---- arrastrar sections del panel al preview ----
@@ -2216,15 +2288,15 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   }
 
   function soltarSection(tipo, ancla) {
+    // Nace con la plantilla de espacios ya puesta (como el andamio de reseñas):
+    // se ven los slots y se llenan haciendo clic sobre cada uno.
     const nueva =
       tipo === "videos"
-        ? { id: "s" + Date.now(), tipo: "videos", ancla, titulo: "Videos del producto", items: [{ url: "", poster: null }] }
-        : { id: "s" + Date.now(), tipo: "carrusel", ancla, titulo: "Galería", items: [] };
+        ? { id: "s" + Date.now(), tipo: "videos", ancla, items: [{ url: "", poster: null }, { url: "", poster: null }, { url: "", poster: null }] }
+        : { id: "s" + Date.now(), tipo: "carrusel", ancla, items: [{ media_id: null, caption: "", link: "" }, { media_id: null, caption: "", link: "" }, { media_id: null, caption: "", link: "" }, { media_id: null, caption: "", link: "" }] };
     estado.pagina.data.secciones.push(nueva);
     marcarSucio();
     repintarPreview();
-    // dar tiempo a que el iframe repinte y abrir el editor de la nueva section
-    setTimeout(() => abrirModalEdicion("sec:" + nueva.id), 320);
   }
 
   // ---- reacción a cada tecla ----

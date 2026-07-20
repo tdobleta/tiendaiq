@@ -354,11 +354,13 @@
     // El dueño reemplaza las tarjetas guía por reseñas reales desde el editor.
     const items = f.items ?? [];
 
-    const tarjeta = (r) => {
+    const tarjeta = (r, j) => {
       const modoGuia = !r.autor && !r.imagen; // sin datos reales → tarjeta punteada
+      // En el editor la foto es clickeable: abre el selector de archivos.
+      const clic = MODO_APP ? ` data-imgclick="res:${j}" title="Clic para elegir una imagen"` : "";
       return `
       <div class="tarjeta-resena ${modoGuia ? "tarjeta-resena--vacia" : ""}">
-        <div class="tarjeta-resena__img">${r.imagen ? img(r.imagen) : `<div class="ph-img">Foto del cliente</div>`}</div>
+        <div class="tarjeta-resena__img${MODO_APP ? " tiq-clicable" : ""}"${clic}>${r.imagen ? img(r.imagen) : `<div class="ph-img">Foto del cliente</div>`}</div>
         <div class="tarjeta-resena__autor ${r.autor ? "" : "guia"}">${r.autor ? esc(r.autor) : "Nombre del cliente"}</div>
         <div class="tarjeta-resena__verificado"><span class="verificado">✔</span> Comprador verificado</div>
         ${estrellas(r.estrellas ?? 5)}
@@ -452,26 +454,36 @@
   const FLECHA_DER = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>`;
   const PLAY = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>`;
 
+  const ICONO_VIDEO = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="14" height="14" rx="2.5"/><path d="M16.5 9.5l5-2.5v10l-5-2.5"/></svg>`;
+  const ICONO_IMG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="8.5" cy="9.5" r="1.8"/><path d="M4 17l4.5-4.5 4 4L15.5 12l4.5 4.5"/></svg>`;
+
   // Videos: carrusel CENTRADO. Un video protagonista en el medio, los vecinos
   // asomando a los costados; las flechas pasan de a uno (posición fija).
+  // En el editor SIEMPRE se ven los espacios (aunque estén vacíos); en la
+  // tienda solo los videos ya cargados.
   function seccionVideos(s) {
-    const items = (s.items || []).filter((i) => i.url);
-    if (!items.length) {
-      return `
-    <section class="tiq-sec tiq-sec--videos" data-seccion="${esc(s.id)}">
-      <div class="contenedor"><div class="tiq-sec__vacio">Tocá <b>Editar</b> y sumá videos: pegá un enlace (YouTube, Vimeo o MP4) o subí un archivo.</div></div>
-    </section>`;
-    }
-    const cards = items
-      .map(
-        (i) => `
+    const items = s.items || [];
+    const visibles = MODO_APP ? items.map((i, j) => [i, j]) : items.map((i, j) => [i, j]).filter(([i]) => i.url);
+    if (!visibles.length) return MODO_APP ? "" : ""; // sin nada que mostrar
+
+    const cards = visibles
+      .map(([i, j]) => {
+        if (!i.url) {
+          // espacio vacío (solo editor): clic → cargar video
+          return `
+          <div class="tiq-video tiq-video--vacio" data-vslot="${esc(s.id)}:${j}" title="Clic para agregar un video">
+            <div class="tiq-video__add">${ICONO_VIDEO}<span>Agregar video</span></div>
+          </div>`;
+        }
+        const accion = MODO_APP ? `data-vslot="${esc(s.id)}:${j}" title="Clic para cambiar este video"` : `onclick="tiqVideoPlay(this)"`;
+        return `
         <div class="tiq-video" data-embed="${esc(videoEmbed(i.url))}">
-          <div class="tiq-video__poster" onclick="tiqVideoPlay(this)">
+          <div class="tiq-video__poster" ${accion}>
             ${posterVideo(i)}
             <button class="tiq-video__play" type="button" aria-label="Reproducir">${PLAY}</button>
           </div>
-        </div>`
-      )
+        </div>`;
+      })
       .join("");
     return `
     <section class="tiq-sec tiq-sec--videos" data-seccion="${esc(s.id)}">
@@ -486,21 +498,30 @@
   }
 
   // Fotos: carrusel a lo largo (apaisadas) en fila deslizable, flechas afuera.
+  // En el editor cada espacio (incluso vacío) es clic-para-elegir-imagen.
   function seccionCarrusel(s) {
-    const items = (s.items || []).filter((i) => i.media_id || i.url);
-    const cuerpo = items.length
-      ? items
-          .map((i) => {
-            const src = i.url ? i.url : urlImagen(i.media_id);
-            const inner = `<img src="${esc(src)}" alt="${esc(i.caption || "")}" loading="lazy">${
-              i.caption ? `<span class="tiq-imagen__caption">${esc(i.caption)}</span>` : ""
-            }`;
-            return i.link
-              ? `<a class="tiq-imagen" href="${esc(i.link)}" target="_blank" rel="noopener">${inner}</a>`
-              : `<div class="tiq-imagen">${inner}</div>`;
-          })
-          .join("")
-      : `<div class="tiq-sec__vacio">Tocá <b>Editar</b> y sumá imágenes de tu producto o subí las tuyas.</div>`;
+    const items = s.items || [];
+    const visibles = MODO_APP ? items.map((i, j) => [i, j]) : items.map((i, j) => [i, j]).filter(([i]) => i.media_id || i.url);
+    if (!visibles.length) return "";
+
+    const cuerpo = visibles
+      .map(([i, j]) => {
+        const clic = MODO_APP ? ` data-imgclick="sec:${esc(s.id)}:${j}"` : "";
+        if (!i.media_id && !i.url) {
+          return `<div class="tiq-imagen tiq-imagen--vacio tiq-clicable"${clic} title="Clic para elegir una imagen">
+            <div class="tiq-imagen__add">${ICONO_IMG}<span>Elegí una imagen</span></div>
+          </div>`;
+        }
+        const src = i.url ? i.url : urlImagen(i.media_id);
+        const inner = `<img src="${esc(src)}" alt="${esc(i.caption || "")}" loading="lazy">${
+          i.caption ? `<span class="tiq-imagen__caption">${esc(i.caption)}</span>` : ""
+        }`;
+        if (MODO_APP) return `<div class="tiq-imagen tiq-clicable"${clic} title="Clic para cambiar la imagen">${inner}</div>`;
+        return i.link
+          ? `<a class="tiq-imagen" href="${esc(i.link)}" target="_blank" rel="noopener">${inner}</a>`
+          : `<div class="tiq-imagen">${inner}</div>`;
+      })
+      .join("");
     return `
     <section class="tiq-sec tiq-sec--carrusel" data-seccion="${esc(s.id)}">
       <div class="contenedor">
