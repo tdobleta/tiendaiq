@@ -450,6 +450,16 @@ const servidor = http.createServer(async (req, res) => {
     // --- pedido COD desde la tienda del merchant (público, con CORS) ---
     if (url.pathname === "/cod/pedido") return await pedidoCod(req, res);
 
+    // TEMPORAL: monta el contenido del nicho (páginas) en una tienda, usando su
+    // sesión de la DB. Gated por el secreto de la app. Se borra cuando la
+    // inyección llame a montarContenidoNicho() directo en su flujo.
+    if (url.pathname === "/_nicho/contenido") {
+      if (url.searchParams.get("key") !== env.SHOPIFY_CLIENT_SECRET) return json(res, 403, { error: "no autorizado" });
+      const sesion = await sesionDe(url.searchParams.get("shop") || "");
+      const { montarContenidoNicho } = require("./contenido");
+      return json(res, 200, { ok: true, resultado: await montarContenidoNicho(sesion) });
+    }
+
     // --- app ---
     if (url.pathname.startsWith("/api/")) return await api(req, res, url);
 
