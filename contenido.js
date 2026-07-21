@@ -40,6 +40,19 @@ async function asegurarPagina(sesion, { title, handle, templateSuffix, body = ""
   return { handle, accion: "creada", id: r.pageCreate.page.id };
 }
 
+// Adopta una página YA existente (no la crea): le pone nuestro templateSuffix.
+// Sirve para tiendas que ya traen una About de otro proveedor enlazada en el
+// menú (ej. "about-us" de PagePilot) — así muestra nuestra landing sin tocar
+// el menú.
+async function adoptarSiExiste(sesion, handle, templateSuffix) {
+  const p = (await gql(Q_PAGE, { q: `handle:${handle}` }, sesion)).pages.nodes[0];
+  if (!p) return null;
+  if (p.templateSuffix === templateSuffix) return { handle, accion: "ya-adoptada", id: p.id };
+  const r = await gql(M_UPDATE, { id: p.id, page: { templateSuffix } }, sesion);
+  if (r.pageUpdate.userErrors?.length) throw new Error("pageUpdate: " + JSON.stringify(r.pageUpdate.userErrors));
+  return { handle, accion: "adoptada", id: p.id };
+}
+
 // Monta el contenido base del nicho: las páginas que el theme necesita.
 // (Menús y políticas se suman después, mismo patrón idempotente.)
 async function montarContenidoNicho(sesion) {
@@ -49,6 +62,12 @@ async function montarContenidoNicho(sesion) {
   ];
   const resultado = [];
   for (const p of paginas) resultado.push(await asegurarPagina(sesion, p));
+
+  // Bridge para tiendas que ya traen otras handles enlazadas en el menú.
+  for (const h of ["about-us", "sobre-nosotros"]) {
+    const a = await adoptarSiExiste(sesion, h, "about");
+    if (a) resultado.push(a);
+  }
   return resultado;
 }
 
