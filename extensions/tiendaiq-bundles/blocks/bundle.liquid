@@ -1,0 +1,39 @@
+{% comment %}
+  TiendaIQ — Bundles (app embed).
+  Se activa desde el editor de temas: Personalizar > Insertar bloque de app >
+  "TiendaIQ Bundles". Solo actúa en páginas de producto.
+
+  Deja en window los datos del producto y la URL pública desde donde el widget
+  trae la config del bundle (mismo dato que hoy viaja embebido en la inyección
+  directa; sin secretos). El widget se monta solo cerca del botón de compra.
+{% endcomment %}
+{%- if product -%}
+  <script>
+    window.TIENDAIQ_PRODUCTO = {
+      id: {{ product.id | json }},
+      variante: {{ product.selected_or_first_available_variant.id | json }},
+      colecciones: {{ product.collections | map: 'id' | json }},
+      precio: {{ product.selected_or_first_available_variant.price | json }},
+      moneda: {{ shop.money_format | json }}
+    };
+    window.TIENDAIQ_BUNDLES_SRC =
+      "{{ block.settings.app_url | default: 'https://tiendaiq.onrender.com' }}/publico/bundles?shop={{ shop.permanent_domain }}";
+  </script>
+  {{ 'tiendaiq-bundle.css' | asset_url | stylesheet_tag }}
+  <script src="{{ 'tiendaiq-bundle.js' | asset_url }}" defer></script>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "TiendaIQ Bundles",
+  "target": "body",
+  "settings": [
+    {
+      "type": "text",
+      "id": "app_url",
+      "label": "URL de la app (no cambiar)",
+      "default": "https://tiendaiq.onrender.com"
+    }
+  ]
+}
+{% endschema %}
