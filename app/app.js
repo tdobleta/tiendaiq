@@ -2760,28 +2760,6 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       ${a.tipo === "productos" ? selectorProductos(a.ids || []) : ""}`;
   }
 
-  // Bloque "Regalos" compartido: por ahora envío gratis por umbral.
-  function bloqueRegalos(b) {
-    const g = b.regalos || {};
-    return `
-      <div class="bdl-seccion">Regalos</div>
-      <label class="cod-check"><input type="checkbox" data-b="regalos.activo" data-tipo="bool" ${g.activo ? "checked" : ""}> Sumar un regalo al llegar a un umbral</label>
-      ${
-        g.activo
-          ? `<div class="campo campo--editor">
-               <label>Tipo de regalo</label>
-               <select data-b="regalos.tipo">
-                 <option value="envio" ${g.tipo === "envio" ? "selected" : ""}>Envío gratis</option>
-                 <option value="producto" disabled>Producto de regalo (próximamente)</option>
-               </select>
-             </div>
-             ${campoBdl("regalos.desde_subtotal", "Desde este subtotal ($)", "numero", 'min="0"')}
-             ${campoBdl("regalos.etiqueta", "Texto del regalo")}
-             <div class="bdl-nota">El envío gratis lo aplica Shopify solo cuando el subtotal llega al umbral. Combina con el descuento del bundle.</div>`
-          : ""
-      }`;
-  }
-
   // --- pestaña Ofertas ---
   function panelOfertas(b) {
     if (b.tipo === "bxgy") return panelBxgy(b);
@@ -2817,9 +2795,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       ${bloqueActivador(b)}
 
       <div class="bdl-ofertas">${ofertas}</div>
-      ${b.ofertas.length < 3 ? `<button class="btn btn--fantasma btn--chico" id="bdl-add-oferta">＋ Agregar oferta</button>` : `<div class="panel__sub">Máximo 3 ofertas.</div>`}
-
-      ${bloqueRegalos(b)}`;
+      ${b.ofertas.length < 3 ? `<button class="btn btn--fantasma btn--chico" id="bdl-add-oferta">＋ Agregar oferta</button>` : `<div class="panel__sub">Máximo 3 ofertas.</div>`}`;
   }
 
   // --- pestaña Ofertas para BXGY ---
@@ -2839,9 +2815,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         ${campoBdl("bxgy.regalo_cantidad", "Y llevás esta cantidad", "numero", 'min="1"')}
       </div>
       ${campoBdl("bxgy.regalo_descuento", "Descuento sobre lo que se lleva (%)", "numero", 'min="1" max="100"')}
-      <div class="bdl-nota">${gratis ? "Con 100% el producto de regalo sale <strong>gratis</strong>." : "Con menos de 100% el producto extra sale con ese descuento."} Ej: comprá ${Number(x.compra_cantidad) || 2}, llevás ${Number(x.regalo_cantidad) || 1} ${gratis ? "gratis" : "al " + (Number(x.regalo_descuento) || 100) + "% off"}.</div>
-
-      ${bloqueRegalos(b)}`;
+      <div class="bdl-nota">${gratis ? "Con 100% el producto de regalo sale <strong>gratis</strong>." : "Con menos de 100% el producto extra sale con ese descuento."} Ej: comprá ${Number(x.compra_cantidad) || 2}, llevás ${Number(x.regalo_cantidad) || 1} ${gratis ? "gratis" : "al " + (Number(x.regalo_descuento) || 100) + "% off"}.</div>`;
   }
 
   function selectorProductos(ids) {
@@ -2938,9 +2912,8 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       if (e.target.dataset.tipo === "numero") v = Number(v) || 0;
       fijar(b, ruta, v);
       if (e.target.type === "color") e.target.parentElement.querySelector("code").textContent = v;
-      // Estos cambios muestran/ocultan sub-paneles: repintar el editor entero.
+      // El tipo de activador cambia el sub-panel: repintar.
       if (ruta === "activador.tipo") { b.activador.ids = b.activador.ids || []; marcarSucioBundles(); return pintarEditorBundle(); }
-      if (ruta === "regalos.activo" || ruta === "regalos.tipo") { marcarSucioBundles(); return pintarEditorBundle(); }
       marcarSucioBundles();
       pintarPreviewBundle();
     });
@@ -3084,26 +3057,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         ${d.subtitulo ? `<div class="tiq-bdl__h2">${esc(d.subtitulo)}</div>` : ""}
       </div>` : ""}
       <div class="tiq-bdl__cards">${cards}</div>
-      ${barraEnvioPreview(b, totalSel)}
       <button type="button" class="tiq-bdl__cta">${esc(textoBoton)}</button>
-    </div>`;
-  }
-
-  // Barra de envío gratis para el preview del admin (mismo markup que el widget).
-  function barraEnvioPreview(b, total) {
-    const g = b.regalos;
-    if (!g || !g.activo || g.tipo !== "envio") return "";
-    const umbral = (Number(g.desde_subtotal) || 0) * 100;
-    if (umbral <= 0) return "";
-    const pct = Math.min(100, Math.round((total / umbral) * 100));
-    const falta = Math.max(0, umbral - total);
-    const ok = falta <= 0;
-    const texto = ok
-      ? `${g.etiqueta || "🎁 Envío gratis"} desbloqueado`
-      : `Agregá ${fmtBdl(falta)} y sumás envío gratis`;
-    return `<div class="tiq-bdl__envio ${ok ? "is-ok" : ""}">
-      <div class="tiq-bdl__envio-txt">${esc(texto)}</div>
-      <div class="tiq-bdl__envio-barra"><span style="width:${pct}%"></span></div>
     </div>`;
   }
 

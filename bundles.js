@@ -57,16 +57,6 @@ function bundleDefault() {
       regalo_cantidad: 1,     // customerGets.value.discountOnQuantity.quantity
       regalo_descuento: 100   // 100 = gratis; 50 = mitad de precio, etc.
     },
-    // Peldaño de regalo, combinable con el descuento del bundle. v2: solo
-    // "envio" (envío gratis por umbral de subtotal, nativo y combinable).
-    // "producto" (regalo físico) queda para v3: exige manejo de línea en el
-    // carrito y no combina limpio con los tiers de volumen.
-    regalos: {
-      activo: false,
-      tipo: "envio",          // envio | producto (v3)
-      desde_subtotal: 500,    // umbral en la unidad principal de la moneda (ej. $500)
-      etiqueta: "🎁 Envío gratis"
-    },
     diseno: {
       preset: "negro",
       titulo: "Elegí tu paquete y ahorrá",
@@ -143,13 +133,6 @@ const M_CREAR_BXGY = `mutation($d: DiscountAutomaticBxgyInput!) {
   }
 }`;
 
-const M_CREAR_ENVIO = `mutation($d: DiscountAutomaticFreeShippingInput!) {
-  discountAutomaticFreeShippingCreate(freeShippingAutomaticDiscount: $d) {
-    automaticDiscountNode { id }
-    userErrors { field message }
-  }
-}`;
-
 const M_BORRAR = `mutation($id: ID!) {
   discountAutomaticDelete(id: $id) {
     deletedAutomaticDiscountId
@@ -191,20 +174,8 @@ async function borrarDescuentos(sesion, ids = [], log = () => {}) {
 // el más valioso (el 15%). Es el patrón estándar sin Shopify Functions.
 async function crearDescuentos(sesion, bundle, log = () => {}) {
   if (bundle.activo === false) return [];
+  if (bundle.tipo === "bxgy") return await crearDescuentoBxgy(sesion, bundle, log);
 
-  // Descuento base del bundle (según tipo) + el regalo combinable si está.
-  const base = bundle.tipo === "bxgy"
-    ? await crearDescuentoBxgy(sesion, bundle, log)
-    : await crearDescuentosVolumen(sesion, bundle, log);
-
-  const g = bundle.regalos;
-  if (g && g.activo && g.tipo === "envio") {
-    base.push(...(await crearDescuentoEnvio(sesion, bundle, log)));
-  }
-  return base;
-}
-
-async function crearDescuentosVolumen(sesion, bundle, log = () => {}) {
   const items = itemsDelActivador(bundle.activador || { tipo: "todos" });
   const creados = [];
 
@@ -267,32 +238,6 @@ async function crearDescuentoBxgy(sesion, bundle, log = () => {}) {
   }
   const id = r.discountAutomaticBxgyCreate.automaticDiscountNode.id;
   log(`  descuento · comprá ${compra} → ${regalo} al ${desc}% off  (${id.split("/").pop()})`);
-  return [id];
-}
-
-// Envío gratis por umbral de subtotal. Es clase "envío", así que combina con
-// el descuento de producto del bundle (volumen o BXGY) sin pisarse.
-async function crearDescuentoEnvio(sesion, bundle, log = () => {}) {
-  const g = bundle.regalos || {};
-  const umbral = Math.max(0, Number(g.desde_subtotal) || 0);
-
-  const d = {
-    title: `TiendaIQ Bundle · ${bundle.nombre} · envío gratis`.slice(0, 250),
-    startsAt: new Date().toISOString(),
-    destination: { all: true },
-    minimumRequirement: {
-      subtotal: { greaterThanOrEqualToSubtotalAmount: umbral.toFixed(2) }
-    },
-    combinesWith: { orderDiscounts: true, productDiscounts: true, shippingDiscounts: false }
-  };
-
-  const r = await gql(M_CREAR_ENVIO, { d }, sesion);
-  const errores = r.discountAutomaticFreeShippingCreate.userErrors;
-  if (errores?.length) {
-    throw new Error(`Envío gratis: ${errores.map((e) => e.message).join(" · ")}`);
-  }
-  const id = r.discountAutomaticFreeShippingCreate.automaticDiscountNode.id;
-  log(`  descuento · envío gratis desde ${umbral}  (${id.split("/").pop()})`);
   return [id];
 }
 

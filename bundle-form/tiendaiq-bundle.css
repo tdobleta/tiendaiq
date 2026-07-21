@@ -127,25 +127,6 @@
   white-space: nowrap;
 }
 
-/* --- barra de envío gratis --- */
-.tiq-bdl__envio { margin-top: 14px; }
-.tiq-bdl__envio-txt { font-size: 0.86em; font-weight: 600; margin-bottom: 6px; }
-.tiq-bdl__envio.is-ok .tiq-bdl__envio-txt { color: #059669; }
-.tiq-bdl__envio-barra {
-  height: 7px;
-  border-radius: 999px;
-  background: rgba(0, 0, 0, 0.08);
-  overflow: hidden;
-}
-.tiq-bdl__envio-barra span {
-  display: block;
-  height: 100%;
-  background: var(--tiq-borde);
-  border-radius: 999px;
-  transition: width 0.3s ease;
-}
-.tiq-bdl__envio.is-ok .tiq-bdl__envio-barra span { background: #059669; }
-
 /* --- botón --- */
 .tiq-bdl__cta {
   display: block;
