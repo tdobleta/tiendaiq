@@ -68,9 +68,14 @@
     return Number(PROD.precio) || 0;
   }
 
+  // La variante puede venir del form de Dawn, de un input suelto, o de un
+  // global que setean los temas custom (landing PagePilot / TiendaIQ).
   function varianteActual() {
-    var el = document.querySelector('form[action*="/cart/add"] [name="id"]');
+    var el = document.querySelector('form[action*="/cart/add"] [name="id"]') || document.querySelector('[name="id"]');
     if (el && el.value) return el.value;
+    if (window.TIENDAIQ_VARIANT) return window.TIENDAIQ_VARIANT;
+    if (window.VARIANT) return window.VARIANT;
+    if (PROD.variante) return PROD.variante;
     return null;
   }
 
@@ -222,22 +227,40 @@
       });
   }
 
-  // --- montar cerca del botón de compra del tema ---
-  function montar() {
-    var ancla =
+  // Busca el botón/zona de "Agregar al carrito" del tema. Primero los
+  // selectores estándar de Dawn; si no, cualquier botón/enlace cuyo texto sea
+  // "agregar al carrito" (temas custom tipo landing PagePilot/TiendaIQ).
+  function buscarAncla() {
+    var estandar =
       document.querySelector(".product-form__buttons") ||
       document.querySelector('form[action*="/cart/add"] button[name="add"]') ||
+      document.querySelector('button[name="add"]') ||
       document.querySelector('form[action*="/cart/add"]');
+    if (estandar) return estandar;
+
+    var re = /(agregar|añadir|agrega)\s+al\s+carrito|add\s+to\s+cart|comprar\s+ahora/i;
+    var cands = document.querySelectorAll('button, a[role="button"], input[type="submit"], [onclick]');
+    for (var i = 0; i < cands.length; i++) {
+      var t = (cands[i].textContent || cands[i].value || "").trim();
+      if (t && re.test(t) && cands[i].offsetParent !== null) return cands[i];
+    }
+    return null;
+  }
+
+  // --- montar cerca del botón de compra del tema ---
+  function montar() {
+    if (document.querySelector(".tiq-bdl")) return true; // ya montado
+    var ancla = buscarAncla();
     if (!ancla) return false;
 
     // El widget toma la compra: ocultamos los botones nativos para no dejar
-    // dos "Agregar al carrito". Si el ancla es el form entero, insertamos al
-    // inicio y no ocultamos nada.
-    if (ancla.classList && ancla.classList.contains("product-form__buttons")) {
-      ancla.parentNode.insertBefore(raiz, ancla);
-      ancla.style.display = "none";
-    } else if (ancla.tagName === "BUTTON") {
-      var cont = ancla.closest(".product-form__buttons") || ancla.parentNode;
+    // dos "Agregar al carrito".
+    var cont =
+      (ancla.classList && ancla.classList.contains("product-form__buttons"))
+        ? ancla
+        : (ancla.closest && (ancla.closest(".product-form__buttons") || ancla.closest('form[action*="/cart/add"]'))) || ancla;
+
+    if (cont.parentNode) {
       cont.parentNode.insertBefore(raiz, cont);
       cont.style.display = "none";
     } else {
@@ -247,9 +270,19 @@
     return true;
   }
 
+  // En temas custom la página se renderiza por JS: el botón puede aparecer
+  // después del DOMContentLoaded. Reintentamos con un observer (tope 8s).
+  function intentarMontar() {
+    if (montar()) return;
+    if (typeof MutationObserver === "undefined") return;
+    var obs = new MutationObserver(function () { if (montar()) obs.disconnect(); });
+    obs.observe(document.documentElement, { childList: true, subtree: true });
+    setTimeout(function () { obs.disconnect(); }, 8000);
+  }
+
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", montar);
+    document.addEventListener("DOMContentLoaded", intentarMontar);
   } else {
-    montar();
+    intentarMontar();
   }
 })();

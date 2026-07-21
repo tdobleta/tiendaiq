@@ -288,6 +288,7 @@ function armarSnippet(config, sesion, urlApp) {
   window.TIENDAIQ_BUNDLES = ${json};
   window.TIENDAIQ_PRODUCTO = {
     id: {{ product.id | json }},
+    variante: {{ product.selected_or_first_available_variant.id | json }},
     colecciones: {{ product.collections | map: 'id' | json }},
     precio: {{ product.selected_or_first_available_variant.price | json }},
     moneda: {{ shop.money_format | json }}
