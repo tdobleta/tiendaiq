@@ -2509,6 +2509,11 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   const fmtBdl = (c) =>
     "$ " + (Math.round(c) / 100).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+  function cerrarMenuTipo() {
+    const m = document.getElementById("bdl-tipomenu");
+    if (m) m.remove();
+  }
+
   // Presets de color de la pestaña Diseño (nombre → paleta).
   const PRESETS_BDL = {
     negro:   { borde: "#111111", badge: "#111111", etq: "#e11d48", texto: "#111111", bot: "#111111" },
@@ -2521,11 +2526,11 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   const NOMBRE_PRESET = { negro: "Negro", rosa: "Rosa", azul: "Azul", verde: "Verde", violeta: "Violeta", naranja: "Naranja" };
 
   // Bundle nuevo (espeja bundleDefault del server; el server lo completa igual).
-  function nuevoBundleLocal() {
+  function nuevoBundleLocal(tipo = "volumen") {
     return {
       id: "b_" + Math.random().toString(36).slice(2, 9),
-      nombre: "Descuento por volumen",
-      tipo: "volumen",
+      nombre: tipo === "bxgy" ? "Comprá X y obtené Y" : "Descuento por volumen",
+      tipo,
       activo: true,
       activador: { tipo: "todos", ids: [] },
       ofertas: [
@@ -2533,6 +2538,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         { cantidad: 2, descuento: 10, titulo: "Comprá 2", subtitulo: "Ahorás un 10%", etiqueta: "10% OFF", badge: "Más elegido", popular: true,  predeterminada: true },
         { cantidad: 3, descuento: 15, titulo: "Comprá 3", subtitulo: "Mejor precio",  etiqueta: "15% OFF", badge: "Mejor valor", popular: false, predeterminada: false }
       ],
+      bxgy: { compra_cantidad: 2, regalo_cantidad: 1, regalo_descuento: 100 },
       diseno: {
         preset: "negro", titulo: "Elegí tu paquete y ahorrá", subtitulo: "Cuantas más unidades, mejor el precio",
         mostrar_encabezado: true, color_borde: "#111111", color_badge: "#111111", color_badge_texto: "#ffffff",
@@ -2575,16 +2581,19 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
 
     const filas = lista
       .map((b, i) => {
-        const tiers = (b.ofertas || []).filter((o) => Number(o.descuento) > 0).length;
         const alcance =
           b.activador?.tipo === "todos" ? "Todos los productos"
           : b.activador?.tipo === "coleccion" ? `${b.activador.ids?.length || 0} colección(es)`
           : `${b.activador?.ids?.length || 0} producto(s)`;
+        const resumen =
+          b.tipo === "bxgy"
+            ? `Comprá X y obtené Y · comprá ${b.bxgy?.compra_cantidad || 2}, llevás ${b.bxgy?.regalo_cantidad || 1}`
+            : `Descuento por volumen · ${(b.ofertas || []).filter((o) => Number(o.descuento) > 0).length} peldaño(s) con descuento`;
         return `<div class="bdl-fila" data-abrir="${i}">
-          <div class="bdl-fila__ico">📦</div>
+          <div class="bdl-fila__ico">${b.tipo === "bxgy" ? "🎁" : "📦"}</div>
           <div class="bdl-fila__main">
             <div class="bdl-fila__nombre">${esc(b.nombre)} ${b.activo ? "" : '<span class="bdl-chip bdl-chip--off">Pausado</span>'}</div>
-            <div class="bdl-fila__sub">Descuento por volumen · ${tiers} peldaño(s) con descuento · ${esc(alcance)}</div>
+            <div class="bdl-fila__sub">${esc(resumen)} · ${esc(alcance)}</div>
           </div>
           <button class="bdl-fila__del" data-del="${i}" title="Eliminar bundle">🗑</button>
         </div>`;
@@ -2629,16 +2638,31 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       }`;
 
     $("volver-inicio").onclick = () => ir("inicio");
-    const crear = () => {
-      estado.bundles.config.lista.push(nuevoBundleLocal());
+    const crearTipo = (tipo) => {
+      estado.bundles.config.lista.push(nuevoBundleLocal(tipo));
       estado.bundles.editIdx = estado.bundles.config.lista.length - 1;
       estado.bundles.vista = "editor";
       estado.bundles.tab = "ofertas";
       estado.bundles.sucio = true;
       pintarEditorBundle();
     };
-    if ($("bdl-nuevo")) $("bdl-nuevo").onclick = crear;
-    if ($("bdl-vacio-crear")) $("bdl-vacio-crear").onclick = crear;
+    const abrirMenuTipo = (btn) => {
+      cerrarMenuTipo();
+      const m = document.createElement("div");
+      m.className = "bdl-tipomenu";
+      m.id = "bdl-tipomenu";
+      m.innerHTML = `
+        <button data-tipo="volumen"><strong>Descuento por volumen</strong><span>Comprá más, pagá menos con precios escalonados</span></button>
+        <button data-tipo="bxgy"><strong>Comprá X y obtené Y</strong><span>Comprá una cantidad y llevá otra gratis o con descuento</span></button>`;
+      document.body.appendChild(m);
+      const r = btn.getBoundingClientRect();
+      m.style.top = r.bottom + window.scrollY + 6 + "px";
+      m.style.left = Math.max(12, r.left + window.scrollX) + "px";
+      m.querySelectorAll("[data-tipo]").forEach((b) => (b.onclick = () => { cerrarMenuTipo(); crearTipo(b.dataset.tipo); }));
+      setTimeout(() => document.addEventListener("click", cerrarMenuTipo, { once: true }), 0);
+    };
+    if ($("bdl-nuevo")) $("bdl-nuevo").onclick = (e) => { e.stopPropagation(); abrirMenuTipo(e.currentTarget); };
+    if ($("bdl-vacio-crear")) $("bdl-vacio-crear").onclick = (e) => { e.stopPropagation(); abrirMenuTipo(e.currentTarget); };
     if ($("bdl-instalar")) $("bdl-instalar").onclick = instalarBundlesTema;
 
     vista.querySelectorAll("[data-abrir]").forEach((el) => {
@@ -2722,9 +2746,23 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     pintarPreviewBundle();
   }
 
+  // Activador compartido por los dos tipos de bundle.
+  function bloqueActivador(b) {
+    const a = b.activador || { tipo: "todos", ids: [] };
+    return `
+      <div class="campo campo--editor">
+        <label>Se aplica a</label>
+        <select data-b="activador.tipo">
+          <option value="todos" ${a.tipo === "todos" ? "selected" : ""}>Todos los productos</option>
+          <option value="productos" ${a.tipo === "productos" ? "selected" : ""}>Productos específicos</option>
+        </select>
+      </div>
+      ${a.tipo === "productos" ? selectorProductos(a.ids || []) : ""}`;
+  }
+
   // --- pestaña Ofertas ---
   function panelOfertas(b) {
-    const a = b.activador || { tipo: "todos", ids: [] };
+    if (b.tipo === "bxgy") return panelBxgy(b);
     const ofertas = (b.ofertas || [])
       .map((o, i) => `
         <div class="bdl-oferta" data-oi="${i}">
@@ -2754,18 +2792,30 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       <div class="panel__sub">Creá los peldaños de precio. El más conveniente se aplica solo en el checkout.</div>
 
       ${campoBdl("nombre", "Nombre del bundle")}
-
-      <div class="campo campo--editor">
-        <label>Se aplica a</label>
-        <select data-b="activador.tipo">
-          <option value="todos" ${a.tipo === "todos" ? "selected" : ""}>Todos los productos</option>
-          <option value="productos" ${a.tipo === "productos" ? "selected" : ""}>Productos específicos</option>
-        </select>
-      </div>
-      ${a.tipo === "productos" ? selectorProductos(a.ids || []) : ""}
+      ${bloqueActivador(b)}
 
       <div class="bdl-ofertas">${ofertas}</div>
       ${b.ofertas.length < 3 ? `<button class="btn btn--fantasma btn--chico" id="bdl-add-oferta">＋ Agregar oferta</button>` : `<div class="panel__sub">Máximo 3 ofertas.</div>`}`;
+  }
+
+  // --- pestaña Ofertas para BXGY ---
+  function panelBxgy(b) {
+    const x = b.bxgy || {};
+    const gratis = Number(x.regalo_descuento) >= 100;
+    return `
+      <div class="tarjeta__titulo">Comprá X y obtené Y</div>
+      <div class="panel__sub">Definí cuánto tiene que comprar el cliente y qué se lleva. El descuento se aplica solo en el checkout.</div>
+
+      ${campoBdl("nombre", "Nombre del bundle")}
+      ${bloqueActivador(b)}
+
+      <div class="bdl-seccion">La promo</div>
+      <div class="bdl-grid2">
+        ${campoBdl("bxgy.compra_cantidad", "Comprá esta cantidad", "numero", 'min="1"')}
+        ${campoBdl("bxgy.regalo_cantidad", "Y llevás esta cantidad", "numero", 'min="1"')}
+      </div>
+      ${campoBdl("bxgy.regalo_descuento", "Descuento sobre lo que se lleva (%)", "numero", 'min="1" max="100"')}
+      <div class="bdl-nota">${gratis ? "Con 100% el producto de regalo sale <strong>gratis</strong>." : "Con menos de 100% el producto extra sale con ese descuento."} Ej: comprá ${Number(x.compra_cantidad) || 2}, llevás ${Number(x.regalo_cantidad) || 1} ${gratis ? "gratis" : "al " + (Number(x.regalo_descuento) || 100) + "% off"}.</div>`;
   }
 
   function selectorProductos(ids) {
@@ -2947,34 +2997,58 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       `--tiq-etq:${d.color_etiqueta || "#e11d48"};--tiq-txt:${d.color_texto || "#111"};--tiq-radio:${d.radio ?? 12}px;` +
       `--tiq-bot-fondo:${bot.color_fondo || "#111"};--tiq-bot-txt:${bot.color_texto || "#fff"};--tiq-bot-radio:${bot.radio ?? 8}px;--tiq-bot-tam:${bot.tamano ?? 16}px`;
 
-    let predIdx = (b.ofertas || []).findIndex((o) => o.predeterminada);
-    if (predIdx < 0) predIdx = 0;
-
-    const cards = (b.ofertas || [])
-      .map((o, i) => {
-        const cant = Math.max(1, Number(o.cantidad) || 1);
-        const desc = Number(o.descuento) || 0;
-        const bruto = PRECIO_DEMO * cant;
-        const total = Math.round(bruto * (1 - desc / 100));
-        const ahorro = bruto - total;
-        return `<label class="tiq-bdl__card ${i === predIdx ? "is-sel" : ""} ${o.popular ? "is-pop" : ""}">
-          ${o.badge ? `<span class="tiq-bdl__badge">${esc(o.badge)}</span>` : ""}
-          <span class="tiq-bdl__radio"></span>
-          <span class="tiq-bdl__main">
-            <span class="tiq-bdl__titulo">${esc(o.titulo || cant + " unidades")}${o.etiqueta ? ` <span class="tiq-bdl__etq">${esc(o.etiqueta)}</span>` : ""}</span>
-            ${o.subtitulo ? `<span class="tiq-bdl__sub">${esc(o.subtitulo)}</span>` : ""}
-            ${d.mostrar_ahorro && ahorro > 0 ? `<span class="tiq-bdl__ahorro">Ahorrás ${fmtBdl(ahorro)}</span>` : ""}
-          </span>
-          <span class="tiq-bdl__precio">
-            <span class="tiq-bdl__precio-now">${fmtBdl(total)}</span>
-            ${desc > 0 ? `<span class="tiq-bdl__precio-old">${fmtBdl(bruto)}</span>` : ""}
-          </span>
-        </label>`;
-      })
-      .join("");
-
-    const oSel = (b.ofertas || [])[predIdx] || { cantidad: 1, descuento: 0 };
-    const totalSel = Math.round(PRECIO_DEMO * Math.max(1, Number(oSel.cantidad) || 1) * (1 - (Number(oSel.descuento) || 0) / 100));
+    let cards, totalSel;
+    if (b.tipo === "bxgy") {
+      const x = b.bxgy || {};
+      const compra = Math.max(1, Number(x.compra_cantidad) || 1);
+      const regalo = Math.max(1, Number(x.regalo_cantidad) || 1);
+      const desc = Math.min(100, Math.max(1, Number(x.regalo_descuento) || 100));
+      const bruto = PRECIO_DEMO * (compra + regalo);
+      totalSel = Math.round(PRECIO_DEMO * compra + PRECIO_DEMO * regalo * (1 - desc / 100));
+      const ahorro = bruto - totalSel;
+      const gratis = desc >= 100;
+      const titulo = `Comprá ${compra}, llevás ${regalo}${gratis ? " gratis" : " al " + desc + "% off"}`;
+      const etq = gratis ? `${compra + regalo}x${compra}` : `${desc}% OFF`;
+      cards = `<label class="tiq-bdl__card is-sel is-pop">
+        <span class="tiq-bdl__badge">${gratis ? "Regalo" : "Oferta"}</span>
+        <span class="tiq-bdl__radio"></span>
+        <span class="tiq-bdl__main">
+          <span class="tiq-bdl__titulo">${esc(titulo)} <span class="tiq-bdl__etq">${esc(etq)}</span></span>
+          ${d.mostrar_ahorro && ahorro > 0 ? `<span class="tiq-bdl__ahorro">Ahorrás ${fmtBdl(ahorro)}</span>` : ""}
+        </span>
+        <span class="tiq-bdl__precio">
+          <span class="tiq-bdl__precio-now">${fmtBdl(totalSel)}</span>
+          <span class="tiq-bdl__precio-old">${fmtBdl(bruto)}</span>
+        </span>
+      </label>`;
+    } else {
+      let predIdx = (b.ofertas || []).findIndex((o) => o.predeterminada);
+      if (predIdx < 0) predIdx = 0;
+      cards = (b.ofertas || [])
+        .map((o, i) => {
+          const cant = Math.max(1, Number(o.cantidad) || 1);
+          const desc = Number(o.descuento) || 0;
+          const bruto = PRECIO_DEMO * cant;
+          const total = Math.round(bruto * (1 - desc / 100));
+          const ahorro = bruto - total;
+          return `<label class="tiq-bdl__card ${i === predIdx ? "is-sel" : ""} ${o.popular ? "is-pop" : ""}">
+            ${o.badge ? `<span class="tiq-bdl__badge">${esc(o.badge)}</span>` : ""}
+            <span class="tiq-bdl__radio"></span>
+            <span class="tiq-bdl__main">
+              <span class="tiq-bdl__titulo">${esc(o.titulo || cant + " unidades")}${o.etiqueta ? ` <span class="tiq-bdl__etq">${esc(o.etiqueta)}</span>` : ""}</span>
+              ${o.subtitulo ? `<span class="tiq-bdl__sub">${esc(o.subtitulo)}</span>` : ""}
+              ${d.mostrar_ahorro && ahorro > 0 ? `<span class="tiq-bdl__ahorro">Ahorrás ${fmtBdl(ahorro)}</span>` : ""}
+            </span>
+            <span class="tiq-bdl__precio">
+              <span class="tiq-bdl__precio-now">${fmtBdl(total)}</span>
+              ${desc > 0 ? `<span class="tiq-bdl__precio-old">${fmtBdl(bruto)}</span>` : ""}
+            </span>
+          </label>`;
+        })
+        .join("");
+      const oSel = (b.ofertas || [])[predIdx] || { cantidad: 1, descuento: 0 };
+      totalSel = Math.round(PRECIO_DEMO * Math.max(1, Number(oSel.cantidad) || 1) * (1 - (Number(oSel.descuento) || 0) / 100));
+    }
     const textoBoton = (bot.texto || "Agregar al carrito — {total}").replace(/\{total\}/g, fmtBdl(totalSel));
 
     return `<div class="tiq-bdl" style="${vars}">

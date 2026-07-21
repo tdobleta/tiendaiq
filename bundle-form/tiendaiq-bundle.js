@@ -35,7 +35,9 @@
   }
 
   var bundle = CFG.lista.filter(aplica)[0];
-  if (!bundle || !(bundle.ofertas || []).length) return;
+  if (!bundle) return;
+  var esBxgy = bundle.tipo === "bxgy";
+  if (!esBxgy && !(bundle.ofertas || []).length) return;
 
   var D = bundle.diseno || {};
   var BOT = D.boton || {};
@@ -74,7 +76,7 @@
 
   // --- render ---
   var seleccion = 0;
-  bundle.ofertas.forEach(function (o, i) { if (o.predeterminada) seleccion = i; });
+  (bundle.ofertas || []).forEach(function (o, i) { if (o.predeterminada) seleccion = i; });
 
   var raiz = document.createElement("div");
   raiz.className = "tiq-bdl";
@@ -91,37 +93,83 @@
 
   function esc(s) { return String(s == null ? "" : s).replace(/[<>&"]/g, function (c) { return { "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" }[c]; }); }
 
-  function pintar() {
-    var pu = precioUnitario();
-    var tarjetas = bundle.ofertas.map(function (o, i) {
-      var cant = Math.max(1, Number(o.cantidad) || 1);
-      var desc = Number(o.descuento) || 0;
-      var bruto = pu * cant;
-      var total = Math.round(bruto * (1 - desc / 100));
-      var ahorro = bruto - total;
-      var sel = i === seleccion;
-      return (
-        '<label class="tiq-bdl__card' + (sel ? " is-sel" : "") + (o.popular ? " is-pop" : "") + '" data-i="' + i + '">' +
-          (o.badge ? '<span class="tiq-bdl__badge">' + esc(o.badge) + "</span>" : "") +
+  // Cantidad total a agregar al carrito según el tipo y la selección.
+  function cantidadElegida() {
+    if (esBxgy) {
+      var b = bundle.bxgy || {};
+      return Math.max(1, Number(b.compra_cantidad) || 1) + Math.max(1, Number(b.regalo_cantidad) || 1);
+    }
+    return Math.max(1, Number(bundle.ofertas[seleccion].cantidad) || 1);
+  }
+
+  // Tarjeta única para BXGY (comprá X y obtené Y). No es seleccionable.
+  function cardBxgy(pu) {
+    var b = bundle.bxgy || {};
+    var compra = Math.max(1, Number(b.compra_cantidad) || 1);
+    var regalo = Math.max(1, Number(b.regalo_cantidad) || 1);
+    var desc = Math.min(100, Math.max(1, Number(b.regalo_descuento) || 100));
+    var bruto = pu * (compra + regalo);
+    var total = Math.round(pu * compra + pu * regalo * (1 - desc / 100));
+    var ahorro = bruto - total;
+    var gratis = desc >= 100;
+    var titulo = "Comprá " + compra + ", llevás " + regalo + (gratis ? " gratis" : " al " + desc + "% off");
+    var etq = gratis ? (compra + regalo) + "x" + compra : desc + "% OFF";
+    return {
+      html:
+        '<label class="tiq-bdl__card is-sel is-pop">' +
+          '<span class="tiq-bdl__badge">' + (gratis ? "Regalo" : "Oferta") + "</span>" +
           '<span class="tiq-bdl__radio" aria-hidden="true"></span>' +
           '<span class="tiq-bdl__main">' +
-            '<span class="tiq-bdl__titulo">' + esc(o.titulo || (cant + " unidades")) +
-              (o.etiqueta ? ' <span class="tiq-bdl__etq">' + esc(o.etiqueta) + "</span>" : "") +
-            "</span>" +
-            (o.subtitulo ? '<span class="tiq-bdl__sub">' + esc(o.subtitulo) + "</span>" : "") +
+            '<span class="tiq-bdl__titulo">' + esc(titulo) + ' <span class="tiq-bdl__etq">' + esc(etq) + "</span></span>" +
             (D.mostrar_ahorro && ahorro > 0 ? '<span class="tiq-bdl__ahorro">Ahorrás ' + fmt(ahorro) + "</span>" : "") +
           "</span>" +
           '<span class="tiq-bdl__precio">' +
             '<span class="tiq-bdl__precio-now">' + fmt(total) + "</span>" +
-            (desc > 0 ? '<span class="tiq-bdl__precio-old">' + fmt(bruto) + "</span>" : "") +
+            '<span class="tiq-bdl__precio-old">' + fmt(bruto) + "</span>" +
           "</span>" +
-        "</label>"
-      );
-    }).join("");
+        "</label>",
+      total: total
+    };
+  }
 
-    var oSel = bundle.ofertas[seleccion];
-    var cantSel = Math.max(1, Number(oSel.cantidad) || 1);
-    var totalSel = Math.round(pu * cantSel * (1 - (Number(oSel.descuento) || 0) / 100));
+  function pintar() {
+    var pu = precioUnitario();
+    var tarjetas, totalSel;
+
+    if (esBxgy) {
+      var c = cardBxgy(pu);
+      tarjetas = c.html;
+      totalSel = c.total;
+    } else {
+      tarjetas = bundle.ofertas.map(function (o, i) {
+        var cant = Math.max(1, Number(o.cantidad) || 1);
+        var desc = Number(o.descuento) || 0;
+        var bruto = pu * cant;
+        var total = Math.round(bruto * (1 - desc / 100));
+        var ahorro = bruto - total;
+        var sel = i === seleccion;
+        return (
+          '<label class="tiq-bdl__card' + (sel ? " is-sel" : "") + (o.popular ? " is-pop" : "") + '" data-i="' + i + '">' +
+            (o.badge ? '<span class="tiq-bdl__badge">' + esc(o.badge) + "</span>" : "") +
+            '<span class="tiq-bdl__radio" aria-hidden="true"></span>' +
+            '<span class="tiq-bdl__main">' +
+              '<span class="tiq-bdl__titulo">' + esc(o.titulo || (cant + " unidades")) +
+                (o.etiqueta ? ' <span class="tiq-bdl__etq">' + esc(o.etiqueta) + "</span>" : "") +
+              "</span>" +
+              (o.subtitulo ? '<span class="tiq-bdl__sub">' + esc(o.subtitulo) + "</span>" : "") +
+              (D.mostrar_ahorro && ahorro > 0 ? '<span class="tiq-bdl__ahorro">Ahorrás ' + fmt(ahorro) + "</span>" : "") +
+            "</span>" +
+            '<span class="tiq-bdl__precio">' +
+              '<span class="tiq-bdl__precio-now">' + fmt(total) + "</span>" +
+              (desc > 0 ? '<span class="tiq-bdl__precio-old">' + fmt(bruto) + "</span>" : "") +
+            "</span>" +
+          "</label>"
+        );
+      }).join("");
+      var oSel = bundle.ofertas[seleccion];
+      totalSel = Math.round(pu * Math.max(1, Number(oSel.cantidad) || 1) * (1 - (Number(oSel.descuento) || 0) / 100));
+    }
+
     var textoBoton = (BOT.texto || "Agregar al carrito — {total}").replace(/\{total\}/g, fmt(totalSel));
 
     raiz.innerHTML =
@@ -134,20 +182,21 @@
       '<div class="tiq-bdl__cards">' + tarjetas + "</div>" +
       '<button type="button" class="tiq-bdl__cta">' + esc(textoBoton) + "</button>";
 
-    raiz.querySelectorAll(".tiq-bdl__card").forEach(function (el) {
-      el.addEventListener("click", function () {
-        seleccion = Number(el.dataset.i);
-        pintar();
+    if (!esBxgy) {
+      raiz.querySelectorAll(".tiq-bdl__card").forEach(function (el) {
+        el.addEventListener("click", function () {
+          seleccion = Number(el.dataset.i);
+          pintar();
+        });
       });
-    });
+    }
     raiz.querySelector(".tiq-bdl__cta").addEventListener("click", agregar);
   }
 
   var enviando = false;
   function agregar() {
     if (enviando) return;
-    var oSel = bundle.ofertas[seleccion];
-    var cant = Math.max(1, Number(oSel.cantidad) || 1);
+    var cant = cantidadElegida();
     var vid = varianteActual();
     if (!vid) { window.location.href = "/cart"; return; }
 

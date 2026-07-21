@@ -50,6 +50,13 @@ function bundleDefault() {
       { cantidad: 2, descuento: 10, titulo: "Comprá 2",  subtitulo: "Ahorás un 10%",   etiqueta: "10% OFF", badge: "Más elegido", popular: true,  predeterminada: true  },
       { cantidad: 3, descuento: 15, titulo: "Comprá 3",  subtitulo: "Mejor precio",    etiqueta: "15% OFF", badge: "Mejor valor", popular: false, predeterminada: false }
     ],
+    // Solo se usa cuando tipo === "bxgy" (comprá X y obtené Y). El activador
+    // define el scope de ambos lados (lo que comprás y lo que te llevás).
+    bxgy: {
+      compra_cantidad: 2,     // customerBuys.value.quantity
+      regalo_cantidad: 1,     // customerGets.value.discountOnQuantity.quantity
+      regalo_descuento: 100   // 100 = gratis; 50 = mitad de precio, etc.
+    },
     diseno: {
       preset: "negro",
       titulo: "Elegí tu paquete y ahorrá",
@@ -119,6 +126,13 @@ const M_CREAR = `mutation($d: DiscountAutomaticBasicInput!) {
   }
 }`;
 
+const M_CREAR_BXGY = `mutation($d: DiscountAutomaticBxgyInput!) {
+  discountAutomaticBxgyCreate(automaticBxgyDiscount: $d) {
+    automaticDiscountNode { id }
+    userErrors { field message }
+  }
+}`;
+
 const M_BORRAR = `mutation($id: ID!) {
   discountAutomaticDelete(id: $id) {
     deletedAutomaticDiscountId
@@ -159,8 +173,8 @@ async function borrarDescuentos(sesion, ids = [], log = () => {}) {
 // carrito tiene 3, ambos califican y —al no combinar entre sí— Shopify aplica
 // el más valioso (el 15%). Es el patrón estándar sin Shopify Functions.
 async function crearDescuentos(sesion, bundle, log = () => {}) {
-  if (bundle.tipo !== "volumen") return []; // bxgy: v2
   if (bundle.activo === false) return [];
+  if (bundle.tipo === "bxgy") return await crearDescuentoBxgy(sesion, bundle, log);
 
   const items = itemsDelActivador(bundle.activador || { tipo: "todos" });
   const creados = [];
@@ -195,6 +209,36 @@ async function crearDescuentos(sesion, bundle, log = () => {}) {
     log(`  descuento · ${cant}+ → ${desc}%  (${id.split("/").pop()})`);
   }
   return creados;
+}
+
+// BXGY: "comprá X y obtené Y" con un solo descuento automático nativo.
+// El activador define el scope de los dos lados. regalo_descuento 100 = gratis.
+async function crearDescuentoBxgy(sesion, bundle, log = () => {}) {
+  const b = bundle.bxgy || {};
+  const compra = Math.max(1, Number(b.compra_cantidad) || 1);
+  const regalo = Math.max(1, Number(b.regalo_cantidad) || 1);
+  const desc = Math.min(100, Math.max(1, Number(b.regalo_descuento) || 100));
+  const items = itemsDelActivador(bundle.activador || { tipo: "todos" });
+
+  const d = {
+    title: `TiendaIQ Bundle · ${bundle.nombre} · ${compra}x${regalo}`.slice(0, 250),
+    startsAt: new Date().toISOString(),
+    customerBuys: { value: { quantity: String(compra) }, items },
+    customerGets: {
+      value: { discountOnQuantity: { quantity: String(regalo), effect: { percentage: desc / 100 } } },
+      items
+    },
+    combinesWith: { orderDiscounts: false, productDiscounts: false, shippingDiscounts: true }
+  };
+
+  const r = await gql(M_CREAR_BXGY, { d }, sesion);
+  const errores = r.discountAutomaticBxgyCreate.userErrors;
+  if (errores?.length) {
+    throw new Error(`BXGY: ${errores.map((e) => e.message).join(" · ")}`);
+  }
+  const id = r.discountAutomaticBxgyCreate.automaticDiscountNode.id;
+  log(`  descuento · comprá ${compra} → ${regalo} al ${desc}% off  (${id.split("/").pop()})`);
+  return [id];
 }
 
 // Re-sincroniza los descuentos de TODA la lista: borra los viejos y crea los

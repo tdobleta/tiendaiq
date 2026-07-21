@@ -1432,3 +1432,23 @@ summary:focus-visible, label:focus-visible {
 }
 .bdl-preview__nombre { font-weight: 650; color: var(--negro); }
 .bdl-preview__precio { color: var(--suave); font-size: 14px; margin-top: 2px; }
+
+/* --- menú "Crear bundle" (elegir tipo) --- */
+.bdl-tipomenu {
+  position: absolute; z-index: 50; width: 300px;
+  background: var(--superficie); border: 1px solid var(--borde);
+  border-radius: var(--radio); box-shadow: var(--sombra-l); padding: 6px; overflow: hidden;
+}
+.bdl-tipomenu button {
+  display: block; width: 100%; text-align: left; background: none; border: none;
+  padding: 11px 12px; border-radius: 8px; cursor: pointer; transition: background .12s;
+}
+.bdl-tipomenu button:hover { background: var(--fondo); }
+.bdl-tipomenu button strong { display: block; color: var(--negro); font-size: 14px; }
+.bdl-tipomenu button span { display: block; color: var(--suave); font-size: 12px; margin-top: 2px; }
+
+/* --- nota informativa (BXGY) --- */
+.bdl-nota {
+  background: var(--ia-fondo); border: 1px solid var(--ia-borde); color: var(--texto);
+  border-radius: var(--radio-s); padding: 10px 12px; font-size: 13px; line-height: 1.45; margin-top: 6px;
+}
