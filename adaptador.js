@@ -46,6 +46,7 @@ const CONSULTA_LISTA = `{
         id
         title
         templateSuffix
+        priceRangeV2 { minVariantPrice { amount } }
         featuredMedia { id preview { image { url } } }
       }
     }

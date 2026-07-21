@@ -216,6 +216,7 @@ async function api(req, res, url) {
         id: p.id,
         titulo: p.title,
         imagen: p.featuredMedia?.preview?.image?.url ?? null,
+        precio: p.priceRangeV2?.minVariantPrice?.amount ?? null,
         estado: paginas[idDePagina(p.id)] ?? null
       }))
     );

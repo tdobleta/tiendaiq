@@ -465,17 +465,43 @@
   // script a su tienda. El preview usa EL MISMO js/css que la tienda
   // (window.TiendaIQCOD), así lo que se ve acá es lo que ve el cliente.
 
-  const PRODUCTO_DEMO = {
+  const DEMO_COD_BASE = {
     titulo: "Producto de ejemplo",
     imagen: null,
     moneda: "USD",
     variantes: [{ id: 1, titulo: "Default", precio: 3999, disponible: true }]
   };
 
+  // Producto del preview de COD: el elegido en el selector o el de ejemplo.
+  // Se moldea a la forma que espera window.TiendaIQCOD.armarModal.
+  function productoDemoCod() {
+    const id = estado.cod?.previewProd;
+    const p = id ? (estado.productos || []).find((x) => x.id === id) : null;
+    if (!p) return DEMO_COD_BASE;
+    const cents = p.precio != null ? Math.round(parseFloat(p.precio) * 100) : DEMO_COD_BASE.variantes[0].precio;
+    return {
+      titulo: p.titulo,
+      imagen: p.imagen || null,
+      moneda: "USD",
+      variantes: [{ id: 1, titulo: "Default", precio: cents, disponible: true }]
+    };
+  }
+
+  // Barra "Producto de prueba: [select]" — siempre visible en /cod para que
+  // el preview (form inline y tarjeta) use un producto real de la tienda.
+  function barraProductoPreviewCod() {
+    const prods = estado.productos || [];
+    if (!prods.length) return "";
+    const opciones =
+      `<option value="">Producto de ejemplo</option>` +
+      prods.map((p) => `<option value="${esc(p.id)}" ${estado.cod.previewProd === p.id ? "selected" : ""}>${esc(p.titulo)}</option>`).join("");
+    return `<div class="cod-prodbar"><label>Producto de prueba en la vista previa</label><select id="cod-preview-prod">${opciones}</select></div>`;
+  }
+
   async function pantallaCod() {
     vista.innerHTML = `<div class="generando"><div class="giro"></div><h2>Leyendo la configuración…</h2></div>`;
     try {
-      estado.cod = { config: await api("/cod"), tab: estado.cod?.tab || "vista", sucio: false };
+      estado.cod = { config: await api("/cod"), tab: estado.cod?.tab || "vista", sucio: false, previewProd: estado.cod?.previewProd || null };
     } catch (e) {
       vista.innerHTML = `<div class="error">✖ No se pudo leer la configuración: ${esc(e.message)}</div>`;
       return;
@@ -642,7 +668,7 @@
         <div class="ayuda" style="margin-top:8px">Precio 0 se muestra como "${esc(c.textos.gratis)}".</div>`;
 
     if (estado.cod.tab === "ofertas") {
-      const precioDemo = PRODUCTO_DEMO.variantes[0].precio; // solo para la vista de precios
+      const precioDemo = productoDemoCod().variantes[0].precio; // solo para la vista de precios
       const filaTier = (t, i) => {
         const cant = Math.max(1, Number(t.cantidad) || 1);
         const desc = Number(t.descuento) || 0;
@@ -715,6 +741,8 @@
         ).join("")}
       </div>
 
+      ${barraProductoPreviewCod()}
+
       <div class="cod-layout ${estado.cod.tab === "vista" ? "cod-layout--vista" : ""}">
         <div class="tarjeta" id="cod-panel">${tabCod()}</div>
         ${
@@ -725,10 +753,10 @@
                  <div class="panel__sub">Así se ve en tu página de producto</div>
                  <div class="cod-preview__marco">
                    <div class="cod-preview__prod">
-                     <div class="cod-preview__foto">🛍</div>
+                     <div class="cod-preview__foto">${productoDemoCod().imagen ? `<img src="${esc(productoDemoCod().imagen)}" alt="">` : "🛍"}</div>
                      <div>
-                       <div class="cod-preview__nombre">${esc(PRODUCTO_DEMO.titulo)}</div>
-                       <div class="cod-preview__precio">$ 39,99</div>
+                       <div class="cod-preview__nombre">${esc(productoDemoCod().titulo)}</div>
+                       <div class="cod-preview__precio">${fmtBdl(productoDemoCod().variantes[0].precio)}</div>
                      </div>
                    </div>
                    <div class="cod-preview__addto">Agregar al carrito</div>
@@ -743,6 +771,16 @@
     pintarBotonPreview();
     montarVistaCod();
     montarModoCod();
+
+    // selector de producto real para el preview
+    const selProdCod = $("cod-preview-prod");
+    if (selProdCod) selProdCod.onchange = (e) => { estado.cod.previewProd = e.target.value || null; pintarCod(); };
+    if (!(estado.productos || []).length) {
+      api("/productos").then((prods) => {
+        estado.productos = prods;
+        if (estado.pantalla === "cod") pintarCod();
+      }).catch(() => {});
+    }
 
     // menú "＋ Agregar elemento" (pestaña Vista previa)
     const btnAgregar = $("cod-agregar-btn");
@@ -871,7 +909,7 @@
     const verForm = $("cod-ver-form");
     if (verForm)
       verForm.onclick = () => {
-        const capa = window.TiendaIQCOD.armarModal(estado.cod.config, PRODUCTO_DEMO, { preview: true });
+        const capa = window.TiendaIQCOD.armarModal(estado.cod.config, productoDemoCod(), { preview: true });
         document.body.appendChild(capa);
       };
   }
@@ -885,7 +923,7 @@
     const c = estado.cod.config;
 
     cont.innerHTML = "";
-    const capa = window.TiendaIQCOD.armarModal(c, PRODUCTO_DEMO, { preview: true });
+    const capa = window.TiendaIQCOD.armarModal(c, productoDemoCod(), { preview: true });
     capa.querySelector(".tiq-cod-cerrar")?.remove();
     cont.appendChild(capa);
 
@@ -1024,7 +1062,7 @@
     const c = estado.cod.config;
 
     cont.innerHTML = "";
-    const capa = window.TiendaIQCOD.armarModal(c, PRODUCTO_DEMO, { preview: true });
+    const capa = window.TiendaIQCOD.armarModal(c, productoDemoCod(), { preview: true });
     capa.querySelector(".tiq-cod-cerrar")?.remove();
     cont.appendChild(capa);
 
@@ -2552,7 +2590,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   async function pantallaBundles() {
     if (!estado.bundles) {
       try {
-        estado.bundles = { config: await api("/bundles"), vista: "lista", editIdx: null, tab: "ofertas", sucio: false };
+        estado.bundles = { config: await api("/bundles"), vista: "lista", editIdx: null, tab: "ofertas", sucio: false, previewProd: null };
       } catch (e) {
         vista.innerHTML = `<div class="error">✖ No se pudo leer los bundles: ${esc(e.message)}</div>`;
         return;
@@ -2719,20 +2757,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
 
       <div class="cod-layout">
         <div class="tarjeta" id="bdl-panel">${s.tab === "ofertas" ? panelOfertas(b) : panelDiseno(b)}</div>
-        <aside class="tarjeta cod-preview">
-          <div class="tarjeta__titulo">Vista previa</div>
-          <div class="panel__sub">Así se ve en tu página de producto</div>
-          <div class="bdl-preview__marco">
-            <div class="bdl-preview__prod">
-              <div class="bdl-preview__foto">🛍</div>
-              <div>
-                <div class="bdl-preview__nombre">Producto de ejemplo</div>
-                <div class="bdl-preview__precio">${fmtBdl(PRECIO_DEMO)}</div>
-              </div>
-            </div>
-            <div id="bdl-preview"></div>
-          </div>
-        </aside>
+        ${previewAsideBundle()}
       </div>`;
 
     $("bdl-volver").onclick = () => salirBundles();
@@ -2741,9 +2766,19 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     vista.querySelectorAll("[data-btab]").forEach((t) => {
       t.onclick = () => { s.tab = t.dataset.btab; pintarEditorBundle(); };
     });
+    const selProd = $("bdl-preview-prod");
+    if (selProd) selProd.onchange = (e) => { estado.bundles.previewProd = e.target.value || null; pintarEditorBundle(); };
 
     bindPanelBundle();
     pintarPreviewBundle();
+
+    // Cargar productos para el selector del preview (una vez).
+    if (!(estado.productos || []).length) {
+      api("/productos").then((prods) => {
+        estado.productos = prods;
+        if (estado.bundles.vista === "editor") pintarEditorBundle();
+      }).catch(() => {});
+    }
   }
 
   // Activador compartido por los dos tipos de bundle.
@@ -2975,11 +3010,52 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     }
   }
 
+  // Producto elegido para el preview (o null = producto de ejemplo).
+  function productoPreview() {
+    const id = estado.bundles.previewProd;
+    return id ? (estado.productos || []).find((p) => p.id === id) || null : null;
+  }
+  function precioPreviewCents() {
+    const p = productoPreview();
+    const cents = p && p.precio != null ? Math.round(parseFloat(p.precio) * 100) : 0;
+    return cents > 0 ? cents : PRECIO_DEMO;
+  }
+
+  // Columna derecha del editor: selector de producto real + tarjeta + widget.
+  function previewAsideBundle() {
+    const prods = estado.productos || [];
+    const sel = productoPreview();
+    const opciones =
+      `<option value="">Producto de ejemplo</option>` +
+      prods.map((p) => `<option value="${esc(p.id)}" ${estado.bundles.previewProd === p.id ? "selected" : ""}>${esc(p.titulo)}</option>`).join("");
+    const nombre = sel ? sel.titulo : "Producto de ejemplo";
+    const foto = sel && sel.imagen ? `<img src="${esc(sel.imagen)}" alt="">` : "🛍";
+    return `<aside class="tarjeta cod-preview">
+      <div class="tarjeta__titulo">Vista previa</div>
+      <div class="panel__sub">Elegí un producto de tu tienda para verlo real</div>
+      ${
+        prods.length
+          ? `<div class="campo campo--editor"><label>Producto de prueba</label><select id="bdl-preview-prod">${opciones}</select></div>`
+          : ""
+      }
+      <div class="bdl-preview__marco">
+        <div class="bdl-preview__prod">
+          <div class="bdl-preview__foto">${foto}</div>
+          <div>
+            <div class="bdl-preview__nombre">${esc(nombre)}</div>
+            <div class="bdl-preview__precio">${fmtBdl(precioPreviewCents())}</div>
+          </div>
+        </div>
+        <div id="bdl-preview"></div>
+      </div>
+    </aside>`;
+  }
+
   // --- preview: mismo markup que el widget del storefront ---
   function pintarPreviewBundle() {
     const cont = $("bdl-preview");
     if (!cont) return;
-    cont.innerHTML = previewBundleHTML(bundleActual());
+    cont.innerHTML = previewBundleHTML(bundleActual(), precioPreviewCents());
     cont.querySelectorAll(".tiq-bdl__card").forEach((el) => {
       el.onclick = () => {
         cont.querySelectorAll(".tiq-bdl__card").forEach((c) => c.classList.remove("is-sel"));
@@ -2989,7 +3065,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     });
   }
 
-  function previewBundleHTML(b) {
+  function previewBundleHTML(b, PU = PRECIO_DEMO) {
     const d = b.diseno || {};
     const bot = d.boton || {};
     const vars =
@@ -3003,8 +3079,8 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       const compra = Math.max(1, Number(x.compra_cantidad) || 1);
       const regalo = Math.max(1, Number(x.regalo_cantidad) || 1);
       const desc = Math.min(100, Math.max(1, Number(x.regalo_descuento) || 100));
-      const bruto = PRECIO_DEMO * (compra + regalo);
-      totalSel = Math.round(PRECIO_DEMO * compra + PRECIO_DEMO * regalo * (1 - desc / 100));
+      const bruto = PU * (compra + regalo);
+      totalSel = Math.round(PU * compra + PU * regalo * (1 - desc / 100));
       const ahorro = bruto - totalSel;
       const gratis = desc >= 100;
       const titulo = `Comprá ${compra}, llevás ${regalo}${gratis ? " gratis" : " al " + desc + "% off"}`;
@@ -3028,7 +3104,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         .map((o, i) => {
           const cant = Math.max(1, Number(o.cantidad) || 1);
           const desc = Number(o.descuento) || 0;
-          const bruto = PRECIO_DEMO * cant;
+          const bruto = PU * cant;
           const total = Math.round(bruto * (1 - desc / 100));
           const ahorro = bruto - total;
           return `<label class="tiq-bdl__card ${i === predIdx ? "is-sel" : ""} ${o.popular ? "is-pop" : ""}">
@@ -3047,7 +3123,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         })
         .join("");
       const oSel = (b.ofertas || [])[predIdx] || { cantidad: 1, descuento: 0 };
-      totalSel = Math.round(PRECIO_DEMO * Math.max(1, Number(oSel.cantidad) || 1) * (1 - (Number(oSel.descuento) || 0) / 100));
+      totalSel = Math.round(PU * Math.max(1, Number(oSel.cantidad) || 1) * (1 - (Number(oSel.descuento) || 0) / 100));
     }
     const textoBoton = (bot.texto || "Agregar al carrito — {total}").replace(/\{total\}/g, fmtBdl(totalSel));
 

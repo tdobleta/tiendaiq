@@ -1452,3 +1452,15 @@ summary:focus-visible, label:focus-visible {
   background: var(--ia-fondo); border: 1px solid var(--ia-borde); color: var(--texto);
   border-radius: var(--radio-s); padding: 10px 12px; font-size: 13px; line-height: 1.45; margin-top: 6px;
 }
+
+/* --- barra "producto de prueba" en el preview de COD --- */
+.cod-prodbar {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--superficie); border: 1px solid var(--borde);
+  border-radius: var(--radio); padding: 10px 14px; margin-bottom: 16px;
+}
+.cod-prodbar label { font-size: 13px; font-weight: 600; color: var(--negro); white-space: nowrap; }
+.cod-prodbar select { flex: 1 1 auto; max-width: 360px; }
+
+/* imagen real en la tarjeta del preview */
+.cod-preview__foto img, .bdl-preview__foto img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
