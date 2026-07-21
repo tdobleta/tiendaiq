@@ -323,6 +323,7 @@ async function api(req, res, url) {
       }
     }
 
+    config.activo = (config.lista || []).some((b) => b.activo !== false); // master derivado
     await sincronizarDescuentos(sesion, config); // muta discount_ids
     await guardarConfigBundles(sesion.tienda, config);
 
@@ -520,7 +521,8 @@ async function bundlesPublico(req, res, url) {
     if (!/^[a-z0-9-]+\.myshopify\.com$/.test(tienda)) return responder(400, { activo: false, lista: [] });
     const cfg = await leerConfigBundles(tienda);
     return responder(200, {
-      activo: cfg.activo,
+      // El master activo se deriva de que haya al menos un bundle activo.
+      activo: (cfg.lista || []).some((b) => b.activo !== false),
       lista: (cfg.lista || []).map((b) => {
         const { discount_ids, ...resto } = b;
         return resto;

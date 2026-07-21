@@ -20,7 +20,9 @@
   function arrancar() {
     var CFG = window.TIENDAIQ_BUNDLES;
     var PROD = window.TIENDAIQ_PRODUCTO;
-    if (!CFG || !CFG.activo || !PROD || !Array.isArray(CFG.lista)) return;
+    // El control real es bundle.activo (lo filtra aplica()); no hay switch
+    // maestro por ahora, así que no gateamos por CFG.activo.
+    if (!CFG || !PROD || !Array.isArray(CFG.lista)) return;
 
   // --- elegir el bundle que aplica a este producto ---
   function aplica(bundle) {
