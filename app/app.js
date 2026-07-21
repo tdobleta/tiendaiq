@@ -30,6 +30,7 @@
     pagina: null, // el registro que devuelve el server
     volverA: "lista", // desde dónde se abrió el editor: "lista" o "paginas"
     cod: null, // { config, tab, sucio } de la pantalla COD
+    bundles: null, // { config, vista, editIdx, tab, sucio } de la pantalla Bundles
     error: null
   };
 
@@ -230,20 +231,8 @@
             <div class="herramienta__nombre">Páginas de producto con IA</div>
             <p>Elegí un producto y la IA arma la landing completa.</p>
             <button class="btn btn--chico" id="herr-crear">Crear página de producto</button>
-            <div class="herramienta__preview herramienta__preview--paginas">
-              <div class="mini-app">
-                <div class="mini-app__barra"><span></span><span></span><span></span></div>
-                <div class="mini-app__cuerpo">
-                  <div class="mini-app__media"></div>
-                  <div class="mini-app__col">
-                    <div class="mini-linea mini-linea--titulo"></div>
-                    <div class="mini-linea"></div>
-                    <div class="mini-linea mini-linea--corta"></div>
-                    <div class="mini-cta"></div>
-                  </div>
-                </div>
-              </div>
-              <span class="mini-chip-ia">✦ IA</span>
+            <div class="herramienta__preview herramienta__preview--img">
+              <img src="/portadas/portada-paginas.png" alt="Vista previa: página de producto con IA" loading="lazy">
             </div>
           </div>
           <div class="herramienta">
@@ -270,13 +259,8 @@
             <div class="herramienta__nombre">Tienda Shopify con IA</div>
             <p>Una tienda completa armada por IA desde cero.</p>
             <button class="btn btn--chico btn--fantasma" disabled>Próximamente</button>
-            <div class="herramienta__preview herramienta__preview--tienda">
-              <div class="mini-app">
-                <div class="mini-app__barra"><span></span><span></span><span></span></div>
-                <div class="mini-hero"></div>
-                <div class="mini-grid"><span></span><span></span><span></span></div>
-              </div>
-              <span class="mini-chip-ia">✦ IA</span>
+            <div class="herramienta__preview herramienta__preview--img">
+              <img src="/portadas/portada-tienda.png" alt="Vista previa: tienda Shopify con IA" loading="lazy">
             </div>
           </div>
         </div>
@@ -2514,12 +2498,544 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     }
   }
 
+  // ============================================================
+  // BUNDLES — paquetes / descuentos por volumen.
+  // Dashboard (métricas + lista) → editor de 2 pestañas (Ofertas / Diseño)
+  // con preview en vivo. El preview usa el MISMO css que se inyecta en la
+  // tienda (/bundle-form/tiendaiq-bundle.css), así que es fiel al storefront.
+  // ============================================================
+
+  const PRECIO_DEMO = 24990; // centavos, solo para el preview del admin
+  const fmtBdl = (c) =>
+    "$ " + (Math.round(c) / 100).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  // Presets de color de la pestaña Diseño (nombre → paleta).
+  const PRESETS_BDL = {
+    negro:   { borde: "#111111", badge: "#111111", etq: "#e11d48", texto: "#111111", bot: "#111111" },
+    rosa:    { borde: "#db2777", badge: "#db2777", etq: "#db2777", texto: "#111111", bot: "#db2777" },
+    azul:    { borde: "#2563eb", badge: "#2563eb", etq: "#2563eb", texto: "#111111", bot: "#2563eb" },
+    verde:   { borde: "#059669", badge: "#059669", etq: "#059669", texto: "#111111", bot: "#059669" },
+    violeta: { borde: "#7c3aed", badge: "#7c3aed", etq: "#7c3aed", texto: "#111111", bot: "#7c3aed" },
+    naranja: { borde: "#ea580c", badge: "#ea580c", etq: "#ea580c", texto: "#111111", bot: "#ea580c" }
+  };
+  const NOMBRE_PRESET = { negro: "Negro", rosa: "Rosa", azul: "Azul", verde: "Verde", violeta: "Violeta", naranja: "Naranja" };
+
+  // Bundle nuevo (espeja bundleDefault del server; el server lo completa igual).
+  function nuevoBundleLocal() {
+    return {
+      id: "b_" + Math.random().toString(36).slice(2, 9),
+      nombre: "Descuento por volumen",
+      tipo: "volumen",
+      activo: true,
+      activador: { tipo: "todos", ids: [] },
+      ofertas: [
+        { cantidad: 1, descuento: 0,  titulo: "Comprá 1", subtitulo: "Precio normal", etiqueta: "",        badge: "",            popular: false, predeterminada: false },
+        { cantidad: 2, descuento: 10, titulo: "Comprá 2", subtitulo: "Ahorás un 10%", etiqueta: "10% OFF", badge: "Más elegido", popular: true,  predeterminada: true },
+        { cantidad: 3, descuento: 15, titulo: "Comprá 3", subtitulo: "Mejor precio",  etiqueta: "15% OFF", badge: "Mejor valor", popular: false, predeterminada: false }
+      ],
+      diseno: {
+        preset: "negro", titulo: "Elegí tu paquete y ahorrá", subtitulo: "Cuantas más unidades, mejor el precio",
+        mostrar_encabezado: true, color_borde: "#111111", color_badge: "#111111", color_badge_texto: "#ffffff",
+        color_etiqueta: "#e11d48", color_texto: "#111111", radio: 12, mostrar_ahorro: true,
+        boton: { texto: "Agregar al carrito — {total}", color_fondo: "#111111", color_texto: "#ffffff", radio: 8, tamano: 16 }
+      },
+      discount_ids: []
+    };
+  }
+
+  async function pantallaBundles() {
+    if (!estado.bundles) {
+      try {
+        estado.bundles = { config: await api("/bundles"), vista: "lista", editIdx: null, tab: "ofertas", sucio: false };
+      } catch (e) {
+        vista.innerHTML = `<div class="error">✖ No se pudo leer los bundles: ${esc(e.message)}</div>`;
+        return;
+      }
+    }
+    if (estado.bundles.vista === "editor") pintarEditorBundle();
+    else pintarDashboardBundles();
+  }
+
+  function bundleActual() {
+    return estado.bundles.config.lista[estado.bundles.editIdx];
+  }
+
+  // ---------- dashboard ----------
+
+  function tarjetaMetrica(titulo, valor) {
+    return `<div class="bdl-metrica">
+      <div class="bdl-metrica__t">${esc(titulo)} <span class="bdl-metrica__i" title="Se llena con los pedidos que traigan un bundle.">ⓘ</span></div>
+      <div class="bdl-metrica__v">${esc(valor)}</div>
+    </div>`;
+  }
+
+  function pintarDashboardBundles() {
+    const lista = estado.bundles.config.lista || [];
+    const inst = estado.bundles.config.instalado;
+
+    const filas = lista
+      .map((b, i) => {
+        const tiers = (b.ofertas || []).filter((o) => Number(o.descuento) > 0).length;
+        const alcance =
+          b.activador?.tipo === "todos" ? "Todos los productos"
+          : b.activador?.tipo === "coleccion" ? `${b.activador.ids?.length || 0} colección(es)`
+          : `${b.activador?.ids?.length || 0} producto(s)`;
+        return `<div class="bdl-fila" data-abrir="${i}">
+          <div class="bdl-fila__ico">📦</div>
+          <div class="bdl-fila__main">
+            <div class="bdl-fila__nombre">${esc(b.nombre)} ${b.activo ? "" : '<span class="bdl-chip bdl-chip--off">Pausado</span>'}</div>
+            <div class="bdl-fila__sub">Descuento por volumen · ${tiers} peldaño(s) con descuento · ${esc(alcance)}</div>
+          </div>
+          <button class="bdl-fila__del" data-del="${i}" title="Eliminar bundle">🗑</button>
+        </div>`;
+      })
+      .join("");
+
+    vista.innerHTML = `
+      <div class="inicio-cabecera">
+        <h1><button class="volver-flecha" id="volver-inicio">←</button> Bundles, upsells y regalos</h1>
+        <div class="inicio-cabecera__acciones">
+          <button class="btn btn--marca" id="bdl-nuevo">＋ Crear bundle</button>
+        </div>
+      </div>
+
+      ${
+        inst
+          ? `<div class="cod-banner cod-banner--ok">✓ Widget inyectado en el tema <strong>${esc(inst.tema)}</strong> · ${esc(fechaCorta(inst.fecha))}
+               <button class="btn btn--fantasma btn--chico" id="bdl-instalar">↻ Volver a inyectar</button></div>`
+          : lista.length
+            ? `<div class="cod-banner cod-banner--aviso">⚠ Los bundles todavía no están inyectados en tu tema: no aparecen en la tienda.
+                 <button class="btn btn--chico" id="bdl-instalar">▲ Inyectar en el tema</button></div>`
+            : ""
+      }
+
+      <div class="bdl-metricas">
+        ${tarjetaMetrica("Ingresos totales", "$0.00")}
+        ${tarjetaMetrica("Ingresos por upsell", "$0.00")}
+        ${tarjetaMetrica("Pedidos con bundle", "0")}
+        ${tarjetaMetrica("Valor medio del pedido", "$0.00")}
+        ${tarjetaMetrica("Tasa de conversión", "0%")}
+      </div>
+
+      ${
+        lista.length
+          ? `<div class="tarjeta"><div class="bdl-lista">${filas}</div></div>`
+          : `<div class="tarjeta bdl-vacio">
+               <div class="bdl-vacio__ico">🛒</div>
+               <div class="bdl-vacio__t">Aún no hay bundles</div>
+               <div class="bdl-vacio__s">Creá un descuento por volumen (comprá más, pagá menos) para subir el valor del pedido.</div>
+               <button class="btn btn--marca" id="bdl-vacio-crear">Creá tu primer bundle</button>
+             </div>`
+      }`;
+
+    $("volver-inicio").onclick = () => ir("inicio");
+    const crear = () => {
+      estado.bundles.config.lista.push(nuevoBundleLocal());
+      estado.bundles.editIdx = estado.bundles.config.lista.length - 1;
+      estado.bundles.vista = "editor";
+      estado.bundles.tab = "ofertas";
+      estado.bundles.sucio = true;
+      pintarEditorBundle();
+    };
+    if ($("bdl-nuevo")) $("bdl-nuevo").onclick = crear;
+    if ($("bdl-vacio-crear")) $("bdl-vacio-crear").onclick = crear;
+    if ($("bdl-instalar")) $("bdl-instalar").onclick = instalarBundlesTema;
+
+    vista.querySelectorAll("[data-abrir]").forEach((el) => {
+      el.onclick = (e) => {
+        if (e.target.closest("[data-del]")) return;
+        estado.bundles.editIdx = Number(el.dataset.abrir);
+        estado.bundles.vista = "editor";
+        estado.bundles.tab = "ofertas";
+        pintarEditorBundle();
+      };
+    });
+    vista.querySelectorAll("[data-del]").forEach((el) => {
+      el.onclick = async (e) => {
+        e.stopPropagation();
+        if (!confirm("¿Eliminar este bundle? Se borran también sus descuentos en Shopify.")) return;
+        estado.bundles.config.lista.splice(Number(el.dataset.del), 1);
+        await guardarBundles();
+        pintarDashboardBundles();
+      };
+    });
+  }
+
+  // ---------- editor ----------
+
+  function pintarEditorBundle() {
+    const b = bundleActual();
+    if (!b) { estado.bundles.vista = "lista"; return pintarDashboardBundles(); }
+    const inst = estado.bundles.config.instalado;
+    const s = estado.bundles;
+
+    vista.innerHTML = `
+      <div class="inicio-cabecera">
+        <h1><button class="volver-flecha" id="bdl-volver">←</button> ${esc(b.nombre) || "Bundle"}</h1>
+        <div class="inicio-cabecera__acciones">
+          <label class="cod-switch" title="Prende o apaga este bundle en tu tienda.">
+            <input type="checkbox" id="bdl-activo" ${b.activo ? "checked" : ""}>
+            <span class="cod-switch__pista"></span>
+            <span class="cod-switch__texto">${b.activo ? "Activo" : "Pausado"}</span>
+          </label>
+          <button class="btn ${s.sucio ? "btn--acento" : "btn--fantasma"}" id="bdl-guardar" ${s.sucio ? "" : "disabled"}>${s.sucio ? "Guardar cambios" : "✓ Guardado"}</button>
+        </div>
+      </div>
+
+      ${
+        inst
+          ? ""
+          : `<div class="cod-banner cod-banner--aviso">⚠ Cuando termines, inyectá el widget desde la pantalla anterior para que aparezca en la tienda.</div>`
+      }
+
+      <div class="cod-tabs">
+        <button class="cod-tab ${s.tab === "ofertas" ? "cod-tab--activa" : ""}" data-btab="ofertas">Ofertas</button>
+        <button class="cod-tab ${s.tab === "diseno" ? "cod-tab--activa" : ""}" data-btab="diseno">Diseño</button>
+      </div>
+
+      <div class="cod-layout">
+        <div class="tarjeta" id="bdl-panel">${s.tab === "ofertas" ? panelOfertas(b) : panelDiseno(b)}</div>
+        <aside class="tarjeta cod-preview">
+          <div class="tarjeta__titulo">Vista previa</div>
+          <div class="panel__sub">Así se ve en tu página de producto</div>
+          <div class="bdl-preview__marco">
+            <div class="bdl-preview__prod">
+              <div class="bdl-preview__foto">🛍</div>
+              <div>
+                <div class="bdl-preview__nombre">Producto de ejemplo</div>
+                <div class="bdl-preview__precio">${fmtBdl(PRECIO_DEMO)}</div>
+              </div>
+            </div>
+            <div id="bdl-preview"></div>
+          </div>
+        </aside>
+      </div>`;
+
+    $("bdl-volver").onclick = () => salirBundles();
+    $("bdl-activo").onchange = (e) => { b.activo = e.target.checked; marcarSucioBundles(); pintarEditorBundle(); };
+    $("bdl-guardar").onclick = guardarBundles;
+    vista.querySelectorAll("[data-btab]").forEach((t) => {
+      t.onclick = () => { s.tab = t.dataset.btab; pintarEditorBundle(); };
+    });
+
+    bindPanelBundle();
+    pintarPreviewBundle();
+  }
+
+  // --- pestaña Ofertas ---
+  function panelOfertas(b) {
+    const a = b.activador || { tipo: "todos", ids: [] };
+    const ofertas = (b.ofertas || [])
+      .map((o, i) => `
+        <div class="bdl-oferta" data-oi="${i}">
+          <div class="bdl-oferta__cab">
+            <strong>Oferta ${i + 1}</strong>
+            ${b.ofertas.length > 1 ? `<button class="bdl-oferta__del" data-oferta-del="${i}" title="Quitar">✕</button>` : ""}
+          </div>
+          <div class="bdl-grid2">
+            ${campoBdl(`ofertas.${i}.cantidad`, "Cantidad", "numero", 'min="1"')}
+            ${campoBdl(`ofertas.${i}.descuento`, "Descuento %", "numero", 'min="0" max="100"')}
+          </div>
+          ${campoBdl(`ofertas.${i}.titulo`, "Título")}
+          <div class="bdl-grid2">
+            ${campoBdl(`ofertas.${i}.subtitulo`, "Subtítulo")}
+            ${campoBdl(`ofertas.${i}.etiqueta`, "Etiqueta (ej. 10% OFF)")}
+          </div>
+          ${campoBdl(`ofertas.${i}.badge`, "Insignia (ej. Más elegido)")}
+          <div class="bdl-checks">
+            ${campoBdl(`ofertas.${i}.popular`, "Destacar (borde marcado)", "bool")}
+            <label class="cod-check"><input type="radio" name="bdl-pred" data-pred="${i}" ${o.predeterminada ? "checked" : ""}> Seleccionada por defecto</label>
+          </div>
+        </div>`)
+      .join("");
+
+    return `
+      <div class="tarjeta__titulo">Ofertas</div>
+      <div class="panel__sub">Creá los peldaños de precio. El más conveniente se aplica solo en el checkout.</div>
+
+      ${campoBdl("nombre", "Nombre del bundle")}
+
+      <div class="campo campo--editor">
+        <label>Se aplica a</label>
+        <select data-b="activador.tipo">
+          <option value="todos" ${a.tipo === "todos" ? "selected" : ""}>Todos los productos</option>
+          <option value="productos" ${a.tipo === "productos" ? "selected" : ""}>Productos específicos</option>
+        </select>
+      </div>
+      ${a.tipo === "productos" ? selectorProductos(a.ids || []) : ""}
+
+      <div class="bdl-ofertas">${ofertas}</div>
+      ${b.ofertas.length < 3 ? `<button class="btn btn--fantasma btn--chico" id="bdl-add-oferta">＋ Agregar oferta</button>` : `<div class="panel__sub">Máximo 3 ofertas.</div>`}`;
+  }
+
+  function selectorProductos(ids) {
+    const prods = estado.productos || [];
+    if (!prods.length) {
+      return `<div class="bdl-prodsel bdl-prodsel--cargando" id="bdl-prodsel">Cargando productos de tu tienda…</div>`;
+    }
+    const sel = new Set(ids.map((g) => String(g)));
+    const items = prods
+      .map(
+        (p) => `<label class="bdl-prod">
+          <input type="checkbox" data-prod="${esc(p.id)}" ${sel.has(String(p.id)) ? "checked" : ""}>
+          <span class="bdl-prod__foto">${p.imagen ? `<img src="${esc(p.imagen)}" alt="" loading="lazy">` : "🖼"}</span>
+          <span class="bdl-prod__t">${esc(p.titulo)}</span>
+        </label>`
+      )
+      .join("");
+    return `<div class="bdl-prodsel" id="bdl-prodsel">${items}</div>`;
+  }
+
+  // --- pestaña Diseño ---
+  function panelDiseno(b) {
+    const d = b.diseno || {};
+    const bot = d.boton || {};
+    const presets = Object.keys(PRESETS_BDL)
+      .map(
+        (k) => `<button class="bdl-preset ${d.preset === k ? "is-sel" : ""}" data-preset="${k}">
+          <span class="bdl-preset__dot" style="background:${PRESETS_BDL[k].bot}"></span>${NOMBRE_PRESET[k]}
+        </button>`
+      )
+      .join("");
+
+    return `
+      <div class="tarjeta__titulo">Diseño</div>
+      <div class="panel__sub">Elegí una paleta o ajustá los colores a mano.</div>
+
+      <div class="bdl-presets">${presets}</div>
+
+      <div class="bdl-seccion">Encabezado</div>
+      ${campoBdl("diseno.mostrar_encabezado", "Mostrar encabezado", "bool")}
+      ${campoBdl("diseno.titulo", "Título")}
+      ${campoBdl("diseno.subtitulo", "Subtítulo")}
+
+      <div class="bdl-seccion">Colores</div>
+      <div class="bdl-grid2">
+        ${campoBdl("diseno.color_borde", "Borde seleccionado", "color")}
+        ${campoBdl("diseno.color_etiqueta", "Etiqueta", "color")}
+        ${campoBdl("diseno.color_badge", "Fondo insignia", "color")}
+        ${campoBdl("diseno.color_badge_texto", "Texto insignia", "color")}
+        ${campoBdl("diseno.color_texto", "Texto general", "color")}
+      </div>
+      <div class="bdl-grid2">
+        ${campoBdl("diseno.radio", "Redondeo (px)", "numero", 'min="0" max="30"')}
+        ${campoBdl("diseno.mostrar_ahorro", "Mostrar “Ahorrás $X”", "bool")}
+      </div>
+
+      <div class="bdl-seccion">Botón</div>
+      ${campoBdl("diseno.boton.texto", "Texto (usá {total} para el precio)")}
+      <div class="bdl-grid2">
+        ${campoBdl("diseno.boton.color_fondo", "Fondo", "color")}
+        ${campoBdl("diseno.boton.color_texto", "Texto", "color")}
+        ${campoBdl("diseno.boton.radio", "Redondeo (px)", "numero", 'min="0" max="30"')}
+        ${campoBdl("diseno.boton.tamano", "Tamaño de texto (px)", "numero", 'min="10" max="28"')}
+      </div>`;
+  }
+
+  // Campo genérico atado a una ruta del bundle actual: data-b.
+  function campoBdl(ruta, etiqueta, tipo = "text", extra = "") {
+    const v = leer(bundleActual(), ruta);
+    if (tipo === "color") {
+      return `<div class="campo campo--editor bdl-color"><label>${etiqueta}</label>
+        <span class="cod-color__fila"><input type="color" data-b="${ruta}" value="${esc(v || "#000000")}">
+        <code>${esc(v || "#000000")}</code></span></div>`;
+    }
+    if (tipo === "bool") {
+      return `<label class="cod-check"><input type="checkbox" data-b="${ruta}" data-tipo="bool" ${v ? "checked" : ""}> ${etiqueta}</label>`;
+    }
+    if (tipo === "numero") {
+      return `<div class="campo campo--editor"><label>${etiqueta}</label>
+        <input type="number" data-b="${ruta}" data-tipo="numero" value="${esc(v ?? 0)}" ${extra}></div>`;
+    }
+    return `<div class="campo campo--editor"><label>${etiqueta}</label>
+      <input type="text" data-b="${ruta}" value="${esc(v ?? "")}"></div>`;
+  }
+
+  function bindPanelBundle() {
+    const b = bundleActual();
+    const panel = $("bdl-panel");
+
+    panel.addEventListener("input", (e) => {
+      const ruta = e.target.dataset.b;
+      if (!ruta) return;
+      let v = e.target.type === "checkbox" ? e.target.checked : e.target.value;
+      if (e.target.dataset.tipo === "numero") v = Number(v) || 0;
+      fijar(b, ruta, v);
+      if (e.target.type === "color") e.target.parentElement.querySelector("code").textContent = v;
+      // El tipo de activador cambia el sub-panel: repintar.
+      if (ruta === "activador.tipo") { b.activador.ids = b.activador.ids || []; marcarSucioBundles(); return pintarEditorBundle(); }
+      marcarSucioBundles();
+      pintarPreviewBundle();
+    });
+
+    // radio "predeterminada": exclusivo entre ofertas
+    panel.addEventListener("change", (e) => {
+      if (e.target.dataset.pred !== undefined) {
+        b.ofertas.forEach((o, i) => (o.predeterminada = i === Number(e.target.dataset.pred)));
+        marcarSucioBundles();
+        pintarPreviewBundle();
+      }
+      if (e.target.dataset.prod !== undefined) {
+        const gid = e.target.dataset.prod;
+        b.activador.ids = b.activador.ids || [];
+        if (e.target.checked) { if (!b.activador.ids.includes(gid)) b.activador.ids.push(gid); }
+        else b.activador.ids = b.activador.ids.filter((x) => x !== gid);
+        marcarSucioBundles();
+      }
+    });
+
+    // agregar / quitar oferta
+    panel.addEventListener("click", (e) => {
+      if (e.target.id === "bdl-add-oferta") {
+        const n = b.ofertas.length + 1;
+        b.ofertas.push({ cantidad: n, descuento: 0, titulo: "Comprá " + n, subtitulo: "", etiqueta: "", badge: "", popular: false, predeterminada: false });
+        marcarSucioBundles();
+        pintarEditorBundle();
+      }
+      const del = e.target.dataset.ofertaDel;
+      if (del !== undefined) {
+        b.ofertas.splice(Number(del), 1);
+        if (!b.ofertas.some((o) => o.predeterminada)) b.ofertas[0].predeterminada = true;
+        marcarSucioBundles();
+        pintarEditorBundle();
+      }
+    });
+
+    // presets
+    panel.querySelectorAll("[data-preset]").forEach((el) => {
+      el.onclick = () => {
+        const p = PRESETS_BDL[el.dataset.preset];
+        b.diseno.preset = el.dataset.preset;
+        b.diseno.color_borde = p.borde;
+        b.diseno.color_badge = p.badge;
+        b.diseno.color_etiqueta = p.etq;
+        b.diseno.color_texto = p.texto;
+        b.diseno.boton.color_fondo = p.bot;
+        marcarSucioBundles();
+        pintarEditorBundle();
+      };
+    });
+
+    // si el activador es "productos" y no cargamos productos aún, traerlos
+    if (b.activador?.tipo === "productos" && !(estado.productos || []).length) {
+      api("/productos").then((prods) => {
+        estado.productos = prods;
+        if (estado.bundles.vista === "editor" && estado.bundles.tab === "ofertas") pintarEditorBundle();
+      }).catch(() => {});
+    }
+  }
+
+  // --- preview: mismo markup que el widget del storefront ---
+  function pintarPreviewBundle() {
+    const cont = $("bdl-preview");
+    if (!cont) return;
+    cont.innerHTML = previewBundleHTML(bundleActual());
+    cont.querySelectorAll(".tiq-bdl__card").forEach((el) => {
+      el.onclick = () => {
+        cont.querySelectorAll(".tiq-bdl__card").forEach((c) => c.classList.remove("is-sel"));
+        el.classList.add("is-sel");
+        el.querySelector(".tiq-bdl__radio");
+      };
+    });
+  }
+
+  function previewBundleHTML(b) {
+    const d = b.diseno || {};
+    const bot = d.boton || {};
+    const vars =
+      `--tiq-borde:${d.color_borde || "#111"};--tiq-badge:${d.color_badge || "#111"};--tiq-badge-txt:${d.color_badge_texto || "#fff"};` +
+      `--tiq-etq:${d.color_etiqueta || "#e11d48"};--tiq-txt:${d.color_texto || "#111"};--tiq-radio:${d.radio ?? 12}px;` +
+      `--tiq-bot-fondo:${bot.color_fondo || "#111"};--tiq-bot-txt:${bot.color_texto || "#fff"};--tiq-bot-radio:${bot.radio ?? 8}px;--tiq-bot-tam:${bot.tamano ?? 16}px`;
+
+    let predIdx = (b.ofertas || []).findIndex((o) => o.predeterminada);
+    if (predIdx < 0) predIdx = 0;
+
+    const cards = (b.ofertas || [])
+      .map((o, i) => {
+        const cant = Math.max(1, Number(o.cantidad) || 1);
+        const desc = Number(o.descuento) || 0;
+        const bruto = PRECIO_DEMO * cant;
+        const total = Math.round(bruto * (1 - desc / 100));
+        const ahorro = bruto - total;
+        return `<label class="tiq-bdl__card ${i === predIdx ? "is-sel" : ""} ${o.popular ? "is-pop" : ""}">
+          ${o.badge ? `<span class="tiq-bdl__badge">${esc(o.badge)}</span>` : ""}
+          <span class="tiq-bdl__radio"></span>
+          <span class="tiq-bdl__main">
+            <span class="tiq-bdl__titulo">${esc(o.titulo || cant + " unidades")}${o.etiqueta ? ` <span class="tiq-bdl__etq">${esc(o.etiqueta)}</span>` : ""}</span>
+            ${o.subtitulo ? `<span class="tiq-bdl__sub">${esc(o.subtitulo)}</span>` : ""}
+            ${d.mostrar_ahorro && ahorro > 0 ? `<span class="tiq-bdl__ahorro">Ahorrás ${fmtBdl(ahorro)}</span>` : ""}
+          </span>
+          <span class="tiq-bdl__precio">
+            <span class="tiq-bdl__precio-now">${fmtBdl(total)}</span>
+            ${desc > 0 ? `<span class="tiq-bdl__precio-old">${fmtBdl(bruto)}</span>` : ""}
+          </span>
+        </label>`;
+      })
+      .join("");
+
+    const oSel = (b.ofertas || [])[predIdx] || { cantidad: 1, descuento: 0 };
+    const totalSel = Math.round(PRECIO_DEMO * Math.max(1, Number(oSel.cantidad) || 1) * (1 - (Number(oSel.descuento) || 0) / 100));
+    const textoBoton = (bot.texto || "Agregar al carrito — {total}").replace(/\{total\}/g, fmtBdl(totalSel));
+
+    return `<div class="tiq-bdl" style="${vars}">
+      ${d.mostrar_encabezado !== false ? `<div class="tiq-bdl__head">
+        ${d.titulo ? `<div class="tiq-bdl__h1">${esc(d.titulo)}</div>` : ""}
+        ${d.subtitulo ? `<div class="tiq-bdl__h2">${esc(d.subtitulo)}</div>` : ""}
+      </div>` : ""}
+      <div class="tiq-bdl__cards">${cards}</div>
+      <button type="button" class="tiq-bdl__cta">${esc(textoBoton)}</button>
+    </div>`;
+  }
+
+  // ---------- guardar / instalar / salir ----------
+  function marcarSucioBundles() {
+    estado.bundles.sucio = true;
+    const b = $("bdl-guardar");
+    if (b) { b.disabled = false; b.textContent = "Guardar cambios"; b.classList.add("btn--acento"); b.classList.remove("btn--fantasma"); }
+  }
+
+  async function guardarBundles() {
+    const b = $("bdl-guardar");
+    if (b) { b.disabled = true; b.textContent = "Guardando…"; }
+    try {
+      estado.bundles.config = await api("/bundles", { method: "PUT", body: { config: estado.bundles.config } });
+      estado.bundles.sucio = false;
+      if (b) { b.textContent = "✓ Guardado"; b.classList.remove("btn--acento"); b.classList.add("btn--fantasma"); }
+      return true;
+    } catch (e) {
+      if (b) { b.disabled = false; b.textContent = "Guardar cambios"; }
+      vista.insertAdjacentHTML("afterbegin", `<div class="error">✖ No se pudo guardar: ${esc(e.message)}</div>`);
+      return false;
+    }
+  }
+
+  async function instalarBundlesTema() {
+    if (estado.bundles.sucio && !(await guardarBundles())) return;
+    const b = $("bdl-instalar");
+    if (b) { b.disabled = true; b.textContent = "Inyectando…"; }
+    try {
+      estado.bundles.config = await api("/bundles/instalar", { method: "POST" });
+      pintarDashboardBundles();
+    } catch (e) {
+      if (b) { b.disabled = false; b.textContent = "▲ Inyectar en el tema"; }
+      vista.insertAdjacentHTML("afterbegin", `<div class="error">✖ ${esc(e.message)}</div>`);
+    }
+  }
+
+  function salirBundles() {
+    if (estado.bundles?.sucio && !confirm("Hay cambios sin guardar. ¿Salir igual?")) return;
+    estado.bundles.vista = "lista";
+    estado.bundles.sucio = false;
+    pintarDashboardBundles();
+  }
+
   // ---------- ruteo ----------
 
   const PANTALLAS = {
     inicio: pantallaInicio,
     paginas: pantallaPaginas,
     cod: pantallaCod,
+    bundles: pantallaBundles,
     lista: pantallaLista,
     informacion: pantallaInformacion,
     generando: pantallaGenerando,
@@ -2533,6 +3049,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     const ruta =
       pantalla === "paginas" ? "/paginas"
       : pantalla === "cod" ? "/cod"
+      : pantalla === "bundles" ? "/bundles"
       : pantalla === "inicio" ? "/" : "/crear";
     if (location.pathname !== ruta) {
       history.pushState({ pantalla }, "", ruta + location.search);
@@ -2572,6 +3089,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     const ruta = location.pathname.replace(/\/$/, "");
     if (ruta === "/paginas") ir("paginas");
     else if (ruta === "/cod") ir("cod");
+    else if (ruta === "/bundles") ir("bundles");
     else if (ruta === "/crear") cargarLista();
     else ir("inicio");
   }

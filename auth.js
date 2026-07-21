@@ -20,7 +20,9 @@ const { guardarTienda, normalizar, esDominioValido } = require("./tiendas");
 // OJO: al agregar un alcance, las tiendas ya instaladas tienen que volver a
 // pasar por /auth?shop=... para autorizarlo.
 // write_files: imágenes que el merchant sube al formulario COD (Files API).
-const ALCANCES = "read_products,write_products,read_themes,write_themes,write_orders,read_files,write_files,read_content,write_content";
+// write_discounts: los bundles crean descuentos automáticos (por volumen)
+// que Shopify hace cumplir en el checkout.
+const ALCANCES = "read_products,write_products,read_themes,write_themes,write_orders,read_files,write_files,read_content,write_content,write_discounts";
 
 // Comparación en tiempo constante: comparar firmas con === filtra el secreto
 // de a un carácter por vez.

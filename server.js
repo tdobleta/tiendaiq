@@ -29,12 +29,21 @@ const { guardarPaginaDB, leerPaginaDB, listarPaginasDB } = require("./db");
 const { iniciarInstalacion, terminarInstalacion, tiendaDelPase } = require("./auth");
 const { estadoPlan, exigirCupo, contarUso, crearSuscripcion } = require("./facturacion");
 const { leerConfigCod, guardarConfigCod, instalarCod, actualizarSnippet, crearPedidoCod } = require("./cod");
+const {
+  leerConfigBundles,
+  guardarConfigBundles,
+  sincronizarDescuentos,
+  borrarDescuentos,
+  instalarBundles,
+  actualizarSnippet: actualizarSnippetBundle
+} = require("./bundles");
 
 // Render (y cualquier host) fija el puerto por env; local usa 4321.
 const PUERTO = Number(env.PORT || process.env.PORT || 4321);
 const DIR_APP = path.join(__dirname, "app");
 const DIR_PLANTILLA = path.join(__dirname, "plantilla-producto");
 const DIR_COD = path.join(__dirname, "cod-form");
+const DIR_BUNDLE = path.join(__dirname, "bundle-form");
 
 // La URL pública por la que Shopify nos alcanza. En producción es la de Render;
 // en local, el túnel. Sin esto el OAuth no puede volver.
@@ -281,6 +290,57 @@ async function api(req, res, url) {
     return json(res, 200, config);
   }
 
+  // ---------- bundles ----------
+
+  // GET /api/bundles — la config de paquetes de la tienda
+  if (req.method === "GET" && ruta === "/api/bundles") {
+    return json(res, 200, await leerConfigBundles(sesion.tienda));
+  }
+
+  // PUT /api/bundles — guardar la config. Re-sincroniza los descuentos
+  // automáticos (borra los viejos, crea los nuevos) y, si ya está inyectado,
+  // re-sube el snippet con la config nueva.
+  if (req.method === "PUT" && ruta === "/api/bundles") {
+    const { config } = await leerCuerpo(req);
+    if (!config) return json(res, 400, { error: "Falta config" });
+
+    const actual = await leerConfigBundles(sesion.tienda);
+    config.instalado = actual.instalado; // no se pisa desde el browser
+    // Los discount_ids los manda el server: arrancamos de lo guardado para
+    // poder borrar los descuentos viejos aunque el browser no los tenga.
+    config.lista = (config.lista || []).map((b) => {
+      const previo = actual.lista.find((x) => x.id === b.id);
+      return { ...b, discount_ids: previo ? previo.discount_ids : [] };
+    });
+
+    // Bundles que el merchant eliminó: hay que borrar SUS descuentos en Shopify
+    // (el sync solo recorre los que quedan, así que quedarían huérfanos).
+    const idsQueQuedan = new Set(config.lista.map((b) => b.id));
+    for (const viejo of actual.lista) {
+      if (!idsQueQuedan.has(viejo.id) && viejo.discount_ids?.length) {
+        await borrarDescuentos(sesion, viejo.discount_ids);
+      }
+    }
+
+    await sincronizarDescuentos(sesion, config); // muta discount_ids
+    await guardarConfigBundles(sesion.tienda, config);
+
+    if (config.instalado) {
+      await actualizarSnippetBundle(sesion, config, URL_APP);
+      if (env.DEV_MODE === "1") console.log(`  ⚠ snippet Bundle re-subido apuntando a ${URL_APP} (server local)`);
+    }
+    return json(res, 200, config);
+  }
+
+  // POST /api/bundles/instalar — inyecta (o re-inyecta) el widget en el tema
+  if (req.method === "POST" && ruta === "/api/bundles/instalar") {
+    const config = await leerConfigBundles(sesion.tienda);
+    const { tema } = await instalarBundles(sesion, config, URL_APP);
+    config.instalado = { tema, fecha: new Date().toISOString() };
+    await guardarConfigBundles(sesion.tienda, config);
+    return json(res, 200, config);
+  }
+
   // GET /api/plan — estado del plan para la UI
   if (req.method === "GET" && ruta === "/api/plan") {
     return json(res, 200, await estadoPlan(sesion));
@@ -468,6 +528,11 @@ const servidor = http.createServer(async (req, res) => {
       return servirEstatico(res, DIR_COD, url.pathname.replace(/^\/cod-form\/?/, ""));
     }
 
+    // Assets del widget de bundles (para el preview en el admin).
+    if (url.pathname.startsWith("/bundle-form/")) {
+      return servirEstatico(res, DIR_BUNDLE, url.pathname.replace(/^\/bundle-form\/?/, ""));
+    }
+
     if (url.pathname.startsWith("/preview")) {
       const rel = url.pathname.replace(/^\/preview\/?/, "") || "index.html";
       return servirEstatico(res, DIR_PLANTILLA, rel);
@@ -475,7 +540,7 @@ const servidor = http.createServer(async (req, res) => {
 
     // /paginas y /crear son rutas del frontend (el menú lateral del admin
     // navega por URL): sirven la misma app, que rutea por pathname.
-    if (["/", "/index.html", "/paginas", "/crear", "/cod"].includes(url.pathname))
+    if (["/", "/index.html", "/paginas", "/crear", "/cod", "/bundles"].includes(url.pathname))
       return servirIndex(res);
 
     return servirEstatico(res, DIR_APP, url.pathname);
