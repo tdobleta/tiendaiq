@@ -132,6 +132,28 @@
     };
   }
 
+  // Barra de progreso "te falta $X para el envío gratis". Se calcula contra el
+  // total del pack elegido (lo que el cliente está por agregar). El envío
+  // gratis real lo aplica el descuento nativo en el checkout.
+  function barraEnvio(total) {
+    var g = bundle.regalos;
+    if (!g || !g.activo || g.tipo !== "envio") return "";
+    var umbral = (Number(g.desde_subtotal) || 0) * 100;
+    if (umbral <= 0) return "";
+    var pct = Math.min(100, Math.round((total / umbral) * 100));
+    var falta = Math.max(0, umbral - total);
+    var ok = falta <= 0;
+    var texto = ok
+      ? (g.etiqueta || "🎁 Envío gratis") + " desbloqueado"
+      : "Agregá " + fmt(falta) + " y sumás envío gratis";
+    return (
+      '<div class="tiq-bdl__envio' + (ok ? " is-ok" : "") + '">' +
+        '<div class="tiq-bdl__envio-txt">' + esc(texto) + "</div>" +
+        '<div class="tiq-bdl__envio-barra"><span style="width:' + pct + '%"></span></div>' +
+      "</div>"
+    );
+  }
+
   function pintar() {
     var pu = precioUnitario();
     var tarjetas, totalSel;
@@ -180,6 +202,7 @@
           "</div>"
         : "") +
       '<div class="tiq-bdl__cards">' + tarjetas + "</div>" +
+      barraEnvio(totalSel) +
       '<button type="button" class="tiq-bdl__cta">' + esc(textoBoton) + "</button>";
 
     if (!esBxgy) {
