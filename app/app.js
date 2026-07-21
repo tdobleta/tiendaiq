@@ -239,20 +239,8 @@
             <div class="herramienta__nombre">Formulario contra reembolso (COD)</div>
             <p>Tus clientes piden y pagan al recibir: el formulario crea el pedido en Shopify.</p>
             <button class="btn btn--chico" id="herr-cod">Configurar COD</button>
-            <div class="herramienta__preview herramienta__preview--cod">
-              <div class="mini-app">
-                <div class="mini-app__barra"><span></span><span></span><span></span></div>
-                <div class="mini-app__cuerpo">
-                  <div class="mini-app__col">
-                    <div class="mini-linea mini-linea--titulo"></div>
-                    <div class="mini-linea"></div>
-                    <div class="mini-linea"></div>
-                    <div class="mini-linea mini-linea--corta"></div>
-                    <div class="mini-cta mini-cta--cod"></div>
-                  </div>
-                </div>
-              </div>
-              <span class="mini-chip-ia">🛵 COD</span>
+            <div class="herramienta__preview herramienta__preview--img">
+              <img src="/portadas/portada-cod.png" alt="Vista previa: formulario contra reembolso (COD)" loading="lazy">
             </div>
           </div>
           <div class="herramienta">
