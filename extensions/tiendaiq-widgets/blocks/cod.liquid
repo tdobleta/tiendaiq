@@ -7,11 +7,16 @@
   (misma que hoy viaja embebida en la inyección directa; sin secretos). El
   form se monta solo después del botón de compra y crea el pedido real
   server-side vía /cod/pedido.
+
+  La URL de la app va fija: antes era un setting del bloque rotulado "no
+  cambiar", que es justo lo que un merchant termina cambiando y un reviewer
+  termina marcando. Si algún día la app se muda de dominio, se cambia acá y se
+  publica una versión nueva del extension.
 {% endcomment %}
 {%- if product -%}
   <script>
     window.TIENDAIQ_COD_SRC =
-      "{{ block.settings.app_url | default: 'https://tiendaiq.onrender.com' }}/publico/cod?shop={{ shop.permanent_domain }}";
+      "https://tiendaiq.onrender.com/publico/cod?shop={{ shop.permanent_domain }}";
   </script>
   {{ 'tiendaiq-cod.css' | asset_url | stylesheet_tag }}
   <script src="{{ 'tiendaiq-cod.js' | asset_url }}" defer></script>
@@ -21,13 +26,6 @@
 {
   "name": "TiendaIQ COD",
   "target": "body",
-  "settings": [
-    {
-      "type": "text",
-      "id": "app_url",
-      "label": "URL de la app (no cambiar)",
-      "default": "https://tiendaiq.onrender.com"
-    }
-  ]
+  "settings": []
 }
 {% endschema %}
