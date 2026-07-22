@@ -599,6 +599,10 @@ const servidor = http.createServer(async (req, res) => {
     if (url.pathname === "/publico/bundles") return await bundlesPublico(req, res, url);
     if (url.pathname === "/publico/cod") return await codPublico(req, res, url);
 
+    // --- legales (públicas: van en la ficha del App Store) ---
+    if (url.pathname === "/privacidad") return servirEstatico(res, DIR_APP, "privacidad.html");
+    if (url.pathname === "/terminos") return servirEstatico(res, DIR_APP, "terminos.html");
+
     // --- app ---
     if (url.pathname.startsWith("/api/")) return await api(req, res, url);
 

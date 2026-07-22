@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Política de privacidad — TiendaIQ</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root { --texto:#1a1a1a; --suave:#5c5f62; --borde:#e3e3e3; }
+    * { box-sizing:border-box; }
+    body { font-family:Inter,system-ui,sans-serif; color:var(--texto); line-height:1.65;
+           margin:0; padding:48px 20px 80px; background:#fafafa; }
+    main { max-width:760px; margin:0 auto; background:#fff; padding:48px 52px;
+           border:1px solid var(--borde); border-radius:14px; }
+    h1 { font-size:30px; margin:0 0 6px; letter-spacing:-0.02em; }
+    .fecha { color:var(--suave); font-size:14px; margin-bottom:36px; }
+    h2 { font-size:19px; margin:34px 0 10px; letter-spacing:-0.01em; }
+    p, li { font-size:15px; }
+    ul { padding-left:22px; }
+    li { margin:6px 0; }
+    table { width:100%; border-collapse:collapse; margin:14px 0; font-size:14px; }
+    th, td { text-align:left; padding:9px 10px; border-bottom:1px solid var(--borde); vertical-align:top; }
+    th { font-weight:600; background:#f7f7f7; }
+    .nota { background:#f6f6f7; border:1px solid var(--borde); border-radius:10px;
+            padding:14px 16px; font-size:14px; margin:16px 0; }
+    a { color:#2c6ecb; }
+    footer { max-width:760px; margin:22px auto 0; color:var(--suave); font-size:13px; text-align:center; }
+    @media (max-width:600px){ main{padding:30px 22px;} body{padding:24px 12px 60px;} }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Política de privacidad</h1>
+  <div class="fecha">TiendaIQ · Última actualización: 21 de julio de 2026</div>
+
+  <p>Esta política explica qué datos trata la aplicación <strong>TiendaIQ</strong> (“la App”)
+     cuando la instalás en tu tienda de Shopify, para qué los usa, con quién los comparte y
+     cuánto tiempo los conserva.</p>
+
+  <h2>1. Quién es el responsable</h2>
+  <p>TiendaIQ es el responsable del tratamiento de los datos descritos acá.
+     Para cualquier consulta sobre privacidad podés escribirnos a
+     <strong>[COMPLETAR: email de soporte]</strong>.</p>
+
+  <h2>2. Qué datos tratamos</h2>
+
+  <h3 style="font-size:16px;margin:20px 0 6px">2.1. Datos de la tienda (del comerciante)</h3>
+  <table>
+    <tr><th>Dato</th><th>Para qué</th></tr>
+    <tr><td>Dominio de la tienda (<code>*.myshopify.com</code>)</td><td>Identificar a qué tienda pertenece cada configuración</td></tr>
+    <tr><td>Token de acceso de Shopify</td><td>Operar sobre tu tienda con los permisos que autorizaste</td></tr>
+    <tr><td>Catálogo de productos (título, descripción, imágenes, precios)</td><td>Generar páginas de producto y configurar bundles</td></tr>
+    <tr><td>Configuración de la App (formulario COD, bundles, diseño)</td><td>Guardar tus ajustes entre sesiones</td></tr>
+    <tr><td>Páginas generadas</td><td>Permitirte editarlas y publicarlas</td></tr>
+    <tr><td>Uso mensual y estado del plan</td><td>Aplicar el cupo gratuito y la facturación</td></tr>
+  </table>
+
+  <h3 style="font-size:16px;margin:20px 0 6px">2.2. Datos de los clientes finales de tu tienda</h3>
+  <p>Si activás el <strong>formulario de pago contra reembolso (COD)</strong>, los datos que
+     completa el comprador —nombre, apellido, teléfono, dirección de envío, y opcionalmente
+     correo electrónico y notas— <strong>pasan por nuestros servidores</strong> con el único fin
+     de crear el pedido en tu tienda de Shopify.</p>
+  <div class="nota">
+    <strong>No almacenamos esos datos.</strong> Se procesan en tránsito y se envían directamente
+    a Shopify para crear el pedido. Una vez creado, la información queda únicamente en tu tienda
+    de Shopify, bajo tu control y tus propias políticas.
+  </div>
+  <p>No tratamos datos de tarjetas ni de medios de pago: el pago contra reembolso, por
+     definición, se cobra en la entrega y fuera de la App.</p>
+
+  <h2>3. Con quién compartimos datos (subprocesadores)</h2>
+  <table>
+    <tr><th>Proveedor</th><th>Qué recibe</th><th>Para qué</th></tr>
+    <tr>
+      <td>Shopify</td>
+      <td>Configuración, pedidos, páginas, descuentos, archivos del tema</td>
+      <td>Es la plataforma sobre la que opera la App</td>
+    </tr>
+    <tr>
+      <td>Anthropic (Claude)</td>
+      <td>Datos del producto que elegís (título, descripción, atributos)</td>
+      <td>Generar el texto de la página de producto con IA</td>
+    </tr>
+    <tr>
+      <td>Render</td>
+      <td>Todo lo que la App almacena (alojamiento y base de datos)</td>
+      <td>Infraestructura del servidor</td>
+    </tr>
+  </table>
+  <div class="nota">
+    Al generar una página con IA, el contenido del producto elegido se envía a Anthropic para
+    producir el texto. <strong>No se envían datos de clientes finales a la IA</strong> en ningún caso.
+  </div>
+  <p>No vendemos datos ni los cedemos a terceros con fines publicitarios.</p>
+
+  <h2>4. Dónde se alojan</h2>
+  <p>Los datos se alojan en la infraestructura de Render y en Shopify. Esto puede implicar
+     transferencias internacionales; en ese caso se realizan al amparo de las garantías previstas
+     por la normativa aplicable.</p>
+
+  <h2>5. Cuánto los conservamos</h2>
+  <ul>
+    <li><strong>Mientras la App esté instalada:</strong> conservamos tu configuración, tus páginas generadas y tu token.</li>
+    <li><strong>Al desinstalar:</strong> Shopify nos notifica y eliminamos el registro de tu tienda, incluidos el token y la configuración asociada.</li>
+    <li><strong>Datos de clientes finales:</strong> no se conservan (ver punto 2.2).</li>
+  </ul>
+
+  <h2>6. Solicitudes de privacidad de Shopify</h2>
+  <p>Atendemos los webhooks obligatorios de privacidad de Shopify:</p>
+  <ul>
+    <li><code>customers/data_request</code> — pedido de datos de un cliente.</li>
+    <li><code>customers/redact</code> — borrado de datos de un cliente.</li>
+    <li><code>shop/redact</code> — borrado de los datos de la tienda.</li>
+  </ul>
+  <p>Como no almacenamos datos de clientes finales, no hay información personal de compradores
+     que devolver o eliminar de nuestros sistemas. Los datos de la tienda se eliminan al desinstalar.</p>
+
+  <h2>7. Tus derechos</h2>
+  <p>Según tu jurisdicción (por ejemplo GDPR en la UE o CCPA en California), podés solicitar acceso,
+     rectificación, eliminación, limitación u oposición al tratamiento, y la portabilidad de tus datos.
+     Escribinos a <strong>[COMPLETAR: email de soporte]</strong> y respondemos dentro de los plazos legales.</p>
+
+  <h2>8. Seguridad</h2>
+  <p>Aplicamos medidas razonables para proteger la información: todo el tráfico viaja por HTTPS,
+     las solicitudes de la App se autentican con tokens de sesión firmados por Shopify, los webhooks
+     se verifican por firma HMAC, y los tokens de acceso se almacenan en una base de datos con
+     acceso restringido. Ningún sistema es infalible, pero trabajamos para minimizar los riesgos.</p>
+
+  <h2>9. Menores</h2>
+  <p>La App está dirigida a comerciantes y no está pensada para personas menores de edad.</p>
+
+  <h2>10. Cambios en esta política</h2>
+  <p>Si hacemos cambios relevantes, actualizaremos esta página y la fecha del encabezado.
+     El uso continuado de la App implica la aceptación de la versión vigente.</p>
+
+  <h2>11. Contacto</h2>
+  <p>Dudas o solicitudes sobre privacidad: <strong>[COMPLETAR: email de soporte]</strong>.</p>
+</main>
+<footer>TiendaIQ · <a href="/terminos">Términos del servicio</a></footer>
+</body>
+</html>
