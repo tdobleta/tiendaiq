@@ -101,6 +101,18 @@ async function webhooks(req, res) {
     await borrarTienda(tienda);
     console.log(`  ✖ desinstalada · ${tienda}`);
   }
+
+  // Cambió el estado de la suscripción (cancelada, vencida, congelada,
+  // reactivada): se refleja en el plan al instante.
+  if (topico === "app_subscriptions/update" && tienda) {
+    try {
+      const { actualizarPlanDesdeWebhook } = require("./facturacion");
+      const plan = await actualizarPlanDesdeWebhook(tienda, JSON.parse(crudo.toString("utf8")));
+      if (plan) console.log(`  ⟳ plan ${plan} · ${tienda}`);
+    } catch (e) {
+      console.error("✖ webhook suscripción:", e.message);
+    }
+  }
   // customers/data_request, customers/redact, shop/redact:
   // no almacenamos datos de clientes finales — 200 alcanza.
   res.writeHead(200).end();

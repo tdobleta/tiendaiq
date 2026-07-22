@@ -109,21 +109,25 @@ async function terminarInstalacion(res, url) {
   await guardarTienda(tienda, datos.access_token, { alcances: datos.scope });
   console.log(`  ✚ instalada · ${tienda}`);
 
-  // Registrar el webhook de desinstalación: cuando el merchant borra la app,
-  // Shopify nos avisa y limpiamos su token al instante (no lazy en el 401).
-  try {
-    const { gql } = require("./shopify");
-    await gql(
-      `mutation($topic: WebhookSubscriptionTopic!, $sub: WebhookSubscriptionInput!) {
-        webhookSubscriptionCreate(topic: $topic, webhookSubscription: $sub) {
-          userErrors { message }
-        }
-      }`,
-      { topic: "APP_UNINSTALLED", sub: { callbackUrl: `${env.APP_URL}/webhooks`, format: "JSON" } },
-      { tienda, token: datos.access_token }
-    );
-  } catch (e) {
-    console.log(`  ⚠ webhook uninstall no registrado: ${e.message.slice(0, 80)}`);
+  // Webhooks que necesitamos de entrada:
+  //   APP_UNINSTALLED        → borrar el token al instante (no lazy en el 401).
+  //   APP_SUBSCRIPTIONS_UPDATE → si cancelan/vence el plan, bajar a gratis.
+  const M_WEBHOOK = `mutation($topic: WebhookSubscriptionTopic!, $sub: WebhookSubscriptionInput!) {
+    webhookSubscriptionCreate(topic: $topic, webhookSubscription: $sub) {
+      userErrors { message }
+    }
+  }`;
+  for (const topic of ["APP_UNINSTALLED", "APP_SUBSCRIPTIONS_UPDATE"]) {
+    try {
+      const { gql } = require("./shopify");
+      await gql(
+        M_WEBHOOK,
+        { topic, sub: { callbackUrl: `${env.APP_URL}/webhooks`, format: "JSON" } },
+        { tienda, token: datos.access_token }
+      );
+    } catch (e) {
+      console.log(`  ⚠ webhook ${topic} no registrado: ${e.message.slice(0, 80)}`);
+    }
   }
 
   // Adentro del admin, no a la app suelta.

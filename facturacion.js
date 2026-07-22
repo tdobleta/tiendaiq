@@ -5,7 +5,8 @@
 // merchant suscribe el plan pro (Billing API de Shopify, cargo recurrente).
 // El cobro lo hace Shopify en la factura del merchant: no hay pasarela propia.
 //
-// PLAN_TEST=1 crea cargos de prueba (no facturan). Apagar al lanzar en serio.
+// PLAN_TEST=1 crea cargos de PRUEBA (no facturan). Sin esa variable, los
+// cargos son reales: producción cobra por defecto.
 // ============================================================
 
 const { gql, env } = require("./shopify");
@@ -15,12 +16,17 @@ const PAGINAS_GRATIS = Number(env.PAGINAS_GRATIS || 3);
 const PLAN_NOMBRE = "TiendaIQ Pro";
 const PLAN_PRECIO = Number(env.PLAN_PRECIO || 19.99);
 
-// Tiendas con Pro de por vida, sin pasar por Billing: la tienda dev, para
-// probar sin cupo. Coma-separadas en env si algún día hay más.
-const TIENDAS_PRO = (env.TIENDAS_PRO || "emfgq0-he.myshopify.com")
+// Tiendas con Pro de por vida, sin pasar por Billing (para probar sin cupo).
+// SOLO desde env: sin default hardcodeado, para no regalar Pro a una tienda
+// fija desde el código de producción.
+const TIENDAS_PRO = (env.TIENDAS_PRO || "")
   .split(",")
   .map((t) => t.trim())
   .filter(Boolean);
+
+// Cada cuánto re-preguntarle a Shopify si el "pro" cacheado sigue vivo. Sin
+// esto, un merchant que cancela se queda con Pro para siempre.
+const HORAS_REVALIDAR = 12;
 
 const mesActual = () => new Date().toISOString().slice(0, 7); // "2026-07"
 
@@ -40,17 +46,52 @@ async function suscripcionActiva(sesion) {
 async function estadoPlan(sesion) {
   const t = (await leerTienda(sesion.tienda)) || {};
   const usadas = t.uso?.[mesActual()] || 0;
-  let plan =
-    t.plan === "pro" || TIENDAS_PRO.includes(sesion.tienda) ? "pro" : "gratis";
 
-  // Si está al límite, re-chequear en Shopify por si suscribió recién.
-  if (plan !== "pro" && usadas >= PAGINAS_GRATIS) {
-    if (await suscripcionActiva(sesion)) {
-      plan = "pro";
-      await guardarTienda(sesion.tienda, t.token, { ...t, plan: "pro" });
-    }
+  // Cortesía por env: no pasa por Billing ni se revalida.
+  if (TIENDAS_PRO.includes(sesion.tienda)) {
+    return { plan: "pro", usadas, limite: null };
   }
+
+  let plan = t.plan === "pro" ? "pro" : "gratis";
+  const marcar = async (nuevo) => {
+    plan = nuevo;
+    await guardarTienda(sesion.tienda, t.token, {
+      ...t,
+      plan: nuevo,
+      plan_verificado: new Date().toISOString()
+    });
+  };
+
+  if (plan === "pro") {
+    // El pro cacheado se revalida cada tanto contra Shopify (fuente de verdad):
+    // si el merchant canceló, dejó de pagar o venció, baja a gratis.
+    const ultima = t.plan_verificado ? Date.parse(t.plan_verificado) : 0;
+    if (Date.now() - ultima > HORAS_REVALIDAR * 3600 * 1000) {
+      await marcar((await suscripcionActiva(sesion)) ? "pro" : "gratis");
+    }
+  } else if (usadas >= PAGINAS_GRATIS) {
+    // Al límite: re-chequear por si suscribió recién.
+    if (await suscripcionActiva(sesion)) await marcar("pro");
+  }
+
   return { plan, usadas, limite: plan === "pro" ? null : PAGINAS_GRATIS };
+}
+
+// Webhook app_subscriptions/update: Shopify avisa cuando cambia el estado de
+// la suscripción (activa, cancelada, vencida, congelada). Es la vía rápida
+// para bajar el plan; la revalidación de arriba es la red de seguridad.
+async function actualizarPlanDesdeWebhook(tienda, payload) {
+  const estado = payload?.app_subscription?.status;
+  if (!estado) return null;
+  const t = (await leerTienda(tienda)) || {};
+  if (!t.token) return null;
+  const plan = estado === "ACTIVE" ? "pro" : "gratis";
+  await guardarTienda(tienda, t.token, {
+    ...t,
+    plan,
+    plan_verificado: new Date().toISOString()
+  });
+  return plan;
 }
 
 // Se llama antes de generar: tira 402 si no le queda cupo.
@@ -89,7 +130,9 @@ async function crearSuscripcion(sesion, urlApp) {
     {
       name: PLAN_NOMBRE,
       returnUrl: `${urlApp}/?plan=confirmado`,
-      test: env.PLAN_TEST !== "0", // prueba por defecto hasta lanzar
+      // Cargo REAL por defecto. El de prueba (no factura) es opt-in explícito
+      // con PLAN_TEST=1 — así producción nunca deja de cobrar por olvido.
+      test: env.PLAN_TEST === "1",
       precio: PLAN_PRECIO
     },
     sesion
@@ -99,4 +142,7 @@ async function crearSuscripcion(sesion, urlApp) {
   return r.confirmationUrl;
 }
 
-module.exports = { estadoPlan, exigirCupo, contarUso, crearSuscripcion, PAGINAS_GRATIS, PLAN_PRECIO, PLAN_NOMBRE };
+module.exports = {
+  estadoPlan, exigirCupo, contarUso, crearSuscripcion, actualizarPlanDesdeWebhook,
+  PAGINAS_GRATIS, PLAN_PRECIO, PLAN_NOMBRE
+};
