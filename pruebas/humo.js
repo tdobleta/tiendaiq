@@ -77,7 +77,19 @@ const CASOS = [
   {
     nombre: "las legales del App Store se sirven",
     ruta: "/privacidad",
-    espera: 200
+    espera: 200,
+    // Los datos del titular se completan desde el entorno al servir. Si un
+    // marcador llega crudo a la página, quedó a la vista en una URL pública
+    // que lee el reviewer de Shopify.
+    revisar: (cuerpo) =>
+      cuerpo.includes("{{") ? "quedó un marcador {{...}} sin reemplazar" : null
+  },
+  {
+    nombre: "los términos tampoco filtran marcadores",
+    ruta: "/terminos",
+    espera: 200,
+    revisar: (cuerpo) =>
+      cuerpo.includes("{{") ? "quedó un marcador {{...}} sin reemplazar" : null
   },
   {
     nombre: "los assets del storefront se sirven desde el extension",
@@ -126,8 +138,14 @@ async function main() {
       try {
         // redirect: manual — un 302 tiene que verse como 302, no seguirse.
         const r = await fetch(BASE + c.ruta, { redirect: "manual" });
-        if (r.status === c.espera) ok(c.nombre);
-        else mal(c.nombre, `esperaba ${c.espera}, vino ${r.status}`);
+        if (r.status !== c.espera) {
+          mal(c.nombre, `esperaba ${c.espera}, vino ${r.status}`);
+          continue;
+        }
+        // Algunos casos además miran el cuerpo, no solo el código.
+        const problema = c.revisar ? c.revisar(await r.text()) : null;
+        if (problema) mal(c.nombre, problema);
+        else ok(c.nombre);
       } catch (e) {
         mal(c.nombre, e.message);
       }

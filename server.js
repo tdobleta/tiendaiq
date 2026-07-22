@@ -168,6 +168,43 @@ function servirIndex(res) {
   res.end(html);
 }
 
+// ---------- legales ----------
+//
+// Los datos del titular no van escritos en el HTML: se completan desde el
+// entorno al servir. Así, el día que cambie el dominio, el email de soporte o
+// el domicilio, se toca el panel del host y listo — sin editar archivos, sin
+// commit y sin deploy. Es el mismo mecanismo que ya usa index.html con el
+// client_id.
+//
+// Estas dos páginas son las URLs que van en la ficha del App Store, así que
+// tienen que estar completas ANTES del review.
+const CAMPOS_LEGALES = {
+  EMAIL_SOPORTE: {
+    valor: env.EMAIL_SOPORTE,
+    // Un mailto es lo que espera cualquiera que quiera escribirte, y es lo que
+    // mira el reviewer de Shopify para confirmar que hay soporte de verdad.
+    formato: (v) => `<a href="mailto:${v}">${v}</a>`,
+    falta: "email de soporte"
+  },
+  RAZON_SOCIAL: { valor: env.RAZON_SOCIAL, falta: "nombre o razón social del titular" },
+  DOMICILIO: { valor: env.DOMICILIO, falta: "domicilio del titular" }
+};
+
+const legalesIncompletos = () =>
+  Object.values(CAMPOS_LEGALES).filter((c) => !c.valor).map((c) => c.falta);
+
+function servirLegal(res, archivo) {
+  let html = fs.readFileSync(path.join(DIR_APP, archivo), "utf8");
+  for (const [clave, campo] of Object.entries(CAMPOS_LEGALES)) {
+    // Sin valor se ve "(pendiente)" en vez del marcador crudo: queda claro que
+    // falta completarlo y no se filtra un {{...}} a una página pública.
+    const texto = campo.valor ? (campo.formato ? campo.formato(campo.valor) : campo.valor) : "(pendiente)";
+    html = html.split(`{{${clave}}}`).join(texto);
+  }
+  res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" });
+  res.end(html);
+}
+
 function servirEstatico(res, base, rel) {
   // decodeURIComponent: los avatares traen espacios en el nombre.
   const limpio = path.normalize(decodeURIComponent(rel)).replace(/^(\.\.[/\\])+/, "");
@@ -617,8 +654,8 @@ const servidor = http.createServer(async (req, res) => {
     if (url.pathname === "/publico/cod") return await codPublico(req, res, url);
 
     // --- legales (públicas: van en la ficha del App Store) ---
-    if (url.pathname === "/privacidad") return servirEstatico(res, DIR_APP, "privacidad.html");
-    if (url.pathname === "/terminos") return servirEstatico(res, DIR_APP, "terminos.html");
+    if (url.pathname === "/privacidad") return servirLegal(res, "privacidad.html");
+    if (url.pathname === "/terminos") return servirLegal(res, "terminos.html");
 
     // --- app ---
     if (url.pathname.startsWith("/api/")) return await api(req, res, url);
@@ -679,6 +716,14 @@ servidor.listen(PUERTO, async () => {
   console.log(`\n  TiendaIQ  →  ${URL_APP}`);
   console.log(`  almacén: ${USA_PG ? "Postgres" : "archivos (local)"}`);
   console.log(`  tiendas instaladas: ${tiendas.length}${tiendas.length ? " · " + tiendas.map((t) => t.dominio).join(", ") : ""}`);
+  // Las legales son URLs públicas de la ficha del App Store: si les falta un
+  // dato, el review lo devuelve. Se avisa en cada arranque hasta completarlas.
+  const faltan = legalesIncompletos();
+  if (faltan.length) {
+    console.log(`  ⚠ legales incompletas (${faltan.join(", ")}) — se ven como "(pendiente)" en /privacidad y /terminos`);
+    console.log(`    completar con EMAIL_SOPORTE / RAZON_SOCIAL / DOMICILIO en el entorno`);
+  }
+
   if (!env.APP_URL) console.log(`  ⚠ falta APP_URL en .env — el OAuth no va a poder volver\n`);
   else console.log(`  instalar: ${URL_APP}/auth?shop=TIENDA.myshopify.com\n`);
 });
