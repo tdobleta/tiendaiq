@@ -2,6 +2,7 @@
 node_modules/
 tiendas/
 paginas/
+estados/
 ultima-pagina.json
 tunel.log
 tunel.pid

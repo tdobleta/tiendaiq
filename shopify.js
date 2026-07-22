@@ -17,14 +17,22 @@ const path = require("path");
 const API = "2026-07";
 
 // En local las claves viven en .env; en Render (y cualquier host) viven en
-// process.env. Se leen las dos: el .env pisa nada que ya venga del sistema.
+// process.env. Se leen las dos, y GANA process.env: el .env solo rellena lo
+// que falta.
+//
+// Antes era al revés y mordía: `DEV_MODE=0 node server.js` no apagaba nada
+// porque el .env volvía a ponerlo en 1, y no había forma de levantar el
+// server en modo producción para probarlo. Precedencia al revés = una
+// variable que ponés a mano y el proceso ignora en silencio.
 function leerEnv() {
   const env = { ...process.env };
   const ruta = path.join(__dirname, ".env");
   if (fs.existsSync(ruta)) {
     for (const linea of fs.readFileSync(ruta, "utf8").split(/\r?\n/)) {
       const m = linea.match(/^([A-Z_]+)=(.*)$/);
-      if (m) env[m[1]] = m[2].trim();
+      // Solo si el entorno real no la trae ya (cadena vacía incluida: poner
+      // DEV_MODE="" es una forma legítima de decir "apagado").
+      if (m && process.env[m[1]] === undefined) env[m[1]] = m[2].trim();
     }
   }
   // Espacios y saltos de línea colados al pegar en el panel del host rompen

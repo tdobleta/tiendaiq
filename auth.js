@@ -15,6 +15,7 @@
 const crypto = require("crypto");
 const { env } = require("./shopify");
 const { guardarTienda, normalizar, esDominioValido } = require("./tiendas");
+const { guardarEstadoDB, consumirEstadoDB } = require("./db");
 
 // write_orders: lo usa el formulario COD para crear pedidos contra reembolso.
 // OJO: al agregar un alcance, las tiendas ya instaladas tienen que volver a
@@ -53,21 +54,19 @@ function hmacValido(params) {
   return igualSeguro(esperado, hmac || "");
 }
 
-// Un `state` de un solo uso ata el callback a un inicio nuestro.
-const estados = new Map();
-function nuevoEstado(tienda) {
+// Un `state` de un solo uso ata el callback a un inicio nuestro. Vive en la
+// base (no en memoria): el proceso se reinicia y puede haber más de una
+// instancia, y el callback tiene que poder caer en cualquiera de ellas.
+const MINUTOS_ESTADO = 10;
+
+async function nuevoEstado(tienda) {
   const s = crypto.randomBytes(16).toString("hex");
-  estados.set(s, { tienda, vence: Date.now() + 10 * 60 * 1000 });
+  await guardarEstadoDB(s, tienda, Date.now() + MINUTOS_ESTADO * 60 * 1000);
   return s;
-}
-function consumirEstado(s) {
-  const e = estados.get(s);
-  estados.delete(s); // un solo uso, exista o no
-  return e && e.vence > Date.now() ? e : null;
 }
 
 // GET /auth?shop=xxx.myshopify.com — arranca la instalación.
-function iniciarInstalacion(res, url, urlApp) {
+async function iniciarInstalacion(res, url, urlApp) {
   const tienda = normalizar(url.searchParams.get("shop"));
   if (!esDominioValido(tienda)) {
     res.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" }).end("Falta o es inválido el parámetro ?shop=xxx.myshopify.com");
@@ -79,7 +78,7 @@ function iniciarInstalacion(res, url, urlApp) {
     `?client_id=${env.SHOPIFY_CLIENT_ID}` +
     `&scope=${encodeURIComponent(ALCANCES)}` +
     `&redirect_uri=${encodeURIComponent(`${urlApp}/auth/callback`)}` +
-    `&state=${nuevoEstado(tienda)}`;
+    `&state=${await nuevoEstado(tienda)}`;
 
   res.writeHead(302, { Location: destino }).end();
 }
@@ -91,7 +90,14 @@ async function terminarInstalacion(res, url) {
 
   if (!esDominioValido(tienda)) return void res.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" }).end("shop inválido");
   if (!hmacValido(params)) return void res.writeHead(401, { "Content-Type": "text/plain; charset=utf-8" }).end("Firma inválida — el pedido no vino de Shopify");
-  if (!consumirEstado(params.state)) return void res.writeHead(401, { "Content-Type": "text/plain; charset=utf-8" }).end("state inválido o vencido");
+
+  // El state tiene que existir, no haber vencido, y ser el que emitimos para
+  // ESTA tienda: si no se compara, un state válido de una tienda sirve para
+  // cerrar la instalación de otra.
+  const emitido = await consumirEstadoDB(params.state);
+  if (!emitido || emitido.tienda !== tienda) {
+    return void res.writeHead(401, { "Content-Type": "text/plain; charset=utf-8" }).end("state inválido o vencido — volvé a empezar la instalación");
+  }
 
   const r = await fetch(`https://${tienda}/admin/oauth/access_token`, {
     method: "POST",

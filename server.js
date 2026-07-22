@@ -596,7 +596,14 @@ const servidor = http.createServer(async (req, res) => {
 
   try {
     // --- instalación ---
-    if (url.pathname === "/auth") return iniciarInstalacion(res, url, URL_APP);
+    // Chequeo de vida. Sirve para el monitor externo que mantiene despierto
+    // el proceso: si Render lo duerme, los webhooks de Shopify (5 s de
+    // timeout) fallan y Shopify termina dando de baja las suscripciones.
+    if (url.pathname === "/health") {
+      return json(res, 200, { ok: true, ts: new Date().toISOString() });
+    }
+
+    if (url.pathname === "/auth") return await iniciarInstalacion(res, url, URL_APP);
     if (url.pathname === "/auth/callback") return await terminarInstalacion(res, url);
 
     // --- webhooks de Shopify (desinstalación + privacidad) ---
@@ -644,6 +651,25 @@ const servidor = http.createServer(async (req, res) => {
     if (e.status !== 401) console.error("✖", e.message);
     json(res, e.status || 500, { error: e.message });
   }
+});
+
+// DEV_MODE saltea la verificación del pase y opera sobre la tienda del .env
+// (ver resolverSesion). Es comodísimo en local y es un agujero abierto en
+// producción: cualquiera con la URL manejaría esa tienda. Si hay DATABASE_URL
+// estamos en el server de verdad, así que no arranca.
+if (env.DEV_MODE === "1" && env.DATABASE_URL) {
+  console.error("\n  ✖ DEV_MODE=1 con DATABASE_URL presente: eso saltea la autenticación en producción.");
+  console.error("    Sacá DEV_MODE del panel del host y volvé a deployar.\n");
+  process.exit(1);
+}
+
+// Una promesa rechazada fuera de un try/catch tumba el proceso Node entero.
+// En Render eso es caída silenciosa: se loguea y se sigue viviendo.
+process.on("unhandledRejection", (e) => {
+  console.error("✖ promesa sin catch:", e?.stack || e);
+});
+process.on("uncaughtException", (e) => {
+  console.error("✖ excepción sin catch:", e?.stack || e);
 });
 
 servidor.listen(PUERTO, async () => {
