@@ -42,8 +42,11 @@ const {
 const PUERTO = Number(env.PORT || process.env.PORT || 4321);
 const DIR_APP = path.join(__dirname, "app");
 const DIR_PLANTILLA = path.join(__dirname, "plantilla-producto");
-const DIR_COD = path.join(__dirname, "cod-form");
-const DIR_BUNDLE = path.join(__dirname, "bundle-form");
+// Único hogar del código que corre en el storefront (widget de bundles y
+// formulario COD). El theme app extension lo publica en el CDN de Shopify, y
+// el server sirve LOS MISMOS archivos para el preview del admin y para la
+// inyección directa. Una sola copia: no hay nada que sincronizar.
+const DIR_WIDGETS = path.join(__dirname, "extensions", "tiendaiq-widgets", "assets");
 
 // La URL pública por la que Shopify nos alcanza. En producción es la de Render;
 // en local, el túnel. Sin esto el OAuth no puede volver.
@@ -613,14 +616,10 @@ const servidor = http.createServer(async (req, res) => {
     // --- app ---
     if (url.pathname.startsWith("/api/")) return await api(req, res, url);
 
-    // Assets del formulario COD (la app del admin los usa para el preview).
-    if (url.pathname.startsWith("/cod-form/")) {
-      return servirEstatico(res, DIR_COD, url.pathname.replace(/^\/cod-form\/?/, ""));
-    }
-
-    // Assets del widget de bundles (para el preview en el admin).
-    if (url.pathname.startsWith("/bundle-form/")) {
-      return servirEstatico(res, DIR_BUNDLE, url.pathname.replace(/^\/bundle-form\/?/, ""));
+    // Código del storefront (widget de bundles + formulario COD). Lo usa el
+    // preview del admin, y es EL MISMO archivo que publica el extension.
+    if (url.pathname.startsWith("/widgets/")) {
+      return servirEstatico(res, DIR_WIDGETS, url.pathname.replace(/^\/widgets\/?/, ""));
     }
 
     if (url.pathname.startsWith("/preview")) {

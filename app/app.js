@@ -2528,7 +2528,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   // BUNDLES — paquetes / descuentos por volumen.
   // Dashboard (métricas + lista) → editor de 2 pestañas (Ofertas / Diseño)
   // con preview en vivo. El preview usa el MISMO css que se inyecta en la
-  // tienda (/bundle-form/tiendaiq-bundle.css), así que es fiel al storefront.
+  // tienda (/widgets/tiendaiq-bundle.css), así que es fiel al storefront.
   // ============================================================
 
   const PRECIO_DEMO = 24990; // centavos, solo para el preview del admin

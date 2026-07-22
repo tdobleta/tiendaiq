@@ -19,7 +19,9 @@ const path = require("path");
 const { gql } = require("./shopify");
 const { leerTienda, guardarTienda } = require("./tiendas");
 
-const DIR_COD = path.join(__dirname, "cod-form");
+// Único hogar de los assets del storefront (compartido con el theme app
+// extension, que es quien los publica en el CDN de Shopify).
+const DIR_WIDGETS = path.join(__dirname, "extensions", "tiendaiq-widgets", "assets");
 
 // ---------- config ----------
 
@@ -174,11 +176,11 @@ async function instalarCod(sesion, config, urlApp, log = () => {}) {
   const archivos = [
     {
       filename: "assets/tiendaiq-cod.css",
-      body: { type: "TEXT", value: fs.readFileSync(path.join(DIR_COD, "tiendaiq-cod.css"), "utf8") }
+      body: { type: "TEXT", value: fs.readFileSync(path.join(DIR_WIDGETS, "tiendaiq-cod.css"), "utf8") }
     },
     {
       filename: "assets/tiendaiq-cod.js",
-      body: { type: "TEXT", value: fs.readFileSync(path.join(DIR_COD, "tiendaiq-cod.js"), "utf8") }
+      body: { type: "TEXT", value: fs.readFileSync(path.join(DIR_WIDGETS, "tiendaiq-cod.js"), "utf8") }
     },
     {
       filename: "snippets/tiendaiq-cod.liquid",

@@ -29,7 +29,9 @@ const path = require("path");
 const { gql } = require("./shopify");
 const { leerTienda, guardarTienda } = require("./tiendas");
 
-const DIR_BUNDLE = path.join(__dirname, "bundle-form");
+// Único hogar de los assets del storefront (compartido con el theme app
+// extension, que es quien los publica en el CDN de Shopify).
+const DIR_WIDGETS = path.join(__dirname, "extensions", "tiendaiq-widgets", "assets");
 
 // ---------- config ----------
 
@@ -377,11 +379,11 @@ async function instalarBundles(sesion, config, urlApp, log = () => {}) {
   const archivos = [
     {
       filename: "assets/tiendaiq-bundle.css",
-      body: { type: "TEXT", value: fs.readFileSync(path.join(DIR_BUNDLE, "tiendaiq-bundle.css"), "utf8") }
+      body: { type: "TEXT", value: fs.readFileSync(path.join(DIR_WIDGETS, "tiendaiq-bundle.css"), "utf8") }
     },
     {
       filename: "assets/tiendaiq-bundle.js",
-      body: { type: "TEXT", value: fs.readFileSync(path.join(DIR_BUNDLE, "tiendaiq-bundle.js"), "utf8") }
+      body: { type: "TEXT", value: fs.readFileSync(path.join(DIR_WIDGETS, "tiendaiq-bundle.js"), "utf8") }
     },
     {
       filename: "snippets/tiendaiq-bundle.liquid",
