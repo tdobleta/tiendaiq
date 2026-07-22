@@ -53,22 +53,94 @@ async function adoptarSiExiste(sesion, handle, templateSuffix) {
   return { handle, accion: "adoptada", id: p.id };
 }
 
-// Monta el contenido base del nicho: las páginas que el theme necesita.
-// (Menús y políticas se suman después, mismo patrón idempotente.)
+// ---------- menú principal ----------
+//
+// El menú es contenido de TIENDA, no del theme: los 7 themes de nicho comparten
+// el mismo, así que si quedó en inglés (heredado de PagePilot) se ve en todos.
+// Necesita scope write_online_store_navigation.
+
+const Q_MENUS = `{ menus(first: 20) { nodes { id handle title items { id title } } } }`;
+
+const M_MENU_CREATE = `mutation($title: String!, $handle: String!, $items: [MenuItemCreateInput!]!) {
+  menuCreate(title: $title, handle: $handle, items: $items) {
+    menu { id handle }
+    userErrors { field message }
+  }
+}`;
+
+const M_MENU_UPDATE = `mutation($id: ID!, $title: String!, $handle: String!, $items: [MenuItemUpdateInput!]!) {
+  menuUpdate(id: $id, title: $title, handle: $handle, items: $items) {
+    menu { id handle }
+    userErrors { field message }
+  }
+}`;
+
+// Los ítems en español. "Nosotros"/"Contacto" solo si existen esas páginas.
+function itemsEnEspanol(idAbout, idContact) {
+  const items = [
+    { title: "Inicio", type: "FRONTPAGE" },
+    { title: "Comprar", type: "CATALOG" }
+  ];
+  if (idAbout) items.push({ title: "Nosotros", type: "PAGE", resourceId: idAbout });
+  if (idContact) items.push({ title: "Contacto", type: "PAGE", resourceId: idContact });
+  return items;
+}
+
+// Deja el menú principal en español. Idempotente: si ya tiene exactamente esos
+// títulos, no lo reescribe.
+async function asegurarMenu(sesion, { about, contact } = {}) {
+  const menus = (await gql(Q_MENUS, {}, sesion)).menus.nodes || [];
+  const principal = menus.find((m) => m.handle === "main-menu") || menus[0];
+  const items = itemsEnEspanol(about, contact);
+  const esperado = items.map((i) => i.title).join("|");
+
+  if (principal) {
+    const actual = (principal.items || []).map((i) => i.title).join("|");
+    if (actual === esperado) return { handle: principal.handle, accion: "menú-ya-estaba" };
+
+    const r = await gql(
+      M_MENU_UPDATE,
+      { id: principal.id, title: principal.title || "Menú principal", handle: principal.handle, items },
+      sesion
+    );
+    if (r.menuUpdate.userErrors?.length) throw new Error("menuUpdate: " + JSON.stringify(r.menuUpdate.userErrors));
+    return { handle: principal.handle, accion: "menú-traducido" };
+  }
+
+  const r = await gql(M_MENU_CREATE, { title: "Menú principal", handle: "main-menu", items }, sesion);
+  if (r.menuCreate.userErrors?.length) throw new Error("menuCreate: " + JSON.stringify(r.menuCreate.userErrors));
+  return { handle: "main-menu", accion: "menú-creado" };
+}
+
+// Monta el contenido base del nicho: las páginas que el theme necesita y el
+// menú principal en español.
 async function montarContenidoNicho(sesion) {
   const paginas = [
     { title: "Sobre nosotros", handle: "about", templateSuffix: "about" },
     { title: "Contacto", handle: "contact", templateSuffix: "contact" }
   ];
   const resultado = [];
-  for (const p of paginas) resultado.push(await asegurarPagina(sesion, p));
+  const ids = {};
+  for (const p of paginas) {
+    const r = await asegurarPagina(sesion, p);
+    ids[p.handle] = r.id;
+    resultado.push(r);
+  }
 
   // Bridge para tiendas que ya traen otras handles enlazadas en el menú.
   for (const h of ["about-us", "sobre-nosotros"]) {
     const a = await adoptarSiExiste(sesion, h, "about");
     if (a) resultado.push(a);
   }
+
+  // El menú no debe tumbar el resto si falta el scope: se avisa y sigue.
+  try {
+    resultado.push(await asegurarMenu(sesion, { about: ids.about, contact: ids.contact }));
+  } catch (e) {
+    resultado.push({ handle: "main-menu", accion: "menú-falló", error: e.message.slice(0, 160) });
+  }
+
   return resultado;
 }
 
-module.exports = { montarContenidoNicho, asegurarPagina };
+module.exports = { montarContenidoNicho, asegurarPagina, asegurarMenu };
