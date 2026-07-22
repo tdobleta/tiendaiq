@@ -111,9 +111,18 @@
   async function pantallaInicio() {
     vista.innerHTML = `<div class="generando"><div class="giro"></div><h2>Leyendo tu tienda…</h2></div>`;
     try {
-      const [plan, paginas] = await Promise.all([api("/plan"), api("/paginas")]);
+      // COD y bundles son para los "primeros pasos": si fallan, la home igual
+      // se dibuja (por eso el catch por separado, no dentro del Promise.all).
+      const [plan, paginas, cod, bundles] = await Promise.all([
+        api("/plan"),
+        api("/paginas"),
+        api("/cod").catch(() => null),
+        api("/bundles").catch(() => null)
+      ]);
       estado.plan = plan;
       estado.paginas = paginas;
+      estado.inicioCod = cod;
+      estado.inicioBundles = bundles;
     } catch (e) {
       vista.innerHTML = `<div class="error">✖ No se pudo leer la tienda: ${esc(e.message)}</div>`;
       return;
@@ -123,7 +132,18 @@
     const plan = estado.plan;
     const creadas = estado.paginas.length;
     const publicadas = estado.paginas.filter((p) => p.estado === "publicada").length;
-    const hechos = (creadas > 0 ? 1 : 0) + (publicadas > 0 ? 1 : 0);
+
+    // Un paso está "hecho" cuando la feature quedó realmente andando en la
+    // tienda: configurada Y activa/inyectada. Configurarla sin inyectarla no
+    // le sirve de nada al merchant, así que no cuenta.
+    const codListo = !!(estado.inicioCod?.activo && estado.inicioCod?.instalado);
+    const bundlesListo = !!(
+      estado.inicioBundles?.instalado && (estado.inicioBundles?.lista || []).some((b) => b.activo !== false)
+    );
+
+    const TOTAL_PASOS = 4;
+    const hechos =
+      (creadas > 0 ? 1 : 0) + (publicadas > 0 ? 1 : 0) + (codListo ? 1 : 0) + (bundlesListo ? 1 : 0);
     const sinCupo = plan.plan !== "pro" && plan.usadas >= plan.limite;
 
     // Íconos de línea monocromos, como PagePilot: círculo negro sólido si el
@@ -131,7 +151,9 @@
     const ICONO_PASO = {
       chispa: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M11 2l1.7 5.4L18 9l-5.3 1.6L11 16l-1.7-5.4L4 9l5.3-1.6z"/><path d="M18.5 14l.9 2.8 2.8.9-2.8.9-.9 2.8-.9-2.8-2.8-.9 2.8-.9z"/></svg>`,
       publicar: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4"/><path d="M7 9l5-5 5 5"/><path d="M4 19h16"/></svg>`,
-      tienda: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9l1.2-4h13.6L20 9"/><path d="M4 9c0 1.4 1.2 2.5 2.7 2.5S9.3 10.4 9.3 9c0 1.4 1.2 2.5 2.7 2.5s2.7-1.1 2.7-2.5c0 1.4 1.2 2.5 2.7 2.5S20 10.4 20 9"/><path d="M5 11.5V20h14v-8.5"/><path d="M10 20v-5h4v5"/></svg>`
+      tienda: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9l1.2-4h13.6L20 9"/><path d="M4 9c0 1.4 1.2 2.5 2.7 2.5S9.3 10.4 9.3 9c0 1.4 1.2 2.5 2.7 2.5s2.7-1.1 2.7-2.5c0 1.4 1.2 2.5 2.7 2.5S20 10.4 20 9"/><path d="M5 11.5V20h14v-8.5"/><path d="M10 20v-5h4v5"/></svg>`,
+      cod: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6.5" width="19" height="11" rx="2"/><circle cx="12" cy="12" r="2.4"/><path d="M6 10v4M18 10v4"/></svg>`,
+      bundle: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8l9-4 9 4-9 4z"/><path d="M3 8v8l9 4 9-4V8"/><path d="M12 12v8"/></svg>`
     };
 
     const pasoCard = (icono, titulo, texto, hecho, cola, tinte, off) => `
@@ -186,8 +208,8 @@
             <div class="panel__sub">Completá estos pasos para empezar a vender con TiendaIQ</div>
           </div>
           <div class="progreso">
-            <span>${hechos} de 2 completado</span>
-            <div class="progreso__barra"><div style="width:${(hechos / 2) * 100}%"></div></div>
+            <span>${hechos} de ${TOTAL_PASOS} completado${hechos === 1 ? "" : "s"}</span>
+            <div class="progreso__barra"><div style="width:${(hechos / TOTAL_PASOS) * 100}%"></div></div>
           </div>
         </div>
         <div class="pasos-grilla">
@@ -212,12 +234,32 @@
             "verde"
           )}
           ${pasoCard(
+            ICONO_PASO.cod,
+            "Activar el pago contra reembolso",
+            "Que tus clientes pidan y paguen al recibir.",
+            codListo,
+            codListo
+              ? `<span class="chip-estado chip-estado--ok">Completado</span>`
+              : `<button class="btn btn--chico" id="paso-cod">${estado.inicioCod?.instalado ? "Prender el formulario" : "Configurar COD"}</button>`,
+            "naranja"
+          )}
+          ${pasoCard(
+            ICONO_PASO.bundle,
+            "Crear tu primer bundle",
+            "Descuentos por volumen para subir el valor del pedido.",
+            bundlesListo,
+            bundlesListo
+              ? `<span class="chip-estado chip-estado--ok">Completado</span>`
+              : `<button class="btn btn--chico" id="paso-bundles">${(estado.inicioBundles?.lista || []).length ? "Inyectar en el tema" : "Crear bundle"}</button>`,
+            "azul"
+          )}
+          ${pasoCard(
             ICONO_PASO.tienda,
             "Crear tu tienda con IA",
             "Una tienda Shopify completa armada desde cero.",
             false,
             `<span class="chip-estado chip-estado--pronto">Próximamente</span>`,
-            "azul",
+            "violeta",
             true
           )}
         </div>
@@ -241,6 +283,34 @@
             <button class="btn btn--chico" id="herr-cod">Configurar COD</button>
             <div class="herramienta__preview herramienta__preview--img">
               <img src="/portadas/portada-cod.png" alt="Vista previa: formulario contra reembolso (COD)" loading="lazy">
+            </div>
+          </div>
+          <div class="herramienta">
+            <div class="herramienta__nombre">Bundles y descuentos</div>
+            <p>Descuentos por volumen y "comprá X y obtené Y". El precio lo hace cumplir Shopify.</p>
+            <button class="btn btn--chico" id="herr-bundles">Crear bundles</button>
+            <div class="herramienta__preview herramienta__preview--bdl">
+              <div class="tiq-bdl">
+                <div class="tiq-bdl__cards">
+                  <label class="tiq-bdl__card">
+                    <span class="tiq-bdl__radio"></span>
+                    <span class="tiq-bdl__main"><span class="tiq-bdl__titulo">Comprá 1</span></span>
+                    <span class="tiq-bdl__precio"><span class="tiq-bdl__precio-now">$ 24,99</span></span>
+                  </label>
+                  <label class="tiq-bdl__card is-sel is-pop">
+                    <span class="tiq-bdl__badge">Más elegido</span>
+                    <span class="tiq-bdl__radio"></span>
+                    <span class="tiq-bdl__main">
+                      <span class="tiq-bdl__titulo">Comprá 2 <span class="tiq-bdl__etq">10% OFF</span></span>
+                      <span class="tiq-bdl__ahorro">Ahorrás $ 5,00</span>
+                    </span>
+                    <span class="tiq-bdl__precio">
+                      <span class="tiq-bdl__precio-now">$ 44,98</span>
+                      <span class="tiq-bdl__precio-old">$ 49,98</span>
+                    </span>
+                  </label>
+                </div>
+              </div>
             </div>
           </div>
           <div class="herramienta">
@@ -347,8 +417,15 @@
     });
     const bPlan = $("ir-plan");
     if (bPlan) bPlan.onclick = irASuscripcion;
-    const bCod = $("herr-cod");
-    if (bCod) bCod.onclick = () => ir("cod");
+    // COD y bundles: tanto desde "Herramientas" como desde "Primeros pasos".
+    ["herr-cod", "paso-cod"].forEach((id) => {
+      const b = $(id);
+      if (b) b.onclick = () => ir("cod");
+    });
+    ["herr-bundles", "paso-bundles"].forEach((id) => {
+      const b = $(id);
+      if (b) b.onclick = () => ir("bundles");
+    });
   }
 
   // ---------- 0b. mis páginas (tabla de páginas generadas) ----------

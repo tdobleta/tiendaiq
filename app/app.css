@@ -1464,3 +1464,14 @@ summary:focus-visible, label:focus-visible {
 
 /* imagen real en la tarjeta del preview */
 .cod-preview__foto img, .bdl-preview__foto img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
+
+/* --- preview del widget real de bundles dentro de la tarjeta de Herramientas.
+       El widget usa medidas en em, así que alcanza con bajar el font-size. --- */
+.herramienta__preview--bdl {
+  height: auto; overflow: visible; background: none;
+  font-size: 11px; padding: 10px 4px 2px;
+  justify-items: stretch; /* el contenedor es grid y centra: que ocupe el ancho */
+}
+.herramienta__preview--bdl .tiq-bdl { margin: 0; width: 100%; }
+.herramienta__preview--bdl .tiq-bdl__card { padding: 9px 11px; cursor: default; }
+.herramienta__preview--bdl .tiq-bdl__card:hover { border-color: rgba(0,0,0,.12); }
