@@ -2578,7 +2578,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   async function pantallaBundles() {
     if (!estado.bundles) {
       try {
-        estado.bundles = { config: await api("/bundles"), vista: "lista", editIdx: null, tab: "ofertas", sucio: false, previewProd: null };
+        estado.bundles = { config: await api("/bundles"), vista: "lista", editIdx: null, tab: "ofertas", sucio: false, previewProd: null, metricas: null };
       } catch (e) {
         vista.innerHTML = `<div class="error">✖ No se pudo leer los bundles: ${esc(e.message)}</div>`;
         return;
@@ -2594,11 +2594,36 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
 
   // ---------- dashboard ----------
 
-  function tarjetaMetrica(titulo, valor) {
+  function tarjetaMetrica(titulo, valor, ayuda) {
     return `<div class="bdl-metrica">
-      <div class="bdl-metrica__t">${esc(titulo)} <span class="bdl-metrica__i" title="Se llena con los pedidos que traigan un bundle.">ⓘ</span></div>
+      <div class="bdl-metrica__t">${esc(titulo)} <span class="bdl-metrica__i" title="${esc(ayuda || "")}">ⓘ</span></div>
       <div class="bdl-metrica__v">${esc(valor)}</div>
     </div>`;
+  }
+
+  // Métricas reales: se calculan en el server sobre los pedidos que traen
+  // aplicado alguno de nuestros descuentos. Mientras cargan, se muestran "—"
+  // en vez de ceros (un cero acá es un dato, no un placeholder).
+  function bloqueMetricas() {
+    const m = estado.bundles.metricas;
+    if (!m) {
+      const vacia = (t) => tarjetaMetrica(t, "—", "Calculando sobre tus pedidos…");
+      return `<div class="bdl-metricas">
+        ${vacia("Pedidos con bundle")}${vacia("Ingresos")}${vacia("Ticket promedio")}${vacia("Descuento aplicado")}
+      </div>`;
+    }
+    const plata = (n) =>
+      "$ " + Number(n).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return `
+      <div class="bdl-metricas">
+        ${tarjetaMetrica("Pedidos con bundle", String(m.pedidos), `Pedidos de los últimos ${m.dias} días que llegaron con un descuento de TiendaIQ aplicado.`)}
+        ${tarjetaMetrica("Ingresos", plata(m.ingresos), "Suma del total de esos pedidos.")}
+        ${tarjetaMetrica("Ticket promedio", plata(m.ticket), "Ingresos divididos por la cantidad de pedidos con bundle.")}
+        ${tarjetaMetrica("Descuento aplicado", plata(m.descuento), "Total de descuentos otorgados en esos pedidos.")}
+      </div>
+      <div class="panel__sub" style="margin:-8px 0 18px">
+        Últimos ${m.dias} días · moneda ${esc(m.moneda)}${m.parcial ? " · muestra parcial (se recorrieron los 500 pedidos más recientes)" : ""}
+      </div>`;
   }
 
   function pintarDashboardBundles() {
@@ -2644,13 +2669,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
             : ""
       }
 
-      <div class="bdl-metricas">
-        ${tarjetaMetrica("Ingresos totales", "$0.00")}
-        ${tarjetaMetrica("Ingresos por upsell", "$0.00")}
-        ${tarjetaMetrica("Pedidos con bundle", "0")}
-        ${tarjetaMetrica("Valor medio del pedido", "$0.00")}
-        ${tarjetaMetrica("Tasa de conversión", "0%")}
-      </div>
+      ${bloqueMetricas()}
 
       ${
         lista.length
@@ -2709,6 +2728,16 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         pintarDashboardBundles();
       };
     });
+
+    // Métricas reales: se piden una vez y se repintan al llegar.
+    if (!estado.bundles.metricas) {
+      api("/bundles/metricas")
+        .then((m) => {
+          estado.bundles.metricas = m;
+          if (estado.bundles.vista === "lista") pintarDashboardBundles();
+        })
+        .catch(() => {});
+    }
   }
 
   // ---------- editor ----------

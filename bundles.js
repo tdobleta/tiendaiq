@@ -252,6 +252,72 @@ async function sincronizarDescuentos(sesion, config, log = () => {}) {
   return config;
 }
 
+// ---------- métricas ----------
+//
+// Se calculan contra los pedidos REALES de la tienda: un pedido "con bundle"
+// es el que trae aplicado uno de nuestros descuentos automáticos (los creamos
+// con el título "TiendaIQ Bundle · ..."), así que son identificables.
+//
+// Ventana de 30 días: sin el alcance read_all_orders, Shopify solo deja ver
+// los pedidos de los últimos 60, así que quedamos holgados.
+
+const Q_ORDENES = `query($q: String!, $cursor: String) {
+  orders(first: 100, query: $q, after: $cursor, sortKey: CREATED_AT, reverse: true) {
+    pageInfo { hasNextPage endCursor }
+    nodes {
+      id
+      currentTotalPriceSet { shopMoney { amount currencyCode } }
+      totalDiscountsSet { shopMoney { amount } }
+      discountApplications(first: 10) {
+        nodes {
+          ... on AutomaticDiscountApplication { title }
+          ... on DiscountCodeApplication { code }
+        }
+      }
+    }
+  }
+}`;
+
+const dos = (n) => Math.round(n * 100) / 100;
+const ES_NUESTRO = (a) =>
+  String(a?.title || a?.code || "").startsWith("TiendaIQ Bundle");
+
+async function metricasBundles(sesion, dias = 30) {
+  const desde = new Date(Date.now() - dias * 86400000).toISOString().slice(0, 10);
+  const q = `created_at:>=${desde}`;
+
+  let cursor = null;
+  let vueltas = 0;
+  let pedidos = 0;
+  let ingresos = 0;
+  let descuento = 0;
+  let moneda = null;
+
+  do {
+    const conn = (await gql(Q_ORDENES, { q, cursor }, sesion)).orders;
+    for (const o of conn.nodes || []) {
+      if (!(o.discountApplications?.nodes || []).some(ES_NUESTRO)) continue;
+      pedidos++;
+      const m = o.currentTotalPriceSet?.shopMoney;
+      ingresos += Number(m?.amount || 0);
+      descuento += Number(o.totalDiscountsSet?.shopMoney?.amount || 0);
+      moneda = moneda || m?.currencyCode;
+    }
+    cursor = conn.pageInfo?.hasNextPage ? conn.pageInfo.endCursor : null;
+    vueltas++;
+  } while (cursor && vueltas < 5); // tope 500 pedidos: no colgamos el dashboard
+
+  return {
+    dias,
+    pedidos,
+    ingresos: dos(ingresos),
+    descuento: dos(descuento),
+    ticket: pedidos ? dos(ingresos / pedidos) : 0,
+    moneda: moneda || "USD",
+    parcial: !!cursor // había más pedidos de los que recorrimos
+  };
+}
+
 // ---------- instalación en el tema ----------
 
 const Q_TEMA = `{ themes(first: 1, roles: [MAIN]) { nodes { id name } } }`;
@@ -377,6 +443,7 @@ module.exports = {
   guardarConfigBundles,
   sincronizarDescuentos,
   borrarDescuentos,
+  metricasBundles,
   instalarBundles,
   actualizarSnippet
 };

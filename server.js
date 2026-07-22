@@ -346,6 +346,13 @@ async function api(req, res, url) {
     return json(res, 200, config);
   }
 
+  // GET /api/bundles/metricas — números reales calculados sobre los pedidos
+  // que traen aplicado alguno de nuestros descuentos.
+  if (req.method === "GET" && ruta === "/api/bundles/metricas") {
+    const { metricasBundles } = require("./bundles");
+    return json(res, 200, await metricasBundles(sesion, 30));
+  }
+
   // POST /api/bundles/instalar — inyecta (o re-inyecta) el widget en el tema
   if (req.method === "POST" && ruta === "/api/bundles/instalar") {
     const config = await leerConfigBundles(sesion.tienda);
