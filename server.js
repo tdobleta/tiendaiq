@@ -343,6 +343,15 @@ async function api(req, res, url) {
     return json(res, 200, config);
   }
 
+  // POST /api/nicho/contenido — monta el contenido del nicho (About/Contact)
+  // en la tienda que pregunta. Va acá adentro (no como ruta pública) para que
+  // use el pase de sesión de App Bridge: la tienda sale del pase firmado, no
+  // de un ?shop= con el secreto de la app en la URL.
+  if (req.method === "POST" && ruta === "/api/nicho/contenido") {
+    const { montarContenidoNicho } = require("./contenido");
+    return json(res, 200, { ok: true, resultado: await montarContenidoNicho(sesion) });
+  }
+
   // GET /api/plan — estado del plan para la UI
   if (req.method === "GET" && ruta === "/api/plan") {
     return json(res, 200, await estadoPlan(sesion));
@@ -577,16 +586,6 @@ const servidor = http.createServer(async (req, res) => {
     // --- config pública de bundles/COD (la trae el app embed del storefront) ---
     if (url.pathname === "/publico/bundles") return await bundlesPublico(req, res, url);
     if (url.pathname === "/publico/cod") return await codPublico(req, res, url);
-
-    // TEMPORAL: monta el contenido del nicho (páginas) en una tienda, usando su
-    // sesión de la DB. Gated por el secreto de la app. Se borra cuando la
-    // inyección llame a montarContenidoNicho() directo en su flujo.
-    if (url.pathname === "/_nicho/contenido") {
-      if (url.searchParams.get("key") !== env.SHOPIFY_CLIENT_SECRET) return json(res, 403, { error: "no autorizado" });
-      const sesion = await sesionDe(url.searchParams.get("shop") || "");
-      const { montarContenidoNicho } = require("./contenido");
-      return json(res, 200, { ok: true, resultado: await montarContenidoNicho(sesion) });
-    }
 
     // --- app ---
     if (url.pathname.startsWith("/api/")) return await api(req, res, url);
