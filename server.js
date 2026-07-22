@@ -533,6 +533,31 @@ async function bundlesPublico(req, res, url) {
   }
 }
 
+// GET /publico/cod?shop=xxx.myshopify.com — config pública del formulario COD
+// para el app embed. Es lo mismo que hoy va embebido en el snippet: la config
+// sin `instalado`, más tienda y app_url (para que el form sepa a dónde postear
+// el pedido). Sin secretos (el token no viaja acá).
+async function codPublico(req, res, url) {
+  if (req.method === "OPTIONS") return void res.writeHead(204, CORS_PUB).end();
+  const responder = (codigo, cuerpo) => {
+    res.writeHead(codigo, {
+      "Content-Type": "application/json; charset=utf-8",
+      "Cache-Control": "public, max-age=60",
+      ...CORS_PUB
+    });
+    res.end(JSON.stringify(cuerpo));
+  };
+  try {
+    const tienda = String(url.searchParams.get("shop") || "").toLowerCase().replace(/[^a-z0-9.\-]/g, "");
+    if (!/^[a-z0-9-]+\.myshopify\.com$/.test(tienda)) return responder(400, { activo: false });
+    const cfg = await leerConfigCod(tienda);
+    const { instalado, ...publica } = cfg;
+    return responder(200, { ...publica, tienda, app_url: URL_APP });
+  } catch (e) {
+    return responder(200, { activo: false });
+  }
+}
+
 // ---------- servidor ----------
 
 const servidor = http.createServer(async (req, res) => {
@@ -549,8 +574,9 @@ const servidor = http.createServer(async (req, res) => {
     // --- pedido COD desde la tienda del merchant (público, con CORS) ---
     if (url.pathname === "/cod/pedido") return await pedidoCod(req, res);
 
-    // --- config pública de bundles (la trae el app embed del storefront) ---
+    // --- config pública de bundles/COD (la trae el app embed del storefront) ---
     if (url.pathname === "/publico/bundles") return await bundlesPublico(req, res, url);
+    if (url.pathname === "/publico/cod") return await codPublico(req, res, url);
 
     // TEMPORAL: monta el contenido del nicho (páginas) en una tienda, usando su
     // sesión de la DB. Gated por el secreto de la app. Se borra cuando la

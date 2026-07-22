@@ -1,0 +1,33 @@
+{% comment %}
+  TiendaIQ — Formulario contra reembolso / COD (app embed).
+  Se activa desde el editor de temas: Personalizar > Insertar bloque de app >
+  "TiendaIQ COD". Solo actúa en páginas de producto.
+
+  Deja en window la URL pública desde donde el JS trae la config del formulario
+  (misma que hoy viaja embebida en la inyección directa; sin secretos). El
+  form se monta solo después del botón de compra y crea el pedido real
+  server-side vía /cod/pedido.
+{% endcomment %}
+{%- if product -%}
+  <script>
+    window.TIENDAIQ_COD_SRC =
+      "{{ block.settings.app_url | default: 'https://tiendaiq.onrender.com' }}/publico/cod?shop={{ shop.permanent_domain }}";
+  </script>
+  {{ 'tiendaiq-cod.css' | asset_url | stylesheet_tag }}
+  <script src="{{ 'tiendaiq-cod.js' | asset_url }}" defer></script>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "TiendaIQ COD",
+  "target": "body",
+  "settings": [
+    {
+      "type": "text",
+      "id": "app_url",
+      "label": "URL de la app (no cambiar)",
+      "default": "https://tiendaiq.onrender.com"
+    }
+  ]
+}
+{% endschema %}
