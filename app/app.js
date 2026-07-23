@@ -156,8 +156,8 @@
       bundle: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8l9-4 9 4-9 4z"/><path d="M3 8v8l9 4 9-4V8"/><path d="M12 12v8"/></svg>`
     };
 
-    const pasoCard = (icono, titulo, texto, hecho, cola, tinte, off) => `
-      <article class="paso-card paso-card--${tinte} ${off ? "paso-card--off" : ""}" ${off ? 'aria-disabled="true"' : ""}>
+    const pasoCard = (icono, titulo, texto, hecho, cola, tinte) => `
+      <article class="paso-card paso-card--${tinte}">
         <div class="paso-card__icono ${hecho ? "paso-card__icono--hecho" : ""}">${icono}</div>
         <div class="paso-card__titulo">${titulo}</div>
         <p class="paso-card__texto">${texto}</p>
@@ -182,12 +182,22 @@
         <div class="metrica__valor">${valor}</div>
       </div>`;
 
+    // Iconos de los botones de la cabecera (SVG de línea, no glyphs).
+    const IC_PAGINAS = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3.5" width="14" height="17" rx="2"/><path d="M9 8.5h6M9 12h6M9 15.5h4"/></svg>`;
+
+    // Últimas páginas publicadas: dato REAL de la DB. Solo se muestra la sección
+    // si hay algo que mostrar — nada de listas vacías ni de embudos en cero.
+    const publicadasLista = estado.paginas.filter((p) => p.estado === "publicada");
+
     vista.innerHTML = `
       <div class="inicio-cabecera">
-        <h1>Bienvenido a TiendaIQ</h1>
+        <div>
+          <h1>Bienvenido a TiendaIQ</h1>
+          <p class="inicio-cabecera__sub">Generá páginas de producto con IA, cobrá contra reembolso y armá descuentos por volumen — todo desde acá.</p>
+        </div>
         <div class="inicio-cabecera__acciones">
-          <button class="btn btn--fantasma" id="ir-paginas">❐ Ver mis páginas</button>
-          <button class="btn btn--marca" id="ir-crear">✦ Crear página de producto con IA</button>
+          <button class="btn btn--fantasma" id="ir-paginas">${IC_PAGINAS} Ver mis páginas</button>
+          <button class="btn btn--marca" id="ir-crear">${ICONO_PASO.chispa} Crear página con IA</button>
         </div>
       </div>
 
@@ -253,21 +263,27 @@
               : `<button class="btn btn--chico" id="paso-bundles">${(estado.inicioBundles?.lista || []).length ? "Inyectar en el tema" : "Crear bundle"}</button>`,
             "azul"
           )}
-          ${pasoCard(
-            ICONO_PASO.tienda,
-            "Crear tu tienda con IA",
-            "Una tienda Shopify completa armada desde cero.",
-            false,
-            `<span class="chip-estado chip-estado--pronto">Próximamente</span>`,
-            "violeta",
-            true
+        </div>
+      </section>
+
+      <section class="tarjeta">
+        <div class="tarjeta__titulo">Tus números</div>
+        <div class="panel__sub">Sincronizado con tu tienda, en tiempo real</div>
+        <div class="metricas">
+          ${metrica(ICONO_METRICA.pagina, "Páginas creadas", creadas, "violeta")}
+          ${metrica(ICONO_METRICA.check, "Publicadas", publicadas, "verde")}
+          ${metrica(ICONO_METRICA.lapiz, "Borradores", creadas - publicadas)}
+          ${metrica(
+            ICONO_METRICA.estrella,
+            "Plan",
+            plan.plan === "pro" ? "Pro · sin límite" : `${plan.usadas} de ${plan.limite}`
           )}
         </div>
       </section>
 
       <section class="tarjeta">
         <div class="tarjeta__titulo">Herramientas</div>
-        <div class="panel__sub">Explorá lo que TiendaIQ puede hacer por tu tienda.</div>
+        <div class="tarjeta__titulo-sub panel__sub">Lo que TiendaIQ puede hacer por tu tienda.</div>
         <div class="herramientas">
           <div class="herramienta">
             <div class="herramienta__nombre">Páginas de producto con IA</div>
@@ -313,100 +329,33 @@
               </div>
             </div>
           </div>
-          <div class="herramienta">
-            <div class="herramienta__nombre">Tienda Shopify con IA</div>
-            <p>Una tienda completa armada por IA desde cero.</p>
-            <button class="btn btn--chico btn--fantasma" disabled>Próximamente</button>
-            <div class="herramienta__preview herramienta__preview--img">
-              <img src="/portadas/portada-tienda.png" alt="Vista previa: tienda Shopify con IA" loading="lazy">
-            </div>
-          </div>
         </div>
       </section>
 
-      <section class="tarjeta">
-        <div class="tarjeta__titulo">Tus números</div>
-        <div class="panel__sub">Sincronizado con tu tienda, en tiempo real</div>
-        <div class="metricas">
-          ${metrica(ICONO_METRICA.pagina, "Páginas creadas", creadas, "violeta")}
-          ${metrica(ICONO_METRICA.check, "Publicadas", publicadas, "verde")}
-          ${metrica(ICONO_METRICA.lapiz, "Borradores", creadas - publicadas)}
-          ${metrica(
-            ICONO_METRICA.estrella,
-            "Plan",
-            plan.plan === "pro" ? "Pro · sin límite" : `${plan.usadas} de ${plan.limite}`
-          )}
-        </div>
-      </section>
-
-      <section class="tarjeta">
-        <div class="tarjeta__titulo">Resumen de rendimiento</div>
-        <div class="panel__sub">Tu embudo, hitos y mejores páginas de producto</div>
-        <div class="resumen-grilla">
-          <div class="resumen-card">
-            <div class="resumen-card__titulo">Embudo de conversión</div>
-            <div class="resumen-card__sub">De la visita a la compra</div>
-            <div class="embudo-fila">
-              <div class="embudo-fila__cab"><span>Vistas de página</span></div>
-              <div class="embudo-fila__valor">0</div>
-              <div class="mini-barra"><div style="width:0%"></div></div>
-            </div>
-            <div class="embudo-fila">
-              <div class="embudo-fila__cab"><span>Añadido al carrito</span><span class="embudo-fila__pct">0.0%<small>de las vistas de página</small></span></div>
-              <div class="embudo-fila__valor">0</div>
-              <div class="mini-barra"><div style="width:0%"></div></div>
-            </div>
-            <div class="embudo-fila">
-              <div class="embudo-fila__cab"><span>Compras</span><span class="embudo-fila__pct">0.0%<small>de las vistas de página</small></span></div>
-              <div class="embudo-fila__valor">0</div>
-              <div class="mini-barra"><div style="width:0%"></div></div>
-            </div>
-          </div>
-
-          <div class="resumen-card">
-            <div class="resumen-card__titulo">Hitos</div>
-            <div class="resumen-card__sub">Desbloqueá hitos a medida que crecés</div>
-            ${["Primera venta", "Primeros 100 $ de ingresos", "Primeros 1.000 $ de ingresos", "Primeros 100 pedidos"]
-              .map(
-                (h) => `
-                <div class="hito-fila">
-                  <div class="hito-fila__cab"><span>${h}</span><span>0%</span></div>
-                  <div class="mini-barra"><div style="width:0%"></div></div>
-                </div>`
-              )
-              .join("")}
-          </div>
-
-          <div class="resumen-card">
-            <div class="resumen-card__titulo">Páginas de producto principales</div>
-            <div class="resumen-card__sub">Tus últimas páginas publicadas</div>
-            ${
-              publicadas
-                ? estado.paginas
-                    .filter((p) => p.estado === "publicada")
-                    .slice(0, 4)
-                    .map(
-                      (p) => `
-                      <div class="pagina-mini">
-                        <div class="pagina-mini__foto">${p.imagen ? `<img src="${esc(p.imagen)}" alt="" loading="lazy">` : "🖼"}</div>
-                        <div class="pagina-mini__titulo">${esc(p.titulo || "Sin título")}</div>
-                        ${p.url_publica ? `<a href="${esc(p.url_publica)}" target="_blank">Ver</a>` : ""}
-                      </div>`
-                    )
-                    .join("")
-                : `<div class="resumen-vacio">
-                     <div class="resumen-vacio__icono">◧</div>
-                     <div class="resumen-vacio__titulo">Aún no hay datos de productos</div>
-                     <p>Creá tu primera página de producto con IA para empezar a registrar ingresos acá.</p>
-                     <button class="btn btn--chico" id="resumen-crear">＋ Crear página de producto con IA</button>
-                   </div>`
-            }
-          </div>
-        </div>
-      </section>`;
+      ${
+        publicadasLista.length
+          ? `<section class="tarjeta">
+               <div class="tarjeta__titulo">Últimas páginas publicadas</div>
+               <div class="tarjeta__titulo-sub panel__sub">Están vivas en tu tienda ahora mismo.</div>
+               <div class="pub-lista">
+                 ${publicadasLista
+                   .slice(0, 5)
+                   .map(
+                     (p) => `
+                     <div class="pub-fila">
+                       <div class="pub-fila__foto">${p.imagen ? `<img src="${esc(p.imagen)}" alt="" loading="lazy">` : "🖼"}</div>
+                       <div class="pub-fila__titulo">${esc(p.titulo || "Sin título")}</div>
+                       ${p.url_publica ? `<a class="pub-fila__link" href="${esc(p.url_publica)}" target="_blank" rel="noopener">Ver en la tienda ↗</a>` : ""}
+                     </div>`
+                   )
+                   .join("")}
+               </div>
+             </section>`
+          : ""
+      }`;
 
     const aLista = () => cargarLista();
-    ["ir-crear", "paso-crear", "herr-crear", "resumen-crear"].forEach((id) => {
+    ["ir-crear", "paso-crear", "herr-crear"].forEach((id) => {
       const b = $(id);
       if (b) b.onclick = aLista;
     });

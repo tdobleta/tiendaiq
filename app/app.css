@@ -306,7 +306,10 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
   gap: 16px; flex-wrap: wrap; margin-bottom: 28px;
 }
 .inicio-cabecera h1 { font-size: 20px; color: var(--negro); font-weight: 700; letter-spacing: -.2px; }
+.inicio-cabecera__sub { font-size: 13px; color: var(--suave); margin-top: 4px; max-width: 560px; }
 .inicio-cabecera__acciones { display: flex; gap: 10px; flex-wrap: wrap; }
+/* Los íconos de los botones acompañan al texto sin robarle protagonismo. */
+.btn svg { width: 15px; height: 15px; flex-shrink: 0; }
 
 /* Banner de suscripción: tarjeta blanca con el ícono rojo, como PagePilot
    (no un cartel rojo entero). */
@@ -342,7 +345,8 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
   transition: width .2s ease-out;
 }
 
-.pasos-grilla { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+/* Cuatro pasos, cuatro columnas: la grilla y el contador dicen lo mismo. */
+.pasos-grilla { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
 .paso-card {
   border: 1px solid var(--borde); border-radius: var(--radio); background: var(--superficie);
   padding: 18px; display: flex; flex-direction: column; align-items: flex-start; gap: 0;
@@ -368,7 +372,6 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
   height: 24px; padding: 0 10px; border-radius: 999px; line-height: 1;
 }
 .chip-estado--ok { background: var(--ok-fondo); color: #157f3d; }
-.chip-estado--pronto { background: var(--fondo); color: var(--suave); border: 1px dashed #d6d6dc; }
 .chip-estado--ia { background: var(--ia-fondo); color: var(--ia); }
 
 /* Tiles de métrica al estilo PagePilot: fila ícono+label, valor grande
@@ -394,7 +397,10 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
 
 /* Herramientas: título, texto, botón y una vista en miniatura decorativa,
    como las tarjetas con captura de PagePilot. */
-.herramientas { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+/* El subtítulo de sección pegado al título (mismo patrón que panel__sub). */
+.tarjeta__titulo + .tarjeta__titulo-sub { margin: -14px 0 20px; }
+
+.herramientas { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
 .herramienta {
   border: 1px solid var(--borde); border-radius: var(--radio); padding: 20px;
   background: var(--superficie);
@@ -454,59 +460,29 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
   box-shadow: var(--sombra-m);
 }
 
-/* ---------- resumen de rendimiento ---------- */
+/* ---------- últimas páginas publicadas ---------- */
 
-.resumen-grilla { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-.resumen-card {
-  border: 1px solid var(--borde); border-radius: var(--radio); background: #fff;
-  padding: 20px;
+.pub-lista { display: flex; flex-direction: column; }
+.pub-fila {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 8px; margin: 0 -8px; border-radius: var(--radio-s);
+  border-bottom: 1px solid var(--borde-suave);
+  transition: background .15s ease-out;
 }
-.resumen-card__titulo { font-size: 13px; font-weight: 600; color: var(--negro); }
-.resumen-card__sub { font-size: 13px; color: var(--suave); margin: 1px 0 16px; }
-
-.mini-barra { height: 4px; border-radius: 999px; background: var(--borde-suave); overflow: hidden; }
-.mini-barra div { height: 100%; background: var(--gradiente-marca); border-radius: 999px; transition: width .2s ease-out; }
-
-.embudo-fila { margin-bottom: 14px; }
-.embudo-fila:last-child { margin-bottom: 0; }
-.embudo-fila__cab {
-  display: flex; justify-content: space-between; align-items: flex-start;
-  font-size: 13px; color: var(--texto);
-}
-.embudo-fila__pct { text-align: right; font-weight: 600; color: var(--negro); }
-.embudo-fila__pct small { display: block; font-weight: 400; font-size: 11.5px; color: var(--suave); }
-.embudo-fila__valor { font-size: 15px; font-weight: 700; color: var(--negro); margin: 2px 0 6px; }
-
-.hito-fila { margin-bottom: 14px; }
-.hito-fila:last-child { margin-bottom: 0; }
-.hito-fila__cab {
-  display: flex; justify-content: space-between; font-size: 13px;
-  color: var(--texto); margin-bottom: 6px;
-}
-.hito-fila__cab span:last-child { font-weight: 600; color: var(--negro); }
-
-.pagina-mini { display: flex; align-items: center; gap: 10px; padding: 7px 0; }
-.pagina-mini__foto {
-  width: 34px; height: 34px; border-radius: 7px; overflow: hidden; flex-shrink: 0;
+.pub-fila:hover { background: #fafafb; }
+.pub-fila:last-child { border-bottom: none; }
+.pub-fila__foto {
+  width: 40px; height: 40px; border-radius: 8px; overflow: hidden; flex-shrink: 0;
   background: var(--fondo); border: 1px solid var(--borde);
-  display: grid; place-items: center; font-size: 14px;
+  display: grid; place-items: center; font-size: 15px;
 }
-.pagina-mini__foto img { width: 100%; height: 100%; object-fit: cover; }
-.pagina-mini__titulo {
+.pub-fila__foto img { width: 100%; height: 100%; object-fit: cover; }
+.pub-fila__titulo {
   flex: 1; font-size: 13px; color: var(--negro); font-weight: 500;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.pagina-mini a { font-size: 12.5px; color: var(--suave); text-decoration: none; }
-.pagina-mini a:hover { color: var(--negro); text-decoration: underline; }
-
-.resumen-vacio { text-align: center; padding: 18px 8px; }
-.resumen-vacio__icono {
-  width: 44px; height: 44px; border-radius: 50%; margin: 0 auto 10px;
-  background: var(--fondo); display: grid; place-items: center;
-  font-size: 18px; color: var(--suave);
-}
-.resumen-vacio__titulo { font-size: 13px; font-weight: 600; color: var(--negro); margin-bottom: 4px; }
-.resumen-vacio p { font-size: 13px; color: var(--suave); margin-bottom: 14px; }
+.pub-fila__link { font-size: 12.5px; color: var(--suave); text-decoration: none; flex-shrink: 0; }
+.pub-fila__link:hover { color: var(--negro); text-decoration: underline; }
 
 /* ---------- tabla de páginas ---------- */
 
@@ -547,11 +523,17 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
 .pagina-fila__link:hover { color: var(--negro); text-decoration: underline; }
 .pagina-fila > .btn { justify-self: end; }
 
+/* Antes de colapsar a una sola columna, los 4 pasos pasan por 2×2: en una
+   pantalla mediana cuatro columnas quedan apretadas. */
+@media (max-width: 1100px) {
+  .pasos-grilla { grid-template-columns: repeat(2, 1fr); }
+  .herramientas { grid-template-columns: 1fr; }
+}
+
 @media (max-width: 860px) {
   .pasos-grilla { grid-template-columns: 1fr; }
   .metricas { grid-template-columns: repeat(2, 1fr); }
   .herramientas { grid-template-columns: 1fr; }
-  .resumen-grilla { grid-template-columns: 1fr; }
   .pagina-tabla__cabecera { display: none; }
   .pagina-fila { grid-template-columns: 48px 1fr auto; grid-auto-flow: dense; }
   .pagina-fila__link { display: none; }
@@ -1023,7 +1005,7 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
    ajustes por pantalla.
    ============================================================ */
 
-.pasos-grilla > *, .resumen-grilla > *, .metricas > *, .herramientas > *,
+.pasos-grilla > *, .metricas > *, .herramientas > *,
 .dos-columnas > *, .grilla > * { min-width: 0; }
 
 @media (max-width: 700px) {
@@ -1081,13 +1063,6 @@ summary:focus-visible, label:focus-visible {
   border-radius: 4px;
 }
 
-/* paso "Próximamente": deshabilitado visual, sin interacción implícita */
-.paso-card--off { opacity: .55; }
-.paso-card--off:hover { box-shadow: none; transform: none; }
-
-/* resumen: aire garantizado para los gráficos */
-.resumen-card { min-height: 200px; }
-
 /* ============================================================
    Disciplina PagePilot: neutro, denso y sobrio. El color se usa
    una sola vez y pálido; todo lo demás es negro, gris y borde fino.
@@ -1110,7 +1085,6 @@ summary:focus-visible, label:focus-visible {
 .paso-card__icono svg { width: 14px; height: 14px; }
 .paso-card__icono--hecho { background: var(--negro); border: none; color: #fff; box-shadow: none; }
 .paso-card:hover { box-shadow: none; transform: none; }
-.paso-card--off:hover { box-shadow: none; }
 
 /* barra de progreso sobria */
 .progreso__barra div { background: var(--negro); }
