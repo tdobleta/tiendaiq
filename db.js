@@ -42,6 +42,11 @@ async function pg() {
       actualizada TIMESTAMPTZ DEFAULT now(),
       PRIMARY KEY (tienda, id)
     );
+    CREATE TABLE IF NOT EXISTS estados_oauth (
+      estado TEXT PRIMARY KEY,
+      tienda TEXT NOT NULL,
+      vence  TIMESTAMPTZ NOT NULL
+    );
   `);
   return pool;
 }
@@ -151,8 +156,50 @@ async function listarPaginasDB(tienda) {
   return fileListar(path.join(DIR_PAGINAS, seguro(tienda)));
 }
 
+// ---- estados de OAuth ----
+//
+// El `state` ata el callback de Shopify a una instalación que arrancamos
+// nosotros. Antes vivía en un Map en memoria: cada reinicio de Render (y el
+// free tier duerme el proceso) borraba los pendientes, y el merchant que
+// venía del "Instalar" se comía un "state inválido" sin explicación. Con más
+// de una instancia fallaba siempre, porque el callback podía caer en otra.
+//
+// De un solo uso: se borra al leerlo, exista o no.
+
+const DIR_ESTADOS = path.join(__dirname, "estados");
+
+async function guardarEstadoDB(estado, tienda, venceMs) {
+  if (USA_PG) {
+    const p = await pg();
+    await p.query(
+      `INSERT INTO estados_oauth (estado, tienda, vence) VALUES ($1, $2, to_timestamp($3 / 1000.0))
+       ON CONFLICT (estado) DO NOTHING`,
+      [estado, tienda, venceMs]
+    );
+  } else {
+    fileGuardar(DIR_ESTADOS, estado, { estado, tienda, vence: venceMs });
+  }
+}
+
+// Devuelve { tienda } si el estado existía y no venció; null en cualquier otro
+// caso. Siempre lo borra: un state se usa una vez.
+async function consumirEstadoDB(estado) {
+  if (!estado) return null;
+  if (USA_PG) {
+    const p = await pg();
+    // De paso barre los vencidos: la tabla no crece con instalaciones a medias.
+    await p.query(`DELETE FROM estados_oauth WHERE vence < now()`);
+    const r = await p.query(`DELETE FROM estados_oauth WHERE estado = $1 RETURNING tienda`, [estado]);
+    return r.rows[0] ? { tienda: r.rows[0].tienda } : null;
+  }
+  const e = fileLeer(DIR_ESTADOS, estado);
+  fileBorrar(DIR_ESTADOS, estado);
+  return e && e.vence > Date.now() ? { tienda: e.tienda } : null;
+}
+
 module.exports = {
   USA_PG,
   guardarTiendaDB, leerTiendaDB, borrarTiendaDB, listarTiendasDB,
-  guardarPaginaDB, leerPaginaDB, listarPaginasDB
+  guardarPaginaDB, leerPaginaDB, listarPaginasDB,
+  guardarEstadoDB, consumirEstadoDB
 };

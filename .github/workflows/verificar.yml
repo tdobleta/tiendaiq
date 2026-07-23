@@ -1,0 +1,40 @@
+# ============================================================
+# Verificación antes de que Render deploye.
+#
+# Render autodeploya de `main`: sin esto, un error de sintaxis o un server que
+# no arranca llega a las tiendas de los merchants y el rollback es a mano.
+#
+# No pretende ser una suite de tests (todavía no hay). Es la red mínima:
+# que todo parsee y que el proceso levante y conteste lo que tiene que
+# contestar. Ver pruebas/humo.js.
+# ============================================================
+
+name: verificar
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      # Sin lockfile de dependencias raras: `pg` es la única nativa y el smoke
+      # test corre sin base, así que alcanza con instalar.
+      - run: npm install --no-audit --no-fund
+
+      - name: Sintaxis de todos los .js
+        run: npm run verificar
+
+      - name: Coherencia entre archivos de config
+        run: npm run coherencia
+
+      - name: Prueba de humo
+        run: npm run humo

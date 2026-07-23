@@ -1,4 +1,7 @@
-api_version = "2025-01"
+# Misma versión de API que usa el cliente GraphQL (shopify.js). Tenerlas
+# desalineadas es cómo se cuelan diferencias de comportamiento difíciles de
+# rastrear entre lo que hace el admin y lo que ve el storefront.
+api_version = "2026-07"
 
 [[extensions]]
 type = "theme"

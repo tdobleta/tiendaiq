@@ -17,7 +17,43 @@ const path = require("path");
 const Anthropic = require("@anthropic-ai/sdk");
 const { gql, env, sesionDeEnv } = require("./shopify");
 
-const MODELO = "claude-opus-4-8";
+// El modelo y el esfuerzo salen de env para poder compararlos sobre los mismos
+// productos sin tocar código ni deployar.
+//
+//   MODELO_IA=claude-opus-4-8   el más capaz; ~$5/$25 por millón de tokens
+//   MODELO_IA=claude-sonnet-5   default; ~$3/$15 (y $2/$10 hasta el 31/8/2026)
+//
+// La tarea —mirar las fotos del producto y escribir el copy en un JSON con
+// esquema fijo— no necesita el modelo más caro. Sonnet 5 tiene la misma visión
+// en alta resolución, el mismo `output_config.format` y el mismo `effort`, así
+// que es intercambiable sin cambiar nada más. Antes de fijar uno, comparar la
+// página generada por los dos sobre el mismo producto.
+const MODELO = env.MODELO_IA || "claude-sonnet-5";
+
+// Cuánto delibera el modelo antes de escribir: low | medium | high | xhigh | max.
+// La salida cuesta 5 veces más que la entrada, y el esfuerzo es lo que más la
+// mueve — es la palanca principal de costo y de tiempo de generación.
+const ESFUERZO = env.ESFUERZO_IA || "medium";
+
+// Las fotos del producto se le mandan al modelo para que las mire, y cada una
+// consume tokens de entrada según su tamaño. El CDN de Shopify redimensiona
+// solo con ?width=, así que una foto de 2048px que costaba ~4000 tokens pasa a
+// ~1200 sin que el modelo pierda nada de lo que necesita ver.
+//
+// OJO: esto es SOLO para lo que se le manda al modelo. La URL original es la
+// que se guarda en `urls` y termina en la página publicada — ahí sí queremos
+// la foto en su tamaño completo.
+const ANCHO_ANALISIS = 1200;
+
+function urlParaAnalisis(url) {
+  try {
+    const u = new URL(url);
+    u.searchParams.set("width", String(ANCHO_ANALISIS));
+    return u.toString();
+  } catch {
+    return url; // si no parsea, que vaya como está antes que romper la generación
+  }
+}
 const SALIDA = path.join(__dirname, "plantilla-producto", "data.js");
 const DIR_AVATARES = path.join(__dirname, "plantilla-producto", "avatares");
 
@@ -356,7 +392,7 @@ async function generar(fuente, medios, { idioma = "es", angulo = "" } = {}) {
   const contenido = [];
   for (const m of medios) {
     contenido.push({ type: "text", text: `media_id: ${m.media_id}` });
-    contenido.push({ type: "image", source: { type: "url", url: m.url } });
+    contenido.push({ type: "image", source: { type: "url", url: urlParaAnalisis(m.url) } });
   }
 
   contenido.push({
@@ -372,17 +408,27 @@ async function generar(fuente, medios, { idioma = "es", angulo = "" } = {}) {
     ].join("\n")
   });
 
-  const r = await cliente.messages.create({
+  // En streaming, no porque queramos mostrar la página armándose (todavía), sino
+  // porque generar tarda 30-40 segundos y una request HTTP que se queda muda
+  // tanto tiempo la corta cualquiera del camino: el proxy de Render, el iframe
+  // del admin, el navegador. Y cuando se corta, el modelo termina igual y lo
+  // pagamos igual — la página se pierde y el merchant ve un error.
+  //
+  // Con streaming la conexión nunca queda muda, así que nadie la corta.
+  // getFinalMessage() devuelve lo mismo que devolvía create(): el resto de la
+  // función no se entera.
+  const flujo = cliente.messages.stream({
     model: MODELO,
     max_tokens: 16000,
     thinking: { type: "adaptive" },
     output_config: {
-      effort: "high",
+      effort: ESFUERZO,
       format: { type: "json_schema", schema: ESQUEMA }
     },
     system: SISTEMA.replace(/\{idioma\}/g, idioma === "es" ? "español rioplatense (voseo)" : idioma),
     messages: [{ role: "user", content: contenido }]
   });
+  const r = await flujo.finalMessage();
 
   if (r.stop_reason === "refusal") {
     throw new Error(`El modelo rechazó el pedido: ${r.stop_details?.explanation ?? "sin detalle"}`);

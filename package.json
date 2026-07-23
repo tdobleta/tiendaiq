@@ -5,7 +5,11 @@
     "pg": "^8.22.0"
   },
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "verificar": "node pruebas/sintaxis.js",
+    "coherencia": "node pruebas/coherencia.js",
+    "humo": "node pruebas/humo.js",
+    "probar": "npm run verificar && npm run coherencia && npm run humo"
   },
   "engines": {
     "node": ">=20"

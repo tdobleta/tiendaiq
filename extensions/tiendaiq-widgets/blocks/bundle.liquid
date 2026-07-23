@@ -6,6 +6,8 @@
   Deja en window los datos del producto y la URL pública desde donde el widget
   trae la config del bundle (mismo dato que hoy viaja embebido en la inyección
   directa; sin secretos). El widget se monta solo cerca del botón de compra.
+
+  La URL de la app va fija — ver el comentario en cod.liquid.
 {% endcomment %}
 {%- if product -%}
   <script>
@@ -17,7 +19,7 @@
       moneda: {{ shop.money_format | json }}
     };
     window.TIENDAIQ_BUNDLES_SRC =
-      "{{ block.settings.app_url | default: 'https://tiendaiq.onrender.com' }}/publico/bundles?shop={{ shop.permanent_domain }}";
+      "https://tiendaiq.com/publico/bundles?shop={{ shop.permanent_domain }}";
   </script>
   {{ 'tiendaiq-bundle.css' | asset_url | stylesheet_tag }}
   <script src="{{ 'tiendaiq-bundle.js' | asset_url }}" defer></script>
@@ -27,13 +29,6 @@
 {
   "name": "TiendaIQ Bundles",
   "target": "body",
-  "settings": [
-    {
-      "type": "text",
-      "id": "app_url",
-      "label": "URL de la app (no cambiar)",
-      "default": "https://tiendaiq.onrender.com"
-    }
-  ]
+  "settings": []
 }
 {% endschema %}
