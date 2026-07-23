@@ -7,3 +7,5 @@ api_version = "2026-07"
 type = "theme"
 name = "TiendaIQ"
 handle = "tiendaiq-widgets"
+
+uid = "5b52e443-37e7-631d-224e-26ee17f92a1a5bd53bc3"
