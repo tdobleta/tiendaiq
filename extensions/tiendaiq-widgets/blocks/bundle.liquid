@@ -19,7 +19,7 @@
       moneda: {{ shop.money_format | json }}
     };
     window.TIENDAIQ_BUNDLES_SRC =
-      "https://tiendaiq.onrender.com/publico/bundles?shop={{ shop.permanent_domain }}";
+      "https://tiendaiq.com/publico/bundles?shop={{ shop.permanent_domain }}";
   </script>
   {{ 'tiendaiq-bundle.css' | asset_url | stylesheet_tag }}
   <script src="{{ 'tiendaiq-bundle.js' | asset_url }}" defer></script>

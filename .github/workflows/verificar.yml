@@ -33,5 +33,8 @@ jobs:
       - name: Sintaxis de todos los .js
         run: npm run verificar
 
+      - name: Coherencia entre archivos de config
+        run: npm run coherencia
+
       - name: Prueba de humo
         run: npm run humo
