@@ -8,8 +8,9 @@
     "start": "node server.js",
     "verificar": "node pruebas/sintaxis.js",
     "coherencia": "node pruebas/coherencia.js",
+    "unidad": "node --test \"pruebas/*.test.js\"",
     "humo": "node pruebas/humo.js",
-    "probar": "npm run verificar && npm run coherencia && npm run humo"
+    "probar": "npm run verificar && npm run coherencia && npm run unidad && npm run humo"
   },
   "engines": {
     "node": ">=20"

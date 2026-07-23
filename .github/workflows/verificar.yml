@@ -36,5 +36,8 @@ jobs:
       - name: Coherencia entre archivos de config
         run: npm run coherencia
 
+      - name: Pruebas de unidad (facturación y COD)
+        run: npm run unidad
+
       - name: Prueba de humo
         run: npm run humo
