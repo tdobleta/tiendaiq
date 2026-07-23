@@ -351,20 +351,32 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
   border: 1px solid var(--borde); border-radius: var(--radio); background: var(--superficie);
   padding: 18px; display: flex; flex-direction: column; align-items: flex-start; gap: 0;
 }
-/* Círculo punteado = paso pendiente; negro sólido = hecho. Igual que la
-   referencia: el estado se lee de un vistazo por el ícono. */
+/* Tile sólido de color por tarjeta: el color identifica la función (violeta =
+   IA, verde = publicar, naranja = COD, azul = bundles). El estado lo marca el
+   chip "Completado", no el ícono. */
 .paso-card__icono {
-  width: 28px; height: 28px; border-radius: 50%;
-  border: 1.3px dashed #cfcfd4; background: var(--superficie); color: var(--negro);
-  display: grid; place-items: center; margin-bottom: 12px; flex-shrink: 0;
+  width: 42px; height: 42px; border-radius: 12px;
+  color: #fff; background: var(--paso-tinte, #1a1a1a);
+  display: grid; place-items: center; margin-bottom: 15px; flex-shrink: 0;
+  box-shadow: 0 5px 14px -4px var(--paso-sombra, rgba(0, 0, 0, .3));
 }
-.paso-card__icono svg { width: 13px; height: 13px; display: block; }
-.paso-card__icono--hecho { background: var(--negro); border: none; color: #fff; }
-.paso-card__titulo { font-size: 13px; font-weight: 600; color: var(--negro); line-height: 1.4; }
+.paso-card__icono svg { width: 20px; height: 20px; display: block; }
+/* Hecho: mantiene el tinte (no lo pisa a negro); el chip dice el estado. */
+.paso-card__icono--hecho { background: var(--paso-tinte, #1a1a1a); border: none; color: #fff; }
+.paso-card__titulo {
+  font-size: 14px; font-weight: 700; color: var(--negro);
+  line-height: 1.3; letter-spacing: -0.01em;
+}
 .paso-card__texto {
-  font-size: 12.5px; color: var(--suave); line-height: 1.45;
-  margin: 3px 0 12px; flex: 1;
+  font-size: 13px; color: #4b5563; line-height: 1.5; font-weight: 450;
+  margin: 5px 0 15px; flex: 1;
 }
+
+/* Los tints: colores sólidos, saturados pero sobrios, en línea con la marca. */
+.paso-card--violeta { --paso-tinte: #5646d6; --paso-sombra: rgba(86, 70, 214, .38); }
+.paso-card--verde   { --paso-tinte: #10a367; --paso-sombra: rgba(16, 163, 103, .38); }
+.paso-card--naranja { --paso-tinte: #ea580c; --paso-sombra: rgba(234, 88, 12, .38); }
+.paso-card--azul    { --paso-tinte: #1e8fd5; --paso-sombra: rgba(30, 143, 213, .38); }
 
 /* Badges: un solo lenguaje para todos los estados. Altura fija de 24px. */
 .chip-estado {
@@ -1073,17 +1085,17 @@ summary:focus-visible, label:focus-visible {
 .btn--marca { background: var(--negro); }
 .btn--marca:hover:not(:disabled) { background: #2e2e33; }
 
-/* pasos: chip cuadrado chico — negro sólido hecho, punteado pendiente */
+/* Override global (va al final del archivo, así que MANDA sobre la definición
+   de arriba). El tile del paso usa el color sólido de su feature. */
 .paso-card { padding: 16px; gap: 0; }
 .paso-card__icono {
-  width: 30px; height: 30px;
-  border-radius: 8px;
-  border: 1.3px dashed #cfcfd4;
-  background: var(--superficie);
-  color: var(--negro);
+  width: 38px; height: 38px;
+  border-radius: 11px;
+  color: #fff;
+  background: var(--paso-tinte, #1a1a1a);
 }
-.paso-card__icono svg { width: 14px; height: 14px; }
-.paso-card__icono--hecho { background: var(--negro); border: none; color: #fff; box-shadow: none; }
+.paso-card__icono svg { width: 18px; height: 18px; }
+.paso-card__icono--hecho { background: var(--paso-tinte, #1a1a1a); border: none; color: #fff; }
 .paso-card:hover { box-shadow: none; transform: none; }
 
 /* barra de progreso sobria */
