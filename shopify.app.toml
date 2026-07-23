@@ -1,59 +1,42 @@
 # ============================================================
 # Configuración de la app para el CLI de Shopify.
 #
-# Este archivo es la fuente de verdad de lo que se sube al Partner Dashboard
-# con `shopify app deploy`: URLs, alcances y webhooks. Refleja EXACTAMENTE lo
-# que la app ya hace hoy en producción:
+# Este archivo es la fuente de verdad de lo que se sube al Partner Dashboard:
+# `shopify app deploy` sube esta config junto con el extension (Shopify lo
+# volvió obligatorio, por eso el CLI sacó include_config_on_deploy).
 #
-#   - alcances       → los mismos de ALCANCES en auth.js
-#   - redirect       → /auth/callback, que es lo que arma iniciarInstalacion
-#   - webhooks       → /webhooks, el único handler (server.js), que verifica
-#                      el HMAC sobre los bytes crudos antes de mirar el tópico
-#
-# ⚠ ANTES del primer `shopify app deploy`, correr `shopify app config link` y
-#   elegir la app de producción. Ese comando reescribe este archivo con lo que
-#   ya está cargado en el Partner Dashboard: si algo de acá no coincide, se ve
-#   en el diff y se corrige antes de pisar la config real.
+# El orden seguro para tocarlo es: `shopify app config link` primero — trae lo
+# que el Dashboard tiene HOY y pisa este archivo — y recién después comparar y
+# corregir. Al hacerlo la primera vez apareció que el Dashboard declaraba solo
+# 4 alcances mientras auth.js pedía 11 (ver abajo).
 # ============================================================
 
 client_id = "91ac2b61f8d21cc0e788a34a81f2ad58"
 name = "TiendaIQ"
-handle = "tiendaiq"
+
+# El handle que Shopify ya le asignó a ESTA app (se ve en la URL del admin:
+# /store/<tienda>/apps/tiendaiq-3). Los handles "tiendaiq" y "tiendaiq-2" los
+# ocupan apps viejas de la misma cuenta de Partners, hechas en pruebas.
+#
+# PENDIENTE antes de publicar la ficha: borrar esas apps de prueba en el
+# Partner Dashboard para liberar "tiendaiq" y quedarse con el handle limpio.
+# El handle sale en la URL pública, así que conviene resolverlo antes del
+# review y no después, cuando ya haya merchants con la URL vieja.
+handle = "tiendaiq-3"
+
+# El dominio propio. Ver pruebas/coherencia.js: los dos app embeds tienen que
+# apuntar acá, y el chequeo falla si alguno se queda atrás.
 application_url = "https://tiendaiq.com"
 
 # La app vive adentro del admin de Shopify (App Bridge + iframe). Ver el
 # Content-Security-Policy de servirIndex() en server.js.
 embedded = true
 
-[access_scopes]
-# Mismo string que ALCANCES en auth.js. Si cambian ahí, cambian acá: el
-# Dashboard y el OAuth tienen que pedir lo mismo o las tiendas quedan a medio
-# autorizar.
-#
-#   read/write_products   páginas de producto con IA
-#   read/write_themes     inyección del formulario COD y del widget de bundles
-#   write_orders          crea el pedido real contra reembolso
-#   read/write_files      imágenes que sube el merchant (Files API)
-#   read/write_content    páginas About/Contact del módulo de contenido
-#   write_discounts       descuentos automáticos de los bundles
-#   write_online_store_navigation   menú principal en español
-scopes = "read_products,write_products,read_themes,write_themes,write_orders,read_files,write_files,read_content,write_content,write_discounts,write_online_store_navigation"
-
-# El merchant autoriza durante la instalación, no de a poco. Con esto en
-# false, Shopify pide todos los alcances de una en el OAuth.
-use_legacy_install_flow = false
-
-[auth]
-# Las DOS URLs quedan habilitadas mientras dure la mudanza de dominio. El
-# viejo sigue funcionando (Render responde igual en los dos), así que no hay
-# un instante de corte: si algo del dominio nuevo falla, las instalaciones
-# siguen entrando por el viejo.
-#
-# Sacar el de onrender una vez que tiendaiq.com esté verificado y estable.
-redirect_urls = [
-  "https://tiendaiq.com/auth/callback",
-  "https://tiendaiq.onrender.com/auth/callback"
-]
+[build]
+# El servidor es Node puro y se deploya en Render, no con el CLI de Shopify.
+# `shopify app deploy` acá sirve para dos cosas: publicar el theme app
+# extension de extensions/tiendaiq-widgets, y subir esta config.
+automatically_update_urls_on_dev = false
 
 [webhooks]
 api_version = "2026-07"
@@ -66,25 +49,61 @@ api_version = "2026-07"
   customer_deletion_url = "https://tiendaiq.com/webhooks"
   shop_deletion_url = "https://tiendaiq.com/webhooks"
 
-  # app/uninstalled          → borra el token al instante
-  # app_subscriptions/update → si cancelan o vence el plan, baja a gratis
+  # app/uninstalled y app_subscriptions/update NO se declaran acá.
   #
-  # auth.js también los registra por GraphQL al terminar la instalación. No se
-  # duplican: Shopify rechaza un segundo registro del mismo tópico y URL, y ese
-  # error se loguea y se ignora. Declararlos acá es lo que pide el review.
-  [[webhooks.subscriptions]]
-  topics = [ "app/uninstalled", "app_subscriptions/update" ]
-  uri = "https://tiendaiq.com/webhooks"
+  # Shopify rechaza el deploy si hay suscripciones de webhook en este archivo
+  # mientras use_legacy_install_flow siga en true: las suscripciones "de app"
+  # son parte de la instalación gestionada. Con el flujo legacy, los webhooks
+  # se registran por tienda, que es exactamente lo que auth.js ya hace por
+  # GraphQL al terminar cada instalación (webhookSubscriptionCreate).
+  #
+  # O sea: no se pierde nada, solo deja de estar duplicado. Cuando se migre a
+  # instalación gestionada, este bloque vuelve y el registro de auth.js sale.
+
+[access_scopes]
+# Mismo string que ALCANCES en auth.js — pruebas/coherencia.js falla si se
+# separan.
+#
+# El Dashboard tenía declarados SOLO los primeros cuatro. Funcionaba igual
+# porque con use_legacy_install_flow los alcances que valen son los de la URL
+# del OAuth (los que arma auth.js), no los declarados acá. Pero el review del
+# App Store mira lo declarado, así que se alinean.
+#
+#   read/write_products   páginas de producto con IA
+#   read/write_themes     inyección del formulario COD y del widget de bundles
+#   write_orders          crea el pedido real contra reembolso
+#   read/write_files      imágenes que sube el merchant (Files API)
+#   read/write_content    páginas About/Contact del módulo de contenido
+#   write_discounts       descuentos automáticos de los bundles
+#   write_online_store_navigation   menú principal en español
+scopes = "read_products,write_products,read_themes,write_themes,write_orders,read_files,write_files,read_content,write_content,write_discounts,write_online_store_navigation"
+
+# ⚠ EN true A PROPÓSITO, POR AHORA.
+#
+# Es como está instalada hoy la app y como funciona el OAuth de auth.js
+# (redirect clásico con ?scope=). Pasarlo a false activa la instalación
+# gestionada por Shopify, que es el camino moderno y el que conviene para el
+# App Store — pero cambia cómo se otorgan los alcances y cómo entra el
+# merchant, así que es una migración aparte, con su prueba de instalación
+# completa en la dev store. No se mezcla con el deploy del extension.
+use_legacy_install_flow = true
+
+optional_scopes = [ ]
+
+[auth]
+# Las DOS URLs quedan habilitadas mientras dure la mudanza de dominio. El
+# viejo sigue respondiendo (el toggle "Render Subdomain" está encendido), así
+# que no hay un instante de corte: si algo del dominio nuevo falla, las
+# instalaciones siguen entrando por el viejo.
+#
+# Sacar el de onrender cuando tiendaiq.com lleve unas semanas estable.
+redirect_urls = [
+  "https://tiendaiq.com/auth/callback",
+  "https://tiendaiq.onrender.com/auth/callback"
+]
 
 # Sin [app_proxy] a propósito: el widget del storefront habla con /publico/*
 # por CORS, no por proxy de app.
 
 [pos]
 embedded = false
-
-[build]
-# El servidor es Node puro y se deploya en Render, no con el CLI de Shopify.
-# `shopify app deploy` acá sirve para UNA sola cosa: publicar el theme app
-# extension de extensions/tiendaiq-widgets.
-automatically_update_urls_on_dev = false
-include_config_on_deploy = true
