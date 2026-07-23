@@ -144,14 +144,35 @@ const M_BORRAR = `mutation($id: ID!) {
 
 // Traduce el activador del bundle al DiscountItemsInput de Shopify: define a
 // QUÉ productos se les aplica el % (y, con la cantidad mínima, cuándo).
+//
+// Un activador acotado SIN nada elegido revienta en vez de caer en `all`. El
+// merchant que elige "solo estos productos" y guarda sin seleccionar ninguno
+// esperaba un descuento acotado; darle uno para toda la tienda le descuenta
+// el catálogo entero sin que se entere. Es preferible que no guarde.
 function itemsDelActivador(activador) {
-  if (activador.tipo === "productos" && activador.ids?.length) {
-    return { products: { productsToAdd: activador.ids } };
+  const ids = activador.ids || [];
+
+  if (activador.tipo === "productos") {
+    if (!ids.length) throw new Error("El bundle está limitado a productos pero no tiene ningún producto elegido.");
+    return { products: { productsToAdd: ids } };
   }
-  if (activador.tipo === "coleccion" && activador.ids?.length) {
-    return { collections: { add: activador.ids } };
+  if (activador.tipo === "coleccion") {
+    if (!ids.length) throw new Error("El bundle está limitado a una colección pero no tiene ninguna colección elegida.");
+    return { collections: { add: ids } };
   }
   return { all: true }; // "todos": aplica a cualquier producto del carrito
+}
+
+// El porcentaje que se le manda a Shopify va de 0 a 1. Un número mayor a 100
+// no se recorta: se rechaza. Recortarlo a 1 convierte un "150" mal tipeado
+// (por ejemplo, alguien que quiso poner $150 de descuento) en un producto
+// regalado, y el descuento queda activo en la tienda hasta que alguien lo note.
+function porcentajeValido(descuento, cantidad) {
+  const d = Number(descuento) || 0;
+  if (d > 100) {
+    throw new Error(`El descuento del peldaño de ${cantidad}+ es ${d}%: el porcentaje no puede pasar de 100.`);
+  }
+  return d / 100;
 }
 
 // Borra los descuentos que respaldaban un bundle. Tolera ids muertos (si el
@@ -174,6 +195,11 @@ async function borrarDescuentos(sesion, ids = [], log = () => {}) {
 // solo descuento. Se crea "≥2 → 10%" y "≥3 → 15%" por separado; cuando el
 // carrito tiene 3, ambos califican y —al no combinar entre sí— Shopify aplica
 // el más valioso (el 15%). Es el patrón estándar sin Shopify Functions.
+//
+// Si algo falla en el medio, el error sale con los gids que YA se crearon
+// (`err.creados`). Sin eso, un fallo en el segundo peldaño deja el primero
+// vivo en la tienda del merchant y sin registro: la app no lo puede borrar
+// nunca más, y cada intento siguiente suma otro huérfano encima.
 async function crearDescuentos(sesion, bundle, log = () => {}) {
   if (bundle.activo === false) return [];
   if (bundle.tipo === "bxgy") return await crearDescuentoBxgy(sesion, bundle, log);
@@ -181,6 +207,16 @@ async function crearDescuentos(sesion, bundle, log = () => {}) {
   const items = itemsDelActivador(bundle.activador || { tipo: "todos" });
   const creados = [];
 
+  try {
+    await crearPeldanos(sesion, bundle, items, creados, log);
+  } catch (e) {
+    e.creados = creados;
+    throw e;
+  }
+  return creados;
+}
+
+async function crearPeldanos(sesion, bundle, items, creados, log) {
   for (const oferta of bundle.ofertas || []) {
     const desc = Number(oferta.descuento) || 0;
     const cant = Math.max(1, Number(oferta.cantidad) || 1);
@@ -190,7 +226,7 @@ async function crearDescuentos(sesion, bundle, log = () => {}) {
       title: `TiendaIQ Bundle · ${bundle.nombre} · ${cant}+`.slice(0, 250),
       startsAt: new Date().toISOString(),
       customerGets: {
-        value: { percentage: Math.min(1, desc / 100) },
+        value: { percentage: porcentajeValido(desc, cant) },
         items
       },
       minimumRequirement: {
@@ -249,7 +285,15 @@ async function crearDescuentoBxgy(sesion, bundle, log = () => {}) {
 async function sincronizarDescuentos(sesion, config, log = () => {}) {
   for (const bundle of config.lista) {
     await borrarDescuentos(sesion, bundle.discount_ids, log);
-    bundle.discount_ids = await crearDescuentos(sesion, bundle, log);
+    try {
+      bundle.discount_ids = await crearDescuentos(sesion, bundle, log);
+    } catch (e) {
+      // Los que alcanzaron a crearse quedan anotados antes de propagar el
+      // error: están vivos en la tienda del merchant y el próximo guardado
+      // tiene que poder borrarlos. Sin esto se acumulan sin rastro.
+      bundle.discount_ids = e.creados || [];
+      throw e;
+    }
   }
   return config;
 }
