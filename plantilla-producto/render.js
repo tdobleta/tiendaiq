@@ -132,6 +132,16 @@
       ? `<span class="hero__comparativo">${esc(precioBonito(fuente.moneda, fuente.precio_comparativo))}</span>`
       : "";
 
+    // Pastilla de % ahorro: se calcula del precio vs el comparativo (dato que
+    // ya existe). Solo aparece si el comparativo es MAYOR que el precio actual.
+    const pAhora = parseFloat(fuente.precio);
+    const pAntes = parseFloat(fuente.precio_comparativo);
+    const pctDesc =
+      isFinite(pAhora) && isFinite(pAntes) && pAntes > pAhora
+        ? Math.round((1 - pAhora / pAntes) * 100)
+        : 0;
+    const descuento = pctDesc > 0 ? `<span class="hero__descuento">-${pctDesc}%</span>` : "";
+
     const bullets = (h.bullets ?? [])
       .map((b) => `<li><span class="tick">${ICONO.tick}</span>${esc(b)}</li>`)
       .join("");
@@ -184,6 +194,7 @@
             <div class="hero__precios">
               <span class="hero__precio">${esc(precioBonito(fuente.moneda, fuente.precio))}</span>
               ${comparativo}
+              ${descuento}
             </div>
             <p class="hero__impuestos">Impuestos incluidos.</p>
             <p class="hero__subtitulo">${esc(h.subtitulo)}</p>
