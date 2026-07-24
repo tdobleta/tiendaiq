@@ -1,0 +1,10 @@
+<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="TiendaIQ">
+  <mask id="impulso-arrow">
+    <rect x="8.5" y="8.5" width="31" height="31" rx="8.5" transform="rotate(45 24 24)" fill="#fff"/>
+    <g fill="none" stroke="#000" stroke-width="6.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M16.4 31.6 31.6 16.4"/>
+      <path d="M20.4 16.4 H31.6 V27.6"/>
+    </g>
+  </mask>
+  <rect width="48" height="48" fill="#7C5CFF" mask="url(#impulso-arrow)"/>
+</svg>

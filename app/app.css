@@ -94,15 +94,9 @@ img { display: block; max-width: 100%; }
   top: 0;
   z-index: 10;
 }
-.barra__marca { font-weight: 600; font-size: 14px; color: var(--negro); display: flex; align-items: center; gap: 10px; }
-/* La marca: tile con el gradiente del logo y la T en blanco. */
-.barra__logo {
-  width: 26px; height: 26px; border-radius: var(--radio-s);
-  background: var(--gradiente-marca); color: #fff;
-  display: grid; place-items: center;
-  font-size: 13px; font-weight: 800; letter-spacing: 0;
-  box-shadow: var(--sombra-s);
-}
+.barra__marca { font-weight: 600; font-size: 14px; color: var(--negro); display: flex; align-items: center; gap: 9px; }
+/* La marca: el logo Impulso (rombo + flecha en espacio negativo). */
+.barra__logo { width: 26px; height: 26px; display: block; }
 
 /* Stepper del flujo de creación: Elegir producto → Información → Publicar.
    Barra ancha, círculos numerados unidos por una línea que se llena con el
