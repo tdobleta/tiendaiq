@@ -113,24 +113,6 @@
   const ctaCentro = (faceta, global) =>
     faceta.cta ? `<div class="cta-centro">${cta(global)}</div>` : "";
 
-  // Cinta de texto en movimiento (marquee) debajo de la galería del hero.
-  // FIJA en la plantilla: aparece igual en toda página generada, no cambia por
-  // producto ni se edita. La pista lleva el mismo contenido DOS veces y la
-  // animación corre de 0 a -50%, así el segundo set cae justo donde estaba el
-  // primero y el loop no tiene salto.
-  function marquee() {
-    const negro = "2026 Mejor Juguete";
-    const color = "(Tu texto)";
-    const par =
-      `<span class="hero__marquee-neg">${negro}</span>` +
-      `<span class="hero__marquee-col">${color}</span>`;
-    const set = par.repeat(4); // un set ya más ancho que la pantalla
-    return `
-    <div class="hero__marquee">
-      <div class="hero__marquee-pista">${set}${set}</div>
-    </div>`;
-  }
-
   // ---------- facetas ----------
 
   function hero(f, fuente, global) {
@@ -230,7 +212,6 @@
             ${acordeones}
           </div>
         </div>
-        ${marquee()}
       </div>
     </section>`;
   }
