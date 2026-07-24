@@ -351,32 +351,39 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
   border: 1px solid var(--borde); border-radius: var(--radio); background: var(--superficie);
   padding: 18px; display: flex; flex-direction: column; align-items: flex-start; gap: 0;
 }
-/* Tile sólido de color por tarjeta: el color identifica la función (violeta =
-   IA, verde = publicar, naranja = COD, azul = bundles). El estado lo marca el
-   chip "Completado", no el ícono. */
+/* Tile de tinte SUAVE por tarjeta: el color identifica la función (violeta =
+   IA, verde = publicar, naranja = COD, azul = bundles) sin gritar. El estado
+   "hecho" lo comunica un check verde posado sobre el ícono, como PagePilot. */
 .paso-card__icono {
-  width: 42px; height: 42px; border-radius: 12px;
-  color: #fff; background: var(--paso-tinte, #1a1a1a);
-  display: grid; place-items: center; margin-bottom: 15px; flex-shrink: 0;
-  box-shadow: 0 5px 14px -4px var(--paso-sombra, rgba(0, 0, 0, .3));
+  position: relative;
+  width: 40px; height: 40px; border-radius: 11px;
+  background: var(--paso-bg, #f0f0f3); color: var(--paso-fg, #3a3a42);
+  display: grid; place-items: center; margin-bottom: 14px; flex-shrink: 0;
 }
 .paso-card__icono svg { width: 20px; height: 20px; display: block; }
-/* Hecho: mantiene el tinte (no lo pisa a negro); el chip dice el estado. */
-.paso-card__icono--hecho { background: var(--paso-tinte, #1a1a1a); border: none; color: #fff; }
+.paso-card__check {
+  position: absolute; right: -5px; bottom: -5px;
+  width: 18px; height: 18px; border-radius: 50%;
+  background: var(--ok); color: #fff;
+  display: grid; place-items: center; border: 2px solid var(--superficie);
+}
+.paso-card__check svg { width: 10px; height: 10px; }
 .paso-card__titulo {
   font-size: 14px; font-weight: 700; color: var(--negro);
   line-height: 1.3; letter-spacing: -0.01em;
 }
 .paso-card__texto {
   font-size: 13px; color: #4b5563; line-height: 1.5; font-weight: 450;
-  margin: 5px 0 15px; flex: 1;
+  margin: 5px 0 16px; flex: 1;
 }
+/* La cola (botón o chip) queda pegada al fondo, alineada entre tarjetas. */
+.paso-card__cola { margin-top: auto; }
 
-/* Los tints: colores sólidos, saturados pero sobrios, en línea con la marca. */
-.paso-card--violeta { --paso-tinte: #5646d6; --paso-sombra: rgba(86, 70, 214, .38); }
-.paso-card--verde   { --paso-tinte: #10a367; --paso-sombra: rgba(16, 163, 103, .38); }
-.paso-card--naranja { --paso-tinte: #ea580c; --paso-sombra: rgba(234, 88, 12, .38); }
-.paso-card--azul    { --paso-tinte: #1e8fd5; --paso-sombra: rgba(30, 143, 213, .38); }
+/* Tints suaves: fondo lavado + ícono en el color pleno de la función. */
+.paso-card--violeta { --paso-bg: #eeecfb; --paso-fg: #5646d6; }
+.paso-card--verde   { --paso-bg: #e4f6ec; --paso-fg: #0f9b63; }
+.paso-card--naranja { --paso-bg: #fdecdf; --paso-fg: #d9600b; }
+.paso-card--azul    { --paso-bg: #e3f1fb; --paso-fg: #1a80c4; }
 
 /* Badges: un solo lenguaje para todos los estados. Altura fija de 24px. */
 .chip-estado {
@@ -406,6 +413,39 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
 .metrica__nombre { font-size: 13px; color: var(--texto); font-weight: 500; }
 .metrica__valor { font-size: 22px; font-weight: 700; color: var(--negro); line-height: 1.2; margin: 8px 0 0 26px; letter-spacing: -.3px; }
 .metrica--violeta .metrica__valor { color: var(--ia); }
+
+/* Medidor de plan: vive al pie de "Tus números", separado por una hairline.
+   Barra de uso real del cupo mensual (no una métrica de venta inventada). */
+.plan-medidor {
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--borde-suave);
+}
+.plan-medidor__info { display: flex; flex-direction: column; gap: 1px; min-width: 150px; }
+.plan-medidor__nombre { font-size: 13px; font-weight: 600; color: var(--negro); }
+.plan-medidor__detalle { font-size: 12.5px; color: var(--suave); }
+.plan-medidor__detalle strong { color: var(--texto); font-weight: 600; }
+.plan-medidor__barra {
+  flex: 1; min-width: 140px; height: 6px; border-radius: 999px;
+  background: var(--borde-suave); overflow: hidden;
+}
+.plan-medidor__barra div {
+  height: 100%; border-radius: 999px; background: var(--ia);
+  transition: width .3s ease-out;
+}
+/* Uso normal en indigo; solo al llegar al límite vira a aviso. Pro = gradiente. */
+.plan-medidor:not(.plan-medidor--pro) .plan-medidor__barra div { background: var(--ia); }
+.plan-medidor.is-lleno .plan-medidor__barra div { background: var(--aviso); }
+.plan-medidor--pro .plan-medidor__barra div { background: var(--gradiente-marca); }
+
+/* Tira de ayuda al pie: cierre humano de la home, links reales. */
+.ayuda-strip {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap;
+  padding: 4px 4px 0; font-size: 12.5px; color: var(--suave);
+}
+.ayuda-strip a { color: var(--texto); text-decoration: none; font-weight: 500; }
+.ayuda-strip a:hover { color: var(--negro); text-decoration: underline; }
+.ayuda-strip__link { color: var(--suave); }
 
 /* Herramientas: título, texto, botón y una vista en miniatura decorativa,
    como las tarjetas con captura de PagePilot. */
@@ -1085,21 +1125,11 @@ summary:focus-visible, label:focus-visible {
 .btn--marca { background: var(--negro); }
 .btn--marca:hover:not(:disabled) { background: #2e2e33; }
 
-/* Override global (va al final del archivo, así que MANDA sobre la definición
-   de arriba). El tile del paso usa el color sólido de su feature. */
+/* Pasos: cards compactas y quietas (sin lift al hover — no son clickeables
+   enteras). El tile del ícono y su estado los define el bloque de arriba
+   (tinte suave + check verde). */
 .paso-card { padding: 16px; gap: 0; }
-.paso-card__icono {
-  width: 38px; height: 38px;
-  border-radius: 11px;
-  color: #fff;
-  background: var(--paso-tinte, #1a1a1a);
-}
-.paso-card__icono svg { width: 18px; height: 18px; }
-.paso-card__icono--hecho { background: var(--paso-tinte, #1a1a1a); border: none; color: #fff; }
 .paso-card:hover { box-shadow: none; transform: none; }
-
-/* barra de progreso sobria */
-.progreso__barra div { background: var(--negro); }
 
 /* métricas compactas: color SOLO en las dos primeras, y apenas */
 .metrica { padding: 14px 16px; }

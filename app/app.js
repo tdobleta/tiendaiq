@@ -145,6 +145,10 @@
     const hechos =
       (creadas > 0 ? 1 : 0) + (publicadas > 0 ? 1 : 0) + (codListo ? 1 : 0) + (bundlesListo ? 1 : 0);
     const sinCupo = plan.plan !== "pro" && plan.usadas >= plan.limite;
+    const bundlesActivos = (estado.inicioBundles?.lista || []).filter((b) => b.activo !== false).length;
+    const esPro = plan.plan === "pro";
+    // Uso del cupo para el medidor: entre 0 y 1 (Pro va lleno con el gradiente).
+    const usoPct = esPro ? 100 : Math.min(100, Math.round((plan.usadas / Math.max(1, plan.limite)) * 100));
 
     // Íconos de línea monocromos, como PagePilot: círculo negro sólido si el
     // paso está hecho, punteado si falta.
@@ -156,12 +160,16 @@
       bundle: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8l9-4 9 4-9 4z"/><path d="M3 8v8l9 4 9-4V8"/><path d="M12 12v8"/></svg>`
     };
 
+    // Check que se posa sobre el ícono cuando el paso ya está hecho: el estado
+    // lo comunica el propio ícono, no solo el chip de abajo.
+    const IC_CHECK = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg>`;
+
     const pasoCard = (icono, titulo, texto, hecho, cola, tinte) => `
-      <article class="paso-card paso-card--${tinte}">
-        <div class="paso-card__icono ${hecho ? "paso-card__icono--hecho" : ""}">${icono}</div>
+      <article class="paso-card paso-card--${tinte} ${hecho ? "is-hecho" : ""}">
+        <div class="paso-card__icono">${icono}${hecho ? `<span class="paso-card__check">${IC_CHECK}</span>` : ""}</div>
         <div class="paso-card__titulo">${titulo}</div>
         <p class="paso-card__texto">${texto}</p>
-        ${cola}
+        <div class="paso-card__cola">${cola}</div>
       </article>`;
 
     // Tiles de métrica al estilo PagePilot: ícono + label arriba, valor
@@ -273,11 +281,24 @@
           ${metrica(ICONO_METRICA.pagina, "Páginas creadas", creadas, "violeta")}
           ${metrica(ICONO_METRICA.check, "Publicadas", publicadas, "verde")}
           ${metrica(ICONO_METRICA.lapiz, "Borradores", creadas - publicadas)}
-          ${metrica(
-            ICONO_METRICA.estrella,
-            "Plan",
-            plan.plan === "pro" ? "Pro · sin límite" : `${plan.usadas} de ${plan.limite}`
-          )}
+          ${metrica(ICONO_PASO.bundle, "Bundles activos", bundlesActivos)}
+        </div>
+
+        <div class="plan-medidor ${esPro ? "plan-medidor--pro" : ""} ${!esPro && plan.usadas >= plan.limite ? "is-lleno" : ""}">
+          <div class="plan-medidor__info">
+            <span class="plan-medidor__nombre">${esPro ? "Plan Pro" : "Plan gratis"}</span>
+            <span class="plan-medidor__detalle">${
+              esPro
+                ? "Páginas de producto ilimitadas."
+                : `Usaste <strong>${plan.usadas} de ${plan.limite}</strong> páginas este mes.`
+            }</span>
+          </div>
+          <div class="plan-medidor__barra"><div style="width:${usoPct}%"></div></div>
+          ${
+            esPro
+              ? `<span class="chip-estado chip-estado--ok">Activo</span>`
+              : `<button class="btn btn--chico" id="plan-mejorar">Mejorar a Pro</button>`
+          }
         </div>
       </section>
 
@@ -352,7 +373,12 @@
                </div>
              </section>`
           : ""
-      }`;
+      }
+
+      <div class="ayuda-strip">
+        <span class="ayuda-strip__txt">¿Necesitás una mano? Escribinos a <a href="mailto:soporte@tiendaiq.com">soporte@tiendaiq.com</a></span>
+        <a class="ayuda-strip__link" href="/terminos" target="_blank" rel="noopener">Términos y privacidad ↗</a>
+      </div>`;
 
     const aLista = () => cargarLista();
     ["ir-crear", "paso-crear", "herr-crear"].forEach((id) => {
@@ -364,8 +390,10 @@
       const b = $(id);
       if (b) b.onclick = () => ir("paginas");
     });
-    const bPlan = $("ir-plan");
-    if (bPlan) bPlan.onclick = irASuscripcion;
+    ["ir-plan", "plan-mejorar"].forEach((id) => {
+      const b = $(id);
+      if (b) b.onclick = irASuscripcion;
+    });
     // COD y bundles: tanto desde "Herramientas" como desde "Primeros pasos".
     ["herr-cod", "paso-cod"].forEach((id) => {
       const b = $(id);
