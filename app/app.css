@@ -104,17 +104,35 @@ img { display: block; max-width: 100%; }
   box-shadow: var(--sombra-s);
 }
 
-.pasos { display: flex; gap: 8px; align-items: center; font-size: 12px; }
-.paso { color: var(--suave); display: flex; align-items: center; gap: 7px; font-weight: 500; }
-.paso__n {
-  width: 20px; height: 20px; border-radius: 50%;
-  background: #ececf0; color: var(--suave);
-  display: grid; place-items: center; font-size: 11px; font-weight: 600;
+/* Stepper del flujo de creación: Elegir producto → Información → Publicar.
+   Barra ancha, círculos numerados unidos por una línea que se llena con el
+   avance; el paso hecho lleva check, el activo un halo. */
+.pasos { flex: 1; display: block; min-width: 0; }
+.stepper { display: flex; align-items: center; gap: 12px; width: 100%; max-width: 720px; }
+.stepper__linea {
+  flex: 1; height: 2px; min-width: 20px; border-radius: 2px;
+  background: var(--borde); transition: background .25s ease-out;
 }
-.paso--activo { color: var(--negro); }
-.paso--activo .paso__n { background: var(--negro); color: #fff; }
-.paso--hecho .paso__n { background: var(--ok); color: #fff; }
-.paso__sep { color: #d1d1d6; }
+.stepper__linea.es-hecho { background: var(--ia); }
+.stepper__paso { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.stepper__num {
+  width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
+  display: grid; place-items: center; font-size: 12px; font-weight: 700;
+  background: var(--superficie); color: var(--suave); border: 1.5px solid var(--borde);
+  transition: background .2s ease-out, color .2s ease-out, border-color .2s ease-out, box-shadow .2s ease-out;
+}
+.stepper__num svg { width: 14px; height: 14px; display: block; }
+.stepper__label {
+  font-size: 13px; font-weight: 500; color: var(--suave);
+  white-space: nowrap; letter-spacing: -.1px;
+}
+.stepper__paso.es-activo .stepper__num {
+  background: var(--ia); color: #fff; border-color: var(--ia);
+  box-shadow: 0 0 0 4px var(--ia-fondo);
+}
+.stepper__paso.es-activo .stepper__label { color: var(--negro); font-weight: 600; }
+.stepper__paso.es-hecho .stepper__num { background: var(--ia); color: #fff; border-color: var(--ia); }
+.stepper__paso.es-hecho .stepper__label { color: var(--negro); }
 
 /* ---------- layout ---------- */
 
@@ -727,7 +745,12 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
 
 @media (max-width: 860px) {
   .dos-columnas { grid-template-columns: 1fr; }
-  .pasos { display: none; }
+}
+/* En pantallas chicas el stepper se compacta: quedan los círculos + la línea
+   y solo el paso activo muestra su etiqueta (no se pierde la orientación). */
+@media (max-width: 620px) {
+  .stepper__paso:not(.es-activo) .stepper__label { display: none; }
+  .stepper { gap: 8px; }
 }
 
 /* ============================================================
@@ -747,16 +770,10 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
   background: transparent;
   border-bottom: none;
   height: auto;
-  padding: 14px 28px 0;
+  padding: 20px 28px 6px;
   position: static;
 }
 .embebida .barra__marca { display: none; }
-.embebida .paso { color: var(--suave); }
-.embebida .paso--activo { color: var(--negro); }
-.embebida .paso__n { background: #e3e3e3; color: var(--suave); }
-.embebida .paso--activo .paso__n { background: var(--acento); color: #fff; }
-.embebida .paso--hecho .paso__n { background: var(--ok); color: #fff; }
-.embebida .paso__sep { color: #c9c9c9; }
 
 /* El preview adentro de un iframe adentro de otro iframe queda muy chato:
    se le da más aire porque el alto del admin ya viene recortado. */

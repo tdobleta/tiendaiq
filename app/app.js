@@ -80,9 +80,11 @@
   // ---------- barra de pasos ----------
 
   function pintarPasos() {
-    // El inicio y la tabla de páginas son paneles, no pasos del flujo.
-    if (["inicio", "paginas", "cod"].includes(estado.pantalla)) {
-      $("pasos").innerHTML = "";
+    const cont = $("pasos");
+    // El stepper es SOLO del flujo de creación. En el resto (inicio, tabla,
+    // COD, bundles) no va: son paneles, no un asistente por pasos.
+    if (!["lista", "informacion", "generando", "preview"].includes(estado.pantalla)) {
+      cont.innerHTML = "";
       return;
     }
     const pasos = [
@@ -92,16 +94,23 @@
     ];
     const actual = estado.pantalla === "generando" ? "informacion" : estado.pantalla;
     const i = pasos.findIndex((p) => p.id === actual);
+    const CHECK = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg>`;
 
-    $("pasos").innerHTML = pasos
+    const cuerpo = pasos
       .map((p, n) => {
-        const clase = n < i ? "paso--hecho" : n === i ? "paso--activo" : "";
+        const clase = n < i ? "es-hecho" : n === i ? "es-activo" : "es-futuro";
+        const linea = n > 0 ? `<div class="stepper__linea ${n <= i ? "es-hecho" : ""}"></div>` : "";
         return (
-          (n ? `<span class="paso__sep">›</span>` : "") +
-          `<span class="paso ${clase}"><span class="paso__n">${n < i ? "✓" : n + 1}</span>${p.texto}</span>`
+          linea +
+          `<div class="stepper__paso ${clase}">
+             <span class="stepper__num">${n < i ? CHECK : n + 1}</span>
+             <span class="stepper__label">${p.texto}</span>
+           </div>`
         );
       })
       .join("");
+
+    cont.innerHTML = `<div class="stepper" role="list" aria-label="Paso ${i + 1} de ${pasos.length}">${cuerpo}</div>`;
   }
 
   // ---------- 0. inicio (panel principal, estilo PagePilot) ----------
