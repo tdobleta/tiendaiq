@@ -26,6 +26,7 @@
     paginas: [], // resumen de páginas para el inicio y la tabla
     plan: null,
     filtro: "",
+    filtroEstado: "todos", // segmento del picker: todos | sin | publicada | borrador
     producto: null, // el elegido
     pagina: null, // el registro que devuelve el server
     volverA: "lista", // desde dónde se abrió el editor: "lista" o "paginas"
@@ -1300,22 +1301,63 @@
 
   // ---------- 1. lista ----------
 
+  // Símbolo por divisa (subconjunto LatAm + majors); lo que no figure cae a "$".
+  const SIMBOLO_MONEDA = {
+    USD: "US$", ARS: "$", MXN: "$", CLP: "$", COP: "$", UYU: "$", PEN: "S/",
+    BRL: "R$", BOB: "Bs", PYG: "₲", GTQ: "Q", DOP: "RD$", CRC: "₡", EUR: "€", GBP: "£"
+  };
+  const SIN_DECIMALES = ["CLP", "COP", "PYG"];
+  function precioLindo(monto, moneda) {
+    if (monto == null || monto === "") return "";
+    const n = Number(monto);
+    if (!isFinite(n)) return "";
+    // Sin decimales para divisas que no los usan y para montos enteros
+    // (los "$ 24.990,00" sobran); con 2 decimales solo cuando hay centavos.
+    const dec = SIN_DECIMALES.includes(moneda) || Number.isInteger(n) ? 0 : 2;
+    const txt = n.toLocaleString("es-AR", { minimumFractionDigits: dec, maximumFractionDigits: dec });
+    return `${SIMBOLO_MONEDA[moneda] || "$"} ${txt}`;
+  }
+
+  const ESTADO_ETQ = { publicada: "Publicada", borrador: "Borrador" };
+
   function pantallaLista() {
     const q = estado.filtro.toLowerCase();
-    const vistos = estado.productos.filter((p) => p.titulo.toLowerCase().includes(q));
+    const fe = estado.filtroEstado;
+    const coincide = (p) =>
+      p.titulo.toLowerCase().includes(q) &&
+      (fe === "todos" || (fe === "sin" ? !p.estado : p.estado === fe));
+    const vistos = estado.productos.filter(coincide);
+
+    // Conteos por segmento (sobre TODOS los productos, no sobre lo filtrado).
+    const cuenta = {
+      todos: estado.productos.length,
+      sin: estado.productos.filter((p) => !p.estado).length,
+      publicada: estado.productos.filter((p) => p.estado === "publicada").length,
+      borrador: estado.productos.filter((p) => p.estado === "borrador").length
+    };
+    const SEGMENTOS = [
+      ["todos", "Todos"],
+      ["sin", "Sin página"],
+      ["publicada", "Publicadas"],
+      ["borrador", "Borradores"]
+    ];
+
+    const IC_LUPA = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>`;
 
     const tarjeta = (p) => `
       <button class="producto" data-id="${esc(p.id)}">
         <div class="producto__foto">
-          ${p.imagen ? `<img src="${esc(p.imagen)}" alt="" loading="lazy">` : "🖼"}
+          ${p.imagen ? `<img src="${esc(p.imagen)}" alt="" loading="lazy">` : `<span class="producto__ph">🛍</span>`}
+          ${
+            p.estado
+              ? `<span class="producto__estado producto__estado--${p.estado}"><i></i>${ESTADO_ETQ[p.estado] || p.estado}</span>`
+              : ""
+          }
+          <span class="producto__cta">${p.estado ? "Editar página" : "Crear página"} <b>→</b></span>
         </div>
         <div class="producto__cuerpo">
           <div class="producto__titulo">${esc(p.titulo)}</div>
-          ${
-            p.estado
-              ? `<span class="etiqueta etiqueta--${p.estado}">${p.estado}</span>`
-              : ""
-          }
+          ${p.precio != null ? `<div class="producto__precio">${esc(precioLindo(p.precio, p.moneda))}</div>` : ""}
         </div>
       </button>`;
 
@@ -1325,12 +1367,31 @@
         <h1>Crear página de producto con IA</h1>
         <p>Elegí uno de tus productos y la IA arma la landing completa.</p>
       </div>
-      <input class="buscador" id="q" placeholder="Buscar entre ${estado.productos.length} productos…"
-             value="${esc(estado.filtro)}">
+
+      <div class="lista-barra">
+        <div class="buscador-caja">
+          <span class="buscador-caja__lupa">${IC_LUPA}</span>
+          <input class="buscador" id="q" placeholder="Buscar entre ${estado.productos.length} productos…"
+                 value="${esc(estado.filtro)}">
+        </div>
+        <div class="segmento" id="segmento">
+          ${SEGMENTOS.map(
+            ([k, txt]) => `
+            <button class="segmento__op ${fe === k ? "es-activo" : ""}" data-f="${k}">
+              ${txt}<span class="segmento__n">${cuenta[k]}</span>
+            </button>`
+          ).join("")}
+        </div>
+      </div>
+
       ${
         vistos.length
           ? `<div class="grilla">${vistos.map(tarjeta).join("")}</div>`
-          : `<div class="vacio">Ningún producto coincide con "${esc(estado.filtro)}".</div>`
+          : `<div class="vacio">${
+              estado.filtro
+                ? `Ningún producto coincide con "${esc(estado.filtro)}".`
+                : "No hay productos en este filtro."
+            }</div>`
       }`;
 
     $("volver-inicio").onclick = () => ir("inicio");
@@ -1344,6 +1405,13 @@
       q1.focus();
       q1.setSelectionRange(pos, pos);
     };
+
+    vista.querySelectorAll(".segmento__op").forEach((b) => {
+      b.onclick = () => {
+        estado.filtroEstado = b.dataset.f;
+        pintarLista_soloGrilla();
+      };
+    });
 
     engancharProductos();
   }

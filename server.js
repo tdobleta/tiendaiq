@@ -269,6 +269,7 @@ async function api(req, res, url) {
         titulo: p.title,
         imagen: p.featuredMedia?.preview?.image?.url ?? null,
         precio: p.priceRangeV2?.minVariantPrice?.amount ?? null,
+        moneda: p.priceRangeV2?.minVariantPrice?.currencyCode ?? null,
         estado: paginas[idDePagina(p.id)] ?? null
       }))
     );

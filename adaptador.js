@@ -82,7 +82,7 @@ const CONSULTA_LISTA = `{
         id
         title
         templateSuffix
-        priceRangeV2 { minVariantPrice { amount } }
+        priceRangeV2 { minVariantPrice { amount currencyCode } }
         featuredMedia { id preview { image { url } } }
       }
     }

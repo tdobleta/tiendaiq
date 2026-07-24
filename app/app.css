@@ -168,37 +168,97 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
 
 /* ---------- 1. lista de productos ---------- */
 
+/* Barra del picker: buscador con lupa a la izquierda + filtro segmentado. */
+.lista-barra {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.buscador-caja { position: relative; flex: 1; min-width: 220px; }
+.buscador-caja__lupa {
+  position: absolute; left: 13px; top: 50%; transform: translateY(-50%);
+  width: 16px; height: 16px; color: var(--suave); pointer-events: none;
+}
+.buscador-caja__lupa svg { width: 100%; height: 100%; display: block; }
 .buscador {
-  width: 100%; padding: 10px 14px; font-size: 13px; font-family: inherit;
+  width: 100%; padding: 10px 14px 10px 38px; font-size: 13px; font-family: inherit;
   border: 1px solid var(--borde); border-radius: var(--radio-s); background: var(--superficie);
-  margin-bottom: 16px;
   transition: border-color .15s ease-out, box-shadow .15s ease-out;
 }
 .buscador:focus { outline: none; border-color: var(--ia); box-shadow: 0 0 0 3px var(--ia-fondo); }
 
+/* Control segmentado: riel gris, la opción activa es una pastilla blanca. */
+.segmento {
+  display: inline-flex; gap: 2px; padding: 3px;
+  background: var(--fondo); border: 1px solid var(--borde); border-radius: 10px;
+  flex-wrap: wrap;
+}
+.segmento__op {
+  display: inline-flex; align-items: center; gap: 6px;
+  border: none; background: none; color: var(--suave);
+  font-size: 12.5px; font-weight: 500; font-family: inherit;
+  padding: 6px 11px; border-radius: 7px;
+  transition: background .15s ease-out, color .15s ease-out, box-shadow .15s ease-out;
+}
+.segmento__op:hover { color: var(--negro); }
+.segmento__op.es-activo { background: var(--superficie); color: var(--negro); box-shadow: var(--sombra-s); }
+.segmento__n {
+  font-size: 11px; font-weight: 600; color: var(--suave);
+  background: rgba(0,0,0,.05); border-radius: 999px; padding: 1px 6px; min-width: 18px; text-align: center;
+}
+.segmento__op.es-activo .segmento__n { background: var(--ia-fondo); color: var(--ia); }
+
 .grilla {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
   gap: 16px;
 }
 
+/* Tarjeta de producto: marco consistente que contiene fotos de fondos
+   dispares; al hover se eleva y revela la acción sobre la imagen. */
 .producto {
   background: var(--superficie); border: 1px solid var(--borde); border-radius: var(--radio);
   overflow: hidden; text-align: left; padding: 0;
   transition: border-color .15s ease-out, transform .15s ease-out, box-shadow .15s ease-out;
 }
-.producto:hover { border-color: #d6d6dc; transform: translateY(-2px); box-shadow: var(--sombra-m); }
+.producto:hover { border-color: #d6d6dc; transform: translateY(-3px); box-shadow: var(--sombra-m); }
 .producto:focus-visible { outline: 2px solid var(--ia); outline-offset: 2px; }
 .producto__foto {
-  aspect-ratio: 1; background: var(--fondo);
-  display: grid; place-items: center; color: #c3c3c3; font-size: 24px;
+  position: relative; aspect-ratio: 1; background: var(--fondo); overflow: hidden;
 }
 .producto__foto img { width: 100%; height: 100%; object-fit: cover; }
-.producto__cuerpo { padding: 10px 12px 12px; }
+.producto__ph { position: absolute; inset: 0; display: grid; place-items: center; font-size: 30px; opacity: .5; }
+
+/* Badge de estado como sobreimpreso en la esquina: no descuadra el pie. */
+.producto__estado {
+  position: absolute; top: 9px; left: 9px; z-index: 2;
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11px; font-weight: 600; color: var(--negro);
+  background: rgba(255,255,255,.94); backdrop-filter: blur(3px);
+  padding: 3px 8px 3px 7px; border-radius: 999px; box-shadow: var(--sombra-s);
+}
+.producto__estado i { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.producto__estado--publicada i { background: var(--ok); }
+.producto__estado--borrador i { background: var(--aviso); }
+
+/* CTA que se revela sobre la foto al pasar el mouse: "estos son lanzadores". */
+.producto__cta {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 2;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 22px 12px 11px; color: #fff; font-size: 12.5px; font-weight: 600;
+  background: linear-gradient(to top, rgba(17,17,20,.82) 10%, rgba(17,17,20,0));
+  opacity: 0; transform: translateY(6px);
+  transition: opacity .18s ease-out, transform .18s ease-out;
+}
+.producto__cta b { font-weight: 700; }
+.producto:hover .producto__cta, .producto:focus-visible .producto__cta { opacity: 1; transform: none; }
+
+.producto__cuerpo { padding: 11px 12px 13px; }
 .producto__titulo {
   font-size: 13px; color: var(--negro); font-weight: 500; line-height: 1.35;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  min-height: calc(1.35em * 2); /* dos líneas fijas: los pies alinean */
 }
+.producto__precio { font-size: 13px; font-weight: 600; color: var(--negro); margin-top: 4px; letter-spacing: -.2px; }
 
 .etiqueta {
   display: inline-block; font-size: 10.5px; font-weight: 600;
