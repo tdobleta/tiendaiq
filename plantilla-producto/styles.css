@@ -249,17 +249,19 @@
 /* Beneficios: alto uniforme, separación pareja, enmarcados arriba y abajo.
    Tipografía calcada de PagePilot: Poppins 500, 15px, texto casi negro,
    tick violeta grueso de trazo redondeado. */
-#app .hero__bullets { list-style: none; border-top: 1px solid var(--borde); border-bottom: 1px solid var(--borde); padding: 16px 0; margin-bottom: 20px; }
+#app .hero__bullets { list-style: none; border-top: 1px solid var(--borde); border-bottom: 1px solid var(--borde); padding: 14px 0; margin-bottom: 20px; }
+/* Más chicos y apretados que la versión anterior: compacto = más "diseñado",
+   menos "texto grande de IA". Referencia: SOLUME. */
 #app .hero__bullets li {
-  display: flex; align-items: flex-start; gap: 10px;
-  font-size: 15.5px; font-weight: 500; line-height: 1.5;
-  color: #52525b; margin-bottom: 11px; /* el detalle en gris; la negrita en negro */
+  display: flex; align-items: flex-start; gap: 9px;
+  font-size: 14px; font-weight: 500; line-height: 1.4;
+  color: #52525b; margin-bottom: 8px; /* el detalle en gris; la negrita en negro */
 }
 #app .hero__bullets li:last-child { margin-bottom: 0; }
 #app .hero__bullets .tick { width: 15px; height: 15px; color: var(--acento); flex-shrink: 0; margin-top: 3px; }
 #app .hero__bullets .tick svg { width: 100%; height: 100%; display: block; }
 /* Ícono de línea del bullet: hereda el color del acento del nicho. */
-#app .hero__bullets .hero__bullet-ico { flex-shrink: 0; width: 20px; height: 20px; color: var(--acento); margin-top: 2px; }
+#app .hero__bullets .hero__bullet-ico { flex-shrink: 0; width: 18px; height: 18px; color: var(--acento); margin-top: 1px; }
 #app .hero__bullets .hero__bullet-ico svg { width: 100%; height: 100%; display: block; }
 /* Emoji (retrocompat de páginas generadas antes de los íconos de línea). */
 #app .hero__bullets .hero__bullet-emoji { flex-shrink: 0; width: 22px; text-align: center; font-size: 17px; line-height: 1.45; }
