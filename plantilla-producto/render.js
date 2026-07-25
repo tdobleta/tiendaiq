@@ -181,8 +181,11 @@
         else if (b.emoji)
           ico = `<span class="hero__bullet-emoji">${esc(b.emoji)}</span>`;
         else ico = `<span class="hero__bullet-ico">${ICONOS_BULLET.check}</span>`;
-        const fuerte = b.fuerte ? `<strong>${esc(b.fuerte)}</strong> ` : "";
-        return `<li>${ico}<span>${fuerte}${esc(b.resto ?? "")}</span></li>`;
+        const fuerte = esc(b.fuerte ?? "");
+        const resto = esc(b.resto ?? "");
+        // "gancho en negrita – detalle": guión entre las dos partes (estilo SOLUME).
+        const cuerpo = fuerte && resto ? `<strong>${fuerte}</strong> – ${resto}` : fuerte ? `<strong>${fuerte}</strong>` : resto;
+        return `<li>${ico}<span>${cuerpo}</span></li>`;
       })
       .join("");
 
