@@ -477,15 +477,25 @@ async function generar(fuente, medios, { idioma = "es", angulo = "" } = {}) {
   // Con streaming la conexión nunca queda muda, así que nadie la corta.
   // getFinalMessage() devuelve lo mismo que devolvía create(): el resto de la
   // función no se entera.
+  // NO usamos output_config.format (salida estructurada por gramática): este
+  // schema es grande y Anthropic lo rechaza con "compiled grammar is too large".
+  // En su lugar le pasamos el schema como TEXTO en el system y parseamos el JSON
+  // de la respuesta. El modelo cumple el schema de forma fiable, y ensamblar()
+  // + validar() corrigen cualquier desvío (cardinalidad fija, defaults).
+  const sistema =
+    SISTEMA.replace(/\{idioma\}/g, idioma === "es" ? "español rioplatense (voseo)" : idioma) +
+    "\n\nFORMATO DE SALIDA (CRÍTICO)\n" +
+    "Respondé ÚNICAMENTE con un objeto JSON válido: sin texto antes ni después, " +
+    "sin markdown, sin ```. Debe cumplir EXACTAMENTE este JSON Schema (mismas " +
+    "claves, mismos tipos, las cantidades pedidas):\n" +
+    JSON.stringify(ESQUEMA);
+
   const flujo = cliente.messages.stream({
     model: MODELO,
     max_tokens: 16000,
     thinking: { type: "adaptive" },
-    output_config: {
-      effort: ESFUERZO,
-      format: { type: "json_schema", schema: ESQUEMA }
-    },
-    system: SISTEMA.replace(/\{idioma\}/g, idioma === "es" ? "español rioplatense (voseo)" : idioma),
+    output_config: { effort: ESFUERZO },
+    system: sistema,
     messages: [{ role: "user", content: contenido }]
   });
   const r = await flujo.finalMessage();
@@ -494,10 +504,23 @@ async function generar(fuente, medios, { idioma = "es", angulo = "" } = {}) {
     throw new Error(`El modelo rechazó el pedido: ${r.stop_details?.explanation ?? "sin detalle"}`);
   }
 
-  const texto = r.content.find((b) => b.type === "text")?.text;
+  let texto = r.content.find((b) => b.type === "text")?.text;
   if (!texto) throw new Error("El modelo no devolvió texto.");
-
-  return { salida: JSON.parse(texto), uso: r.usage };
+  texto = texto.trim();
+  // Robustez: sacar fences ```json…``` y quedarse con el objeto {…} si vino con ruido.
+  const fence = texto.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fence) texto = fence[1].trim();
+  if (texto[0] !== "{") {
+    const i = texto.indexOf("{"), j = texto.lastIndexOf("}");
+    if (i !== -1 && j > i) texto = texto.slice(i, j + 1);
+  }
+  let salida;
+  try {
+    salida = JSON.parse(texto);
+  } catch (e) {
+    throw new Error("El modelo no devolvió JSON válido: " + e.message);
+  }
+  return { salida, uso: r.usage };
 }
 
 // ============================================================
