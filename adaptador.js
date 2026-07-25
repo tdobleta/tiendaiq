@@ -163,19 +163,23 @@ SUBTÍTULO
 Una sola frase: beneficio + mecanismo.
 
 BULLETS (4)
-Cada bullet es un beneficio cuantificado que empieza con verbo. Lo devolvés en 3 partes:
-- emoji: UN solo emoji que ilustre LITERAL y específicamente ese beneficio (el
-  objeto, la acción o el material del que habla el bullet). Distinto en cada
-  bullet, sin repetir. PROHIBIDO los genéricos de relleno (✅ ✔️ ✨ 🔥 🚀 ⭐ 💯 👍
-  🎉): leen a IA. Los 4 emojis tienen que ser del MISMO tipo visual: todos
-  objetos/símbolos planos (💧 🚿 ⏰ 🛡️ 🔋 ❄️ ☀️ 🌿). NO mezcles caritas ni
-  animales (😊 🐱) con objetos — esa mezcla se ve inconsistente.
-- fuerte: el arranque del beneficio en 2-3 palabras (el gancho; va en negrita).
-- resto: la descripción, MUY corta: máximo 4 palabras. Los beneficios premium
-  son cortísimos (SOLUME: "No More Harsh Alarms"). Cortá lo que sobre.
-No repitas emoji entre bullets. Ejemplo:
-  emoji "💧" · fuerte "Reducí la hinchazón" · resto "bajo los ojos"
-  emoji "🚿" · fuerte "Usalo en la ducha" · resto "resistente al agua"
+Los 4 bullets tienen que contar UNA sola historia del producto (la promesa
+central), no 4 beneficios sueltos e independientes. Y VARIÁ el formato entre
+ellos — que NO sean los cuatro "verbo + explicación": eso grita plantilla/IA.
+Mezclá tipos, como una marca real: un beneficio, una especificación seca, una
+garantía, un modo de uso. Ejemplos de tipos:
+  · beneficio:      fuerte "Reducí la hinchazón" · resto "bajo los ojos"
+  · especificación: fuerte "6000 pulsos/min"     · resto ""   (sola, sin explicación)
+  · garantía:       fuerte "30 días de prueba"   · resto ""
+  · uso:            fuerte "Usalo en la ducha"   · resto "resistente al agua"
+Cada bullet en 3 partes:
+- emoji: UN emoji que ilustre LITERAL ese punto (objeto/material/acción). Los 4
+  del MISMO tipo visual: todos objetos/símbolos planos (💧 🚿 ⏰ 🛡️ 🔋 ❄️ ☀️ 🌿).
+  NO mezcles caritas ni animales (😊 🐱) con objetos. Sin repetir. PROHIBIDO los
+  genéricos de relleno (✅ ✔️ ✨ 🔥 🚀 ⭐ 💯 👍 🎉): leen a IA.
+- fuerte: el núcleo del punto en 2-3 palabras (va en negrita).
+- resto: descripción MUY corta (máximo 4 palabras) o VACÍO "" si el punto se
+  entiende solo. Al menos 1 de los 4 debe ir con resto vacío (varía el ritmo).
 
 ICONOS (4)
 emoji + título de 1-2 palabras que sea un BENEFICIO (no un sustantivo:
