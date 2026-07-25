@@ -172,18 +172,19 @@
         : 0;
     const descuento = pctDesc > 0 ? `<span class="hero__descuento">AHORRÁ ${pctDesc}%</span>` : "";
 
-    // Bullet nuevo = {emoji, fuerte, resto}: emoji a color relevante + arranque
-    // en negrita (estilo SOLUME/PagePilot). Retrocompat: páginas viejas traen
-    // {icono} (ícono de línea) o string plano → siguen renderizando igual.
+    // Bullet = {icono, fuerte, resto}: ícono de línea MONO (Feather/Lucide-style),
+    // a un solo color neutro — no emoji a color (leía barato en productos tech y
+    // rompía la disciplina cromática). Retrocompat: páginas con {emoji} o string
+    // plano siguen renderizando igual.
     const bullets = (h.bullets ?? [])
       .map((b) => {
         if (typeof b === "string")
           return `<li><span class="hero__bullet-ico">${ICONOS_BULLET.check}</span><span>${esc(b)}</span></li>`;
         let ico;
-        if (b.emoji)
-          ico = `<span class="hero__bullet-emoji">${esc(b.emoji)}</span>`;
-        else if (b.icono && ICONOS_BULLET[b.icono])
+        if (b.icono && ICONOS_BULLET[b.icono])
           ico = `<span class="hero__bullet-ico">${ICONOS_BULLET[b.icono]}</span>`;
+        else if (b.emoji)
+          ico = `<span class="hero__bullet-emoji">${esc(b.emoji)}</span>`;
         else ico = `<span class="hero__bullet-ico">${ICONOS_BULLET.check}</span>`;
         const fuerte = esc(b.fuerte ?? "");
         const resto = esc(b.resto ?? "");

@@ -173,10 +173,14 @@ garantía, un modo de uso. Ejemplos de tipos:
   · garantía:       fuerte "30 días de prueba"   · resto ""
   · uso:            fuerte "Usalo en la ducha"   · resto "resistente al agua"
 Cada bullet en 3 partes:
-- emoji: UN emoji que ilustre LITERAL ese punto (objeto/material/acción). Los 4
-  del MISMO tipo visual: todos objetos/símbolos planos (💧 🚿 ⏰ 🛡️ 🔋 ❄️ ☀️ 🌿).
-  NO mezcles caritas ni animales (😊 🐱) con objetos. Sin repetir. PROHIBIDO los
-  genéricos de relleno (✅ ✔️ ✨ 🔥 🚀 ⭐ 💯 👍 🎉): leen a IA.
+- icono: elegí de esta lista el que MEJOR ilustre ese punto (ícono de línea mono,
+  NO emoji): escudo (garantía/protección) · rayo (potente/rápido/energía) ·
+  gota (agua/hidratación) · reloj (tiempo/minutos) · hoja (natural/orgánico) ·
+  corazon (cuidado/salud) · brillo (estilo/glamour) · estrella (calidad/premium) ·
+  pluma (liviano/suave) · caja (incluye/compacto) · camion (envío) ·
+  regla (medida/ajuste) · sol (luz/día) · luna (noche/sueño) · diana (precisión) ·
+  refresh (giratorio/reutilizable/360) · candado (seguro) · check (genérico si nada encaja).
+  No repitas el mismo icono en dos bullets si podés evitarlo.
 - fuerte: el núcleo del punto en 2-3 palabras (va en negrita).
 - resto: descripción MUY corta (máximo 4 palabras) o VACÍO "" si el punto se
   entiende solo. Al menos 1 de los 4 debe ir con resto vacío (varía el ritmo).
@@ -279,13 +283,13 @@ const ESQUEMA = {
               items: {
                 type: "object",
                 properties: {
-                  // Un emoji a color relevante por bullet (estilo SOLUME). El
-                  // prompt guía cuáles usar y cuáles evitar (genéricos = IA).
-                  emoji: { type: "string" },
+                  // Clave de ícono de línea mono (el prompt lista las válidas; el
+                  // render cae a "check" si viene una que no existe).
+                  icono: { type: "string" },
                   fuerte: { type: "string" },
                   resto: { type: "string" }
                 },
-                required: ["emoji", "fuerte", "resto"],
+                required: ["icono", "fuerte", "resto"],
                 additionalProperties: false
               }
             },
