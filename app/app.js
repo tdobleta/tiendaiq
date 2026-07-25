@@ -1785,7 +1785,23 @@
       },
       bullets: {
         titulo: "Beneficios del producto",
-        html: () => f.hero.bullets.map((_, i) => campo(`facetas.hero.bullets.${i}`, `Bullet ${i + 1}`)).join("")
+        html: () =>
+          `<div class="editor__nota">Cada beneficio: un emoji, el arranque en negrita y el resto de la frase.</div>` +
+          f.hero.bullets
+            .map(
+              (b, i) => `
+              <fieldset class="resena-edit">
+                <legend>Beneficio ${i + 1}</legend>
+                <div class="fila-triple">
+                  <input type="text" data-ruta="facetas.hero.bullets.${i}.emoji" value="${esc(b.emoji ?? "")}" placeholder="💧" title="Emoji">
+                  <input type="text" data-ruta="facetas.hero.bullets.${i}.fuerte" value="${esc(b.fuerte ?? "")}" placeholder="Arranque (en negrita)">
+                </div>
+                <div class="fila-triple" style="grid-template-columns:1fr;margin-bottom:0">
+                  <input type="text" data-ruta="facetas.hero.bullets.${i}.resto" value="${esc(b.resto ?? "")}" placeholder="Resto de la frase">
+                </div>
+              </fieldset>`
+            )
+            .join("")
       },
       destacada: {
         titulo: "Reseña destacada",
@@ -2550,6 +2566,14 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     const pg = estado.pagina;
     sucio = false;
     if (!Array.isArray(pg.data.secciones)) pg.data.secciones = [];
+    // Bullets viejos (string plano) → objeto {emoji, fuerte, resto} editable.
+    // El render en la tienda tolera ambas formas; esto es solo para el editor.
+    const hb = pg.data.facetas?.hero?.bullets;
+    if (Array.isArray(hb)) {
+      pg.data.facetas.hero.bullets = hb.map((b) =>
+        typeof b === "string" ? { emoji: "", fuerte: "", resto: b } : b
+      );
+    }
     const publicada = pg.estado === "publicada";
 
     vista.innerHTML = `

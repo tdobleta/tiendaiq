@@ -163,7 +163,13 @@ SUBTÍTULO
 Una sola frase: beneficio + mecanismo.
 
 BULLETS (4)
-Beneficio cuantificado, máximo 8 palabras, empiezan con verbo.
+Cada bullet es un beneficio cuantificado que empieza con verbo. Lo devolvés en 3 partes:
+- emoji: UN emoji que ilustre ESE beneficio puntual (que pegue con el punto, no genérico).
+- fuerte: el arranque del beneficio en 2-4 palabras (el gancho; va en negrita).
+- resto: el resto de la frase.
+Entre fuerte y resto, máximo 8 palabras en total. Ejemplo:
+  emoji "💧" · fuerte "Reducí la hinchazón" · resto "bajo los ojos al instante"
+  emoji "🚿" · fuerte "Usalo en la ducha" · resto "es resistente al agua"
 
 ICONOS (4)
 emoji + título de 1-2 palabras que sea un BENEFICIO (no un sustantivo:
@@ -242,7 +248,19 @@ const ESQUEMA = {
           properties: {
             titulo: { type: "string" },
             subtitulo: { type: "string" },
-            bullets: { type: "array", items: { type: "string" } },
+            bullets: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  emoji: { type: "string" },
+                  fuerte: { type: "string" },
+                  resto: { type: "string" }
+                },
+                required: ["emoji", "fuerte", "resto"],
+                additionalProperties: false
+              }
+            },
             galeria: { type: "array", items: { type: "string" } },
             resenas_count: { type: "integer" },
             resena_destacada: {
@@ -491,7 +509,8 @@ function validar(data, salidaCruda) {
   }
 
   for (const b of f.hero.bullets) {
-    if (b.split(/\s+/).length > 8) avisos.push(`bullet: "${b}" — más de 8 palabras`);
+    const txt = typeof b === "string" ? b : `${b.fuerte ?? ""} ${b.resto ?? ""}`.trim();
+    if (txt.split(/\s+/).length > 8) avisos.push(`bullet: "${txt}" — más de 8 palabras`);
   }
 
   // El dato más citado de la descripción sucia no debería aparecer en la página.

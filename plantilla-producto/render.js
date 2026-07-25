@@ -142,8 +142,18 @@
         : 0;
     const descuento = pctDesc > 0 ? `<span class="hero__descuento">-${pctDesc}%</span>` : "";
 
+    // Bullet nuevo = {emoji, fuerte, resto}: emoji contextual + arranque en
+    // negrita. Bullet viejo (string plano) cae al check violeta de siempre.
     const bullets = (h.bullets ?? [])
-      .map((b) => `<li><span class="tick">${ICONO.tick}</span>${esc(b)}</li>`)
+      .map((b) => {
+        if (typeof b === "string")
+          return `<li><span class="tick">${ICONO.tick}</span><span>${esc(b)}</span></li>`;
+        const icono = b.emoji
+          ? `<span class="hero__bullet-emoji">${esc(b.emoji)}</span>`
+          : `<span class="tick">${ICONO.tick}</span>`;
+        const fuerte = b.fuerte ? `<strong>${esc(b.fuerte)}</strong> ` : "";
+        return `<li>${icono}<span>${fuerte}${esc(b.resto ?? "")}</span></li>`;
+      })
       .join("");
 
     // Los selectores de variante (Color, Plug Type, etc.) no se muestran:
