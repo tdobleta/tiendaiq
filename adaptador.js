@@ -165,16 +165,17 @@ Una sola frase: beneficio + mecanismo.
 BULLETS (4)
 Cada bullet es un beneficio cuantificado que empieza con verbo. Lo devolvés en 3 partes:
 - emoji: UN solo emoji que ilustre LITERAL y específicamente ese beneficio (el
-  objeto, la acción o el material del que habla el bullet). Elegí uno concreto y
-  distinto para cada bullet. PROHIBIDO los genéricos de relleno (✅ ✔️ ✨ 🔥 🚀 ⭐
-  💯 👍 🎉): esos leen a IA. Preferí emojis que "muestran" el beneficio, como hace
-  una tienda ganadora — 💧 hidratación, 😴 sueño/descanso, ⏰ tiempo, 🌿 natural,
-  💪 fuerza, 🛡️ garantía, 🚿 resistente al agua, 🔋 batería, ❄️ frío, ☀️ luz.
-- fuerte: el arranque del beneficio en 2-4 palabras (el gancho; va en negrita).
-- resto: el resto de la frase.
-Entre fuerte y resto, máximo 8 palabras en total. No repitas emoji entre bullets. Ejemplo:
-  emoji "💧" · fuerte "Reducí la hinchazón" · resto "bajo los ojos al instante"
-  emoji "🚿" · fuerte "Usalo en la ducha" · resto "es resistente al agua"
+  objeto, la acción o el material del que habla el bullet). Distinto en cada
+  bullet, sin repetir. PROHIBIDO los genéricos de relleno (✅ ✔️ ✨ 🔥 🚀 ⭐ 💯 👍
+  🎉): leen a IA. Los 4 emojis tienen que ser del MISMO tipo visual: todos
+  objetos/símbolos planos (💧 🚿 ⏰ 🛡️ 🔋 ❄️ ☀️ 🌿). NO mezcles caritas ni
+  animales (😊 🐱) con objetos — esa mezcla se ve inconsistente.
+- fuerte: el arranque del beneficio en 2-3 palabras (el gancho; va en negrita).
+- resto: la descripción, MUY corta: máximo 4 palabras. Los beneficios premium
+  son cortísimos (SOLUME: "No More Harsh Alarms"). Cortá lo que sobre.
+No repitas emoji entre bullets. Ejemplo:
+  emoji "💧" · fuerte "Reducí la hinchazón" · resto "bajo los ojos"
+  emoji "🚿" · fuerte "Usalo en la ducha" · resto "resistente al agua"
 
 ICONOS (4)
 emoji + título de 1-2 palabras que sea un BENEFICIO (no un sustantivo:
@@ -544,7 +545,7 @@ function validar(data, salidaCruda) {
 
   for (const b of f.hero.bullets) {
     const txt = typeof b === "string" ? b : `${b.fuerte ?? ""} ${b.resto ?? ""}`.trim();
-    if (txt.split(/\s+/).length > 8) avisos.push(`bullet: "${txt}" — más de 8 palabras`);
+    if (txt.split(/\s+/).length > 7) avisos.push(`bullet: "${txt}" — demasiado largo (apuntar a ≤7 palabras)`);
   }
 
   // El dato más citado de la descripción sucia no debería aparecer en la página.

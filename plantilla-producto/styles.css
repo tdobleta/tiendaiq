@@ -242,13 +242,15 @@
 /* Beneficios: alto uniforme, separación pareja, enmarcados arriba y abajo.
    Tipografía calcada de PagePilot: Poppins 500, 15px, texto casi negro,
    tick violeta grueso de trazo redondeado. */
-#app .hero__bullets { list-style: none; border-top: 1px solid var(--borde); padding: 14px 0 0; margin-bottom: 22px; }
-/* Más chicos y apretados que la versión anterior: compacto = más "diseñado",
-   menos "texto grande de IA". Referencia: SOLUME. */
+/* Sin línea divisoria: el aire (margin-top) separa de "Impuestos". Marcas
+   premium separan con espacio, no con reglas. */
+#app .hero__bullets { list-style: none; margin: 20px 0 22px; padding: 0; }
+/* Compacto y con ritmo parejo: interlineado corto adentro, separación pareja
+   entre beneficios. Referencia: SOLUME/Bungee. */
 #app .hero__bullets li {
-  display: flex; align-items: flex-start; gap: 9px;
-  font-size: 14px; font-weight: 500; line-height: 1.4;
-  color: #52525b; margin-bottom: 8px; /* el detalle en gris; la negrita en negro */
+  display: flex; align-items: flex-start; gap: 8px;
+  font-size: 14px; font-weight: 400; line-height: 1.3;
+  color: #6b7280; margin-bottom: 13px; /* descripción en gris claro; el título en negro */
 }
 #app .hero__bullets li:last-child { margin-bottom: 0; }
 #app .hero__bullets .tick { width: 15px; height: 15px; color: var(--acento); flex-shrink: 0; margin-top: 3px; }
@@ -257,9 +259,10 @@
 #app .hero__bullets .hero__bullet-ico { flex-shrink: 0; width: 18px; height: 18px; color: var(--acento); margin-top: 1px; }
 #app .hero__bullets .hero__bullet-ico svg { width: 100%; height: 100%; display: block; }
 /* Emoji a color: el ícono principal del bullet (estilo SOLUME/PagePilot). */
-#app .hero__bullets .hero__bullet-emoji { flex-shrink: 0; width: 24px; text-align: center; font-size: 18px; line-height: 1.4; }
-/* El arranque del beneficio en negrita, como SOLUME. */
-#app .hero__bullets li strong { font-weight: 700; color: var(--negro); }
+#app .hero__bullets .hero__bullet-emoji { flex-shrink: 0; width: 22px; text-align: center; font-size: 18px; line-height: 1.3; }
+/* El título del beneficio: negrita SUTIL (600, no 700/800) — la diferencia con
+   la descripción tiene que ser leve, como en SOLUME. */
+#app .hero__bullets li strong { font-weight: 600; color: var(--negro); }
 
 /* Variantes: cada grupo bien separado, label chico en mayúsculas. */
 #app .hero__variantes { margin-bottom: 24px; }
