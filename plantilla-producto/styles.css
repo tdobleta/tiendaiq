@@ -208,7 +208,10 @@
    Poppins lo hacía ver pesado y desbalanceaba la columna. */
 /* Destaca por el ESPACIO alrededor, no por el tamaño. Más chico y con más aire
    que antes: deja respirar la columna en vez de aplastarla. */
-#app .hero__titulo { font-size: 31px; font-weight: 800; line-height: 1.1; letter-spacing: -0.02em; margin: 0 0 20px; }
+#app .hero__titulo { font-size: 31px; font-weight: 800; line-height: 1.1; letter-spacing: -0.02em; margin: 0 0 12px; }
+/* Promesa (función: IDENTIDAD/emoción). La frase que le da carácter al producto,
+   pegada al título y angosta. Muteada: acompaña, no compite. */
+#app .hero__promesa { font-size: 15.5px; font-weight: 400; line-height: 1.5; color: #52525b; max-width: 34ch; margin: 0 0 26px; }
 
 /* Precio actual = protagonista, limpio. Los tres elementos centrados sobre
    el mismo eje (align-items:center), con aire entre ellos. */
@@ -286,12 +289,11 @@
 #app .chip:hover { border-color: #9ca3af; }
 #app .chip.activa { border-color: var(--negro); border-width: 2px; padding: 8px 15px; color: var(--negro); font-weight: 500; }
 
-/* Bloque de envío/garantía/devoluciones: 3 columnas centradas, ícono arriba. */
-#app .hero__badges { display: flex; justify-content: space-between; gap: 8px; border-top: 1px solid var(--borde); border-bottom: 1px solid var(--borde); padding: 16px 0; }
-/* border:0 fuerza planos: el recuadro venía del tema, PagePilot los tiene sin caja. */
-#app .badge { flex: 1; text-align: center; font-size: 12.5px; font-weight: 500; color: var(--negro); line-height: 1.35; border: 0; background: none; padding: 0; }
-#app .badge__icono { display: block; margin: 0 auto 8px; width: 24px; height: 24px; color: var(--negro); }
-#app .badge__icono svg { width: 100%; height: 100%; }
+/* Confianza (función: CONFIANZA). Una línea de texto sobria bajo el CTA, sin
+   tarjetas ni íconos — distinta en estructura de los bullets, para no repetir
+   patrón. Red de seguridad en el momento de la decisión. */
+#app .hero__confianza { font-size: 12px; letter-spacing: .02em; color: var(--texto-suave); line-height: 1.5; margin: 0 0 8px; }
+#app .hero__confianza span { color: #cbd5e1; margin: 0 8px; }
 
 /* Reseña destacada: prueba social elegante, con aire arriba y abajo. */
 #app .resena-destacada {

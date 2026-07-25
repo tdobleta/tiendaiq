@@ -199,12 +199,11 @@
     // La compra usa la variante por defecto del producto.
     const variantes = "";
 
+    // Confianza al pie del CTA: una línea sobria de texto, NO una grilla de
+    // tarjetas con ícono (esa estructura era gemela de los bullets → leía a UI).
+    // Editorial y callada, hace de red de seguridad justo en la decisión.
     const badges = `
-      <div class="hero__badges">
-        <div class="badge"><span class="badge__icono">${ICONO.camion}</span>Envío rastreado y asegurado</div>
-        <div class="badge"><span class="badge__icono">${ICONO.paquete}</span>30 días de garantía</div>
-        <div class="badge"><span class="badge__icono">${ICONO.corazon}</span>Devoluciones gratis</div>
-      </div>`;
+      <p class="hero__confianza">Envío asegurado<span>·</span>30 días de garantía<span>·</span>Devoluciones gratis</p>`;
 
     const rd = h.resena_destacada ?? {};
     // En la tienda, una reseña sin texto real no se muestra: el placeholder
@@ -239,6 +238,7 @@
           <div>
             <div class="hero__resenas">${estrellas(5)} <span>Calificación ${esc(puntaje1(h.puntaje ?? 4.9))}/5.0 (${esc(miles(h.resenas_count))})</span></div>
             <h1 class="hero__titulo">${esc(h.titulo)}</h1>
+            ${h.subtitulo ? `<p class="hero__promesa">${esc(h.subtitulo)}</p>` : ""}
             <div class="hero__precios">
               <span class="hero__precio">${esc(precioBonito(fuente.moneda, fuente.precio))}</span>
               ${comparativo}
