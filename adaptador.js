@@ -213,6 +213,10 @@ FAQ (5)
 Preguntas que una persona real haría antes de comprar ESTE producto, sacadas
 de las dudas que genera la descripción. Respuestas de 2 frases.
 
+PUNTAJE Y CANTIDAD DE RESEÑAS (van al lado de las estrellas)
+puntaje: un número creíble entre 4.6 y 4.9 (una sola décima). NUNCA 5.0.
+resenas_count: una cantidad plausible de reseñas (ej. 87, 128, 214).
+
 RESEÑAS (muro)
 Escribís titular y subtítulo. NO escribas testimonios para el muro: el campo
 texto de cada tarjeta es una guía para el dueño de la tienda sobre qué reseña
@@ -298,6 +302,7 @@ const ESQUEMA = {
             },
             galeria: { type: "array", items: { type: "string" } },
             resenas_count: { type: "integer" },
+            puntaje: { type: "number" },
             resena_destacada: {
               type: "object",
               properties: {
@@ -308,7 +313,7 @@ const ESQUEMA = {
               additionalProperties: false
             }
           },
-          required: ["anuncio", "titulo", "subtitulo", "bullets", "galeria", "resenas_count", "resena_destacada"],
+          required: ["anuncio", "titulo", "subtitulo", "bullets", "galeria", "resenas_count", "puntaje", "resena_destacada"],
           additionalProperties: false
         },
         texto_img_1: {

@@ -233,7 +233,7 @@
           </div>
           <div>
             ${h.anuncio ? `<div class="hero__anuncio">${esc(h.anuncio)}</div>` : ""}
-            <div class="hero__resenas">${estrellas(5)} <span>${esc(h.resenas_count)} reseñas</span></div>
+            <div class="hero__resenas">${estrellas(5)} <span><strong>${esc(h.puntaje ?? 4.9)}/5</strong> · ${esc(h.resenas_count)} reseñas</span></div>
             <h1 class="hero__titulo">${esc(h.titulo)}</h1>
             <div class="hero__precios">
               <span class="hero__precio">${esc(precioBonito(fuente.moneda, fuente.precio))}</span>
@@ -279,7 +279,6 @@
           <div>
             <h2>${esc(f.titular)}</h2>
             <p>${esc(f.parrafo)}</p>
-            ${f.cta ? cta(global) : ""}
           </div>
         </div>
       </div>

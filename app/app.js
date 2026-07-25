@@ -1788,6 +1788,8 @@
             campo("facetas.hero.anuncio", "Barra de anuncio (arriba del título · vacío = sin barra)", 0, true) +
             campo("facetas.hero.titulo", "Título") +
             campoNumero("facetas.hero.resenas_count", "Cantidad de reseñas (junto a las estrellas)") +
+            `<div class="campo campo--editor"><label>Puntaje (de 5, ej: 4.9)</label>
+              <input type="number" min="0" max="5" step="0.1" data-ruta="facetas.hero.puntaje" data-tipo="numero" value="${esc(leer(estado.pagina.data, "facetas.hero.puntaje") ?? 4.9)}"></div>` +
             campo("global.cta", "Texto del botón de compra") +
             `<div class="campo campo--editor">
               <label>Color de la página (según el rubro)</label>

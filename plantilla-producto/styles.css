@@ -202,15 +202,16 @@
    sin ser una alarma roja. Solo aparece si hay texto. */
 #app .hero__anuncio {
   display: flex; align-items: center; justify-content: center; gap: 8px;
-  background: var(--acento-suave); color: var(--acento-texto);
-  font-size: 13.5px; font-weight: 600; line-height: 1.35;
-  text-align: center; padding: 9px 16px; border-radius: 10px;
+  background: var(--acento); color: #fff;
+  font-size: 13px; font-weight: 700; letter-spacing: .2px; line-height: 1.35;
+  text-align: center; padding: 10px 16px; border-radius: 8px;
   margin-bottom: 16px;
 }
 
 /* Rating: presente y prolijo — estrellas grandes, texto a la par. */
-#app .hero__resenas { display: flex; align-items: center; gap: 10px; font-size: 15.5px; color: var(--texto-suave); font-weight: 500; }
-#app .hero__resenas .estrellas { font-size: 21px; letter-spacing: 1.5px; }
+#app .hero__resenas { display: flex; align-items: center; gap: 10px; font-size: 14.5px; color: var(--texto-suave); font-weight: 500; }
+#app .hero__resenas .estrellas { font-size: 20px; letter-spacing: 1.5px; }
+#app .hero__resenas strong { color: var(--negro); font-weight: 700; }
 
 /* Título: el elemento dominante, pero en 600 como PagePilot — el 700 de
    Poppins lo hacía ver pesado y desbalanceaba la columna. */
