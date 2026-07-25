@@ -170,7 +170,7 @@
       isFinite(pAhora) && isFinite(pAntes) && pAntes > pAhora
         ? Math.round((1 - pAhora / pAntes) * 100)
         : 0;
-    const descuento = pctDesc > 0 ? `<span class="hero__descuento">-${pctDesc}%</span>` : "";
+    const descuento = pctDesc > 0 ? `<span class="hero__descuento">AHORRÁ ${pctDesc}%</span>` : "";
 
     // Bullet nuevo = {emoji, fuerte, resto}: emoji a color relevante + arranque
     // en negrita (estilo SOLUME/PagePilot). Retrocompat: páginas viejas traen
