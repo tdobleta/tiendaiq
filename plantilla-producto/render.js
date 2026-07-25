@@ -78,6 +78,32 @@
   // los acordeones del hero llevan icono fijo por posición: globo, retorno
   const ICONO_ACORDEON = [ICONO.globo, ICONO.retorno];
 
+  // Set curado de íconos de línea para los bullets (reemplaza el emoji genérico
+  // que leía a IA). La IA elige la clave por beneficio; heredan el color del
+  // acento del nicho vía currentColor. Trazo fino redondeado, estilo consistente.
+  const _sv = (p) =>
+    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
+  const ICONOS_BULLET = {
+    escudo: _sv(`<path d="M12 3l7 2.5V11c0 4.6-3.1 7.6-7 8.5-3.9-.9-7-3.9-7-8.5V5.5z"/><path d="M9 12l2 2 4-4.2"/>`),
+    rayo: _sv(`<path d="M13 2.5 4.5 13.5H11l-1 8L19.5 10H13z"/>`),
+    gota: _sv(`<path d="M12 3.5c3 3.4 5.5 6.3 5.5 9.4a5.5 5.5 0 0 1-11 0c0-3.1 2.5-6 5.5-9.4z"/>`),
+    reloj: _sv(`<circle cx="12" cy="12" r="8.5"/><path d="M12 7.3V12l3.2 2"/>`),
+    hoja: _sv(`<path d="M5 19c9 1.4 14-4.6 14-13 0 0-8.6-1.4-12.6 3.6C4 12.5 4.5 16 5 19z"/><path d="M5 19l8-8"/>`),
+    corazon: ICONO.corazon,
+    brillo: _sv(`<path d="M12 3l1.7 4.6L18.3 9l-4.6 1.4L12 15l-1.7-4.6L5.7 9l4.6-1.4z"/><path d="M18.5 14.5l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z"/>`),
+    estrella: _sv(`<path d="M12 3.4l2.5 5.2 5.7.8-4.1 4 1 5.7L12 16.5l-5.1 2.6 1-5.7-4.1-4 5.7-.8z"/>`),
+    pluma: _sv(`<path d="M20.2 8.2A5.5 5.5 0 0 0 11 4.1L5.5 9.6V19h9.4z"/><path d="M16 8 3.5 20.5"/><path d="M15.5 13H9"/>`),
+    caja: ICONO.paquete,
+    camion: ICONO.camion,
+    regla: _sv(`<path d="M3 15 15 3l6 6L9 21z"/><path d="M7.5 10.5l1.6 1.6M10.5 7.5l1.6 1.6M13.5 4.5l1.6 1.6M4.5 13.5l1.6 1.6"/>`),
+    sol: _sv(`<circle cx="12" cy="12" r="4.4"/><path d="M12 2v2.4M12 19.6V22M4.2 4.2l1.7 1.7M18.1 18.1l1.7 1.7M2 12h2.4M19.6 12H22M4.2 19.8l1.7-1.7M18.1 5.9l1.7-1.7"/>`),
+    luna: _sv(`<path d="M20 14.4A8 8 0 1 1 9.6 4 6.5 6.5 0 0 0 20 14.4z"/>`),
+    diana: _sv(`<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.4"/><circle cx="12" cy="12" r="1" fill="currentColor"/>`),
+    refresh: _sv(`<path d="M20 11a8 8 0 1 0-2.1 6.4"/><path d="M20 4.5V11h-6.5"/>`),
+    candado: _sv(`<rect x="4.8" y="10.5" width="14.4" height="9.7" rx="2"/><path d="M8 10.5V7.6a4 4 0 0 1 8 0v2.9"/>`),
+    check: _sv(`<circle cx="12" cy="12" r="9"/><path d="M8.4 12.4l2.5 2.5 4.7-5.4"/>`)
+  };
+
   const cta = (global, extra = "") =>
     `<button class="cta ${extra}">${esc(global.cta)}</button>`;
 
@@ -142,17 +168,21 @@
         : 0;
     const descuento = pctDesc > 0 ? `<span class="hero__descuento">-${pctDesc}%</span>` : "";
 
-    // Bullet nuevo = {emoji, fuerte, resto}: emoji contextual + arranque en
-    // negrita. Bullet viejo (string plano) cae al check violeta de siempre.
+    // Bullet nuevo = {icono, fuerte, resto}: ícono de línea (color del acento)
+    // + arranque en negrita. Retrocompat: si trae emoji (páginas #2) lo respeta;
+    // si es string plano (páginas viejas) cae al check.
     const bullets = (h.bullets ?? [])
       .map((b) => {
         if (typeof b === "string")
-          return `<li><span class="tick">${ICONO.tick}</span><span>${esc(b)}</span></li>`;
-        const icono = b.emoji
-          ? `<span class="hero__bullet-emoji">${esc(b.emoji)}</span>`
-          : `<span class="tick">${ICONO.tick}</span>`;
+          return `<li><span class="hero__bullet-ico">${ICONOS_BULLET.check}</span><span>${esc(b)}</span></li>`;
+        let ico;
+        if (b.icono && ICONOS_BULLET[b.icono])
+          ico = `<span class="hero__bullet-ico">${ICONOS_BULLET[b.icono]}</span>`;
+        else if (b.emoji)
+          ico = `<span class="hero__bullet-emoji">${esc(b.emoji)}</span>`;
+        else ico = `<span class="hero__bullet-ico">${ICONOS_BULLET.check}</span>`;
         const fuerte = b.fuerte ? `<strong>${esc(b.fuerte)}</strong> ` : "";
-        return `<li>${icono}<span>${fuerte}${esc(b.resto ?? "")}</span></li>`;
+        return `<li>${ico}<span>${fuerte}${esc(b.resto ?? "")}</span></li>`;
       })
       .join("");
 

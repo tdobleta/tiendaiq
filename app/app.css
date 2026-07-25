@@ -695,11 +695,11 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
 
 .fila-doble { display: grid; grid-template-columns: 1fr 116px; gap: 8px; margin-bottom: 8px; }
 .fila-triple { display: grid; grid-template-columns: 52px 1fr; gap: 8px; margin-bottom: 8px; }
-.fila-doble input, .fila-doble select, .fila-triple input {
+.fila-doble input, .fila-doble select, .fila-triple input, .fila-triple select {
   width: 100%; padding: 8px 10px; font-size: 13px; font-family: inherit;
   border: 1px solid var(--borde); border-radius: 8px; background: #fff; color: var(--texto);
 }
-.fila-doble input:focus, .fila-doble select:focus, .fila-triple input:focus {
+.fila-doble input:focus, .fila-doble select:focus, .fila-triple input:focus, .fila-triple select:focus {
   outline: 2px solid var(--acento); outline-offset: -1px;
 }
 
