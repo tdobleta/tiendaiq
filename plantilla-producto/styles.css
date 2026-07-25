@@ -10,12 +10,15 @@
 @import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=DM+Sans:opsz,wght@9..40,400..700&display=swap");
 
 :root {
-  --negro: #111111;
-  --texto: #333333;
-  --texto-suave: #6b7280;
-  --borde: #e5e7eb;
-  --fondo-suave: #fafafa;
-  --estrella: #f5b301;
+  /* Neutros CÁLIDOS (stone), no grises fríos: leen premium/editorial y
+     conviven mejor con el acento. Recomendación de ui-ux-pro-max para
+     e-commerce premium; es la base de SOLUME (crema + negro cálido). */
+  --negro: #0c0a09;
+  --texto: #292524;
+  --texto-suave: #78716c;
+  --borde: #e7e5e4;
+  --fondo-suave: #fafaf9;
+  --estrella: #d9a441;
   --check: #16a34a;
   --violeta: #7c5cd6;   /* ticks de los bullets del hero */
   --azul-verif: #2b7cf6; /* sello de comprador verificado */
@@ -38,7 +41,7 @@
 
 /* Paletas por rubro. La flecha del nicho la pone render.js en #app[data-nicho].
    Contraste verificado para texto blanco sobre --acento (CTA/pastilla). */
-#app[data-nicho="belleza"]  { --acento: #db2777; --acento-suave: #fdf2f8; --acento-texto: #9d174d; }
+#app[data-nicho="belleza"]  { --acento: #a16207; --acento-suave: #fbf3e4; --acento-texto: #854d0e; }
 #app[data-nicho="salud"]    { --acento: #0d9488; --acento-suave: #f0fdfa; --acento-texto: #0f766e; }
 #app[data-nicho="hogar"]    { --acento: #c2410c; --acento-suave: #fff7ed; --acento-texto: #9a3412; }
 #app[data-nicho="mascotas"] { --acento: #d97706; --acento-suave: #fffbeb; --acento-texto: #b45309; }
@@ -211,7 +214,7 @@
 #app .hero__titulo { font-size: 31px; font-weight: 800; line-height: 1.1; letter-spacing: -0.02em; margin: 0 0 12px; }
 /* Promesa (función: IDENTIDAD/emoción). La frase que le da carácter al producto,
    pegada al título y angosta. Muteada: acompaña, no compite. */
-#app .hero__promesa { font-size: 15.5px; font-weight: 400; line-height: 1.5; color: #52525b; max-width: 34ch; margin: 0 0 26px; }
+#app .hero__promesa { font-size: 15.5px; font-weight: 400; line-height: 1.5; color: #57534e; max-width: 34ch; margin: 0 0 26px; }
 
 /* Precio actual = protagonista, limpio. Los tres elementos centrados sobre
    el mismo eje (align-items:center), con aire entre ellos. */
@@ -256,14 +259,14 @@
 #app .hero__bullets li {
   display: flex; align-items: flex-start; gap: 9px;
   font-size: 14px; font-weight: 400; line-height: 1.3;
-  color: #6b7280; margin-bottom: 10px; /* descripción en gris claro; el título en negro */
+  color: var(--texto-suave); margin-bottom: 10px; /* descripción en gris cálido; el título en negro */
 }
 #app .hero__bullets li:last-child { margin-bottom: 0; }
 #app .hero__bullets .tick { width: 15px; height: 15px; color: var(--acento); flex-shrink: 0; margin-top: 3px; }
 #app .hero__bullets .tick svg { width: 100%; height: 100%; display: block; }
 /* Ícono de línea MONO a un solo color neutro (no el acento): disciplina
    cromática 95% neutro + acento solo en el CTA. Feather/Lucide-style. */
-#app .hero__bullets .hero__bullet-ico { flex-shrink: 0; width: 18px; height: 18px; color: #262626; margin-top: 1px; }
+#app .hero__bullets .hero__bullet-ico { flex-shrink: 0; width: 18px; height: 18px; color: var(--texto); margin-top: 1px; }
 #app .hero__bullets .hero__bullet-ico svg { width: 100%; height: 100%; display: block; }
 /* Emoji a color: el ícono principal del bullet (estilo SOLUME/PagePilot). */
 #app .hero__bullets .hero__bullet-emoji { flex-shrink: 0; width: 22px; text-align: center; font-size: 18px; line-height: 1.3; }
