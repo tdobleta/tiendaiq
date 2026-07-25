@@ -21,7 +21,25 @@
   --tabla-fila: #5f6672;
   --radio: 12px;
   --ancho: 1100px;
+
+  /* ACENTO por nicho (general por defecto). Lo pisan las reglas
+     #app[data-nicho="..."] de abajo. Fluye por CTA, pastilla, anuncio y
+     detalles → cada rubro se ve distinto sin tocar layout ni tipografía. */
+  --acento: #4f46e5;
+  --acento-suave: #eef2ff;
+  --acento-texto: #4338ca;
 }
+
+/* Paletas por rubro. La flecha del nicho la pone render.js en #app[data-nicho].
+   Contraste verificado para texto blanco sobre --acento (CTA/pastilla). */
+#app[data-nicho="belleza"]  { --acento: #db2777; --acento-suave: #fdf2f8; --acento-texto: #9d174d; }
+#app[data-nicho="salud"]    { --acento: #0d9488; --acento-suave: #f0fdfa; --acento-texto: #0f766e; }
+#app[data-nicho="hogar"]    { --acento: #c2410c; --acento-suave: #fff7ed; --acento-texto: #9a3412; }
+#app[data-nicho="mascotas"] { --acento: #d97706; --acento-suave: #fffbeb; --acento-texto: #b45309; }
+#app[data-nicho="tech"]     { --acento: #2563eb; --acento-suave: #eff6ff; --acento-texto: #1d4ed8; }
+#app[data-nicho="fitness"]  { --acento: #15803d; --acento-suave: #f0fdf4; --acento-texto: #166534; }
+#app[data-nicho="bebes"]    { --acento: #3f77b8; --acento-suave: #eff6ff; --acento-texto: #2f6cad; }
+#app[data-nicho="moda"]     { --acento: #171717; --acento-suave: #f5f5f4; --acento-texto: #292524; }
 
 /* Todo lo genérico va encerrado en #app: en la tienda esta hoja convive con
    el CSS del tema, y un reset global le rompería el header y el footer. */
@@ -53,7 +71,7 @@
 /* ---------- CTA ---------- */
 #app .cta {
   display: inline-block;
-  background: var(--negro);
+  background: var(--acento);
   color: #fff;
   border: none;
   border-radius: 8px;
@@ -175,7 +193,7 @@
    sin ser una alarma roja. Solo aparece si hay texto. */
 #app .hero__anuncio {
   display: flex; align-items: center; justify-content: center; gap: 8px;
-  background: #fff4e0; color: #8a5a00;
+  background: var(--acento-suave); color: var(--acento-texto);
   font-size: 13.5px; font-weight: 600; line-height: 1.35;
   text-align: center; padding: 9px 16px; border-radius: 10px;
   margin-bottom: 16px;
@@ -200,7 +218,7 @@
    tachado → historia de descuento coherente). Centrado contra el precio. */
 #app .hero__descuento {
   align-self: center;
-  background: #e11d48; color: #fff;
+  background: var(--acento); color: #fff;
   font-size: 13px; font-weight: 700; letter-spacing: -.2px; line-height: 1.2;
   padding: 3px 9px; border-radius: 7px;
 }
@@ -229,7 +247,7 @@
   color: #2b2b33; margin-bottom: 11px;
 }
 #app .hero__bullets li:last-child { margin-bottom: 0; }
-#app .hero__bullets .tick { width: 15px; height: 15px; color: var(--violeta); flex-shrink: 0; margin-top: 3px; }
+#app .hero__bullets .tick { width: 15px; height: 15px; color: var(--acento); flex-shrink: 0; margin-top: 3px; }
 #app .hero__bullets .tick svg { width: 100%; height: 100%; display: block; }
 /* Emoji contextual del bullet (reemplaza al check en las páginas nuevas). */
 #app .hero__bullets .hero__bullet-emoji { flex-shrink: 0; width: 22px; text-align: center; font-size: 17px; line-height: 1.45; }
@@ -403,7 +421,7 @@ body.publicada #app .resena-destacada__editar { display: none; }
 #app .stat-item:last-of-type { border-bottom: none; }
 #app .stat-item__circulo {
   width: 56px; height: 56px; border-radius: 50%; flex-shrink: 0;
-  border: 3px solid var(--negro);
+  border: 3px solid var(--acento);
   display: flex; align-items: center; justify-content: center;
   font-size: 13px; font-weight: 700; color: var(--negro);
 }

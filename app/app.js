@@ -1777,12 +1777,27 @@
       galeria: { titulo: "Editar galería de imágenes", html: () => selectorImagenes("facetas.hero.galeria") },
       encabezado: {
         titulo: "Encabezado",
-        html: () =>
-          campo("facetas.hero.anuncio", "Barra de anuncio (arriba del título · vacío = sin barra)", 0, true) +
-          campo("facetas.hero.titulo", "Título") +
-          campo("facetas.hero.subtitulo", "Subtítulo", 2) +
-          campoNumero("facetas.hero.resenas_count", "Cantidad de reseñas (junto a las estrellas)") +
-          campo("global.cta", "Texto del botón de compra")
+        html: () => {
+          const nichoActual = leer(estado.pagina.data, "global.nicho") || "general";
+          const NICHOS = [
+            ["general", "General"], ["belleza", "Belleza / cosmética"], ["salud", "Salud / bienestar"],
+            ["hogar", "Hogar / cocina"], ["mascotas", "Mascotas"], ["tech", "Tecnología"],
+            ["fitness", "Fitness / deporte"], ["bebes", "Bebés / niños"], ["moda", "Moda / joyas / perfume"]
+          ];
+          return (
+            campo("facetas.hero.anuncio", "Barra de anuncio (arriba del título · vacío = sin barra)", 0, true) +
+            campo("facetas.hero.titulo", "Título") +
+            campo("facetas.hero.subtitulo", "Subtítulo", 2) +
+            campoNumero("facetas.hero.resenas_count", "Cantidad de reseñas (junto a las estrellas)") +
+            campo("global.cta", "Texto del botón de compra") +
+            `<div class="campo campo--editor">
+              <label>Color de la página (según el rubro)</label>
+              <select data-ruta="global.nicho">${NICHOS.map(
+                ([k, t]) => `<option value="${k}" ${k === nichoActual ? "selected" : ""}>${t}</option>`
+              ).join("")}</select>
+            </div>`
+          );
+        }
       },
       bullets: {
         titulo: "Beneficios del producto",

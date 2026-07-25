@@ -763,7 +763,10 @@
 
   function montar(datos) {
     if (EN_TIENDA) document.body.classList.add("publicada");
-    document.getElementById("app").innerHTML = render(datos);
+    const app = document.getElementById("app");
+    // El nicho define el color de acento (skin por rubro). Sin dato → general.
+    app.dataset.nicho = datos?.global?.nicho || "general";
+    app.innerHTML = render(datos);
     iniciarVcar(); // centra los carruseles de video
     // Solo en la tienda: el preview no tiene storefront al que preguntarle.
     if (EN_TIENDA) cargarRecomendados(datos?.fuente?.moneda);

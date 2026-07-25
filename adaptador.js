@@ -220,6 +220,18 @@ Esta SÍ la escribís: una opinión de clienta creíble sobre ESTE producto.
 - Autor: nombre de pila + inicial del apellido (ej: "Malena R.", "Carla T.").
 Escribís en {idioma}.
 
+NICHO (define el color de acento de la página)
+Clasificá el producto en UN rubro. Elegí el que mejor lo describe:
+- belleza: cosmética, skincare, maquillaje, cuidado facial/capilar.
+- salud: bienestar, terapéutico, higiene, dispositivos de salud.
+- hogar: cocina, limpieza, organización, deco.
+- mascotas: cualquier producto para perros, gatos u otras mascotas.
+- tech: gadgets, electrónica, accesorios de celular/PC.
+- fitness: deporte, entrenamiento, vida activa.
+- bebes: bebés y niños chicos.
+- moda: ropa, joyas, relojes, perfume, accesorios (rubro elegante/premium).
+- general: solo si no encaja claramente en ninguno.
+
 IMÁGENES
 Clasificá cada una: lifestyle | infografia | producto_limpio | detalle
 Después asigná media_ids a los slots:
@@ -407,9 +419,14 @@ const ESQUEMA = {
         "stats", "texto_img_2", "faq", "garantia", "resenas"
       ],
       additionalProperties: false
+    },
+    nicho: {
+      type: "string",
+      description: "El rubro del producto. Define el color de acento de la página.",
+      enum: ["belleza", "salud", "hogar", "mascotas", "tech", "fitness", "bebes", "moda", "general"]
     }
   },
-  required: ["pool_imagenes", "facetas"],
+  required: ["pool_imagenes", "facetas", "nicho"],
   additionalProperties: false
 };
 
@@ -600,7 +617,7 @@ function ensamblar(fuente, salida, { idioma, angulo }) {
       },
       recomendados: { modo: "placeholder", items: [] }
     },
-    global: { cta: "Agregar al carrito", idioma, angulo }
+    global: { cta: "Agregar al carrito", idioma, angulo, nicho: salida.nicho || "general" }
   };
 }
 
