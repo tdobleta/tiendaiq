@@ -203,7 +203,11 @@
 
 /* Título: el elemento dominante, pero en 600 como PagePilot — el 700 de
    Poppins lo hacía ver pesado y desbalanceaba la columna. */
-#app .hero__titulo { font-size: 38px; font-weight: 600; line-height: 1.16; margin: 10px 0 12px; }
+#app .hero__titulo { font-size: 38px; font-weight: 800; line-height: 1.07; letter-spacing: -0.01em; margin: 10px 0 12px; }
+/* Belleza/moda van con serif de lujo (Fraunces): 800 no existe en esa familia,
+   así que el peso máximo real es 700 — pesado sin caer en falso-bold sintético. */
+#app[data-nicho="belleza"] .hero__titulo,
+#app[data-nicho="moda"] .hero__titulo { font-weight: 700; letter-spacing: -0.005em; }
 
 /* Precio: pesado pero SIN competir con el título. 23px lo deja como segunda
    jerarquía clara, no como un segundo título. */
