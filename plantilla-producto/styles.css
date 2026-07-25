@@ -26,12 +26,12 @@
   --radio: 12px;
   --ancho: 1100px;
 
-  /* ACENTO por nicho (general por defecto). Lo pisan las reglas
-     #app[data-nicho="..."] de abajo. Fluye por CTA, pastilla y
-     detalles → cada rubro se ve distinto sin tocar layout ni tipografía. */
-  --acento: #4f46e5;
-  --acento-suave: #eef2ff;
-  --acento-texto: #4338ca;
+  /* ACENTO ÚNICO para toda la página de producto (una sola, igual para todos).
+     Dorado/bronce sobre neutros cálidos = premium DTC (referencia SOLUME), y
+     conversa con la fotografía del producto. Fluye por CTA, badge y detalles. */
+  --acento: #a16207;
+  --acento-suave: #fbf3e4;
+  --acento-texto: #854d0e;
 
   /* Título: grotesca pesada para todos los nichos (look DTC). La diferencia
      entre rubros la hace el color de acento, no la fuente. */
@@ -39,16 +39,9 @@
   --fuente-cuerpo: "DM Sans", "Segoe UI", system-ui, sans-serif;
 }
 
-/* Paletas por rubro. La flecha del nicho la pone render.js en #app[data-nicho].
-   Contraste verificado para texto blanco sobre --acento (CTA/pastilla). */
-#app[data-nicho="belleza"]  { --acento: #a16207; --acento-suave: #fbf3e4; --acento-texto: #854d0e; }
-#app[data-nicho="salud"]    { --acento: #0d9488; --acento-suave: #f0fdfa; --acento-texto: #0f766e; }
-#app[data-nicho="hogar"]    { --acento: #c2410c; --acento-suave: #fff7ed; --acento-texto: #9a3412; }
-#app[data-nicho="mascotas"] { --acento: #d97706; --acento-suave: #fffbeb; --acento-texto: #b45309; }
-#app[data-nicho="tech"]     { --acento: #2563eb; --acento-suave: #eff6ff; --acento-texto: #1d4ed8; }
-#app[data-nicho="fitness"]  { --acento: #15803d; --acento-suave: #f0fdf4; --acento-texto: #166534; }
-#app[data-nicho="bebes"]    { --acento: #3f77b8; --acento-suave: #eff6ff; --acento-texto: #2f6cad; }
-#app[data-nicho="moda"]     { --acento: #171717; --acento-suave: #f5f5f4; --acento-texto: #292524; }
+/* Sin paletas por nicho: la página de producto es UNA sola, igual para todos.
+   El acento único (dorado) vive en :root. (Si algún día se quiere diferenciar
+   por rubro, se reintroducen reglas #app[data-nicho="..."] acá.) */
 
 /* Todo lo genérico va encerrado en #app: en la tienda esta hoja convive con
    el CSS del tema, y un reset global le rompería el header y el footer. */
