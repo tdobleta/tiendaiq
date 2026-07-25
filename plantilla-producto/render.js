@@ -199,6 +199,7 @@
             <div class="hero__miniaturas">${miniaturas}</div>
           </div>
           <div>
+            ${h.anuncio ? `<div class="hero__anuncio">${esc(h.anuncio)}</div>` : ""}
             <div class="hero__resenas">${estrellas(5)} <span>${esc(h.resenas_count)} reseñas</span></div>
             <h1 class="hero__titulo">${esc(h.titulo)}</h1>
             <div class="hero__precios">

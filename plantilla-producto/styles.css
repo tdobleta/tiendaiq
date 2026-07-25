@@ -170,6 +170,17 @@
 #app .hero__mini img { width: 100%; height: 100%; object-fit: cover; }
 #app .hero__mini.activa { border: 2px solid var(--negro); }
 
+/* Barra de anuncio: gancho honesto arriba del título, como las tiendas
+   ganadoras. Tinte cálido (familia del dorado de las estrellas) para llamar
+   sin ser una alarma roja. Solo aparece si hay texto. */
+#app .hero__anuncio {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  background: #fff4e0; color: #8a5a00;
+  font-size: 13.5px; font-weight: 600; line-height: 1.35;
+  text-align: center; padding: 9px 16px; border-radius: 10px;
+  margin-bottom: 16px;
+}
+
 /* Rating: presente y prolijo — estrellas grandes, texto a la par. */
 #app .hero__resenas { display: flex; align-items: center; gap: 10px; font-size: 15.5px; color: var(--texto-suave); font-weight: 500; }
 #app .hero__resenas .estrellas { font-size: 21px; letter-spacing: 1.5px; }

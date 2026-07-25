@@ -1778,6 +1778,7 @@
       encabezado: {
         titulo: "Encabezado",
         html: () =>
+          campo("facetas.hero.anuncio", "Barra de anuncio (arriba del título · vacío = sin barra)", 0, true) +
           campo("facetas.hero.titulo", "Título") +
           campo("facetas.hero.subtitulo", "Subtítulo", 2) +
           campoNumero("facetas.hero.resenas_count", "Cantidad de reseñas (junto a las estrellas)") +
@@ -2193,7 +2194,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   const ZONAS_EDICION = [
     { sel: ".hero__galeria", id: "galeria" },
     { sel: ".hero__bullets", id: "bullets" },
-    { sel: ".hero__resenas, .hero__titulo, .hero__subtitulo, .hero__precios, .hero__cantidad", id: "encabezado" },
+    { sel: ".hero__anuncio, .hero__resenas, .hero__titulo, .hero__subtitulo, .hero__precios, .hero__cantidad", id: "encabezado" },
     { sel: ".acordeon", id: "acordeones" },
     { sel: ".resena-destacada", id: "destacada" },
     { sel: ".iconos", id: "iconos" },
