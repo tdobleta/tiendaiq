@@ -285,14 +285,10 @@ const ESQUEMA = {
               items: {
                 type: "object",
                 properties: {
-                  icono: {
-                    type: "string",
-                    enum: [
-                      "escudo", "rayo", "gota", "reloj", "hoja", "corazon", "brillo",
-                      "estrella", "pluma", "caja", "camion", "regla", "sol", "luna",
-                      "diana", "refresh", "candado", "check"
-                    ]
-                  },
+                  // Sin enum (inflaba la gramática de la salida estructurada). El
+                  // prompt lista las claves válidas; el render cae a "check" si
+                  // viene una que no existe.
+                  icono: { type: "string" },
                   fuerte: { type: "string" },
                   resto: { type: "string" }
                 },
@@ -439,9 +435,10 @@ const ESQUEMA = {
       additionalProperties: false
     },
     nicho: {
+      // Sin enum (inflaba la gramática). El prompt lista los rubros válidos; el
+      // CSS cae a "general" si viene uno que no existe.
       type: "string",
-      description: "El rubro del producto. Define el color de acento de la página.",
-      enum: ["belleza", "salud", "hogar", "mascotas", "tech", "fitness", "bebes", "moda", "general"]
+      description: "El rubro del producto (belleza/salud/hogar/mascotas/tech/fitness/bebes/moda/general). Define el color de acento."
     }
   },
   required: ["pool_imagenes", "facetas", "nicho"],
