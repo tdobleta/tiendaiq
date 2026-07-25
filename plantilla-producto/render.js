@@ -389,18 +389,6 @@
     </section>`;
   }
 
-  function garantia(f, global) {
-    return `
-    <section class="garantia">
-      <div class="contenedor">
-        <div class="garantia__icono">📜</div>
-        <h2>${esc(f.titular)}</h2>
-        <p>${esc(f.parrafo)}</p>
-        ${ctaCentro(f, global)}
-      </div>
-    </section>`;
-  }
-
   function resenas(f) {
     // El muro se muestra siempre, con andamio incluido — igual que PagePilot.
     // El dueño reemplaza las tarjetas guía por reseñas reales desde el editor.
@@ -658,9 +646,7 @@
       ["iconos", iconos(f.iconos)],
       ["tabla", tabla(f.tabla, f.hero.titulo, g)],
       ["stats", stats(f.stats, g)],
-      ["texto2", dupla(f.texto_img_2, g, true)],
       ["faq", faq(f.faq, g)],
-      ["garantia", garantia(f.garantia, g)],
       ["resenas", resenas(f.resenas)],
       ["recomendados", recomendados(f.recomendados)]
     ];

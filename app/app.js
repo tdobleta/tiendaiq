@@ -1898,13 +1898,6 @@
             .join("") +
           selectorImagenUno("facetas.stats.imagen", "Imagen del bloque")
       },
-      texto2: {
-        titulo: "Texto + imagen 2",
-        html: () =>
-          campo("facetas.texto_img_2.titular", "Titular") +
-          campo("facetas.texto_img_2.parrafo", "Párrafo", 4) +
-          selectorImagenUno("facetas.texto_img_2.imagen", "Imagen del bloque")
-      },
       faq: {
         titulo: "Preguntas frecuentes",
         html: () =>
@@ -1916,10 +1909,6 @@
                 campo(`facetas.faq.items.${i}.respuesta`, `Respuesta ${i + 1}`, 2)
             )
             .join("")
-      },
-      garantia: {
-        titulo: "Garantía",
-        html: () => campo("facetas.garantia.titular", "Titular") + campo("facetas.garantia.parrafo", "Párrafo", 3)
       },
       resenas: {
         titulo: "Muro de reseñas",
@@ -1965,9 +1954,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     ["iconos", "Después de los beneficios"],
     ["tabla", "Después de la tabla"],
     ["stats", "Después de las estadísticas"],
-    ["texto2", "Después de Texto + imagen 2"],
     ["faq", "Después de las preguntas"],
-    ["garantia", "Después de la garantía"],
     ["resenas", "Después de las reseñas"],
     ["recomendados", "Al final de la página"]
   ];
@@ -2229,9 +2216,8 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     { sel: ".tabla", id: "tabla" },
     { sel: ".stats", id: "stats" },
     { sel: ".faq", id: "faq" },
-    { sel: ".garantia", id: "garantia" },
     { sel: ".resenas", id: "resenas" },
-    { sel: ".dupla", id: null } // texto1 o texto2 según posición
+    { sel: ".dupla", id: "texto1" } // ya solo queda Texto + imagen 1
   ];
 
   function montarEdicionEnIframe(marco) {
@@ -2284,9 +2270,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         for (const z of ZONAS_EDICION) {
           const el = e.target.closest?.(z.sel);
           if (el) {
-            let id = z.id;
-            if (!id) id = [...doc.querySelectorAll(".dupla")].indexOf(el) === 0 ? "texto1" : "texto2";
-            hit = { el, id };
+            hit = { el, id: z.id };
             break;
           }
         }
@@ -2390,8 +2374,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   const NOMBRE_BLOQUE = {
     top: "el principio", hero: "el encabezado", texto1: "Texto + imagen 1",
     iconos: "los beneficios", tabla: "la tabla", stats: "las estadísticas",
-    texto2: "Texto + imagen 2", faq: "las preguntas", garantia: "la garantía",
-    resenas: "las reseñas", recomendados: "los recomendados"
+    faq: "las preguntas", resenas: "las reseñas", recomendados: "los recomendados"
   };
 
   function montarDragSections(marco) {

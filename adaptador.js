@@ -237,7 +237,7 @@ IMÁGENES
 Clasificá cada una: lifestyle | infografia | producto_limpio | detalle
 Después asigná media_ids a los slots:
 - galeria: todas, en orden
-- texto_img_1 / texto_img_2: lifestyle, contexto de uso
+- texto_img_1: lifestyle, contexto de uso
 - iconos.imagen_central: la que mejor quede en recorte CIRCULAR (producto
   centrado, mano usándolo, detalle). Nunca una con texto encima.
 - stats.imagen: infografia si existe; si no, lifestyle
@@ -363,16 +363,6 @@ const ESQUEMA = {
           required: ["titular", "imagen", "items"],
           additionalProperties: false
         },
-        texto_img_2: {
-          type: "object",
-          properties: {
-            titular: { type: "string" },
-            parrafo: { type: "string" },
-            imagen: { type: ["string", "null"] }
-          },
-          required: ["titular", "parrafo", "imagen"],
-          additionalProperties: false
-        },
         faq: {
           type: "object",
           properties: {
@@ -394,15 +384,6 @@ const ESQUEMA = {
           required: ["titular", "subtitulo", "items"],
           additionalProperties: false
         },
-        garantia: {
-          type: "object",
-          properties: {
-            titular: { type: "string" },
-            parrafo: { type: "string" }
-          },
-          required: ["titular", "parrafo"],
-          additionalProperties: false
-        },
         resenas: {
           type: "object",
           properties: {
@@ -420,7 +401,7 @@ const ESQUEMA = {
       },
       required: [
         "hero", "texto_img_1", "iconos", "tabla",
-        "stats", "texto_img_2", "faq", "garantia", "resenas"
+        "stats", "faq", "resenas"
       ],
       additionalProperties: false
     },
@@ -628,9 +609,7 @@ function ensamblar(fuente, salida, { idioma, angulo }) {
           frase: it.frase
         }))
       },
-      texto_img_2: { ...f.texto_img_2, cta: true },
       faq: { ...f.faq, cta: true, items: fijo(f.faq.items, CARDINALIDAD["faq.items"]) },
-      garantia: { ...f.garantia, cta: true },
       resenas: {
         titular: f.resenas.titular,
         subtitulo: f.resenas.subtitulo,
