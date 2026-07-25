@@ -1801,23 +1801,36 @@
       },
       bullets: {
         titulo: "Beneficios del producto",
-        html: () =>
-          `<div class="editor__nota">Cada beneficio: un emoji, el arranque en negrita y el resto (se muestra tras un guión).</div>` +
-          f.hero.bullets
-            .map(
-              (b, i) => `
+        html: () => {
+          const OPC = [
+            ["escudo", "Escudo"], ["rayo", "Rayo"], ["gota", "Gota"], ["reloj", "Reloj"],
+            ["hoja", "Hoja"], ["corazon", "Corazón"], ["brillo", "Brillo"], ["estrella", "Estrella"],
+            ["pluma", "Pluma"], ["caja", "Caja"], ["camion", "Camión"], ["regla", "Regla"],
+            ["sol", "Sol"], ["luna", "Luna"], ["diana", "Diana"], ["refresh", "Giro"],
+            ["candado", "Candado"], ["check", "Check"]
+          ];
+          return (
+            `<div class="editor__nota">Cada beneficio: un ícono, el arranque en negrita y el resto de la frase.</div>` +
+            f.hero.bullets
+              .map(
+                (b, i) => `
               <fieldset class="resena-edit">
                 <legend>Beneficio ${i + 1}</legend>
-                <div class="fila-triple">
-                  <input type="text" data-ruta="facetas.hero.bullets.${i}.emoji" value="${esc(b.emoji ?? "")}" placeholder="💧" title="Emoji">
+                <div class="fila-triple" style="grid-template-columns:130px 1fr">
+                  <select data-ruta="facetas.hero.bullets.${i}.icono">
+                    <option value="" ${!b.icono ? "selected" : ""}>— ícono —</option>
+                    ${OPC.map(([k, t]) => `<option value="${k}" ${b.icono === k ? "selected" : ""}>${t}</option>`).join("")}
+                  </select>
                   <input type="text" data-ruta="facetas.hero.bullets.${i}.fuerte" value="${esc(b.fuerte ?? "")}" placeholder="Arranque (en negrita)">
                 </div>
                 <div class="fila-triple" style="grid-template-columns:1fr;margin-bottom:0">
                   <input type="text" data-ruta="facetas.hero.bullets.${i}.resto" value="${esc(b.resto ?? "")}" placeholder="Resto de la frase">
                 </div>
               </fieldset>`
-            )
-            .join("")
+              )
+              .join("")
+          );
+        }
       },
       destacada: {
         titulo: "Reseña destacada",
@@ -2587,7 +2600,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     const hb = pg.data.facetas?.hero?.bullets;
     if (Array.isArray(hb)) {
       pg.data.facetas.hero.bullets = hb.map((b) =>
-        typeof b === "string" ? { emoji: "", fuerte: "", resto: b } : b
+        typeof b === "string" ? { icono: "check", fuerte: "", resto: b } : b
       );
     }
     const publicada = pg.estado === "publicada";

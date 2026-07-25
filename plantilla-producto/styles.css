@@ -253,7 +253,7 @@
 #app .hero__bullets li {
   display: flex; align-items: flex-start; gap: 10px;
   font-size: 15.5px; font-weight: 500; line-height: 1.5;
-  color: #52525b; margin-bottom: 11px; /* el detalle en gris; la negrita en negro */
+  color: #2b2b33; margin-bottom: 11px;
 }
 #app .hero__bullets li:last-child { margin-bottom: 0; }
 #app .hero__bullets .tick { width: 15px; height: 15px; color: var(--acento); flex-shrink: 0; margin-top: 3px; }
