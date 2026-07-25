@@ -172,18 +172,18 @@
         : 0;
     const descuento = pctDesc > 0 ? `<span class="hero__descuento">-${pctDesc}%</span>` : "";
 
-    // Bullet nuevo = {icono, fuerte, resto}: ícono de línea (color del acento)
-    // + arranque en negrita. Retrocompat: si trae emoji (páginas #2) lo respeta;
-    // si es string plano (páginas viejas) cae al check.
+    // Bullet nuevo = {emoji, fuerte, resto}: emoji a color relevante + arranque
+    // en negrita (estilo SOLUME/PagePilot). Retrocompat: páginas viejas traen
+    // {icono} (ícono de línea) o string plano → siguen renderizando igual.
     const bullets = (h.bullets ?? [])
       .map((b) => {
         if (typeof b === "string")
           return `<li><span class="hero__bullet-ico">${ICONOS_BULLET.check}</span><span>${esc(b)}</span></li>`;
         let ico;
-        if (b.icono && ICONOS_BULLET[b.icono])
-          ico = `<span class="hero__bullet-ico">${ICONOS_BULLET[b.icono]}</span>`;
-        else if (b.emoji)
+        if (b.emoji)
           ico = `<span class="hero__bullet-emoji">${esc(b.emoji)}</span>`;
+        else if (b.icono && ICONOS_BULLET[b.icono])
+          ico = `<span class="hero__bullet-ico">${ICONOS_BULLET[b.icono]}</span>`;
         else ico = `<span class="hero__bullet-ico">${ICONOS_BULLET.check}</span>`;
         const fuerte = esc(b.fuerte ?? "");
         const resto = esc(b.resto ?? "");
@@ -245,12 +245,6 @@
             </div>
             <p class="hero__impuestos">Impuestos incluidos.</p>
             <ul class="hero__bullets">${bullets}</ul>
-            <div class="hero__cantidad">
-              <label>Cantidad</label>
-              <div class="selector-cantidad">
-                <button type="button" onclick="tiendaiqCantidad(-1)">−</button><input id="tiendaiq-cantidad" value="1" readonly><button type="button" onclick="tiendaiqCantidad(1)">+</button>
-              </div>
-            </div>
             ${variantes}
             ${botonComprar(global)}
             ${badges}
@@ -728,16 +722,6 @@
     document.getElementById("imagen-principal").innerHTML = img(mediaId);
     document.querySelectorAll(".hero__mini").forEach((m) => m.classList.remove("activa"));
     boton.classList.add("activa");
-  };
-
-  // selector de cantidad: 1 a 99, y mantiene sincronizado el hidden del form
-  window.tiendaiqCantidad = function (delta) {
-    const visible = document.getElementById("tiendaiq-cantidad");
-    if (!visible) return;
-    const valor = Math.min(99, Math.max(1, (parseInt(visible.value, 10) || 1) + delta));
-    visible.value = valor;
-    const oculto = document.getElementById("tiendaiq-cantidad-form");
-    if (oculto) oculto.value = valor;
   };
 
   // Agregar al carrito sin salir de la página: POST a /cart/add.js (la API

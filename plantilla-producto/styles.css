@@ -4,10 +4,10 @@
    ============================================================ */
 
 /* Tipografía con carácter (NO Poppins — esa lee a template/IA). Cuerpo en
-   Inter; títulos en Bricolage Grotesque (grotesca con personalidad) y, en los
-   rubros elegantes (belleza/moda), en Fraunces (serif de lujo). Por nicho, igual
-   que el color. Va acá y no en el Liquid: la hoja viaja como asset del tema. */
-@import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Fraunces:opsz,wght@9..144,500..700&family=DM+Sans:opsz,wght@9..40,400..700&display=swap");
+   DM Sans; títulos en Bricolage Grotesque (grotesca pesada, look DTC tipo
+   SOLUME) para TODOS los nichos: la diferenciación es solo por color (acento).
+   Va acá y no en el Liquid: la hoja viaja como asset del tema. */
+@import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=DM+Sans:opsz,wght@9..40,400..700&display=swap");
 
 :root {
   --negro: #111111;
@@ -30,22 +30,22 @@
   --acento-suave: #eef2ff;
   --acento-texto: #4338ca;
 
-  /* Tipografía (también por nicho). Título por defecto = grotesca con carácter;
-     belleza/moda lo pisan con la serif elegante abajo. */
+  /* Título: grotesca pesada para todos los nichos (look DTC). La diferencia
+     entre rubros la hace el color de acento, no la fuente. */
   --fuente-titulo: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
   --fuente-cuerpo: "DM Sans", "Segoe UI", system-ui, sans-serif;
 }
 
 /* Paletas por rubro. La flecha del nicho la pone render.js en #app[data-nicho].
    Contraste verificado para texto blanco sobre --acento (CTA/pastilla). */
-#app[data-nicho="belleza"]  { --acento: #db2777; --acento-suave: #fdf2f8; --acento-texto: #9d174d; --fuente-titulo: "Fraunces", Georgia, serif; }
+#app[data-nicho="belleza"]  { --acento: #db2777; --acento-suave: #fdf2f8; --acento-texto: #9d174d; }
 #app[data-nicho="salud"]    { --acento: #0d9488; --acento-suave: #f0fdfa; --acento-texto: #0f766e; }
 #app[data-nicho="hogar"]    { --acento: #c2410c; --acento-suave: #fff7ed; --acento-texto: #9a3412; }
 #app[data-nicho="mascotas"] { --acento: #d97706; --acento-suave: #fffbeb; --acento-texto: #b45309; }
 #app[data-nicho="tech"]     { --acento: #2563eb; --acento-suave: #eff6ff; --acento-texto: #1d4ed8; }
 #app[data-nicho="fitness"]  { --acento: #15803d; --acento-suave: #f0fdf4; --acento-texto: #166534; }
 #app[data-nicho="bebes"]    { --acento: #3f77b8; --acento-suave: #eff6ff; --acento-texto: #2f6cad; }
-#app[data-nicho="moda"]     { --acento: #171717; --acento-suave: #f5f5f4; --acento-texto: #292524; --fuente-titulo: "Fraunces", Georgia, serif; }
+#app[data-nicho="moda"]     { --acento: #171717; --acento-suave: #f5f5f4; --acento-texto: #292524; }
 
 /* Todo lo genérico va encerrado en #app: en la tienda esta hoja convive con
    el CSS del tema, y un reset global le rompería el header y el footer. */
@@ -204,10 +204,6 @@
 /* Título: el elemento dominante, pero en 600 como PagePilot — el 700 de
    Poppins lo hacía ver pesado y desbalanceaba la columna. */
 #app .hero__titulo { font-size: 38px; font-weight: 800; line-height: 1.07; letter-spacing: -0.01em; margin: 10px 0 12px; }
-/* Belleza/moda van con serif de lujo (Fraunces): 800 no existe en esa familia,
-   así que el peso máximo real es 700 — pesado sin caer en falso-bold sintético. */
-#app[data-nicho="belleza"] .hero__titulo,
-#app[data-nicho="moda"] .hero__titulo { font-weight: 700; letter-spacing: -0.005em; }
 
 /* Precio: pesado pero SIN competir con el título. 23px lo deja como segunda
    jerarquía clara, no como un segundo título. */
@@ -242,7 +238,7 @@
 /* Beneficios: alto uniforme, separación pareja, enmarcados arriba y abajo.
    Tipografía calcada de PagePilot: Poppins 500, 15px, texto casi negro,
    tick violeta grueso de trazo redondeado. */
-#app .hero__bullets { list-style: none; border-top: 1px solid var(--borde); border-bottom: 1px solid var(--borde); padding: 14px 0; margin-bottom: 20px; }
+#app .hero__bullets { list-style: none; border-top: 1px solid var(--borde); padding: 14px 0 0; margin-bottom: 22px; }
 /* Más chicos y apretados que la versión anterior: compacto = más "diseñado",
    menos "texto grande de IA". Referencia: SOLUME. */
 #app .hero__bullets li {
@@ -256,8 +252,8 @@
 /* Ícono de línea del bullet: hereda el color del acento del nicho. */
 #app .hero__bullets .hero__bullet-ico { flex-shrink: 0; width: 18px; height: 18px; color: var(--acento); margin-top: 1px; }
 #app .hero__bullets .hero__bullet-ico svg { width: 100%; height: 100%; display: block; }
-/* Emoji (retrocompat de páginas generadas antes de los íconos de línea). */
-#app .hero__bullets .hero__bullet-emoji { flex-shrink: 0; width: 22px; text-align: center; font-size: 17px; line-height: 1.45; }
+/* Emoji a color: el ícono principal del bullet (estilo SOLUME/PagePilot). */
+#app .hero__bullets .hero__bullet-emoji { flex-shrink: 0; width: 24px; text-align: center; font-size: 18px; line-height: 1.4; }
 /* El arranque del beneficio en negrita, como SOLUME. */
 #app .hero__bullets li strong { font-weight: 700; color: var(--negro); }
 

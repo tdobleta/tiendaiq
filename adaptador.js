@@ -164,18 +164,17 @@ Una sola frase: beneficio + mecanismo.
 
 BULLETS (4)
 Cada bullet es un beneficio cuantificado que empieza con verbo. Lo devolvés en 3 partes:
-- icono: elegí de esta lista el que MEJOR ilustre ese beneficio puntual:
-  escudo (garantía/protección) · rayo (potente/rápido/energía) · gota (agua/hidratación/líquido) ·
-  reloj (tiempo/minutos) · hoja (natural/orgánico/ecológico) · corazon (cuidado/salud/amor) ·
-  brillo (estilo/brillo/glamour) · estrella (calidad/premium) · pluma (liviano/suave) ·
-  caja (incluye/compacto/guarda) · camion (envío) · regla (medida/ajuste/tamaño) ·
-  sol (luz/día) · luna (noche/sueño/relax) · diana (precisión/objetivo) ·
-  refresh (giratorio/reutilizable/360) · candado (seguro/privado) · check (genérico si nada encaja).
+- emoji: UN solo emoji que ilustre LITERAL y específicamente ese beneficio (el
+  objeto, la acción o el material del que habla el bullet). Elegí uno concreto y
+  distinto para cada bullet. PROHIBIDO los genéricos de relleno (✅ ✔️ ✨ 🔥 🚀 ⭐
+  💯 👍 🎉): esos leen a IA. Preferí emojis que "muestran" el beneficio, como hace
+  una tienda ganadora — 💧 hidratación, 😴 sueño/descanso, ⏰ tiempo, 🌿 natural,
+  💪 fuerza, 🛡️ garantía, 🚿 resistente al agua, 🔋 batería, ❄️ frío, ☀️ luz.
 - fuerte: el arranque del beneficio en 2-4 palabras (el gancho; va en negrita).
 - resto: el resto de la frase.
-Entre fuerte y resto, máximo 8 palabras en total. No repitas el mismo icono en dos bullets si podés evitarlo. Ejemplo:
-  icono "gota" · fuerte "Reducí la hinchazón" · resto "bajo los ojos al instante"
-  icono "escudo" · fuerte "Usalo en la ducha" · resto "es resistente al agua"
+Entre fuerte y resto, máximo 8 palabras en total. No repitas emoji entre bullets. Ejemplo:
+  emoji "💧" · fuerte "Reducí la hinchazón" · resto "bajo los ojos al instante"
+  emoji "🚿" · fuerte "Usalo en la ducha" · resto "es resistente al agua"
 
 ICONOS (4)
 emoji + título de 1-2 palabras que sea un BENEFICIO (no un sustantivo:
@@ -275,14 +274,13 @@ const ESQUEMA = {
               items: {
                 type: "object",
                 properties: {
-                  // Sin enum (inflaba la gramática de la salida estructurada). El
-                  // prompt lista las claves válidas; el render cae a "check" si
-                  // viene una que no existe.
-                  icono: { type: "string" },
+                  // Un emoji a color relevante por bullet (estilo SOLUME). El
+                  // prompt guía cuáles usar y cuáles evitar (genéricos = IA).
+                  emoji: { type: "string" },
                   fuerte: { type: "string" },
                   resto: { type: "string" }
                 },
-                required: ["icono", "fuerte", "resto"],
+                required: ["emoji", "fuerte", "resto"],
                 additionalProperties: false
               }
             },

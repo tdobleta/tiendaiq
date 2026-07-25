@@ -1802,25 +1802,15 @@
       bullets: {
         titulo: "Beneficios del producto",
         html: () => {
-          const OPC = [
-            ["escudo", "Escudo"], ["rayo", "Rayo"], ["gota", "Gota"], ["reloj", "Reloj"],
-            ["hoja", "Hoja"], ["corazon", "Corazón"], ["brillo", "Brillo"], ["estrella", "Estrella"],
-            ["pluma", "Pluma"], ["caja", "Caja"], ["camion", "Camión"], ["regla", "Regla"],
-            ["sol", "Sol"], ["luna", "Luna"], ["diana", "Diana"], ["refresh", "Giro"],
-            ["candado", "Candado"], ["check", "Check"]
-          ];
           return (
-            `<div class="editor__nota">Cada beneficio: un ícono, el arranque en negrita y el resto de la frase.</div>` +
+            `<div class="editor__nota">Cada beneficio: un emoji, el arranque en negrita y el resto de la frase.</div>` +
             f.hero.bullets
               .map(
                 (b, i) => `
               <fieldset class="resena-edit">
                 <legend>Beneficio ${i + 1}</legend>
-                <div class="fila-triple" style="grid-template-columns:130px 1fr">
-                  <select data-ruta="facetas.hero.bullets.${i}.icono">
-                    <option value="" ${!b.icono ? "selected" : ""}>— ícono —</option>
-                    ${OPC.map(([k, t]) => `<option value="${k}" ${b.icono === k ? "selected" : ""}>${t}</option>`).join("")}
-                  </select>
+                <div class="fila-triple" style="grid-template-columns:56px 1fr">
+                  <input type="text" data-ruta="facetas.hero.bullets.${i}.emoji" value="${esc(b.emoji ?? "")}" placeholder="💧" title="Emoji" maxlength="4">
                   <input type="text" data-ruta="facetas.hero.bullets.${i}.fuerte" value="${esc(b.fuerte ?? "")}" placeholder="Arranque (en negrita)">
                 </div>
                 <div class="fila-triple" style="grid-template-columns:1fr;margin-bottom:0">
