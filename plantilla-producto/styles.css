@@ -198,7 +198,9 @@
 #app .hero__mini.activa { border: 2px solid var(--negro); }
 
 /* Rating: presente y prolijo — estrellas grandes, texto a la par. */
-#app .hero__resenas { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--texto); font-weight: 600; }
+/* Sobrio como los widgets premium (Trustpilot/Judge.me): peso medio, gris
+   suave y aire — que el foco sean las estrellas, no el texto. */
+#app .hero__resenas { display: flex; align-items: center; gap: 9px; font-size: 14px; color: #4a4a4a; font-weight: 500; }
 #app .hero__resenas .estrellas { font-size: 15px; letter-spacing: 1px; }
 
 /* Título: el elemento dominante, pero en 600 como PagePilot — el 700 de
