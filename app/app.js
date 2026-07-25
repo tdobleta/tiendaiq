@@ -1787,7 +1787,6 @@
           return (
             campo("facetas.hero.anuncio", "Barra de anuncio (arriba del título · vacío = sin barra)", 0, true) +
             campo("facetas.hero.titulo", "Título") +
-            campo("facetas.hero.subtitulo", "Subtítulo", 2) +
             campoNumero("facetas.hero.resenas_count", "Cantidad de reseñas (junto a las estrellas)") +
             campo("global.cta", "Texto del botón de compra") +
             `<div class="campo campo--editor">

@@ -7,7 +7,7 @@
    Inter; títulos en Bricolage Grotesque (grotesca con personalidad) y, en los
    rubros elegantes (belleza/moda), en Fraunces (serif de lujo). Por nicho, igual
    que el color. Va acá y no en el Liquid: la hoja viaja como asset del tema. */
-@import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Fraunces:opsz,wght@9..144,500..700&family=Inter:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Fraunces:opsz,wght@9..144,500..700&family=DM+Sans:opsz,wght@9..40,400..700&display=swap");
 
 :root {
   --negro: #111111;
@@ -33,7 +33,7 @@
   /* Tipografía (también por nicho). Título por defecto = grotesca con carácter;
      belleza/moda lo pisan con la serif elegante abajo. */
   --fuente-titulo: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
-  --fuente-cuerpo: "Inter", "Segoe UI", system-ui, sans-serif;
+  --fuente-cuerpo: "DM Sans", "Segoe UI", system-ui, sans-serif;
 }
 
 /* Paletas por rubro. La flecha del nicho la pone render.js en #app[data-nicho].

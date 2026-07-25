@@ -241,7 +241,6 @@
               ${descuento}
             </div>
             <p class="hero__impuestos">Impuestos incluidos.</p>
-            <p class="hero__subtitulo">${esc(h.subtitulo)}</p>
             <ul class="hero__bullets">${bullets}</ul>
             <div class="hero__cantidad">
               <label>Cantidad</label>
