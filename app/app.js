@@ -1785,7 +1785,6 @@
             ["fitness", "Fitness / deporte"], ["bebes", "Bebés / niños"], ["moda", "Moda / joyas / perfume"]
           ];
           return (
-            campo("facetas.hero.anuncio", "Barra de anuncio (arriba del título · vacío = sin barra)", 0, true) +
             campo("facetas.hero.titulo", "Título") +
             campoNumero("facetas.hero.resenas_count", "Cantidad de reseñas (junto a las estrellas)") +
             `<div class="campo campo--editor"><label>Puntaje (de 5, ej: 4.9)</label>
@@ -2223,7 +2222,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   const ZONAS_EDICION = [
     { sel: ".hero__galeria", id: "galeria" },
     { sel: ".hero__bullets", id: "bullets" },
-    { sel: ".hero__anuncio, .hero__resenas, .hero__titulo, .hero__subtitulo, .hero__precios, .hero__cantidad", id: "encabezado" },
+    { sel: ".hero__resenas, .hero__titulo, .hero__subtitulo, .hero__precios, .hero__cantidad", id: "encabezado" },
     { sel: ".acordeon", id: "acordeones" },
     { sel: ".resena-destacada", id: "destacada" },
     { sel: ".iconos", id: "iconos" },

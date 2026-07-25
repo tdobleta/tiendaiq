@@ -154,15 +154,6 @@ IDIOMA
 {idioma} aplica SOLO al texto que generás. Las imágenes se usan como están,
 aunque tengan texto en otro idioma. Nunca descartes una imagen por su idioma.
 
-ANUNCIO (la barra angosta arriba del título)
-Un gancho corto y HONESTO con un emoji al inicio. Máximo 7 palabras.
-Es un valor/beneficio real o una promesa que la página ya hace (garantía,
-envío a todo el país, el beneficio principal). NO inventes urgencia falsa:
-prohibido "quedan X", "solo por hoy", contadores, o stock que no conocemos.
-  ✓ "🎁 Sumá el ritual facial a tu rutina"
-  ✓ "🛡️ 30 días de garantía sin preguntas"
-  ✗ "🔥 ¡Solo quedan 3 unidades!" · "⏰ Termina en 2 horas"
-
 TÍTULO
 Reescribilo: mismo producto, sin ruido de buscador. Máximo 5 palabras.
 NO inventes nombres de marca. Es el mismo producto con nombre limpio.
@@ -277,7 +268,6 @@ const ESQUEMA = {
         hero: {
           type: "object",
           properties: {
-            anuncio: { type: "string" },
             titulo: { type: "string" },
             subtitulo: { type: "string" },
             bullets: {
@@ -309,7 +299,7 @@ const ESQUEMA = {
               additionalProperties: false
             }
           },
-          required: ["anuncio", "titulo", "subtitulo", "bullets", "galeria", "resenas_count", "puntaje", "resena_destacada"],
+          required: ["titulo", "subtitulo", "bullets", "galeria", "resenas_count", "puntaje", "resena_destacada"],
           additionalProperties: false
         },
         texto_img_1: {
