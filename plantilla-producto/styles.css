@@ -198,9 +198,8 @@
 #app .hero__mini.activa { border: 2px solid var(--negro); }
 
 /* Rating: presente y prolijo — estrellas grandes, texto a la par. */
-#app .hero__resenas { display: flex; align-items: center; gap: 10px; font-size: 14.5px; color: var(--texto-suave); font-weight: 500; }
-#app .hero__resenas .estrellas { font-size: 20px; letter-spacing: 1.5px; }
-#app .hero__resenas strong { color: var(--negro); font-weight: 700; }
+#app .hero__resenas { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--texto); font-weight: 600; }
+#app .hero__resenas .estrellas { font-size: 15px; letter-spacing: 1px; }
 
 /* Título: el elemento dominante, pero en 600 como PagePilot — el 700 de
    Poppins lo hacía ver pesado y desbalanceaba la columna. */

@@ -61,6 +61,10 @@
   };
 
   const estrellas = (n = 5) => `<span class="estrellas">${"★".repeat(n)}</span>`;
+  // Miles con punto (es-AR): 1205 → "1.205".
+  const miles = (n) => String(n ?? "").replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  // Puntaje siempre con un decimal: 4.9 → "4.9", 5 → "5.0".
+  const puntaje1 = (n) => Number(n).toFixed(1);
 
   // Iconos de línea (mismos que usa PagePilot: trazo fino, sin relleno)
   const ICONO = {
@@ -232,7 +236,7 @@
             <div class="hero__miniaturas">${miniaturas}</div>
           </div>
           <div>
-            <div class="hero__resenas">${estrellas(5)} <span><strong>${esc(h.puntaje ?? 4.9)}/5</strong> · ${esc(h.resenas_count)} reseñas</span></div>
+            <div class="hero__resenas">${estrellas(5)} <span>Calificación ${esc(puntaje1(h.puntaje ?? 4.9))}/5.0 (${esc(miles(h.resenas_count))})</span></div>
             <h1 class="hero__titulo">${esc(h.titulo)}</h1>
             <div class="hero__precios">
               <span class="hero__precio">${esc(precioBonito(fuente.moneda, fuente.precio))}</span>
