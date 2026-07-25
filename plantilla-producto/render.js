@@ -168,21 +168,21 @@
         : 0;
     const descuento = pctDesc > 0 ? `<span class="hero__descuento">-${pctDesc}%</span>` : "";
 
-    // Bullet nuevo = {icono, fuerte, resto}: ícono de línea (color del acento)
-    // + arranque en negrita. Retrocompat: si trae emoji (páginas #2) lo respeta;
-    // si es string plano (páginas viejas) cae al check.
+    // Bullet = {emoji, fuerte, resto}: emoji contextual + "gancho en negrita –
+    // resto" (formato SOLUME). Fallbacks: ícono de línea (páginas generadas en
+    // el medio) y check (strings viejos).
     const bullets = (h.bullets ?? [])
       .map((b) => {
         if (typeof b === "string")
           return `<li><span class="hero__bullet-ico">${ICONOS_BULLET.check}</span><span>${esc(b)}</span></li>`;
         let ico;
-        if (b.icono && ICONOS_BULLET[b.icono])
-          ico = `<span class="hero__bullet-ico">${ICONOS_BULLET[b.icono]}</span>`;
-        else if (b.emoji)
-          ico = `<span class="hero__bullet-emoji">${esc(b.emoji)}</span>`;
+        if (b.emoji) ico = `<span class="hero__bullet-emoji">${esc(b.emoji)}</span>`;
+        else if (b.icono && ICONOS_BULLET[b.icono]) ico = `<span class="hero__bullet-ico">${ICONOS_BULLET[b.icono]}</span>`;
         else ico = `<span class="hero__bullet-ico">${ICONOS_BULLET.check}</span>`;
-        const fuerte = b.fuerte ? `<strong>${esc(b.fuerte)}</strong> ` : "";
-        return `<li>${ico}<span>${fuerte}${esc(b.resto ?? "")}</span></li>`;
+        const fuerte = esc(b.fuerte ?? "");
+        const resto = esc(b.resto ?? "");
+        const cuerpo = fuerte && resto ? `<strong>${fuerte}</strong> – ${resto}` : fuerte ? `<strong>${fuerte}</strong>` : resto;
+        return `<li>${ico}<span>${cuerpo}</span></li>`;
       })
       .join("");
 
