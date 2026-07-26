@@ -1329,6 +1329,23 @@
 
   const ESTADO_ETQ = { publicada: "Publicada", borrador: "Borrador" };
 
+  // Variantes de color de la plantilla (solo pisan el acento; la lógica queda
+  // igual). "auto" = usa el color del rubro. Los hex viven en styles.css
+  // (#app[data-tema=...]); acá solo el swatch para el editor y el paso previo.
+  const TEMAS = [
+    ["auto", "Automático (por rubro)", ""],
+    ["rosa", "Rosa", "#db2777"],
+    ["negro", "Negro", "#1a1a1a"],
+    ["marron", "Marrón", "#7a4a24"],
+    ["azul", "Azul", "#2563eb"],
+    ["verde", "Verde", "#16a34a"]
+  ];
+  const swatchesTema = (actual) =>
+    `<div class="temas">${TEMAS.map(
+      ([k, n, c]) =>
+        `<button type="button" class="tema ${(actual || "auto") === k ? "is-sel" : ""}${c ? "" : " tema--auto"}" data-tema-pick="${k}" title="${n}" aria-label="${n}"${c ? ` style="--sw:${c}"` : ""}></button>`
+    ).join("")}</div>`;
+
   // ---------- 1. elegir producto (lanzador tipo command-palette) ----------
   //
   // Nada de grilla: una sola decisión. Un input que busca sobre los productos
@@ -1546,6 +1563,12 @@
           </div>
 
           <div class="tarjeta">
+            <div class="tarjeta__titulo">Color de la página</div>
+            <div class="panel__sub" style="margin-bottom:12px">Elegí el color del botón, los círculos de % y los detalles. Después lo podés cambiar en el editor.</div>
+            <div id="tema-previo">${swatchesTema(estado.temaElegido === "auto" ? null : estado.temaElegido)}</div>
+          </div>
+
+          <div class="tarjeta">
             <div class="tarjeta__titulo">Medios</div>
             <div class="medios" id="medios"><span class="ayuda">Cargando…</span></div>
             <div class="nota" id="nota-medios"></div>
@@ -1569,6 +1592,14 @@
 
     $("volver").onclick = () => ir("lista");
     $("generar").onclick = generar;
+    // Swatches de color (opción previa): guarda la elección para el generado.
+    const tp = $("tema-previo");
+    if (tp) tp.onclick = (e) => {
+      const b = e.target.closest("[data-tema-pick]");
+      if (!b) return;
+      estado.temaElegido = b.dataset.temaPick;
+      tp.innerHTML = swatchesTema(estado.temaElegido === "auto" ? null : estado.temaElegido);
+    };
     const abrir = $("abrir");
     if (abrir) abrir.onclick = abrirExistente;
 
@@ -1624,6 +1655,17 @@
         method: "POST",
         body: { producto_id: estado.producto.id, idioma, angulo }
       });
+      // Color elegido antes de generar: se inyecta en la página y se persiste
+      // con el PUT que ya existe (sin tocar backend). Sin elección → color del rubro.
+      if (estado.temaElegido && estado.temaElegido !== "auto" && estado.pagina?.data) {
+        (estado.pagina.data.global ||= {}).tema = estado.temaElegido;
+        try {
+          estado.pagina = await api(`/paginas/${estado.pagina.id}`, {
+            method: "PUT",
+            body: { data: estado.pagina.data }
+          });
+        } catch {}
+      }
       clearInterval(reloj);
       ir("preview");
     } catch (e) {
@@ -1867,7 +1909,12 @@
               <input type="number" min="0" max="5" step="0.1" data-ruta="facetas.hero.puntaje" data-tipo="numero" value="${esc(leer(estado.pagina.data, "facetas.hero.puntaje") ?? 4.9)}"></div>` +
             campo("global.cta", "Texto del botón de compra") +
             `<div class="campo campo--editor">
-              <label>Color de la página (según el rubro)</label>
+              <label>Color de la página</label>
+              ${swatchesTema(leer(estado.pagina.data, "global.tema"))}
+              <div class="ayuda">Cambia el color del botón, los círculos de % y los detalles. Todo lo demás queda igual.</div>
+            </div>` +
+            `<div class="campo campo--editor">
+              <label>Rubro (define el color si elegís “Automático”)</label>
               <select data-ruta="global.nicho">${NICHOS.map(
                 ([k, t]) => `<option value="${k}" ${k === nichoActual ? "selected" : ""}>${t}</option>`
               ).join("")}</select>
@@ -2224,6 +2271,16 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         return;
       }
       if (e.target.id === "btn-lote") return cargarLote();
+      // elegir variante de color (swatch)
+      const sw = e.target.closest("[data-tema-pick]");
+      if (sw) {
+        const v = sw.dataset.temaPick;
+        fijar(estado.pagina.data, "global.tema", v === "auto" ? null : v);
+        marcarSucio();
+        repintarPreview();
+        refrescarModal();
+        return;
+      }
       // acciones de section (agregar/quitar/mover items, borrar section)
       const accion = accionSeccion(e.target);
       if (accion === "cerrado") return;

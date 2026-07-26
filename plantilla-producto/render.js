@@ -867,6 +867,10 @@
     const app = document.getElementById("app");
     // El nicho define el color de acento (skin por rubro). Sin dato → general.
     app.dataset.nicho = datos?.global?.nicho || "general";
+    // Variante de color elegida por el merchant: pisa el acento del nicho. Sin
+    // variante → queda el color del rubro (comportamiento de siempre).
+    if (datos?.global?.tema) app.dataset.tema = datos.global.tema;
+    else app.removeAttribute("data-tema");
     app.innerHTML = render(datos);
     iniciarVcar(); // centra los carruseles de video
     autoplayMuro(); // los videos del muro se reproducen solos al entrar en vista

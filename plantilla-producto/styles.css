@@ -47,6 +47,17 @@
 #app[data-nicho="bebes"]    { --acento: #3f77b8; --acento-suave: #eff6ff; --acento-texto: #2f6cad; }
 #app[data-nicho="moda"]     { --acento: #171717; --acento-suave: #f5f5f4; --acento-texto: #292524; }
 
+/* VARIANTES DE COLOR elegibles por el merchant (global.tema → data-tema). Solo
+   pisan el acento: el mismo color viaja al CTA, a los anillos de %, a los ticks,
+   etc. Van DESPUÉS de los nichos, así una variante elegida gana sobre el rubro.
+   Todo lo demás (lógica y layout) queda idéntico. Para cambiar un color, editá
+   solo el hex de acá. Texto blanco sobre el CTA → contraste verificado. */
+#app[data-tema="rosa"]   { --acento: #db2777; --acento-suave: #fdf2f8; --acento-texto: #9d174d; }
+#app[data-tema="negro"]  { --acento: #1a1a1a; --acento-suave: #f4f4f5; --acento-texto: #27272a; }
+#app[data-tema="marron"] { --acento: #7a4a24; --acento-suave: #f7f1ea; --acento-texto: #5c3718; }
+#app[data-tema="azul"]   { --acento: #2563eb; --acento-suave: #eff6ff; --acento-texto: #1d4ed8; }
+#app[data-tema="verde"]  { --acento: #16a34a; --acento-suave: #f0fdf4; --acento-texto: #15803d; }
+
 /* Todo lo genérico va encerrado en #app: en la tienda esta hoja convive con
    el CSS del tema, y un reset global le rompería el header y el footer. */
 :where(#app, #app *) { margin: 0; padding: 0; box-sizing: border-box; }

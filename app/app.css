@@ -455,6 +455,17 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
 .crear__hero h1 { font-size: 42px; font-weight: 700; letter-spacing: -.8px; color: var(--negro); line-height: 1.06; }
 .crear__hero p { font-size: 16.5px; color: var(--suave); margin-top: 12px; }
 
+/* Swatches de variante de color (editor + paso previo). */
+.temas { display: flex; gap: 10px; flex-wrap: wrap; margin: 6px 0 2px; }
+.tema {
+  width: 30px; height: 30px; border-radius: 50%; padding: 0; cursor: pointer;
+  background: var(--sw, #ccc); border: 2px solid var(--superficie); box-shadow: 0 0 0 1px var(--borde);
+  transition: box-shadow .12s ease-out, transform .12s ease-out;
+}
+.tema:hover { transform: scale(1.08); }
+.tema.is-sel { box-shadow: 0 0 0 2px var(--ia); }
+.tema--auto { background: conic-gradient(from 0deg, #db2777, #2563eb, #16a34a, #7a4a24, #1a1a1a, #db2777); }
+
 /* Modal "Ver todos los productos" — lista completa buscable estilo picker. */
 .picker-modal { position: fixed; inset: 0; z-index: 100; background: rgba(18, 18, 24, .38); display: grid; place-items: center; padding: 20px; }
 .picker {
