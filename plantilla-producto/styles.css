@@ -233,13 +233,14 @@
 /* Precio anterior: rojo, casi tan grande como el vigente, bien tachado —
    el ancla de descuento es parte del argumento de venta, no un detalle gris. */
 #app .hero__comparativo { font-size: 20px; font-weight: 700; color: #d02e3f; text-decoration: line-through; }
-/* Pastilla de % ahorro: pill sólido en el rojo de oferta (mismo tono que el
-   tachado → historia de descuento coherente). Centrado contra el precio. */
+/* Etiqueta de % ahorro: NO es un botón ni cambia con la variante de color.
+   Tag fino, rojo fijo (mismo rojo que el tachado → historia de descuento
+   coherente), estilo etiqueta de oferta (Best Buy). Centrado contra el precio. */
 #app .hero__descuento {
   align-self: center;
-  background: var(--acento); color: #fff;
-  font-size: 13px; font-weight: 700; letter-spacing: -.2px; line-height: 1.2;
-  padding: 3px 9px; border-radius: 7px;
+  background: #d02e3f; color: #fff;
+  font-size: 12px; font-weight: 700; letter-spacing: .2px; line-height: 1;
+  padding: 3px 7px; border-radius: 4px;
 }
 
 #app .hero__impuestos { font-size: 12.5px; color: var(--texto-suave); margin-bottom: 14px; }
