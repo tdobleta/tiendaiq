@@ -1848,21 +1848,29 @@
       clientes: {
         titulo: "Muro de clientes (gifs/videos)",
         html: () => {
-          const c = f.clientes && f.clientes.items && f.clientes.items.length
-            ? f.clientes
-            : { items: [{}, {}, {}] };
+          // Aseguramos la estructura en el estado para poder agregar/quitar.
+          if (!f.clientes) f.clientes = { titulo: "", items: [] };
+          if (!Array.isArray(f.clientes.items)) f.clientes.items = [];
+          const items = f.clientes.items;
           return (
-            `<div class="editor__nota">Pegá el enlace de un GIF o video (.gif, .mp4 o YouTube). Se reproduce solo, en loop, sin controles. Vacío = no se muestra.</div>` +
+            `<div class="editor__nota">Pegá el enlace de un GIF o video (.gif, .mp4 o YouTube) o subilo desde tu compu. Se reproduce solo, en loop, sin controles. Agregá todos los que quieras; los vacíos no se muestran en la tienda.</div>` +
             campo("facetas.clientes.titulo", "Título de la sección") +
-            c.items
-              .map(
-                (_, i) => `
+            (items.length
+              ? items
+                  .map(
+                    (it, i) => `
               <fieldset class="resena-edit">
-                <legend>Clip ${i + 1}</legend>
+                <legend>Clip ${i + 1}${manijasMuro(i, items.length)}</legend>
                 ${campo(`facetas.clientes.items.${i}.url`, "Enlace del gif o video")}
+                <label class="btn btn--fantasma btn--chico sec-subir-video" style="cursor:pointer">⬆ Subir video de tu computadora
+                  <input type="file" accept="video/*" hidden data-video-el="muro:${i}">
+                </label>
+                ${it && it.url && /^https?:\/\/cdn\.shopify/.test(it.url) ? `<div class="ayuda" style="margin-top:6px">Video subido ✓</div>` : ""}
               </fieldset>`
-              )
-              .join("")
+                  )
+                  .join("")
+              : `<div class="editor__nota">Todavía no agregaste clips.</div>`) +
+            `<button class="btn btn--fantasma" type="button" data-muro-add="1">＋ Agregar clip</button>`
           );
         }
       },
@@ -1955,8 +1963,8 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   const ANCLAS_UBICACION = [
     ["top", "Al principio de la página"],
     ["hero", "Después del encabezado"],
-    ["clientes", "Después del muro de clientes"],
     ["faq", "Después de las preguntas"],
+    ["clientes", "Después del muro de clientes"],
     ["iconos", "Después de los beneficios"],
     ["tabla", "Después de la tabla"],
     ["stats", "Después de las estadísticas"],
@@ -2033,6 +2041,14 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     );
   }
 
+  // ↑↓ y ✕ de cada clip del muro de clientes
+  const manijasMuro = (i, total) => `
+    <span class="sec-item__manijas">
+      <button type="button" data-muro-mov="${i}:-1" ${i === 0 ? "disabled" : ""}>↑</button>
+      <button type="button" data-muro-mov="${i}:1" ${i === total - 1 ? "disabled" : ""}>↓</button>
+      <button type="button" data-muro-del="${i}">✕</button>
+    </span>`;
+
   // ↑↓ y ✕ de cada item de una section
   const manijasItem = (i, j, total) => `
     <span class="sec-item__manijas">
@@ -2042,6 +2058,28 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     </span>`;
 
   function accionSeccion(target) {
+    // Muro de clientes: agregar / quitar / mover clips (cantidad libre).
+    const f = estado.pagina.data.facetas;
+    const muroAdd = target.closest("[data-muro-add]");
+    if (muroAdd) {
+      if (!f.clientes) f.clientes = { titulo: "", items: [] };
+      (f.clientes.items ||= []).push({ url: "", poster: null });
+      return true;
+    }
+    const muroDel = target.closest("[data-muro-del]");
+    if (muroDel) {
+      f.clientes?.items?.splice(Number(muroDel.dataset.muroDel), 1);
+      return true;
+    }
+    const muroMov = target.closest("[data-muro-mov]");
+    if (muroMov) {
+      const [i, d] = muroMov.dataset.muroMov.split(":").map(Number);
+      const arr = f.clientes?.items || [];
+      const k = i + d;
+      if (k >= 0 && k < arr.length) [arr[i], arr[k]] = [arr[k], arr[i]];
+      return true;
+    }
+
     const secs = estado.pagina.data.secciones;
     const add = target.closest("[data-sec-add]");
     if (add) {
@@ -2161,8 +2199,13 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   }
 
   // Sube un video directo a Shopify (browser → bucket) y pone su URL en el item.
+  // ref = "muro:i" (muro de clientes) o "i:j" (item de una section).
   async function subirVideoNuevo(archivo, ref, inp) {
-    const [i, j] = ref.split(":").map(Number);
+    const partes = ref.split(":");
+    const rutaDestino =
+      partes[0] === "muro"
+        ? `facetas.clientes.items.${Number(partes[1])}.url`
+        : `secciones.${Number(partes[0])}.items.${Number(partes[1])}.url`;
     const label = inp.closest("label");
     const textoOrig = label.firstChild.textContent;
     label.firstChild.textContent = "Subiendo… 0%";
@@ -2194,7 +2237,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         method: "POST",
         body: { resourceUrl: destino.resourceUrl, mime: archivo.type }
       });
-      fijar(estado.pagina.data, `secciones.${i}.items.${j}.url`, url);
+      fijar(estado.pagina.data, rutaDestino, url);
       marcarSucio();
       repintarPreview();
       refrescarModal();

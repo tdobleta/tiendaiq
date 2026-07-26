@@ -383,8 +383,11 @@
     const visibles = MODO_APP
       ? items.map((i, j) => [i, j])
       : items.map((i, j) => [i, j]).filter(([i]) => i.url);
-    if (!visibles.length) return "";
-    const cards = visibles
+    // En la tienda: si no hay clips reales, la sección no se muestra.
+    // En el editor: dejamos siempre un andamio para poder abrirla y agregar.
+    if (!visibles.length && !MODO_APP) return "";
+    const paraPintar = visibles.length ? visibles : [[{}, 0]];
+    const cards = paraPintar
       .map(([i]) =>
         i.url
           ? `<div class="tiq-video muro-card">${mediaAuto(i.url)}</div>`
@@ -691,8 +694,8 @@
     // intercalan según su `ancla` (= id del bloque tras el cual va).
     const fijos = [
       ["hero", hero(f, data.fuente, g)],
-      ["clientes", muroClientes(f.clientes)],
       ["faq", faq(f.faq, g)],
+      ["clientes", muroClientes(f.clientes)],
       ["iconos", iconos(f.iconos)],
       ["tabla", tabla(f.tabla, f.hero.titulo, g)],
       ["stats", stats(f.stats, g)],
