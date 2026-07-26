@@ -42,6 +42,22 @@ const {
 const PUERTO = Number(env.PORT || process.env.PORT || 4321);
 const DIR_APP = path.join(__dirname, "app");
 const DIR_PLANTILLA = path.join(__dirname, "plantilla-producto");
+
+// Cache-busting: un token que cambia cuando cambia cualquier asset del front.
+// Se inyecta en las URLs de app.js/app.css y render.js/styles.css, así después
+// de cada deploy el navegador SIEMPRE baja la versión nueva (no más "no veo los
+// cambios"). Se calcula del mtime más reciente; si algo falla, cae al arranque.
+const VERSION_ASSETS = (() => {
+  try {
+    const archivos = [
+      path.join(DIR_APP, "app.js"), path.join(DIR_APP, "app.css"),
+      path.join(DIR_PLANTILLA, "render.js"), path.join(DIR_PLANTILLA, "styles.css")
+    ];
+    return Math.floor(Math.max(...archivos.map((a) => fs.statSync(a).mtimeMs))).toString(36);
+  } catch {
+    return Date.now().toString(36);
+  }
+})();
 // Único hogar del código que corre en el storefront (widget de bundles y
 // formulario COD). El theme app extension lo publica en el CDN de Shopify, y
 // el server sirve LOS MISMOS archivos para el preview del admin y para la
@@ -159,7 +175,9 @@ const TIPOS = {
 function servirIndex(res) {
   const html = fs
     .readFileSync(path.join(DIR_APP, "index.html"), "utf8")
-    .replace("{{SHOPIFY_CLIENT_ID}}", env.SHOPIFY_CLIENT_ID || "");
+    .replace("{{SHOPIFY_CLIENT_ID}}", env.SHOPIFY_CLIENT_ID || "")
+    .replace('href="app.css"', `href="app.css?v=${VERSION_ASSETS}"`)
+    .replace('src="app.js"', `src="app.js?v=${VERSION_ASSETS}"`);
   res.writeHead(200, {
     "Content-Type": "text/html; charset=utf-8",
     // Sin esto el admin de Shopify no puede meter la app en su iframe.
@@ -671,6 +689,15 @@ const servidor = http.createServer(async (req, res) => {
 
     if (url.pathname.startsWith("/preview")) {
       const rel = url.pathname.replace(/^\/preview\/?/, "") || "index.html";
+      // El index del preview referencia render.js/styles.css con ?v=…: le
+      // inyectamos la versión viva para que tras un deploy baje lo nuevo.
+      if (rel === "index.html") {
+        const html = fs
+          .readFileSync(path.join(DIR_PLANTILLA, "index.html"), "utf8")
+          .replace(/(styles\.css|render\.js)\?v=[\w.]+/g, `$1?v=${VERSION_ASSETS}`);
+        res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" });
+        return res.end(html);
+      }
       return servirEstatico(res, DIR_PLANTILLA, rel);
     }
 

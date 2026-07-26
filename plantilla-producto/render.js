@@ -367,7 +367,12 @@
   // Media que se auto-reproduce en loop, SIN controles: gif/imagen → <img>;
   // video (mp4/webm/cdn) → <video autoplay muted loop>; YouTube → thumbnail.
   function mediaAuto(url) {
-    if (/\.(gif|png|jpe?g|webp)(\?|#|$)/i.test(url))
+    url = (url || "").trim();
+    // Giphy: si pegan el link de la PÁGINA (giphy.com/gifs/slug-ID) lo pasamos
+    // al gif directo, así "anda" sin que el usuario tenga que buscar el .gif.
+    const gphy = url.match(/giphy\.com\/(?:gifs|clips|stickers)\/(?:[^/]*-)?([A-Za-z0-9]{6,})/i);
+    if (gphy) url = `https://media.giphy.com/media/${gphy[1]}/giphy.gif`;
+    if (/\.(gif|png|jpe?g|webp|avif)(\?|#|$)/i.test(url))
       return `<img class="muro__media" src="${esc(encodeURI(url))}" alt="" loading="lazy">`;
     const yt = idYouTube(url);
     if (yt) return `<img class="muro__media" src="https://i.ytimg.com/vi/${yt}/hqdefault.jpg" alt="" loading="lazy">`;
@@ -410,18 +415,20 @@
   function faq(f, global) {
     // Checkbox tildado a la izquierda de cada pregunta (como la referencia).
     const CHECK = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3.5"/><path d="M7.5 12.2l3 3 6-6.4"/></svg>`;
-    // Olas EN MOVIMIENTO tipo fluido: dos capas (gris atrás, blanca al frente)
-    // con una onda que se REPITE (dos períodos de 1440 en un viewBox de 2880) y
-    // se desplaza horizontal en loop sin cortes (translateX -50% = un período).
-    // Cada capa fluye a distinta velocidad → parallax, se siente como agua/
-    // corriente real. La curva es continua entre períodos (tangentes iguales),
-    // así el loop es perfecto. El contenido va en z-index 1: no se toca.
+    // Olas EN MOVIMIENTO tipo "layered waves" (el efecto clásico más usado): 3
+    // capas BLANCAS a distinta opacidad y velocidad que fluyen horizontal en loop
+    // sin cortes → parece agua con espuma y profundidad, limpio (sin grises
+    // sucios). Onda que se repite (2 períodos de 1440 en viewBox 2880); mover
+    // -50% = un período, con tangentes continuas = loop perfecto. La más lenta y
+    // baja va atrás; la opaca al frente es el borde real con la página.
     const OLA_TOP = `
-      <svg class="ola ola--atras" viewBox="0 0 2880 80" preserveAspectRatio="none"><path fill="#9a9a9a" opacity="0.4" d="M0,50 C240,80 480,80 720,50 C960,20 1200,20 1440,50 C1680,80 1920,80 2160,50 C2400,20 2640,20 2880,50 V0 H0 Z"/></svg>
-      <svg class="ola ola--frente" viewBox="0 0 2880 80" preserveAspectRatio="none"><path fill="#ffffff" d="M0,40 C240,72 480,72 720,40 C960,8 1200,8 1440,40 C1680,72 1920,72 2160,40 C2400,8 2640,8 2880,40 V0 H0 Z"/></svg>`;
+      <svg class="ola ola--1" viewBox="0 0 2880 80" preserveAspectRatio="none"><path fill="#ffffff" opacity="0.35" d="M0,54 C240,78 480,78 720,54 C960,30 1200,30 1440,54 C1680,78 1920,78 2160,54 C2400,30 2640,30 2880,54 V0 H0 Z"/></svg>
+      <svg class="ola ola--2" viewBox="0 0 2880 80" preserveAspectRatio="none"><path fill="#ffffff" opacity="0.6" d="M0,48 C240,70 480,70 720,48 C960,26 1200,26 1440,48 C1680,70 1920,70 2160,48 C2400,26 2640,26 2880,48 V0 H0 Z"/></svg>
+      <svg class="ola ola--3" viewBox="0 0 2880 80" preserveAspectRatio="none"><path fill="#ffffff" d="M0,40 C240,60 480,60 720,40 C960,20 1200,20 1440,40 C1680,60 1920,60 2160,40 C2400,20 2640,20 2880,40 V0 H0 Z"/></svg>`;
     const OLA_BOT = `
-      <svg class="ola ola--atras" viewBox="0 0 2880 80" preserveAspectRatio="none"><path fill="#9a9a9a" opacity="0.4" d="M0,30 C240,0 480,0 720,30 C960,60 1200,60 1440,30 C1680,0 1920,0 2160,30 C2400,60 2640,60 2880,30 V80 H0 Z"/></svg>
-      <svg class="ola ola--frente" viewBox="0 0 2880 80" preserveAspectRatio="none"><path fill="#ffffff" d="M0,40 C240,8 480,8 720,40 C960,72 1200,72 1440,40 C1680,8 1920,8 2160,40 C2400,72 2640,72 2880,40 V80 H0 Z"/></svg>`;
+      <svg class="ola ola--1" viewBox="0 0 2880 80" preserveAspectRatio="none"><path fill="#ffffff" opacity="0.35" d="M0,26 C240,2 480,2 720,26 C960,50 1200,50 1440,26 C1680,2 1920,2 2160,26 C2400,50 2640,50 2880,26 V80 H0 Z"/></svg>
+      <svg class="ola ola--2" viewBox="0 0 2880 80" preserveAspectRatio="none"><path fill="#ffffff" opacity="0.6" d="M0,32 C240,10 480,10 720,32 C960,54 1200,54 1440,32 C1680,10 1920,10 2160,32 C2400,54 2640,54 2880,32 V80 H0 Z"/></svg>
+      <svg class="ola ola--3" viewBox="0 0 2880 80" preserveAspectRatio="none"><path fill="#ffffff" d="M0,40 C240,20 480,20 720,40 C960,60 1200,60 1440,40 C1680,20 1920,20 2160,40 C2400,60 2640,60 2880,40 V80 H0 Z"/></svg>`;
 
     const items = (f.items ?? [])
       .map(

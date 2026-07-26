@@ -1853,7 +1853,7 @@
           if (!Array.isArray(f.clientes.items)) f.clientes.items = [];
           const items = f.clientes.items;
           return (
-            `<div class="editor__nota">Pegá el enlace de un GIF o video (.gif, .mp4 o YouTube) o subilo desde tu compu. Se reproduce solo, en loop, sin controles. Agregá todos los que quieras; los vacíos no se muestran en la tienda.</div>` +
+            `<div class="editor__nota">Subí o <strong>arrastrá</strong> el video/GIF desde tu compu (lo más simple), o pegá un enlace <strong>directo</strong>: un .gif o .mp4, un link de Giphy o de YouTube. Ojo: el link de una página web común (por ej. una nota) no sirve, tiene que ser el del archivo. Se reproduce solo, en loop, sin controles. Agregá todos los que quieras; los vacíos no se muestran en la tienda.</div>` +
             campo("facetas.clientes.titulo", "Título de la sección") +
             (items.length
               ? items
