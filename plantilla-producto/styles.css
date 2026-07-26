@@ -200,6 +200,14 @@
 /* Rating: presente y prolijo — estrellas grandes, texto a la par. */
 /* Sobrio como los widgets premium (Trustpilot/Judge.me): peso medio, gris
    suave y aire — que el foco sean las estrellas, no el texto. */
+/* Barra de urgencia arriba de todo (como SOLUME/Bungee): full-width, color de
+   acento, mayúsculas. Prueba social + escasez de un vistazo. */
+#app .hero__urgencia {
+  background: var(--acento); color: #fff;
+  text-align: center; font-size: 12px; font-weight: 700;
+  letter-spacing: 1px; text-transform: uppercase;
+  padding: 9px 14px; border-radius: 6px; margin-bottom: 16px;
+}
 #app .hero__resenas { display: flex; align-items: center; gap: 9px; font-size: 14px; color: #4a4a4a; font-weight: 500; }
 #app .hero__resenas .estrellas { font-size: 15px; letter-spacing: 1px; }
 

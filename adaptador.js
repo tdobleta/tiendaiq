@@ -154,6 +154,11 @@ IDIOMA
 {idioma} aplica SOLO al texto que generás. Las imágenes se usan como están,
 aunque tengan texto en otro idioma. Nunca descartes una imagen por su idioma.
 
+URGENCIA
+Una barra corta de escasez/viralidad para arriba de todo (3-6 palabras, va en
+MAYÚSCULAS por CSS). Prueba social + escasez. Ejemplos: "Ya es viral · Últimas
+unidades", "Agotamos 3 veces este mes", "Pocas unidades disponibles". En {idioma}.
+
 TÍTULO
 Reescribilo: mismo producto, sin ruido de buscador. Máximo 5 palabras.
 NO inventes nombres de marca. Es el mismo producto con nombre limpio.
@@ -267,6 +272,7 @@ const ESQUEMA = {
         hero: {
           type: "object",
           properties: {
+            urgencia: { type: "string" },
             titulo: { type: "string" },
             subtitulo: { type: "string" },
             bullets: {
@@ -297,7 +303,7 @@ const ESQUEMA = {
               additionalProperties: false
             }
           },
-          required: ["titulo", "subtitulo", "bullets", "galeria", "resenas_count", "puntaje", "resena_destacada"],
+          required: ["urgencia", "titulo", "subtitulo", "bullets", "galeria", "resenas_count", "puntaje", "resena_destacada"],
           additionalProperties: false
         },
         texto_img_1: {

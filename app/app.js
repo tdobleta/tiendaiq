@@ -1785,6 +1785,7 @@
             ["fitness", "Fitness / deporte"], ["bebes", "Bebés / niños"], ["moda", "Moda / joyas / perfume"]
           ];
           return (
+            campo("facetas.hero.urgencia", "Barra de urgencia (arriba de todo)") +
             campo("facetas.hero.titulo", "Título") +
             campoNumero("facetas.hero.resenas_count", "Cantidad de reseñas (junto a las estrellas)") +
             `<div class="campo campo--editor"><label>Puntaje (de 5, ej: 4.9)</label>
