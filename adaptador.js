@@ -154,13 +154,28 @@ IDIOMA
 {idioma} aplica SOLO al texto que generás. Las imágenes se usan como están,
 aunque tengan texto en otro idioma. Nunca descartes una imagen por su idioma.
 
+CONCEPTO CREATIVO (definilo ANTES de escribir una sola palabra)
+No armás "una landing": construís la IDENTIDAD de ESTE producto. Decidí primero,
+internamente, y escribí TODO alineado a esa decisión:
+- ¿Qué emoción vende? (lujo, calma, rendimiento, bienestar, seguridad, diversión…)
+- ¿Qué personalidad tiene la marca? (clínica, premium, minimalista, femenina,
+  tecnológica, natural…)
+- ¿Qué NO pertenece a esa personalidad? Evitá esas palabras y ese tono en TODO.
+Cada texto (título, promesa, bullets, reseña) debe reforzar el MISMO concepto.
+Una frase que funciona sola pero rompe la coherencia se cambia. Vendé una
+sensación, no "un masajeador facial".
+
 TÍTULO
 Reescribilo: mismo producto, sin ruido de buscador. Máximo 5 palabras.
 NO inventes nombres de marca. Es el mismo producto con nombre limpio.
 Cambiá palabras técnicas por palabras deseables (Rotating → Swivel).
 
-SUBTÍTULO
-Una sola frase: beneficio + mecanismo.
+SUBTÍTULO (la promesa)
+2 frases MUY cortas y humanas, fáciles de escanear — voz de marca, no de IA.
+Vendé la sensación/el resultado, no el mecanismo. Directo y limpio.
+Estilo SOLUME ("Despertá naturalmente. Sin alarmas molestas."), NUNCA una frase
+larga y "correcta" tipo "Afirmá y desinflamá tu rostro con microvibraciones que
+reactivan la piel desde adentro". Cortá todo lo que sobre.
 
 BULLETS (4)
 Los 4 bullets tienen que contar UNA sola historia del producto (la promesa
@@ -229,7 +244,8 @@ Esta SÍ la escribís: una opinión de clienta creíble sobre ESTE producto.
 - Autor: nombre de pila + inicial del apellido (ej: "Malena R.", "Carla T.").
 Escribís en {idioma}.
 
-NICHO (define el color de acento de la página)
+NICHO (clasificación interna del producto; ya NO define color — la página tiene
+un acento único para todos)
 Clasificá el producto en UN rubro. Elegí el que mejor lo describe:
 - belleza: cosmética, skincare, maquillaje, cuidado facial/capilar.
 - salud: bienestar, terapéutico, higiene, dispositivos de salud.
@@ -244,7 +260,11 @@ Clasificá el producto en UN rubro. Elegí el que mejor lo describe:
 IMÁGENES
 Clasificá cada una: lifestyle | infografia | producto_limpio | detalle
 Después asigná media_ids a los slots:
-- galeria: todas, en orden
+- galeria: todas, PERO ordenadas para que la PRIMERA (la foto principal del hero,
+  el protagonista de la página) sea la más limpia y aspiracional: producto_limpio
+  o lifestyle SIN texto encima. NUNCA pongas primero una infografia ni una imagen
+  con texto/precio/logo del proveedor incrustado (leen a AliExpress y matan el
+  valor percibido) — esas van al FINAL de la galería.
 - texto_img_1: lifestyle, contexto de uso
 - iconos.imagen_central: la que mejor quede en recorte CIRCULAR (producto
   centrado, mano usándolo, detalle). Nunca una con texto encima.
