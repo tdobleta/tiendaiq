@@ -410,10 +410,30 @@
   function faq(f, global) {
     // Checkbox tildado a la izquierda de cada pregunta (como la referencia).
     const CHECK = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3.5"/><path d="M7.5 12.2l3 3 6-6.4"/></svg>`;
-    // Olas: tapas del color de la página con borde ondulado → el negro parece
-    // una banda con ondas arriba y abajo. El gris tenue detrás da profundidad.
-    const OLA_TOP = `<svg viewBox="0 0 1440 80" preserveAspectRatio="none"><path d="M0,0 H1440 V46 C1080,94 360,6 0,52 Z" fill="#9a9a9a" opacity="0.4"/><path d="M0,0 H1440 V36 C1080,84 360,-6 0,42 Z" fill="#ffffff"/></svg>`;
-    const OLA_BOT = `<svg viewBox="0 0 1440 80" preserveAspectRatio="none"><path d="M0,80 H1440 V34 C1080,-14 360,74 0,28 Z" fill="#9a9a9a" opacity="0.4"/><path d="M0,80 H1440 V44 C1080,-4 360,84 0,38 Z" fill="#ffffff"/></svg>`;
+    // Olas EN MOVIMIENTO: tapas del color de la página con borde ondulado → el
+    // negro parece una banda con ondas arriba y abajo. El gris tenue detrás da
+    // profundidad. Cada onda muta su curva con <animate> (SMIL), a distinto
+    // ritmo, así el borde ondula suave como agua. El contenido no se toca.
+    const OLA_TOP = `<svg viewBox="0 0 1440 80" preserveAspectRatio="none">
+      <path fill="#9a9a9a" opacity="0.4" d="M0,0 H1440 V46 C1080,94 360,6 0,52 Z">
+        <animate attributeName="d" dur="9s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.5;1" keySplines="0.45 0 0.55 1;0.45 0 0.55 1"
+          values="M0,0 H1440 V46 C1080,94 360,6 0,52 Z;M0,0 H1440 V50 C1080,18 360,90 0,44 Z;M0,0 H1440 V46 C1080,94 360,6 0,52 Z"/>
+      </path>
+      <path fill="#ffffff" d="M0,0 H1440 V36 C1080,84 360,-6 0,42 Z">
+        <animate attributeName="d" dur="8s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.5;1" keySplines="0.45 0 0.55 1;0.45 0 0.55 1"
+          values="M0,0 H1440 V36 C1080,84 360,-6 0,42 Z;M0,0 H1440 V40 C1080,10 360,80 0,34 Z;M0,0 H1440 V36 C1080,84 360,-6 0,42 Z"/>
+      </path>
+    </svg>`;
+    const OLA_BOT = `<svg viewBox="0 0 1440 80" preserveAspectRatio="none">
+      <path fill="#9a9a9a" opacity="0.4" d="M0,80 H1440 V34 C1080,-14 360,74 0,28 Z">
+        <animate attributeName="d" dur="9s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.5;1" keySplines="0.45 0 0.55 1;0.45 0 0.55 1"
+          values="M0,80 H1440 V34 C1080,-14 360,74 0,28 Z;M0,80 H1440 V30 C1080,62 360,-10 0,36 Z;M0,80 H1440 V34 C1080,-14 360,74 0,28 Z"/>
+      </path>
+      <path fill="#ffffff" d="M0,80 H1440 V44 C1080,-4 360,84 0,38 Z">
+        <animate attributeName="d" dur="8s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.5;1" keySplines="0.45 0 0.55 1;0.45 0 0.55 1"
+          values="M0,80 H1440 V44 C1080,-4 360,84 0,38 Z;M0,80 H1440 V40 C1080,72 360,2 0,46 Z;M0,80 H1440 V44 C1080,-4 360,84 0,38 Z"/>
+      </path>
+    </svg>`;
 
     const items = (f.items ?? [])
       .map(
@@ -434,7 +454,6 @@
           <p>${esc(f.subtitulo)}</p>
         </div>
         <div class="faq__lista">${items}</div>
-        ${ctaCentro(f, global)}
       </div>
       <div class="faq__ola faq__ola--bot">${OLA_BOT}</div>
     </section>`;
