@@ -4,6 +4,9 @@
     "cloudflared": "^0.7.1",
     "pg": "^8.22.0"
   },
+  "optionalDependencies": {
+    "sharp": "^0.33.5"
+  },
   "scripts": {
     "start": "node server.js",
     "verificar": "node pruebas/sintaxis.js",
