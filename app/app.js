@@ -1329,114 +1329,123 @@
 
   const ESTADO_ETQ = { publicada: "Publicada", borrador: "Borrador" };
 
+  // ---------- 1. elegir producto (lanzador tipo command-palette) ----------
+  //
+  // Nada de grilla: una sola decisión. Un input que busca sobre los productos
+  // que ya cargamos (sin backend), operable 100% por teclado. Con el input
+  // vacío mostramos atajos: retomar borradores + productos sin página. La
+  // selección reusa el flujo existente: estado.producto → ir("informacion").
   function pantallaLista() {
-    const q = estado.filtro.toLowerCase();
-    const fe = estado.filtroEstado;
-    const coincide = (p) =>
-      p.titulo.toLowerCase().includes(q) &&
-      (fe === "todos" || (fe === "sin" ? !p.estado : p.estado === fe));
-    const vistos = estado.productos.filter(coincide);
+    const IC_LUPA = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>`;
 
-    // Conteos por segmento (sobre TODOS los productos, no sobre lo filtrado).
-    const cuenta = {
-      todos: estado.productos.length,
-      sin: estado.productos.filter((p) => !p.estado).length,
-      publicada: estado.productos.filter((p) => p.estado === "publicada").length,
-      borrador: estado.productos.filter((p) => p.estado === "borrador").length
-    };
-    const SEGMENTOS = [
-      ["todos", "Todos"],
-      ["sin", "Sin página"],
-      ["publicada", "Publicadas"],
-      ["borrador", "Borradores"]
-    ];
-
-    const IC_LUPA = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>`;
-
-    const tarjeta = (p) => `
-      <button class="producto" data-id="${esc(p.id)}">
-        <div class="producto__foto">
-          ${p.imagen ? `<img src="${esc(p.imagen)}" alt="" loading="lazy">` : `<span class="producto__ph">🛍</span>`}
-          ${
-            p.estado
-              ? `<span class="producto__estado producto__estado--${p.estado}"><i></i>${ESTADO_ETQ[p.estado] || p.estado}</span>`
-              : ""
-          }
-          <span class="producto__cta">${p.estado ? "Editar página" : "Crear página"} <b>→</b></span>
-        </div>
-        <div class="producto__cuerpo">
-          <div class="producto__titulo">${esc(p.titulo)}</div>
-          ${p.precio != null ? `<div class="producto__precio">${esc(precioLindo(p.precio, p.moneda))}</div>` : ""}
-        </div>
-      </button>`;
+    // Tienda sin productos: estado honesto, no una grilla vacía.
+    if (!estado.productos.length) {
+      vista.innerHTML = `
+        <button class="volver" id="volver-inicio">← Inicio</button>
+        <div class="cabecera"><h1>Crear página de producto con IA</h1></div>
+        <div class="vacio-panel">
+          <div class="vacio-panel__tit">Todavía no tenés productos en tu tienda</div>
+          <p>Agregá al menos un producto en Shopify y volvé para armar su página con IA.</p>
+        </div>`;
+      $("volver-inicio").onclick = () => ir("inicio");
+      return;
+    }
 
     vista.innerHTML = `
       <button class="volver" id="volver-inicio">← Inicio</button>
       <div class="cabecera">
         <h1>Crear página de producto con IA</h1>
-        <p>Elegí uno de tus productos y la IA arma la landing completa.</p>
+        <p>Buscá el producto y la IA arma la landing completa.</p>
       </div>
-
-      <div class="lista-barra">
-        <div class="buscador-caja">
-          <span class="buscador-caja__lupa">${IC_LUPA}</span>
-          <input class="buscador" id="q" placeholder="Buscar entre ${estado.productos.length} productos…"
-                 value="${esc(estado.filtro)}">
+      <div class="lanzador">
+        <div class="cmd">
+          <span class="cmd__ico">${IC_LUPA}</span>
+          <input class="cmd__input" id="q" type="text" autocomplete="off" spellcheck="false"
+                 placeholder="Buscá un producto para empezar…" value="${esc(estado.filtro || "")}">
+          <span class="cmd__kbd">↑↓ · Enter</span>
         </div>
-        <div class="segmento" id="segmento">
-          ${SEGMENTOS.map(
-            ([k, txt]) => `
-            <button class="segmento__op ${fe === k ? "es-activo" : ""}" data-f="${k}">
-              ${txt}<span class="segmento__n">${cuenta[k]}</span>
-            </button>`
-          ).join("")}
-        </div>
-      </div>
-
-      ${
-        vistos.length
-          ? `<div class="grilla">${vistos.map(tarjeta).join("")}</div>`
-          : `<div class="vacio">${
-              estado.filtro
-                ? `Ningún producto coincide con "${esc(estado.filtro)}".`
-                : "No hay productos en este filtro."
-            }</div>`
-      }`;
+        <div class="lanzador__res" id="res" role="listbox" aria-label="Productos"></div>
+      </div>`;
 
     $("volver-inicio").onclick = () => ir("inicio");
-
     const q0 = $("q");
-    q0.oninput = () => {
-      estado.filtro = q0.value;
-      const pos = q0.selectionStart;
-      pintarLista_soloGrilla();
-      const q1 = $("q");
-      q1.focus();
-      q1.setSelectionRange(pos, pos);
+    let navIdx = 0;      // fila activa
+    let navLista = [];   // ids en orden de navegación
+
+    const fila = (p) => `
+      <button class="fila" role="option" data-id="${esc(p.id)}">
+        <span class="fila__thumb">${p.imagen ? `<img src="${esc(p.imagen)}" alt="" loading="lazy">` : `<span class="fila__ph">🛍</span>`}</span>
+        <span class="fila__txt">
+          <span class="fila__tit">${esc(p.titulo)}</span>
+          ${p.precio != null ? `<span class="fila__precio">${esc(precioLindo(p.precio, p.moneda))}</span>` : ""}
+        </span>
+        ${
+          p.estado
+            ? `<span class="chip chip--${p.estado}">${ESTADO_ETQ[p.estado] || p.estado}</span>`
+            : `<span class="fila__cta">Crear página →</span>`
+        }
+      </button>`;
+
+    function marcarActiva(scroll = true) {
+      $("res").querySelectorAll(".fila").forEach((b, i) => {
+        const on = i === navIdx;
+        b.classList.toggle("is-activa", on);
+        b.setAttribute("aria-selected", on ? "true" : "false");
+        if (on && scroll) b.scrollIntoView({ block: "nearest" });
+      });
+    }
+
+    function renderResultados() {
+      const q = (estado.filtro || "").trim().toLowerCase();
+      let html = "";
+      let planos = [];
+
+      if (!q) {
+        const borradores = estado.productos.filter((p) => p.estado === "borrador").slice(0, 4);
+        const sinPagina = estado.productos.filter((p) => !p.estado).slice(0, 6);
+        planos = [...borradores, ...sinPagina];
+        if (borradores.length) html += `<div class="lanzador__grupo">Seguí donde dejaste</div>` + borradores.map(fila).join("");
+        if (sinPagina.length) html += `<div class="lanzador__grupo">Empezá una nueva</div>` + sinPagina.map(fila).join("");
+        html += `<div class="lanzador__pie">${estado.productos.length} productos en tu tienda · escribí para buscar todos</div>`;
+      } else {
+        planos = estado.productos.filter((p) => p.titulo.toLowerCase().includes(q)).slice(0, 50);
+        html = planos.length
+          ? planos.map(fila).join("")
+          : `<div class="vacio">Ningún producto coincide con “${esc(estado.filtro)}”.</div>`;
+      }
+
+      navLista = planos.map((p) => p.id);
+      if (navIdx >= navLista.length) navIdx = Math.max(0, navLista.length - 1);
+
+      const cont = $("res");
+      cont.innerHTML = html;
+      cont.querySelectorAll(".fila").forEach((b) => {
+        b.onclick = () => elegirProducto(b.dataset.id);
+        b.onmouseenter = () => {
+          const i = navLista.indexOf(b.dataset.id);
+          if (i >= 0 && i !== navIdx) { navIdx = i; marcarActiva(false); }
+        };
+      });
+      marcarActiva(false);
+    }
+
+    renderResultados();
+    q0.focus();
+    q0.setSelectionRange(q0.value.length, q0.value.length);
+
+    q0.oninput = () => { estado.filtro = q0.value; navIdx = 0; renderResultados(); };
+    q0.onkeydown = (e) => {
+      const n = navLista.length;
+      if (e.key === "ArrowDown") { e.preventDefault(); if (n) { navIdx = (navIdx + 1) % n; marcarActiva(); } }
+      else if (e.key === "ArrowUp") { e.preventDefault(); if (n) { navIdx = (navIdx - 1 + n) % n; marcarActiva(); } }
+      else if (e.key === "Enter") { e.preventDefault(); if (navLista[navIdx]) elegirProducto(navLista[navIdx]); }
+      else if (e.key === "Escape" && q0.value) { q0.value = ""; estado.filtro = ""; navIdx = 0; renderResultados(); }
     };
-
-    vista.querySelectorAll(".segmento__op").forEach((b) => {
-      b.onclick = () => {
-        estado.filtroEstado = b.dataset.f;
-        pintarLista_soloGrilla();
-      };
-    });
-
-    engancharProductos();
   }
 
-  // Repinta solo la grilla para no perder el foco del buscador en cada tecla.
-  function pintarLista_soloGrilla() {
-    pantallaLista();
-  }
-
-  function engancharProductos() {
-    vista.querySelectorAll(".producto").forEach((b) => {
-      b.onclick = () => {
-        estado.producto = estado.productos.find((p) => p.id === b.dataset.id);
-        ir("informacion");
-      };
-    });
+  function elegirProducto(id) {
+    estado.producto = estado.productos.find((p) => p.id === id);
+    if (estado.producto) ir("informacion");
   }
 
   // ---------- 2. información del producto ----------
