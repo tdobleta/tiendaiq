@@ -527,6 +527,7 @@
     return `
     <section class="tiq-sec tiq-sec--videos" data-seccion="${esc(s.id)}">
       <div class="contenedor">
+        ${s.titulo ? `<h2 class="tiq-sec__titulo">${esc(s.titulo)}</h2>` : ""}
         <div class="tiq-vcar" data-idx="0">
           <button class="tiq-vcar__flecha tiq-vcar__flecha--izq" type="button" onclick="tiqVideoNav(this,-1)" aria-label="Anterior">${FLECHA_IZQ}</button>
           <div class="tiq-vcar__viewport"><div class="tiq-vcar__pista">${cards}</div></div>
@@ -641,7 +642,6 @@
     // intercalan según su `ancla` (= id del bloque tras el cual va).
     const fijos = [
       ["hero", hero(f, data.fuente, g)],
-      ["texto1", dupla(f.texto_img_1, g, false)],
       ["iconos", iconos(f.iconos)],
       ["tabla", tabla(f.tabla, f.hero.titulo, g)],
       ["stats", stats(f.stats, g)],

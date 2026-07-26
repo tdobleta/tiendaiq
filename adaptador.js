@@ -241,7 +241,6 @@ IMÁGENES
 Clasificá cada una: lifestyle | infografia | producto_limpio | detalle
 Después asigná media_ids a los slots:
 - galeria: todas, en orden
-- texto_img_1: lifestyle, contexto de uso
 - iconos.imagen_central: la que mejor quede en recorte CIRCULAR (producto
   centrado, mano usándolo, detalle). Nunca una con texto encima.
 - stats.imagen: infografia si existe; si no, lifestyle
@@ -304,16 +303,6 @@ const ESQUEMA = {
             }
           },
           required: ["urgencia", "titulo", "subtitulo", "bullets", "galeria", "resenas_count", "puntaje", "resena_destacada"],
-          additionalProperties: false
-        },
-        texto_img_1: {
-          type: "object",
-          properties: {
-            titular: { type: "string" },
-            parrafo: { type: "string" },
-            imagen: { type: ["string", "null"] }
-          },
-          required: ["titular", "parrafo", "imagen"],
           additionalProperties: false
         },
         iconos: {
@@ -404,7 +393,7 @@ const ESQUEMA = {
         }
       },
       required: [
-        "hero", "texto_img_1", "iconos", "tabla",
+        "hero", "iconos", "tabla",
         "stats", "faq", "resenas"
       ],
       additionalProperties: false
@@ -596,7 +585,6 @@ function ensamblar(fuente, salida, { idioma, angulo }) {
           }
         ]
       },
-      texto_img_1: { ...f.texto_img_1, cta: true },
       iconos: { ...f.iconos, items: fijo(f.iconos.items, CARDINALIDAD["iconos.items"]) },
       tabla: {
         ...f.tabla,
@@ -628,7 +616,22 @@ function ensamblar(fuente, salida, { idioma, angulo }) {
       },
       recomendados: { modo: "placeholder", items: [] }
     },
-    global: { cta: "Agregar al carrito", idioma, angulo, nicho: salida.nicho || "general" }
+    global: { cta: "Agregar al carrito", idioma, angulo, nicho: salida.nicho || "general" },
+    // Debajo del hero: muro de videos de clientes (UGC). Vacío por defecto — el
+    // merchant inyecta sus videos desde el editor. Reemplaza al viejo texto+imagen.
+    secciones: [
+      {
+        id: "clientes",
+        tipo: "videos",
+        ancla: "hero",
+        titulo: `Únete a más de ${f.hero.resenas_count || 200} clientes contentos`,
+        items: [
+          { url: "", poster: null },
+          { url: "", poster: null },
+          { url: "", poster: null }
+        ]
+      }
+    ]
   };
 }
 

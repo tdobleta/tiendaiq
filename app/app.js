@@ -1845,13 +1845,6 @@
             )
             .join("")
       },
-      texto1: {
-        titulo: "Texto + imagen 1",
-        html: () =>
-          campo("facetas.texto_img_1.titular", "Titular") +
-          campo("facetas.texto_img_1.parrafo", "Párrafo", 4) +
-          selectorImagenUno("facetas.texto_img_1.imagen", "Imagen del bloque")
-      },
       iconos: {
         titulo: "Beneficios (íconos)",
         html: () =>
@@ -1941,7 +1934,6 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   const ANCLAS_UBICACION = [
     ["top", "Al principio de la página"],
     ["hero", "Después del encabezado"],
-    ["texto1", "Después de Texto + imagen 1"],
     ["iconos", "Después de los beneficios"],
     ["tabla", "Después de la tabla"],
     ["stats", "Después de las estadísticas"],
@@ -1972,7 +1964,8 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
           ).join("")}
         </select>
       </div>`;
-    const cabecera = ubicacion;
+    const tituloCampo = s.tipo === "videos" ? campo(`${base}.titulo`, "Título de la sección") : "";
+    const cabecera = tituloCampo + ubicacion;
 
     let items = "";
     if (s.tipo === "videos") {
@@ -2207,8 +2200,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     { sel: ".tabla", id: "tabla" },
     { sel: ".stats", id: "stats" },
     { sel: ".faq", id: "faq" },
-    { sel: ".resenas", id: "resenas" },
-    { sel: ".dupla", id: "texto1" } // ya solo queda Texto + imagen 1
+    { sel: ".resenas", id: "resenas" }
   ];
 
   function montarEdicionEnIframe(marco) {
@@ -2363,7 +2355,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   // caería la section. Un indicador dentro del iframe marca la posición.
 
   const NOMBRE_BLOQUE = {
-    top: "el principio", hero: "el encabezado", texto1: "Texto + imagen 1",
+    top: "el principio", hero: "el encabezado",
     iconos: "los beneficios", tabla: "la tabla", stats: "las estadísticas",
     faq: "las preguntas", resenas: "las reseñas", recomendados: "los recomendados"
   };

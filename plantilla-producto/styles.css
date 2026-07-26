@@ -577,6 +577,12 @@ body.publicada #app .resena-destacada__editar { display: none; }
    Sections incrustables — carruseles de video e imágenes
    ============================================================ */
 #app .tiq-sec { padding: 48px 0; }
+/* Título del muro de videos de clientes (UGC), centrado como la referencia. */
+#app .tiq-sec__titulo {
+  text-align: center; font-family: var(--fuente-titulo);
+  font-size: 30px; font-weight: 800; letter-spacing: -0.01em;
+  color: var(--negro); line-height: 1.15; margin: 0 auto 32px; max-width: 20ch;
+}
 #app .tiq-sec__vacio {
   color: var(--texto-suave); font-size: 14px; text-align: center;
   padding: 34px 24px; border: 1px dashed var(--borde); border-radius: var(--radio);
