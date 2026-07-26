@@ -10,15 +10,12 @@
 @import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=DM+Sans:opsz,wght@9..40,400..700&display=swap");
 
 :root {
-  /* Neutros CÁLIDOS (stone), no grises fríos: leen premium/editorial y
-     conviven mejor con el acento. Recomendación de ui-ux-pro-max para
-     e-commerce premium; es la base de SOLUME (crema + negro cálido). */
-  --negro: #0c0a09;
-  --texto: #292524;
-  --texto-suave: #78716c;
-  --borde: #e7e5e4;
-  --fondo-suave: #fafaf9;
-  --estrella: #d9a441;
+  --negro: #111111;
+  --texto: #333333;
+  --texto-suave: #6b7280;
+  --borde: #e5e7eb;
+  --fondo-suave: #fafafa;
+  --estrella: #f5b301;
   --check: #16a34a;
   --violeta: #7c5cd6;   /* ticks de los bullets del hero */
   --azul-verif: #2b7cf6; /* sello de comprador verificado */
@@ -26,12 +23,12 @@
   --radio: 12px;
   --ancho: 1100px;
 
-  /* ACENTO ÚNICO para toda la página de producto (una sola, igual para todos).
-     Dorado/bronce sobre neutros cálidos = premium DTC (referencia SOLUME), y
-     conversa con la fotografía del producto. Fluye por CTA, badge y detalles. */
-  --acento: #a16207;
-  --acento-suave: #fbf3e4;
-  --acento-texto: #854d0e;
+  /* ACENTO por nicho (general por defecto). Lo pisan las reglas
+     #app[data-nicho="..."] de abajo. Fluye por CTA, pastilla y
+     detalles → cada rubro se ve distinto sin tocar layout ni tipografía. */
+  --acento: #4f46e5;
+  --acento-suave: #eef2ff;
+  --acento-texto: #4338ca;
 
   /* Título: grotesca pesada para todos los nichos (look DTC). La diferencia
      entre rubros la hace el color de acento, no la fuente. */
@@ -39,9 +36,16 @@
   --fuente-cuerpo: "DM Sans", "Segoe UI", system-ui, sans-serif;
 }
 
-/* Sin paletas por nicho: la página de producto es UNA sola, igual para todos.
-   El acento único (dorado) vive en :root. (Si algún día se quiere diferenciar
-   por rubro, se reintroducen reglas #app[data-nicho="..."] acá.) */
+/* Paletas por rubro. La flecha del nicho la pone render.js en #app[data-nicho].
+   Contraste verificado para texto blanco sobre --acento (CTA/pastilla). */
+#app[data-nicho="belleza"]  { --acento: #db2777; --acento-suave: #fdf2f8; --acento-texto: #9d174d; }
+#app[data-nicho="salud"]    { --acento: #0d9488; --acento-suave: #f0fdfa; --acento-texto: #0f766e; }
+#app[data-nicho="hogar"]    { --acento: #c2410c; --acento-suave: #fff7ed; --acento-texto: #9a3412; }
+#app[data-nicho="mascotas"] { --acento: #d97706; --acento-suave: #fffbeb; --acento-texto: #b45309; }
+#app[data-nicho="tech"]     { --acento: #2563eb; --acento-suave: #eff6ff; --acento-texto: #1d4ed8; }
+#app[data-nicho="fitness"]  { --acento: #15803d; --acento-suave: #f0fdf4; --acento-texto: #166534; }
+#app[data-nicho="bebes"]    { --acento: #3f77b8; --acento-suave: #eff6ff; --acento-texto: #2f6cad; }
+#app[data-nicho="moda"]     { --acento: #171717; --acento-suave: #f5f5f4; --acento-texto: #292524; }
 
 /* Todo lo genérico va encerrado en #app: en la tienda esta hoja convive con
    el CSS del tema, y un reset global le rompería el header y el footer. */
@@ -97,11 +101,10 @@
 #app .cta--full {
   display: block;
   width: 100%;
-  padding: 17px 24px;
+  padding: 16px 24px;
   font-size: 16px;
-  font-weight: 700;
   border-radius: 10px;
-  margin: 0 0 18px;
+  margin: 2px 0 18px;
   position: relative;
   overflow: hidden;
 }
@@ -125,7 +128,7 @@
   100% { left: 135%; }
 }
 #app .cta--full:disabled { opacity: .75; cursor: default; }
-#app form[action="/cart/add"] { margin: 0 0 18px; }
+#app form[action="/cart/add"] { margin: 2px 0 18px; }
 #app form[action="/cart/add"] .cta--full { margin: 0; }
 #app .cta-centro { text-align: center; margin-top: 32px; }
 
@@ -156,28 +159,22 @@
    domina y las dos columnas tienen aire de sobra. Solo acá, no en las secciones
    de abajo. */
 #app .hero .contenedor { max-width: 1280px; }
-/* NO son dos columnas: es UN hero donde el producto DOMINA. La foto pesa más
-   (columna asimétrica), es más alta (portrait) y se acopla al texto con poco
-   gap → se lee como una pieza, no como Dawn de dos islas. */
 #app .hero__grid {
   display: grid;
-  grid-template-columns: 1.42fr 1fr;
-  gap: 52px;
+  grid-template-columns: 1.08fr 1fr;
+  gap: 72px;
   align-items: start;
 }
-/* El texto arranca más abajo que la foto: rompe la simetría y crea espacio
-   negativo arriba a la derecha (tensión editorial, no grilla pareja). */
-#app .hero__grid > div:last-child { padding-top: 34px; }
 
-/* La galería acompaña el scroll: la foto persiste y sigue dominando mientras
-   se lee la info (align-items:start deja la columna sin estirar). */
+/* La galería acompaña el scroll hasta que la columna derecha se termina.
+   Funciona porque el grid es align-items:start (la columna no se estira). */
 #app .hero__galeria { position: sticky; top: 24px; }
 
-/* La foto DOMINA el viewport: portrait, alta, casi sin caja (rounding sutil). */
+/* Sin borde, esquinas más redondeadas: la foto llena la caja, como PagePilot. */
 #app .hero__principal {
-  border-radius: 10px;
+  border-radius: 16px;
   overflow: hidden;
-  aspect-ratio: 4 / 5;
+  aspect-ratio: 1 / 1;
   background: var(--fondo-suave);
 }
 #app .hero__principal img { width: 100%; height: 100%; object-fit: cover; }
@@ -203,37 +200,30 @@
 /* Rating: presente y prolijo — estrellas grandes, texto a la par. */
 /* Sobrio como los widgets premium (Trustpilot/Judge.me): peso medio, gris
    suave y aire — que el foco sean las estrellas, no el texto. */
-#app .hero__resenas { display: flex; align-items: center; gap: 9px; font-size: 13.5px; color: #4a4a4a; font-weight: 500; margin-bottom: 14px; }
+#app .hero__resenas { display: flex; align-items: center; gap: 9px; font-size: 14px; color: #4a4a4a; font-weight: 500; }
 #app .hero__resenas .estrellas { font-size: 15px; letter-spacing: 1px; }
 
 /* Título: el elemento dominante, pero en 600 como PagePilot — el 700 de
    Poppins lo hacía ver pesado y desbalanceaba la columna. */
-/* Destaca por el ESPACIO alrededor, no por el tamaño. Más chico y con más aire
-   que antes: deja respirar la columna en vez de aplastarla. */
-#app .hero__titulo { font-size: 31px; font-weight: 800; line-height: 1.1; letter-spacing: -0.02em; margin: 0 0 12px; }
-/* Promesa (función: IDENTIDAD/emoción). La frase que le da carácter al producto,
-   pegada al título y angosta. Muteada: acompaña, no compite. */
-#app .hero__promesa { font-size: 15.5px; font-weight: 400; line-height: 1.5; color: #57534e; max-width: 34ch; margin: 0 0 26px; }
+#app .hero__titulo { font-size: 38px; font-weight: 800; line-height: 1.07; letter-spacing: -0.01em; margin: 10px 0 12px; }
 
-/* Precio actual = protagonista, limpio. Los tres elementos centrados sobre
-   el mismo eje (align-items:center), con aire entre ellos. */
-#app .hero__precios { display: flex; align-items: center; gap: 14px; margin-bottom: 6px; }
-#app .hero__precio { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; color: var(--negro); }
-/* Precio anterior: gris fino que "desaparece" visualmente — NO rojo (robaba
-   demasiada atención). El ancla se lee, pero el foco es el precio vigente. */
-#app .hero__comparativo { font-size: 18px; font-weight: 400; color: #7f7f7f; opacity: .8; text-decoration: line-through; text-decoration-thickness: 1px; }
-/* Badge de descuento: TINTE suave, no sólido. El color sólido del nicho queda
-   reservado para el CTA (un solo protagonista cromático). Así el descuento se
-   lee sin competir con el botón ni con el título. */
+/* Precio: pesado pero SIN competir con el título. 23px lo deja como segunda
+   jerarquía clara, no como un segundo título. */
+#app .hero__precios { display: flex; align-items: baseline; gap: 12px; margin-bottom: 4px; }
+#app .hero__precio { font-size: 23px; font-weight: 800; color: var(--negro); }
+/* Precio anterior: rojo, casi tan grande como el vigente, bien tachado —
+   el ancla de descuento es parte del argumento de venta, no un detalle gris. */
+#app .hero__comparativo { font-size: 20px; font-weight: 700; color: #d02e3f; text-decoration: line-through; }
+/* Pastilla de % ahorro: pill sólido en el rojo de oferta (mismo tono que el
+   tachado → historia de descuento coherente). Centrado contra el precio. */
 #app .hero__descuento {
-  display: inline-flex; align-items: center; height: 28px;
-  margin-left: 6px;
-  background: var(--acento-suave); color: var(--acento-texto);
-  font-size: 12.5px; font-weight: 600; letter-spacing: .01em; line-height: 1;
-  padding: 0 12px; border-radius: 999px;
+  align-self: center;
+  background: var(--acento); color: #fff;
+  font-size: 13px; font-weight: 700; letter-spacing: -.2px; line-height: 1.2;
+  padding: 3px 9px; border-radius: 7px;
 }
 
-#app .hero__impuestos { font-size: 12.5px; color: var(--texto-suave); margin-bottom: 30px; }
+#app .hero__impuestos { font-size: 12.5px; color: var(--texto-suave); margin-bottom: 14px; }
 
 /* Subtítulo: va DEBAJO del precio y en negrita (no es un texto secundario,
    es la promesa del producto). Lo genera la IA por producto. */
@@ -250,28 +240,24 @@
 /* Beneficios: alto uniforme, separación pareja, enmarcados arriba y abajo.
    Tipografía calcada de PagePilot: Poppins 500, 15px, texto casi negro,
    tick violeta grueso de trazo redondeado. */
-/* Sin línea divisoria: el aire (margin-top) separa de "Impuestos". Marcas
-   premium separan con espacio, no con reglas. */
-/* Los 4 beneficios leen como UN bloque compacto (juntos), con aire GRANDE
-   arriba y abajo. Ancho de lectura angosto: no llegan al borde derecho. */
-#app .hero__bullets { list-style: none; margin: 0 0 34px; padding: 0; max-width: 33ch; }
+#app .hero__bullets { list-style: none; border-top: 1px solid var(--borde); padding: 14px 0 0; margin-bottom: 22px; }
+/* Más chicos y apretados que la versión anterior: compacto = más "diseñado",
+   menos "texto grande de IA". Referencia: SOLUME. */
 #app .hero__bullets li {
   display: flex; align-items: flex-start; gap: 9px;
-  font-size: 14px; font-weight: 400; line-height: 1.3;
-  color: var(--texto-suave); margin-bottom: 10px; /* descripción en gris cálido; el título en negro */
+  font-size: 14px; font-weight: 500; line-height: 1.4;
+  color: #52525b; margin-bottom: 8px; /* el detalle en gris; la negrita en negro */
 }
 #app .hero__bullets li:last-child { margin-bottom: 0; }
 #app .hero__bullets .tick { width: 15px; height: 15px; color: var(--acento); flex-shrink: 0; margin-top: 3px; }
 #app .hero__bullets .tick svg { width: 100%; height: 100%; display: block; }
-/* Ícono de línea MONO a un solo color neutro (no el acento): disciplina
-   cromática 95% neutro + acento solo en el CTA. Feather/Lucide-style. */
-#app .hero__bullets .hero__bullet-ico { flex-shrink: 0; width: 18px; height: 18px; color: var(--texto); margin-top: 1px; }
+/* Ícono de línea del bullet: hereda el color del acento del nicho. */
+#app .hero__bullets .hero__bullet-ico { flex-shrink: 0; width: 18px; height: 18px; color: var(--acento); margin-top: 1px; }
 #app .hero__bullets .hero__bullet-ico svg { width: 100%; height: 100%; display: block; }
 /* Emoji a color: el ícono principal del bullet (estilo SOLUME/PagePilot). */
-#app .hero__bullets .hero__bullet-emoji { flex-shrink: 0; width: 22px; text-align: center; font-size: 18px; line-height: 1.3; }
-/* El título del beneficio: negrita SUTIL (600, no 700/800) — la diferencia con
-   la descripción tiene que ser leve, como en SOLUME. */
-#app .hero__bullets li strong { font-weight: 600; color: var(--negro); }
+#app .hero__bullets .hero__bullet-emoji { flex-shrink: 0; width: 24px; text-align: center; font-size: 18px; line-height: 1.4; }
+/* El arranque del beneficio en negrita, como SOLUME. */
+#app .hero__bullets li strong { font-weight: 700; color: var(--negro); }
 
 /* Variantes: cada grupo bien separado, label chico en mayúsculas. */
 #app .hero__variantes { margin-bottom: 24px; }
@@ -291,41 +277,12 @@
 #app .chip:hover { border-color: #9ca3af; }
 #app .chip.activa { border-color: var(--negro); border-width: 2px; padding: 8px 15px; color: var(--negro); font-weight: 500; }
 
-/* Confianza (función: CONFIANZA). Una línea de texto sobria bajo el CTA, sin
-   tarjetas ni íconos — distinta en estructura de los bullets, para no repetir
-   patrón. Red de seguridad en el momento de la decisión. */
-#app .hero__confianza { font-size: 12px; letter-spacing: .02em; color: var(--texto-suave); line-height: 1.5; margin: 0 0 8px; }
-#app .hero__confianza span { color: #cbd5e1; margin: 0 8px; }
-
-/* ====================================================================
-   ARQUETIPOS DE HERO (por CONCEPTO creativo, no por rubro).
-   La IA elige el concepto del producto y con eso cambia la COMPOSICIÓN,
-   no solo el color. Cada arquetipo rompe la linealidad a su manera.
-   Default = "esencial" (las reglas de arriba). Abajo, el primero: editorial.
-   ==================================================================== */
-/* EDITORIAL: construye percepción antes que conversión. Título más grande,
-   promesa con más presencia, el precio "flota" (badge al borde derecho) y los
-   beneficios se leen como índice editorial (separadores finos, no lista suelta). */
-#app[data-concepto="editorial"] .hero__titulo { font-size: 42px; line-height: 1.04; letter-spacing: -0.03em; margin: 0 0 16px; }
-#app[data-concepto="editorial"] .hero__promesa { font-size: 17px; color: var(--texto); max-width: 32ch; margin: 0 0 30px; }
-#app[data-concepto="editorial"] .hero__precios { justify-content: flex-start; gap: 12px; margin-bottom: 4px; }
-#app[data-concepto="editorial"] .hero__descuento { margin-left: auto; }
-#app[data-concepto="editorial"] .hero__impuestos { margin-bottom: 34px; }
-#app[data-concepto="editorial"] .hero__bullets { max-width: none; margin: 0 0 34px; }
-#app[data-concepto="editorial"] .hero__bullets li { margin-bottom: 0; padding: 13px 0; border-top: 1px solid var(--borde); }
-#app[data-concepto="editorial"] .hero__bullets li:first-child { border-top: none; padding-top: 0; }
-
-/* CLÍNICO: tech/preciso, tipo ficha técnica. Composición más densa y ordenada;
-   los beneficios pasan a una grilla 2×2 (se leen como specs, no como lista). */
-#app[data-concepto="clinico"] .hero__titulo { font-size: 29px; font-weight: 700; letter-spacing: -0.01em; margin: 0 0 10px; }
-#app[data-concepto="clinico"] .hero__promesa { font-size: 14.5px; max-width: 40ch; margin: 0 0 22px; }
-#app[data-concepto="clinico"] .hero__impuestos { margin-bottom: 22px; }
-#app[data-concepto="clinico"] .hero__bullets {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 14px 22px;
-  max-width: none; margin: 0 0 28px;
-  padding: 18px 20px; border: 1px solid var(--borde); border-radius: var(--radio);
-}
-#app[data-concepto="clinico"] .hero__bullets li { margin-bottom: 0; }
+/* Bloque de envío/garantía/devoluciones: 3 columnas centradas, ícono arriba. */
+#app .hero__badges { display: flex; justify-content: space-between; gap: 8px; border-top: 1px solid var(--borde); border-bottom: 1px solid var(--borde); padding: 16px 0; }
+/* border:0 fuerza planos: el recuadro venía del tema, PagePilot los tiene sin caja. */
+#app .badge { flex: 1; text-align: center; font-size: 12.5px; font-weight: 500; color: var(--negro); line-height: 1.35; border: 0; background: none; padding: 0; }
+#app .badge__icono { display: block; margin: 0 auto 8px; width: 24px; height: 24px; color: var(--negro); }
+#app .badge__icono svg { width: 100%; height: 100%; }
 
 /* Reseña destacada: prueba social elegante, con aire arriba y abajo. */
 #app .resena-destacada {

@@ -1778,11 +1778,11 @@
       encabezado: {
         titulo: "Encabezado",
         html: () => {
-          const conceptoActual = leer(estado.pagina.data, "global.concepto") || "esencial";
-          const CONCEPTOS = [
-            ["esencial", "Esencial (limpio / premium)"],
-            ["editorial", "Editorial (aspiracional / lujo)"],
-            ["clinico", "Clínico (técnico / ficha)"]
+          const nichoActual = leer(estado.pagina.data, "global.nicho") || "general";
+          const NICHOS = [
+            ["general", "General"], ["belleza", "Belleza / cosmética"], ["salud", "Salud / bienestar"],
+            ["hogar", "Hogar / cocina"], ["mascotas", "Mascotas"], ["tech", "Tecnología"],
+            ["fitness", "Fitness / deporte"], ["bebes", "Bebés / niños"], ["moda", "Moda / joyas / perfume"]
           ];
           return (
             campo("facetas.hero.titulo", "Título") +
@@ -1791,9 +1791,9 @@
               <input type="number" min="0" max="5" step="0.1" data-ruta="facetas.hero.puntaje" data-tipo="numero" value="${esc(leer(estado.pagina.data, "facetas.hero.puntaje") ?? 4.9)}"></div>` +
             campo("global.cta", "Texto del botón de compra") +
             `<div class="campo campo--editor">
-              <label>Estilo de la página (arquetipo)</label>
-              <select data-ruta="global.concepto">${CONCEPTOS.map(
-                ([k, t]) => `<option value="${k}" ${k === conceptoActual ? "selected" : ""}>${t}</option>`
+              <label>Color de la página (según el rubro)</label>
+              <select data-ruta="global.nicho">${NICHOS.map(
+                ([k, t]) => `<option value="${k}" ${k === nichoActual ? "selected" : ""}>${t}</option>`
               ).join("")}</select>
             </div>`
           );
@@ -1802,25 +1802,15 @@
       bullets: {
         titulo: "Beneficios del producto",
         html: () => {
-          const OPC = [
-            ["escudo", "Escudo"], ["rayo", "Rayo"], ["gota", "Gota"], ["reloj", "Reloj"],
-            ["hoja", "Hoja"], ["corazon", "Corazón"], ["brillo", "Brillo"], ["estrella", "Estrella"],
-            ["pluma", "Pluma"], ["caja", "Caja"], ["camion", "Camión"], ["regla", "Regla"],
-            ["sol", "Sol"], ["luna", "Luna"], ["diana", "Diana"], ["refresh", "Giro"],
-            ["candado", "Candado"], ["check", "Check"]
-          ];
           return (
-            `<div class="editor__nota">Cada beneficio: un ícono, el arranque en negrita y el resto de la frase.</div>` +
+            `<div class="editor__nota">Cada beneficio: un emoji, el arranque en negrita y el resto de la frase.</div>` +
             f.hero.bullets
               .map(
                 (b, i) => `
               <fieldset class="resena-edit">
                 <legend>Beneficio ${i + 1}</legend>
-                <div class="fila-triple" style="grid-template-columns:130px 1fr">
-                  <select data-ruta="facetas.hero.bullets.${i}.icono">
-                    <option value="" ${!b.icono ? "selected" : ""}>— ícono —</option>
-                    ${OPC.map(([k, t]) => `<option value="${k}" ${b.icono === k ? "selected" : ""}>${t}</option>`).join("")}
-                  </select>
+                <div class="fila-triple" style="grid-template-columns:56px 1fr">
+                  <input type="text" data-ruta="facetas.hero.bullets.${i}.emoji" value="${esc(b.emoji ?? "")}" placeholder="💧" title="Emoji" maxlength="4">
                   <input type="text" data-ruta="facetas.hero.bullets.${i}.fuerte" value="${esc(b.fuerte ?? "")}" placeholder="Arranque (en negrita)">
                 </div>
                 <div class="fila-triple" style="grid-template-columns:1fr;margin-bottom:0">

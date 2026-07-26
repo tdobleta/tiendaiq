@@ -154,60 +154,27 @@ IDIOMA
 {idioma} aplica SOLO al texto que generás. Las imágenes se usan como están,
 aunque tengan texto en otro idioma. Nunca descartes una imagen por su idioma.
 
-CREATIVE BRIEF (PASO 1 — definilo ANTES de escribir una sola palabra de copy)
-No armás "una landing": actuás como DIRECTOR CREATIVO y primero decidís la marca.
-Llená el objeto "brief" y TODO lo demás (título, promesa, bullets, reseña,
-arquetipo) tiene que OBEDECERLO. Si una frase funciona sola pero rompe el brief,
-se cambia. Vendé una sensación/rutina, no "un aparato".
-- emocion: la emoción central que vende el producto (ej: "calma", "confianza",
-  "rendimiento", "cuidado propio", "seguridad").
-- personalidad: 3-4 adjetivos de la marca (ej: "minimalista, dermocosmética,
-  femenina, premium").
-- tono: cómo habla el copy (ej: "directo y cálido, frases cortas").
-- evitar: lo que NO pertenece a esta marca y hay que evitar en TODO el texto
-  (ej: "jerga técnica, superlativos, tono gadget/AliExpress").
-- referencia: 1-2 marcas cuyo espíritu seguir (ej: "Aesop, SOLUME").
-Traducí el brief a UN arquetipo de hero (campo "concepto"):
-- editorial: productos aspiracionales/de percepción (lujo, belleza, bienestar,
-  lifestyle) donde primero se construye deseo. Composición grande y respirada.
-- clinico: productos técnicos/de rendimiento (gadgets, salud, dispositivos)
-  donde mandan specs y precisión. Composición densa, tipo ficha.
-- esencial: default seguro cuando ninguno domina claramente.
-
 TÍTULO
 Reescribilo: mismo producto, sin ruido de buscador. Máximo 5 palabras.
 NO inventes nombres de marca. Es el mismo producto con nombre limpio.
 Cambiá palabras técnicas por palabras deseables (Rotating → Swivel).
 
-SUBTÍTULO (la promesa)
-2 frases MUY cortas y humanas, fáciles de escanear — voz de marca, no de IA.
-Vendé la sensación/el resultado, no el mecanismo. Directo y limpio.
-Estilo SOLUME ("Despertá naturalmente. Sin alarmas molestas."), NUNCA una frase
-larga y "correcta" tipo "Afirmá y desinflamá tu rostro con microvibraciones que
-reactivan la piel desde adentro". Cortá todo lo que sobre.
+SUBTÍTULO
+Una sola frase: beneficio + mecanismo.
 
 BULLETS (4)
-Los 4 bullets tienen que contar UNA sola historia del producto (la promesa
-central), no 4 beneficios sueltos e independientes. Y VARIÁ el formato entre
-ellos — que NO sean los cuatro "verbo + explicación": eso grita plantilla/IA.
-Mezclá tipos, como una marca real: un beneficio, una especificación seca, una
-garantía, un modo de uso. Ejemplos de tipos:
-  · beneficio:      fuerte "Reducí la hinchazón" · resto "bajo los ojos"
-  · especificación: fuerte "6000 pulsos/min"     · resto ""   (sola, sin explicación)
-  · garantía:       fuerte "30 días de prueba"   · resto ""
-  · uso:            fuerte "Usalo en la ducha"   · resto "resistente al agua"
-Cada bullet en 3 partes:
-- icono: elegí de esta lista el que MEJOR ilustre ese punto (ícono de línea mono,
-  NO emoji): escudo (garantía/protección) · rayo (potente/rápido/energía) ·
-  gota (agua/hidratación) · reloj (tiempo/minutos) · hoja (natural/orgánico) ·
-  corazon (cuidado/salud) · brillo (estilo/glamour) · estrella (calidad/premium) ·
-  pluma (liviano/suave) · caja (incluye/compacto) · camion (envío) ·
-  regla (medida/ajuste) · sol (luz/día) · luna (noche/sueño) · diana (precisión) ·
-  refresh (giratorio/reutilizable/360) · candado (seguro) · check (genérico si nada encaja).
-  No repitas el mismo icono en dos bullets si podés evitarlo.
-- fuerte: el núcleo del punto en 2-3 palabras (va en negrita).
-- resto: descripción MUY corta (máximo 4 palabras) o VACÍO "" si el punto se
-  entiende solo. Al menos 1 de los 4 debe ir con resto vacío (varía el ritmo).
+Cada bullet es un beneficio cuantificado que empieza con verbo. Lo devolvés en 3 partes:
+- emoji: UN solo emoji que ilustre LITERAL y específicamente ese beneficio (el
+  objeto, la acción o el material del que habla el bullet). Elegí uno concreto y
+  distinto para cada bullet. PROHIBIDO los genéricos de relleno (✅ ✔️ ✨ 🔥 🚀 ⭐
+  💯 👍 🎉): esos leen a IA. Preferí emojis que "muestran" el beneficio, como hace
+  una tienda ganadora — 💧 hidratación, 😴 sueño/descanso, ⏰ tiempo, 🌿 natural,
+  💪 fuerza, 🛡️ garantía, 🚿 resistente al agua, 🔋 batería, ❄️ frío, ☀️ luz.
+- fuerte: el arranque del beneficio en 2-4 palabras (el gancho; va en negrita).
+- resto: el resto de la frase.
+Entre fuerte y resto, máximo 8 palabras en total. No repitas emoji entre bullets. Ejemplo:
+  emoji "💧" · fuerte "Reducí la hinchazón" · resto "bajo los ojos al instante"
+  emoji "🚿" · fuerte "Usalo en la ducha" · resto "es resistente al agua"
 
 ICONOS (4)
 emoji + título de 1-2 palabras que sea un BENEFICIO (no un sustantivo:
@@ -253,8 +220,7 @@ Esta SÍ la escribís: una opinión de clienta creíble sobre ESTE producto.
 - Autor: nombre de pila + inicial del apellido (ej: "Malena R.", "Carla T.").
 Escribís en {idioma}.
 
-NICHO (clasificación interna del producto; ya NO define color — la página tiene
-un acento único para todos)
+NICHO (define el color de acento de la página)
 Clasificá el producto en UN rubro. Elegí el que mejor lo describe:
 - belleza: cosmética, skincare, maquillaje, cuidado facial/capilar.
 - salud: bienestar, terapéutico, higiene, dispositivos de salud.
@@ -269,11 +235,7 @@ Clasificá el producto en UN rubro. Elegí el que mejor lo describe:
 IMÁGENES
 Clasificá cada una: lifestyle | infografia | producto_limpio | detalle
 Después asigná media_ids a los slots:
-- galeria: todas, PERO ordenadas para que la PRIMERA (la foto principal del hero,
-  el protagonista de la página) sea la más limpia y aspiracional: producto_limpio
-  o lifestyle SIN texto encima. NUNCA pongas primero una infografia ni una imagen
-  con texto/precio/logo del proveedor incrustado (leen a AliExpress y matan el
-  valor percibido) — esas van al FINAL de la galería.
+- galeria: todas, en orden
 - texto_img_1: lifestyle, contexto de uso
 - iconos.imagen_central: la que mejor quede en recorte CIRCULAR (producto
   centrado, mano usándolo, detalle). Nunca una con texto encima.
@@ -312,13 +274,13 @@ const ESQUEMA = {
               items: {
                 type: "object",
                 properties: {
-                  // Clave de ícono de línea mono (el prompt lista las válidas; el
-                  // render cae a "check" si viene una que no existe).
-                  icono: { type: "string" },
+                  // Un emoji a color relevante por bullet (estilo SOLUME). El
+                  // prompt guía cuáles usar y cuáles evitar (genéricos = IA).
+                  emoji: { type: "string" },
                   fuerte: { type: "string" },
                   resto: { type: "string" }
                 },
-                required: ["icono", "fuerte", "resto"],
+                required: ["emoji", "fuerte", "resto"],
                 additionalProperties: false
               }
             },
@@ -445,28 +407,10 @@ const ESQUEMA = {
       // Sin enum (inflaba la gramática). El prompt lista los rubros válidos; el
       // CSS cae a "general" si viene uno que no existe.
       type: "string",
-      description: "El rubro del producto (belleza/salud/hogar/mascotas/tech/fitness/bebes/moda/general). Clasificación interna."
-    },
-    concepto: {
-      // Arquetipo de hero según el concepto creativo (el CSS cae a "esencial").
-      type: "string",
-      description: "El arquetipo de hero según la personalidad del producto: esencial (limpio/premium, default seguro), editorial (percepción/lujo/aspiracional) o clinico (tech/preciso/ficha técnica)."
-    },
-    brief: {
-      // Director creativo: la decisión de marca que gobierna todo el copy.
-      type: "object",
-      properties: {
-        emocion: { type: "string" },
-        personalidad: { type: "string" },
-        tono: { type: "string" },
-        evitar: { type: "string" },
-        referencia: { type: "string" }
-      },
-      required: ["emocion", "personalidad", "tono", "evitar", "referencia"],
-      additionalProperties: false
+      description: "El rubro del producto (belleza/salud/hogar/mascotas/tech/fitness/bebes/moda/general). Define el color de acento."
     }
   },
-  required: ["pool_imagenes", "facetas", "nicho", "concepto", "brief"],
+  required: ["pool_imagenes", "facetas", "nicho"],
   additionalProperties: false
 };
 
@@ -600,7 +544,7 @@ function validar(data, salidaCruda) {
 
   for (const b of f.hero.bullets) {
     const txt = typeof b === "string" ? b : `${b.fuerte ?? ""} ${b.resto ?? ""}`.trim();
-    if (txt.split(/\s+/).length > 7) avisos.push(`bullet: "${txt}" — demasiado largo (apuntar a ≤7 palabras)`);
+    if (txt.split(/\s+/).length > 8) avisos.push(`bullet: "${txt}" — más de 8 palabras`);
   }
 
   // El dato más citado de la descripción sucia no debería aparecer en la página.
@@ -678,7 +622,7 @@ function ensamblar(fuente, salida, { idioma, angulo }) {
       },
       recomendados: { modo: "placeholder", items: [] }
     },
-    global: { cta: "Agregar al carrito", idioma, angulo, nicho: salida.nicho || "general", concepto: salida.concepto || "esencial", brief: salida.brief || null }
+    global: { cta: "Agregar al carrito", idioma, angulo, nicho: salida.nicho || "general" }
   };
 }
 
@@ -699,32 +643,7 @@ async function crearPagina(idProducto, sesion, { idioma = "es", angulo = "" } = 
   const { salida, uso } = await generar(fuente, medios, { idioma, angulo });
   const data = ensamblar(fuente, salida, { idioma, angulo });
   const urls = Object.fromEntries(medios.map((m) => [m.media_id, m.url]));
-  // Hero de marca (OPCIONAL, fail-safe): si hay proveedor de recorte configurado,
-  // recorta la foto principal y la pone sobre un backdrop propio para matar el
-  // look "asset de proveedor". Sin key o ante cualquier error → galería original.
-  await aplicarHeroDeMarca(data, urls, fuente, sesion).catch((e) =>
-    console.warn("[hero-branding] omitido:", e.message)
-  );
   return { data, urls, avisos: validar(data, salida), uso };
-}
-
-// Genera el hero de marca, lo sube como media del producto y lo pone PRIMERO en
-// la galería. Apagado por defecto (requiere REMOVEBG_API_KEY o REMBG_URL).
-async function aplicarHeroDeMarca(data, urls, fuente, sesion) {
-  if (!process.env.REMOVEBG_API_KEY && !process.env.REMBG_URL) return; // feature off
-  const galeria = data?.facetas?.hero?.galeria;
-  const idHero = galeria && galeria[0];
-  const urlHero = idHero && urls[idHero];
-  const gid = fuente?.shopify_product_id;
-  if (!urlHero || !gid || !sesion) return;
-  const { generarHeroDeMarca } = require("./hero-branding");
-  const hero = await generarHeroDeMarca(urlHero);
-  if (!hero) return;
-  const { subirImagenProducto } = require("./imagenes");
-  const subido = await subirImagenProducto(sesion, gid, "hero-marca.png", hero.mime, hero.base64);
-  if (!subido?.media_id || !subido?.url) return;
-  urls[subido.media_id] = subido.url;
-  galeria.unshift(subido.media_id); // el hero de marca pasa a ser la foto principal
 }
 
 // data.js es solo para el preview local; el JSON puro es lo que se publica.

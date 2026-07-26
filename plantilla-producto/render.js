@@ -170,21 +170,20 @@
       isFinite(pAhora) && isFinite(pAntes) && pAntes > pAhora
         ? Math.round((1 - pAhora / pAntes) * 100)
         : 0;
-    const descuento = pctDesc > 0 ? `<span class="hero__descuento">AHORRÁ ${pctDesc}%</span>` : "";
+    const descuento = pctDesc > 0 ? `<span class="hero__descuento">-${pctDesc}%</span>` : "";
 
-    // Bullet = {icono, fuerte, resto}: ícono de línea MONO (Feather/Lucide-style),
-    // a un solo color neutro — no emoji a color (leía barato en productos tech y
-    // rompía la disciplina cromática). Retrocompat: páginas con {emoji} o string
-    // plano siguen renderizando igual.
+    // Bullet nuevo = {emoji, fuerte, resto}: emoji a color relevante + arranque
+    // en negrita (estilo SOLUME/PagePilot). Retrocompat: páginas viejas traen
+    // {icono} (ícono de línea) o string plano → siguen renderizando igual.
     const bullets = (h.bullets ?? [])
       .map((b) => {
         if (typeof b === "string")
           return `<li><span class="hero__bullet-ico">${ICONOS_BULLET.check}</span><span>${esc(b)}</span></li>`;
         let ico;
-        if (b.icono && ICONOS_BULLET[b.icono])
-          ico = `<span class="hero__bullet-ico">${ICONOS_BULLET[b.icono]}</span>`;
-        else if (b.emoji)
+        if (b.emoji)
           ico = `<span class="hero__bullet-emoji">${esc(b.emoji)}</span>`;
+        else if (b.icono && ICONOS_BULLET[b.icono])
+          ico = `<span class="hero__bullet-ico">${ICONOS_BULLET[b.icono]}</span>`;
         else ico = `<span class="hero__bullet-ico">${ICONOS_BULLET.check}</span>`;
         const fuerte = esc(b.fuerte ?? "");
         const resto = esc(b.resto ?? "");
@@ -199,11 +198,12 @@
     // La compra usa la variante por defecto del producto.
     const variantes = "";
 
-    // Confianza al pie del CTA: una línea sobria de texto, NO una grilla de
-    // tarjetas con ícono (esa estructura era gemela de los bullets → leía a UI).
-    // Editorial y callada, hace de red de seguridad justo en la decisión.
     const badges = `
-      <p class="hero__confianza">Envío asegurado<span>·</span>30 días de garantía<span>·</span>Devoluciones gratis</p>`;
+      <div class="hero__badges">
+        <div class="badge"><span class="badge__icono">${ICONO.camion}</span>Envío rastreado y asegurado</div>
+        <div class="badge"><span class="badge__icono">${ICONO.paquete}</span>30 días de garantía</div>
+        <div class="badge"><span class="badge__icono">${ICONO.corazon}</span>Devoluciones gratis</div>
+      </div>`;
 
     const rd = h.resena_destacada ?? {};
     // En la tienda, una reseña sin texto real no se muestra: el placeholder
@@ -238,7 +238,6 @@
           <div>
             <div class="hero__resenas">${estrellas(5)} <span>Calificación ${esc(puntaje1(h.puntaje ?? 4.9))}/5.0 (${esc(miles(h.resenas_count))})</span></div>
             <h1 class="hero__titulo">${esc(h.titulo)}</h1>
-            ${h.subtitulo ? `<p class="hero__promesa">${esc(h.subtitulo)}</p>` : ""}
             <div class="hero__precios">
               <span class="hero__precio">${esc(precioBonito(fuente.moneda, fuente.precio))}</span>
               ${comparativo}
@@ -769,11 +768,8 @@
   function montar(datos) {
     if (EN_TIENDA) document.body.classList.add("publicada");
     const app = document.getElementById("app");
-    // El nicho queda como clasificación interna (ya no pinta color).
+    // El nicho define el color de acento (skin por rubro). Sin dato → general.
     app.dataset.nicho = datos?.global?.nicho || "general";
-    // CONCEPTO creativo → arquetipo de hero (layout + tratamiento). Lo elige la
-    // IA por producto (emoción/personalidad). Sin dato → "esencial" (default).
-    app.dataset.concepto = datos?.global?.concepto || "esencial";
     app.innerHTML = render(datos);
     iniciarVcar(); // centra los carruseles de video
     // Solo en la tienda: el preview no tiene storefront al que preguntarle.
