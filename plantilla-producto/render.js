@@ -365,11 +365,18 @@
   }
 
   function faq(f, global) {
+    // Checkbox tildado a la izquierda de cada pregunta (como la referencia).
+    const CHECK = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3.5"/><path d="M7.5 12.2l3 3 6-6.4"/></svg>`;
+    // Olas: tapas del color de la página con borde ondulado → el negro parece
+    // una banda con ondas arriba y abajo. El gris tenue detrás da profundidad.
+    const OLA_TOP = `<svg viewBox="0 0 1440 80" preserveAspectRatio="none"><path d="M0,0 H1440 V46 C1080,94 360,6 0,52 Z" fill="#9a9a9a" opacity="0.4"/><path d="M0,0 H1440 V36 C1080,84 360,-6 0,42 Z" fill="#ffffff"/></svg>`;
+    const OLA_BOT = `<svg viewBox="0 0 1440 80" preserveAspectRatio="none"><path d="M0,80 H1440 V34 C1080,-14 360,74 0,28 Z" fill="#9a9a9a" opacity="0.4"/><path d="M0,80 H1440 V44 C1080,-4 360,84 0,38 Z" fill="#ffffff"/></svg>`;
+
     const items = (f.items ?? [])
       .map(
         (q) => `
         <details class="faq__item">
-          <summary>${esc(q.pregunta)}</summary>
+          <summary><span class="faq__q"><span class="faq__check">${CHECK}</span>${esc(q.pregunta)}</span></summary>
           <p>${esc(q.respuesta)}</p>
         </details>`
       )
@@ -377,6 +384,7 @@
 
     return `
     <section class="faq">
+      <div class="faq__ola faq__ola--top">${OLA_TOP}</div>
       <div class="contenedor">
         <div class="faq__cabecera">
           <h2>${esc(f.titular)}</h2>
@@ -385,6 +393,7 @@
         <div class="faq__lista">${items}</div>
         ${ctaCentro(f, global)}
       </div>
+      <div class="faq__ola faq__ola--bot">${OLA_BOT}</div>
     </section>`;
   }
 
