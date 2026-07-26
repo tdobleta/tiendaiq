@@ -1361,15 +1361,15 @@
           <h1>Creá tu página de producto</h1>
           <p>Elegí un producto y la IA arma la landing completa en segundos.</p>
         </div>
-        <div class="lanzador">
-          <div class="cmd">
-            <span class="cmd__ico">${IC_LUPA}</span>
-            <input class="cmd__input" id="q" type="text" autocomplete="off" spellcheck="false"
-                   placeholder="Buscá un producto para empezar…" value="${esc(estado.filtro || "")}">
+        <div class="consola">
+          <div class="consola__buscar">
+            <span class="consola__lupa">${IC_LUPA}</span>
+            <input class="consola__input" id="q" type="text" autocomplete="off" spellcheck="false"
+                   placeholder="Buscá un producto…" value="${esc(estado.filtro || "")}">
             <span class="cmd__kbd">↑↓ · Enter</span>
           </div>
-          <button class="crear__vertodos" id="ver-todos">${IC_GRID} Ver todos los productos (${estado.productos.length})</button>
-          <div class="lanzador__res" id="res" role="listbox" aria-label="Productos"></div>
+          <div class="consola__res" id="res" role="listbox" aria-label="Productos"></div>
+          <button class="consola__pie" id="ver-todos">${IC_GRID} Ver los ${estado.productos.length} productos de tu tienda</button>
         </div>
       </div>`;
 
@@ -1408,12 +1408,11 @@
       let planos = [];
 
       if (!q) {
-        const borradores = estado.productos.filter((p) => p.estado === "borrador").slice(0, 4);
-        const sinPagina = estado.productos.filter((p) => !p.estado).slice(0, 6);
+        const borradores = estado.productos.filter((p) => p.estado === "borrador").slice(0, 3);
+        const sinPagina = estado.productos.filter((p) => !p.estado).slice(0, 4);
         planos = [...borradores, ...sinPagina];
-        if (borradores.length) html += `<div class="lanzador__grupo">Seguí donde dejaste</div>` + borradores.map(fila).join("");
-        if (sinPagina.length) html += `<div class="lanzador__grupo">Empezá una nueva</div>` + sinPagina.map(fila).join("");
-        html += `<div class="lanzador__pie">${estado.productos.length} productos en tu tienda · escribí para buscar todos</div>`;
+        if (borradores.length) html += `<div class="consola__grupo">Seguí donde dejaste</div>` + borradores.map(fila).join("");
+        if (sinPagina.length) html += `<div class="consola__grupo">Empezá una nueva</div>` + sinPagina.map(fila).join("");
       } else {
         planos = estado.productos.filter((p) => p.titulo.toLowerCase().includes(q)).slice(0, 50);
         html = planos.length
