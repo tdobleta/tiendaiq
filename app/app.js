@@ -2357,6 +2357,8 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     doc.addEventListener("click", (e) => {
       if (e.target.closest(".resenas__editar")) return abrirModalEdicion("resenas");
       if (e.target.closest(".resena-destacada__editar")) return abrirModalEdicion("destacada");
+      // clic en cualquier card del muro de clientes → abre su editor
+      if (e.target.closest(".muro-card")) return abrirModalEdicion("clientes");
       // clic directo en un espacio de imagen → selector de archivos
       const slot = e.target.closest("[data-imgclick]");
       if (slot) return void elegirImagenSlot(slot.dataset.imgclick, slot);
