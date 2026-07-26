@@ -154,17 +154,20 @@ IDIOMA
 {idioma} aplica SOLO al texto que generás. Las imágenes se usan como están,
 aunque tengan texto en otro idioma. Nunca descartes una imagen por su idioma.
 
-CONCEPTO CREATIVO (definilo ANTES de escribir una sola palabra)
-No armás "una landing": construís la IDENTIDAD de ESTE producto. Decidí primero,
-internamente, y escribí TODO alineado a esa decisión:
-- ¿Qué emoción vende? (lujo, calma, rendimiento, bienestar, seguridad, diversión…)
-- ¿Qué personalidad tiene la marca? (clínica, premium, minimalista, femenina,
-  tecnológica, natural…)
-- ¿Qué NO pertenece a esa personalidad? Evitá esas palabras y ese tono en TODO.
-Cada texto (título, promesa, bullets, reseña) debe reforzar el MISMO concepto.
-Una frase que funciona sola pero rompe la coherencia se cambia. Vendé una
-sensación, no "un masajeador facial".
-Traducí ese concepto a UN arquetipo de hero (campo "concepto"):
+CREATIVE BRIEF (PASO 1 — definilo ANTES de escribir una sola palabra de copy)
+No armás "una landing": actuás como DIRECTOR CREATIVO y primero decidís la marca.
+Llená el objeto "brief" y TODO lo demás (título, promesa, bullets, reseña,
+arquetipo) tiene que OBEDECERLO. Si una frase funciona sola pero rompe el brief,
+se cambia. Vendé una sensación/rutina, no "un aparato".
+- emocion: la emoción central que vende el producto (ej: "calma", "confianza",
+  "rendimiento", "cuidado propio", "seguridad").
+- personalidad: 3-4 adjetivos de la marca (ej: "minimalista, dermocosmética,
+  femenina, premium").
+- tono: cómo habla el copy (ej: "directo y cálido, frases cortas").
+- evitar: lo que NO pertenece a esta marca y hay que evitar en TODO el texto
+  (ej: "jerga técnica, superlativos, tono gadget/AliExpress").
+- referencia: 1-2 marcas cuyo espíritu seguir (ej: "Aesop, SOLUME").
+Traducí el brief a UN arquetipo de hero (campo "concepto"):
 - editorial: productos aspiracionales/de percepción (lujo, belleza, bienestar,
   lifestyle) donde primero se construye deseo. Composición grande y respirada.
 - clinico: productos técnicos/de rendimiento (gadgets, salud, dispositivos)
@@ -448,9 +451,22 @@ const ESQUEMA = {
       // Arquetipo de hero según el concepto creativo (el CSS cae a "esencial").
       type: "string",
       description: "El arquetipo de hero según la personalidad del producto: esencial (limpio/premium, default seguro), editorial (percepción/lujo/aspiracional) o clinico (tech/preciso/ficha técnica)."
+    },
+    brief: {
+      // Director creativo: la decisión de marca que gobierna todo el copy.
+      type: "object",
+      properties: {
+        emocion: { type: "string" },
+        personalidad: { type: "string" },
+        tono: { type: "string" },
+        evitar: { type: "string" },
+        referencia: { type: "string" }
+      },
+      required: ["emocion", "personalidad", "tono", "evitar", "referencia"],
+      additionalProperties: false
     }
   },
-  required: ["pool_imagenes", "facetas", "nicho", "concepto"],
+  required: ["pool_imagenes", "facetas", "nicho", "concepto", "brief"],
   additionalProperties: false
 };
 
@@ -662,7 +678,7 @@ function ensamblar(fuente, salida, { idioma, angulo }) {
       },
       recomendados: { modo: "placeholder", items: [] }
     },
-    global: { cta: "Agregar al carrito", idioma, angulo, nicho: salida.nicho || "general", concepto: salida.concepto || "esencial" }
+    global: { cta: "Agregar al carrito", idioma, angulo, nicho: salida.nicho || "general", concepto: salida.concepto || "esencial", brief: salida.brief || null }
   };
 }
 
@@ -683,7 +699,32 @@ async function crearPagina(idProducto, sesion, { idioma = "es", angulo = "" } = 
   const { salida, uso } = await generar(fuente, medios, { idioma, angulo });
   const data = ensamblar(fuente, salida, { idioma, angulo });
   const urls = Object.fromEntries(medios.map((m) => [m.media_id, m.url]));
+  // Hero de marca (OPCIONAL, fail-safe): si hay proveedor de recorte configurado,
+  // recorta la foto principal y la pone sobre un backdrop propio para matar el
+  // look "asset de proveedor". Sin key o ante cualquier error → galería original.
+  await aplicarHeroDeMarca(data, urls, fuente, sesion).catch((e) =>
+    console.warn("[hero-branding] omitido:", e.message)
+  );
   return { data, urls, avisos: validar(data, salida), uso };
+}
+
+// Genera el hero de marca, lo sube como media del producto y lo pone PRIMERO en
+// la galería. Apagado por defecto (requiere REMOVEBG_API_KEY o REMBG_URL).
+async function aplicarHeroDeMarca(data, urls, fuente, sesion) {
+  if (!process.env.REMOVEBG_API_KEY && !process.env.REMBG_URL) return; // feature off
+  const galeria = data?.facetas?.hero?.galeria;
+  const idHero = galeria && galeria[0];
+  const urlHero = idHero && urls[idHero];
+  const gid = fuente?.shopify_product_id;
+  if (!urlHero || !gid || !sesion) return;
+  const { generarHeroDeMarca } = require("./hero-branding");
+  const hero = await generarHeroDeMarca(urlHero);
+  if (!hero) return;
+  const { subirImagenProducto } = require("./imagenes");
+  const subido = await subirImagenProducto(sesion, gid, "hero-marca.png", hero.mime, hero.base64);
+  if (!subido?.media_id || !subido?.url) return;
+  urls[subido.media_id] = subido.url;
+  galeria.unshift(subido.media_id); // el hero de marca pasa a ser la foto principal
 }
 
 // data.js es solo para el preview local; el JSON puro es lo que se publica.
