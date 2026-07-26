@@ -444,10 +444,41 @@ body.publicada #app .resena-destacada__editar { display: none; }
    FAQ
    ============================================================ */
 /* FAQ = banda NEGRA con olas arriba y abajo (como la referencia). */
-#app .faq { background: #131313; color: #fff; position: relative; padding: 100px 0 104px; }
+#app .faq { background: #131313; color: #fff; position: relative; padding: 100px 0 104px; overflow: hidden; }
+/* Fondo EN MOVIMIENTO: dos resplandores (uno gris, uno con el acento) que van
+   a la deriva lento y sutil, en una capa detrás del contenido (z-index 0). El
+   texto y los ítems van en z-index 1, así que se siguen leyendo y EDITANDO
+   igual. Se apaga con prefers-reduced-motion. */
+#app .faq::before,
+#app .faq::after {
+  content: ""; position: absolute; z-index: 0; pointer-events: none;
+  width: 85vw; height: 85vw; max-width: 920px; max-height: 920px;
+  border-radius: 50%; filter: blur(70px);
+}
+#app .faq::before {
+  top: -22%; left: -12%;
+  background: radial-gradient(circle, rgba(72,72,72,.85), transparent 68%);
+  animation: faqDeriva1 19s ease-in-out infinite alternate;
+}
+#app .faq::after {
+  bottom: -26%; right: -12%; opacity: .2;
+  background: radial-gradient(circle, var(--acento), transparent 68%);
+  animation: faqDeriva2 24s ease-in-out infinite alternate;
+}
+@keyframes faqDeriva1 {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to   { transform: translate3d(14%, 16%, 0) scale(1.18); }
+}
+@keyframes faqDeriva2 {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to   { transform: translate3d(-16%, -12%, 0) scale(1.22); }
+}
+@media (prefers-reduced-motion: reduce) {
+  #app .faq::before, #app .faq::after { animation: none; }
+}
 /* Olas: tapas blancas (= color de la página) con borde ondulado, superpuestas
    arriba y abajo del negro. */
-#app .faq__ola { position: absolute; left: 0; right: 0; height: 80px; line-height: 0; pointer-events: none; }
+#app .faq__ola { position: absolute; left: 0; right: 0; height: 80px; line-height: 0; pointer-events: none; z-index: 2; }
 #app .faq__ola svg { width: 100%; height: 100%; display: block; }
 #app .faq__ola--top { top: 0; }
 #app .faq__ola--bot { bottom: 0; }
