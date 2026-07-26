@@ -364,6 +364,46 @@
     </section>`;
   }
 
+  // Media que se auto-reproduce en loop, SIN controles: gif/imagen → <img>;
+  // video (mp4/webm/cdn) → <video autoplay muted loop>; YouTube → thumbnail.
+  function mediaAuto(url) {
+    if (/\.(gif|png|jpe?g|webp)(\?|#|$)/i.test(url))
+      return `<img class="muro__media" src="${esc(encodeURI(url))}" alt="" loading="lazy">`;
+    const yt = idYouTube(url);
+    if (yt) return `<img class="muro__media" src="https://i.ytimg.com/vi/${yt}/hqdefault.jpg" alt="" loading="lazy">`;
+    return `<video class="muro__media" src="${esc(encodeURI(url))}" autoplay muted loop playsinline></video>`;
+  }
+
+  // Muro de clientes (UGC): sección PROPIA (no la section del constructor).
+  // Carrusel de cards verticales que auto-reproducen gif o video. Vacío por
+  // defecto; el merchant inyecta desde el editor. Reusa el shell del carrusel.
+  function muroClientes(c) {
+    if (!c) return "";
+    const items = c.items || [];
+    const visibles = MODO_APP
+      ? items.map((i, j) => [i, j])
+      : items.map((i, j) => [i, j]).filter(([i]) => i.url);
+    if (!visibles.length) return "";
+    const cards = visibles
+      .map(([i]) =>
+        i.url
+          ? `<div class="tiq-video muro-card">${mediaAuto(i.url)}</div>`
+          : `<div class="tiq-video muro-card muro-card--vacio"><div class="muro-card__add">${ICONO_VIDEO}<span>Agregar gif o video</span></div></div>`
+      )
+      .join("");
+    return `
+    <section class="muro">
+      <div class="contenedor">
+        <h2 class="muro__titulo">${esc(c.titulo || "Únete a más de 200 clientes contentos")}</h2>
+        <div class="tiq-vcar" data-idx="0">
+          <button class="tiq-vcar__flecha tiq-vcar__flecha--izq" type="button" onclick="tiqVideoNav(this,-1)" aria-label="Anterior">${FLECHA_IZQ}</button>
+          <div class="tiq-vcar__viewport"><div class="tiq-vcar__pista">${cards}</div></div>
+          <button class="tiq-vcar__flecha tiq-vcar__flecha--der" type="button" onclick="tiqVideoNav(this,1)" aria-label="Siguiente">${FLECHA_DER}</button>
+        </div>
+      </div>
+    </section>`;
+  }
+
   function faq(f, global) {
     // Checkbox tildado a la izquierda de cada pregunta (como la referencia).
     const CHECK = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3.5"/><path d="M7.5 12.2l3 3 6-6.4"/></svg>`;
@@ -651,10 +691,11 @@
     // intercalan según su `ancla` (= id del bloque tras el cual va).
     const fijos = [
       ["hero", hero(f, data.fuente, g)],
+      ["clientes", muroClientes(f.clientes)],
+      ["faq", faq(f.faq, g)],
       ["iconos", iconos(f.iconos)],
       ["tabla", tabla(f.tabla, f.hero.titulo, g)],
       ["stats", stats(f.stats, g)],
-      ["faq", faq(f.faq, g)],
       ["resenas", resenas(f.resenas)],
       ["recomendados", recomendados(f.recomendados)]
     ];

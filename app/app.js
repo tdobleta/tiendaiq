@@ -1845,6 +1845,27 @@
             )
             .join("")
       },
+      clientes: {
+        titulo: "Muro de clientes (gifs/videos)",
+        html: () => {
+          const c = f.clientes && f.clientes.items && f.clientes.items.length
+            ? f.clientes
+            : { items: [{}, {}, {}] };
+          return (
+            `<div class="editor__nota">Pegá el enlace de un GIF o video (.gif, .mp4 o YouTube). Se reproduce solo, en loop, sin controles. Vacío = no se muestra.</div>` +
+            campo("facetas.clientes.titulo", "Título de la sección") +
+            c.items
+              .map(
+                (_, i) => `
+              <fieldset class="resena-edit">
+                <legend>Clip ${i + 1}</legend>
+                ${campo(`facetas.clientes.items.${i}.url`, "Enlace del gif o video")}
+              </fieldset>`
+              )
+              .join("")
+          );
+        }
+      },
       iconos: {
         titulo: "Beneficios (íconos)",
         html: () =>
@@ -1934,10 +1955,11 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   const ANCLAS_UBICACION = [
     ["top", "Al principio de la página"],
     ["hero", "Después del encabezado"],
+    ["clientes", "Después del muro de clientes"],
+    ["faq", "Después de las preguntas"],
     ["iconos", "Después de los beneficios"],
     ["tabla", "Después de la tabla"],
     ["stats", "Después de las estadísticas"],
-    ["faq", "Después de las preguntas"],
     ["resenas", "Después de las reseñas"],
     ["recomendados", "Al final de la página"]
   ];
@@ -2200,7 +2222,8 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     { sel: ".tabla", id: "tabla" },
     { sel: ".stats", id: "stats" },
     { sel: ".faq", id: "faq" },
-    { sel: ".resenas", id: "resenas" }
+    { sel: ".resenas", id: "resenas" },
+    { sel: ".muro", id: "clientes" }
   ];
 
   function montarEdicionEnIframe(marco) {
@@ -2355,7 +2378,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   // caería la section. Un indicador dentro del iframe marca la posición.
 
   const NOMBRE_BLOQUE = {
-    top: "el principio", hero: "el encabezado",
+    top: "el principio", hero: "el encabezado", clientes: "el muro de clientes",
     iconos: "los beneficios", tabla: "la tabla", stats: "las estadísticas",
     faq: "las preguntas", resenas: "las reseñas", recomendados: "los recomendados"
   };

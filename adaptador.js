@@ -585,6 +585,12 @@ function ensamblar(fuente, salida, { idioma, angulo }) {
           }
         ]
       },
+      // Muro de clientes (UGC): gifs/videos que auto-reproducen. Vacío por
+      // defecto — el merchant los inyecta desde el editor. Va debajo del hero.
+      clientes: {
+        titulo: `Únete a más de ${f.hero.resenas_count || 200} clientes contentos`,
+        items: [{ url: "", poster: null }, { url: "", poster: null }, { url: "", poster: null }]
+      },
       iconos: { ...f.iconos, items: fijo(f.iconos.items, CARDINALIDAD["iconos.items"]) },
       tabla: {
         ...f.tabla,
@@ -616,22 +622,7 @@ function ensamblar(fuente, salida, { idioma, angulo }) {
       },
       recomendados: { modo: "placeholder", items: [] }
     },
-    global: { cta: "Agregar al carrito", idioma, angulo, nicho: salida.nicho || "general" },
-    // Debajo del hero: muro de videos de clientes (UGC). Vacío por defecto — el
-    // merchant inyecta sus videos desde el editor. Reemplaza al viejo texto+imagen.
-    secciones: [
-      {
-        id: "clientes",
-        tipo: "videos",
-        ancla: "hero",
-        titulo: `Únete a más de ${f.hero.resenas_count || 200} clientes contentos`,
-        items: [
-          { url: "", poster: null },
-          { url: "", poster: null },
-          { url: "", poster: null }
-        ]
-      }
-    ]
+    global: { cta: "Agregar al carrito", idioma, angulo, nicho: salida.nicho || "general" }
   };
 }
 
