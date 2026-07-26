@@ -164,6 +164,12 @@ internamente, y escribí TODO alineado a esa decisión:
 Cada texto (título, promesa, bullets, reseña) debe reforzar el MISMO concepto.
 Una frase que funciona sola pero rompe la coherencia se cambia. Vendé una
 sensación, no "un masajeador facial".
+Traducí ese concepto a UN arquetipo de hero (campo "concepto"):
+- editorial: productos aspiracionales/de percepción (lujo, belleza, bienestar,
+  lifestyle) donde primero se construye deseo. Composición grande y respirada.
+- clinico: productos técnicos/de rendimiento (gadgets, salud, dispositivos)
+  donde mandan specs y precisión. Composición densa, tipo ficha.
+- esencial: default seguro cuando ninguno domina claramente.
 
 TÍTULO
 Reescribilo: mismo producto, sin ruido de buscador. Máximo 5 palabras.
@@ -436,10 +442,15 @@ const ESQUEMA = {
       // Sin enum (inflaba la gramática). El prompt lista los rubros válidos; el
       // CSS cae a "general" si viene uno que no existe.
       type: "string",
-      description: "El rubro del producto (belleza/salud/hogar/mascotas/tech/fitness/bebes/moda/general). Define el color de acento."
+      description: "El rubro del producto (belleza/salud/hogar/mascotas/tech/fitness/bebes/moda/general). Clasificación interna."
+    },
+    concepto: {
+      // Arquetipo de hero según el concepto creativo (el CSS cae a "esencial").
+      type: "string",
+      description: "El arquetipo de hero según la personalidad del producto: esencial (limpio/premium, default seguro), editorial (percepción/lujo/aspiracional) o clinico (tech/preciso/ficha técnica)."
     }
   },
-  required: ["pool_imagenes", "facetas", "nicho"],
+  required: ["pool_imagenes", "facetas", "nicho", "concepto"],
   additionalProperties: false
 };
 
@@ -651,7 +662,7 @@ function ensamblar(fuente, salida, { idioma, angulo }) {
       },
       recomendados: { modo: "placeholder", items: [] }
     },
-    global: { cta: "Agregar al carrito", idioma, angulo, nicho: salida.nicho || "general" }
+    global: { cta: "Agregar al carrito", idioma, angulo, nicho: salida.nicho || "general", concepto: salida.concepto || "esencial" }
   };
 }
 

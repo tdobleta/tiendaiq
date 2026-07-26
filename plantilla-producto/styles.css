@@ -309,6 +309,18 @@
 #app[data-concepto="editorial"] .hero__bullets li { margin-bottom: 0; padding: 13px 0; border-top: 1px solid var(--borde); }
 #app[data-concepto="editorial"] .hero__bullets li:first-child { border-top: none; padding-top: 0; }
 
+/* CLÍNICO: tech/preciso, tipo ficha técnica. Composición más densa y ordenada;
+   los beneficios pasan a una grilla 2×2 (se leen como specs, no como lista). */
+#app[data-concepto="clinico"] .hero__titulo { font-size: 29px; font-weight: 700; letter-spacing: -0.01em; margin: 0 0 10px; }
+#app[data-concepto="clinico"] .hero__promesa { font-size: 14.5px; max-width: 40ch; margin: 0 0 22px; }
+#app[data-concepto="clinico"] .hero__impuestos { margin-bottom: 22px; }
+#app[data-concepto="clinico"] .hero__bullets {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 14px 22px;
+  max-width: none; margin: 0 0 28px;
+  padding: 18px 20px; border: 1px solid var(--borde); border-radius: var(--radio);
+}
+#app[data-concepto="clinico"] .hero__bullets li { margin-bottom: 0; }
+
 /* Reseña destacada: prueba social elegante, con aire arriba y abajo. */
 #app .resena-destacada {
   display: flex; gap: 18px; align-items: flex-start;

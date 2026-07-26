@@ -1778,11 +1778,11 @@
       encabezado: {
         titulo: "Encabezado",
         html: () => {
-          const nichoActual = leer(estado.pagina.data, "global.nicho") || "general";
-          const NICHOS = [
-            ["general", "General"], ["belleza", "Belleza / cosmética"], ["salud", "Salud / bienestar"],
-            ["hogar", "Hogar / cocina"], ["mascotas", "Mascotas"], ["tech", "Tecnología"],
-            ["fitness", "Fitness / deporte"], ["bebes", "Bebés / niños"], ["moda", "Moda / joyas / perfume"]
+          const conceptoActual = leer(estado.pagina.data, "global.concepto") || "esencial";
+          const CONCEPTOS = [
+            ["esencial", "Esencial (limpio / premium)"],
+            ["editorial", "Editorial (aspiracional / lujo)"],
+            ["clinico", "Clínico (técnico / ficha)"]
           ];
           return (
             campo("facetas.hero.titulo", "Título") +
@@ -1791,9 +1791,9 @@
               <input type="number" min="0" max="5" step="0.1" data-ruta="facetas.hero.puntaje" data-tipo="numero" value="${esc(leer(estado.pagina.data, "facetas.hero.puntaje") ?? 4.9)}"></div>` +
             campo("global.cta", "Texto del botón de compra") +
             `<div class="campo campo--editor">
-              <label>Color de la página (según el rubro)</label>
-              <select data-ruta="global.nicho">${NICHOS.map(
-                ([k, t]) => `<option value="${k}" ${k === nichoActual ? "selected" : ""}>${t}</option>`
+              <label>Estilo de la página (arquetipo)</label>
+              <select data-ruta="global.concepto">${CONCEPTOS.map(
+                ([k, t]) => `<option value="${k}" ${k === conceptoActual ? "selected" : ""}>${t}</option>`
               ).join("")}</select>
             </div>`
           );
