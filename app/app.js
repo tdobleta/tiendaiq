@@ -1955,8 +1955,8 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   const ANCLAS_UBICACION = [
     ["top", "Al principio de la página"],
     ["hero", "Después del encabezado"],
-    ["faq", "Después de las preguntas"],
     ["clientes", "Después del muro de clientes"],
+    ["faq", "Después de las preguntas"],
     ["iconos", "Después de los beneficios"],
     ["stats", "Después de las estadísticas"],
     ["resenas", "Después de las reseñas"],

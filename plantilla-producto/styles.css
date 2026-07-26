@@ -445,10 +445,10 @@ body.publicada #app .resena-destacada__editar { display: none; }
    ============================================================ */
 /* FAQ = banda NEGRA con olas arriba y abajo (como la referencia). */
 #app .faq { background: #131313; color: #fff; position: relative; padding: 100px 0 104px; overflow: hidden; }
-/* Fondo EN MOVIMIENTO: dos resplandores (uno gris, uno con el acento) que van
-   a la deriva lento y sutil, en una capa detrás del contenido (z-index 0). El
-   texto y los ítems van en z-index 1, así que se siguen leyendo y EDITANDO
-   igual. Se apaga con prefers-reduced-motion. */
+/* Fondo EN MOVIMIENTO: dos resplandores GRISES (sin color, para que la banda
+   siga siendo negra) que van a la deriva lento y sutil, en una capa detrás del
+   contenido (z-index 0). El texto y los ítems van en z-index 1, así que se
+   siguen leyendo y EDITANDO igual. Se apaga con prefers-reduced-motion. */
 #app .faq::before,
 #app .faq::after {
   content: ""; position: absolute; z-index: 0; pointer-events: none;
@@ -457,12 +457,12 @@ body.publicada #app .resena-destacada__editar { display: none; }
 }
 #app .faq::before {
   top: -22%; left: -12%;
-  background: radial-gradient(circle, rgba(72,72,72,.85), transparent 68%);
+  background: radial-gradient(circle, rgba(78,78,78,.85), transparent 68%);
   animation: faqDeriva1 19s ease-in-out infinite alternate;
 }
 #app .faq::after {
-  bottom: -26%; right: -12%; opacity: .2;
-  background: radial-gradient(circle, var(--acento), transparent 68%);
+  bottom: -26%; right: -12%;
+  background: radial-gradient(circle, rgba(58,58,58,.8), transparent 68%);
   animation: faqDeriva2 24s ease-in-out infinite alternate;
 }
 @keyframes faqDeriva1 {
@@ -615,11 +615,8 @@ body.publicada #app .resena-destacada__editar { display: none; }
    Sections incrustables — carruseles de video e imágenes
    ============================================================ */
 #app .tiq-sec { padding: 30px 0; }
-/* Muro de clientes (UGC): banda con un tinte suave del acento del nicho,
-   para que la sección acompañe la paleta de la página en vez de quedar en
-   blanco plano. Va justo debajo del FAQ (banda negra). */
-#app .muro { background: var(--acento-suave); padding: 56px 0; }
-/* Muro de clientes (UGC): título + carrusel de cards que auto-reproducen. */
+/* Muro de clientes (UGC): título + carrusel de cards que auto-reproducen.
+   Fondo blanco (sin banda de color). */
 #app .muro__titulo {
   text-align: center; font-family: var(--fuente-titulo);
   font-size: 30px; font-weight: 800; letter-spacing: -0.01em;

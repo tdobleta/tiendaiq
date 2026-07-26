@@ -694,8 +694,8 @@
     // intercalan según su `ancla` (= id del bloque tras el cual va).
     const fijos = [
       ["hero", hero(f, data.fuente, g)],
-      ["faq", faq(f.faq, g)],
       ["clientes", muroClientes(f.clientes)],
+      ["faq", faq(f.faq, g)],
       ["iconos", iconos(f.iconos)],
       ["stats", stats(f.stats, g)],
       ["resenas", resenas(f.resenas)],

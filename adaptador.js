@@ -586,7 +586,7 @@ function ensamblar(fuente, salida, { idioma, angulo }) {
         ]
       },
       // Muro de clientes (UGC): gifs/videos que auto-reproducen. Vacío por
-      // defecto — el merchant los inyecta desde el editor. Va debajo del FAQ.
+      // defecto — el merchant los inyecta desde el editor. Va arriba del FAQ.
       clientes: {
         titulo: `Únete a más de ${f.hero.resenas_count || 200} clientes contentos`,
         items: [{ url: "", poster: null }, { url: "", poster: null }, { url: "", poster: null }]
