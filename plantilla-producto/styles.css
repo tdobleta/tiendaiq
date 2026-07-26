@@ -584,7 +584,9 @@ body.publicada #app .resena-destacada__editar { display: none; }
   #app .dupla--invertida .dupla__grid > .dupla__media { order: 0; }
   #app .iconos__grid { grid-template-columns: 1fr; gap: 26px; }
   #app .iconos__centro { order: -1; max-width: 300px; }
-  #app .iconos__col { gap: 26px; }
+  /* Móvil: cada columna (2 ítems) pasa a una fila de 2 → los 4 beneficios
+     quedan 2×2 (dos y dos enfrentados) y la sección no se estira tanto. */
+  #app .iconos__col { display: grid; grid-template-columns: 1fr 1fr; gap: 28px 14px; align-items: start; }
   #app .recomendados__grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
   #app .resenas__grid { columns: 2 150px; column-gap: 10px; }
   #app .badge { font-size: 11.5px; }

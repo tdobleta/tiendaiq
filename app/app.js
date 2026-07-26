@@ -1346,6 +1346,32 @@
         `<button type="button" class="tema ${(actual || "auto") === k ? "is-sel" : ""}${c ? "" : " tema--auto"}" data-tema-pick="${k}" title="${n}" aria-label="${n}"${c ? ` style="--sw:${c}"` : ""}></button>`
     ).join("")}</div>`;
 
+  // Clasifica el link de un clip del muro (mismo criterio que render.js, pero
+  // marca como "invalido" lo que NO es un archivo/host de video conocido — así
+  // avisamos cuando pegan el link de una página web en vez del archivo).
+  function tipoMedia(url) {
+    url = (url || "").trim();
+    if (!url) return null;
+    if (/giphy\.com\/(?:gifs|clips|stickers)\//i.test(url)) return "img";
+    if (/\.(gif|png|jpe?g|webp|avif)(\?|#|$)/i.test(url)) return "img";
+    if (/(?:youtube\.com|youtu\.be|vimeo\.com)/i.test(url)) return "yt";
+    if (/\.(mp4|webm|mov|m4v)(\?|#|$)/i.test(url) || /cdn\.shopify\.com/i.test(url)) return "video";
+    return "invalido";
+  }
+  // Estado/vista previa de un clip: miniatura si el link sirve, aviso claro si no.
+  function estadoClip(url) {
+    const t = tipoMedia(url);
+    if (!t) return "";
+    if (t === "invalido")
+      return `<div class="clip-mal">✖ Ese link es una página web, no un archivo. Pegá el enlace <strong>directo</strong> (termina en .gif/.mp4), uno de Giphy/YouTube, o subí/arrastrá el archivo.</div>`;
+    if (t === "img") {
+      const g = url.match(/giphy\.com\/(?:gifs|clips|stickers)\/(?:[^/]*-)?([A-Za-z0-9]{6,})/i);
+      const src = g ? `https://media.giphy.com/media/${g[1]}/giphy.gif` : url;
+      return `<div class="clip-ok"><img src="${esc(encodeURI(src))}" alt="" loading="lazy">Se ve bien ✓</div>`;
+    }
+    return `<div class="clip-ok">${t === "yt" ? "Video de YouTube ✓" : "Video ✓"}</div>`;
+  }
+
   // ---------- 1. elegir producto (lanzador tipo command-palette) ----------
   //
   // Nada de grilla: una sola decisión. Un input que busca sobre los productos
@@ -1988,7 +2014,7 @@
                   <input type="file" accept="image/*,video/*" hidden data-video-el="muro:${i}">
                 </label>
                 <div class="clip-drop__hint">o arrastrá el archivo hasta acá</div>
-                ${it && it.url && /^https?:\/\/cdn\.shopify/.test(it.url) ? `<div class="ayuda" style="margin-top:6px">Archivo subido ✓</div>` : ""}
+                <div class="clip-estado">${estadoClip(it && it.url)}</div>
               </fieldset>`
                   )
                   .join("")
@@ -2262,6 +2288,11 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
 
     m.addEventListener("input", (e) => {
       if (e.target.dataset.ruta) actualizarDato(e.target);
+      // Feedback en vivo del clip del muro (sin re-render, no pierde foco).
+      if (/^facetas\.clientes\.items\.\d+\.url$/.test(e.target.dataset.ruta || "")) {
+        const st = e.target.closest(".clip-drop")?.querySelector(".clip-estado");
+        if (st) st.innerHTML = estadoClip(e.target.value);
+      }
     });
     m.addEventListener("click", async (e) => {
       if (e.target === m || e.target.closest(".editor-modal__x")) return cerrarModalEdicion();

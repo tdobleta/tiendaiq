@@ -826,6 +826,11 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
 .clip-drop { transition: outline-color .15s, background .15s; outline: 2px dashed transparent; outline-offset: 2px; }
 .clip-drop--activo { outline-color: var(--acento); background: #eef1ff; }
 .clip-drop__hint { font-size: 11px; color: var(--suave); margin-top: 5px; text-align: center; }
+/* Estado/preview del clip: aviso rojo si el link no sirve, ok verde + miniatura si sí. */
+.clip-estado:empty { display: none; }
+.clip-mal { margin-top: 8px; padding: 8px 10px; border-radius: 7px; background: var(--peligro-fondo); color: var(--peligro); font-size: 12px; line-height: 1.35; }
+.clip-ok { margin-top: 8px; display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: var(--ok); }
+.clip-ok img { width: 44px; height: 44px; object-fit: cover; border-radius: 6px; border: 1px solid var(--borde); }
 .resena-edit legend { font-size: 11.5px; color: var(--suave); padding: 0 4px; }
 .resena-edit textarea {
   width: 100%; padding: 8px 10px; font-size: 13px; font-family: inherit; resize: vertical;
