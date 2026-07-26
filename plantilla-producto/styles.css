@@ -291,6 +291,24 @@
 #app .hero__confianza { font-size: 12px; letter-spacing: .02em; color: var(--texto-suave); line-height: 1.5; margin: 0 0 8px; }
 #app .hero__confianza span { color: #cbd5e1; margin: 0 8px; }
 
+/* ====================================================================
+   ARQUETIPOS DE HERO (por CONCEPTO creativo, no por rubro).
+   La IA elige el concepto del producto y con eso cambia la COMPOSICIÓN,
+   no solo el color. Cada arquetipo rompe la linealidad a su manera.
+   Default = "esencial" (las reglas de arriba). Abajo, el primero: editorial.
+   ==================================================================== */
+/* EDITORIAL: construye percepción antes que conversión. Título más grande,
+   promesa con más presencia, el precio "flota" (badge al borde derecho) y los
+   beneficios se leen como índice editorial (separadores finos, no lista suelta). */
+#app[data-concepto="editorial"] .hero__titulo { font-size: 42px; line-height: 1.04; letter-spacing: -0.03em; margin: 0 0 16px; }
+#app[data-concepto="editorial"] .hero__promesa { font-size: 17px; color: var(--texto); max-width: 32ch; margin: 0 0 30px; }
+#app[data-concepto="editorial"] .hero__precios { justify-content: flex-start; gap: 12px; margin-bottom: 4px; }
+#app[data-concepto="editorial"] .hero__descuento { margin-left: auto; }
+#app[data-concepto="editorial"] .hero__impuestos { margin-bottom: 34px; }
+#app[data-concepto="editorial"] .hero__bullets { max-width: none; margin: 0 0 34px; }
+#app[data-concepto="editorial"] .hero__bullets li { margin-bottom: 0; padding: 13px 0; border-top: 1px solid var(--borde); }
+#app[data-concepto="editorial"] .hero__bullets li:first-child { border-top: none; padding-top: 0; }
+
 /* Reseña destacada: prueba social elegante, con aire arriba y abajo. */
 #app .resena-destacada {
   display: flex; gap: 18px; align-items: flex-start;

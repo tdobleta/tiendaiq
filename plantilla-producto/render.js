@@ -769,8 +769,11 @@
   function montar(datos) {
     if (EN_TIENDA) document.body.classList.add("publicada");
     const app = document.getElementById("app");
-    // El nicho define el color de acento (skin por rubro). Sin dato → general.
+    // El nicho queda como clasificación interna (ya no pinta color).
     app.dataset.nicho = datos?.global?.nicho || "general";
+    // CONCEPTO creativo → arquetipo de hero (layout + tratamiento). Lo elige la
+    // IA por producto (emoción/personalidad). Sin dato → "esencial" (default).
+    app.dataset.concepto = datos?.global?.concepto || "esencial";
     app.innerHTML = render(datos);
     iniciarVcar(); // centra los carruseles de video
     // Solo en la tienda: el preview no tiene storefront al que preguntarle.
