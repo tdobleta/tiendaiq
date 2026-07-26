@@ -1859,13 +1859,14 @@
               ? items
                   .map(
                     (it, i) => `
-              <fieldset class="resena-edit">
+              <fieldset class="resena-edit clip-drop">
                 <legend>Clip ${i + 1}${manijasMuro(i, items.length)}</legend>
                 ${campo(`facetas.clientes.items.${i}.url`, "Enlace del gif o video")}
-                <label class="btn btn--fantasma btn--chico sec-subir-video" style="cursor:pointer">⬆ Subir video de tu computadora
-                  <input type="file" accept="video/*" hidden data-video-el="muro:${i}">
+                <label class="btn btn--fantasma btn--chico sec-subir-video" style="cursor:pointer">⬆ Subir o arrastrar video/gif
+                  <input type="file" accept="image/*,video/*" hidden data-video-el="muro:${i}">
                 </label>
-                ${it && it.url && /^https?:\/\/cdn\.shopify/.test(it.url) ? `<div class="ayuda" style="margin-top:6px">Video subido ✓</div>` : ""}
+                <div class="clip-drop__hint">o arrastrá el archivo hasta acá</div>
+                ${it && it.url && /^https?:\/\/cdn\.shopify/.test(it.url) ? `<div class="ayuda" style="margin-top:6px">Archivo subido ✓</div>` : ""}
               </fieldset>`
                   )
                   .join("")
@@ -2186,6 +2187,36 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       if (e.target.dataset.videoEl && e.target.files?.length) {
         subirVideoNuevo(e.target.files[0], e.target.dataset.videoEl, e.target);
       }
+    });
+
+    // Arrastrar y soltar un video/gif/imagen sobre un clip del muro.
+    m.addEventListener("dragover", (e) => {
+      const dz = e.target.closest(".clip-drop");
+      if (!dz) return;
+      e.preventDefault();
+      dz.classList.add("clip-drop--activo");
+    });
+    m.addEventListener("dragleave", (e) => {
+      const dz = e.target.closest(".clip-drop");
+      if (dz && !dz.contains(e.relatedTarget)) dz.classList.remove("clip-drop--activo");
+    });
+    m.addEventListener("drop", (e) => {
+      const dz = e.target.closest(".clip-drop");
+      if (!dz) return;
+      e.preventDefault();
+      dz.classList.remove("clip-drop--activo");
+      const archivo = e.dataTransfer?.files?.[0];
+      if (!archivo) return;
+      const inp = dz.querySelector("input[data-video-el]");
+      if (!inp) return;
+      if (!/^(video|image)\//.test(archivo.type)) {
+        document.getElementById("editor-modal-cuerpo")?.insertAdjacentHTML(
+          "afterbegin",
+          `<div class="error">✖ Solo se pueden soltar videos, imágenes o GIFs.</div>`
+        );
+        return;
+      }
+      subirVideoNuevo(archivo, inp.dataset.videoEl, inp);
     });
   }
 

@@ -708,6 +708,10 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
   padding: 10px; margin-bottom: 10px;
 }
 .resena-edit--guia { border-style: dashed; background: #fafafa; }
+/* Clip del muro como zona para arrastrar y soltar video/gif. */
+.clip-drop { transition: outline-color .15s, background .15s; outline: 2px dashed transparent; outline-offset: 2px; }
+.clip-drop--activo { outline-color: var(--acento); background: #eef1ff; }
+.clip-drop__hint { font-size: 11px; color: var(--suave); margin-top: 5px; text-align: center; }
 .resena-edit legend { font-size: 11.5px; color: var(--suave); padding: 0 4px; }
 .resena-edit textarea {
   width: 100%; padding: 8px 10px; font-size: 13px; font-family: inherit; resize: vertical;

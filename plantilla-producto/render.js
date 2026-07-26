@@ -673,6 +673,30 @@
   }
   window.addEventListener("resize", iniciarVcar);
 
+  // Muro de clientes: los videos arrancan solos al entrar en pantalla y se
+  // pausan al salir (muted+playsinline permiten el autoplay; el observer fuerza
+  // el play por si el navegador lo frenó estando fuera de vista). Nada de
+  // apretar para reproducir.
+  function autoplayMuro() {
+    const vids = document.querySelectorAll(".muro video.muro__media");
+    if (!vids.length) return;
+    if (!("IntersectionObserver" in window)) {
+      vids.forEach((v) => { v.muted = true; const p = v.play(); if (p) p.catch(() => {}); });
+      return;
+    }
+    const io = new IntersectionObserver(
+      (entradas) => {
+        for (const e of entradas) {
+          const v = e.target;
+          if (e.isIntersecting) { v.muted = true; const p = v.play(); if (p) p.catch(() => {}); }
+          else v.pause();
+        }
+      },
+      { threshold: 0.2 }
+    );
+    vids.forEach((v) => io.observe(v));
+  }
+
   window.tiqVideoPlay = function (el) {
     const cont = el.closest(".tiq-video");
     if (!cont || cont.classList.contains("tiq-video--play")) return;
@@ -838,6 +862,7 @@
     app.dataset.nicho = datos?.global?.nicho || "general";
     app.innerHTML = render(datos);
     iniciarVcar(); // centra los carruseles de video
+    autoplayMuro(); // los videos del muro se reproducen solos al entrar en vista
     // Solo en la tienda: el preview no tiene storefront al que preguntarle.
     if (EN_TIENDA) cargarRecomendados(datos?.fuente?.moneda);
   }

@@ -486,8 +486,10 @@ async function api(req, res, url) {
   if (req.method === "POST" && mArchIni) {
     const { nombre, mime, size } = await leerCuerpo(req);
     if (!mime || !size) return json(res, 400, { error: "Faltan datos del archivo" });
-    if (!/^video\//.test(mime)) return json(res, 400, { error: "Solo se pueden subir videos." });
-    if (Number(size) > 200 * 1024 * 1024) return json(res, 400, { error: "El video supera los 200 MB." });
+    // Videos, imágenes o GIFs: el muro de clientes acepta todo (los GIF/imagen
+    // se renderizan como <img>, los videos como <video>).
+    if (!/^(video|image)\//.test(mime)) return json(res, 400, { error: "Solo se pueden subir videos, imágenes o GIFs." });
+    if (Number(size) > 200 * 1024 * 1024) return json(res, 400, { error: "El archivo supera los 200 MB." });
     const { crearDestinoArchivo } = require("./imagenes");
     const destino = await crearDestinoArchivo(sesion, nombre, mime, size);
     return json(res, 200, destino);
