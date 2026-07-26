@@ -697,7 +697,6 @@
       ["faq", faq(f.faq, g)],
       ["clientes", muroClientes(f.clientes)],
       ["iconos", iconos(f.iconos)],
-      ["tabla", tabla(f.tabla, f.hero.titulo, g)],
       ["stats", stats(f.stats, g)],
       ["resenas", resenas(f.resenas)],
       ["recomendados", recomendados(f.recomendados)]
@@ -711,10 +710,16 @@
 
     const out = [];
     if (grupos.top) out.push(...grupos.top);
+    const usados = new Set(["top"]);
     for (const [id, html] of fijos) {
       out.push(marcar(id, html));
       if (grupos[id]) out.push(...grupos[id]);
+      usados.add(id);
     }
+    // Secciones ancladas a un bloque que ya no existe (p. ej. la tabla, que
+    // se eliminó): no las perdemos, van al final en vez de desaparecer.
+    for (const ancla of Object.keys(grupos))
+      if (!usados.has(ancla)) out.push(...grupos[ancla]);
     return out.join("\n");
   }
 

@@ -1893,14 +1893,6 @@
             .join("") +
           selectorImagenUno("facetas.iconos.imagen_central", "Imagen central")
       },
-      tabla: {
-        titulo: "Tabla comparativa",
-        html: () =>
-          campo("facetas.tabla.titular", "Titular") +
-          campo("facetas.tabla.parrafo", "Párrafo", 2) +
-          f.tabla.filas.map((_, i) => campo(`facetas.tabla.filas.${i}`, `Fila ${i + 1} (1-2 palabras)`)).join("") +
-          campo("facetas.tabla.col_otros", "Nombre de la columna de la competencia")
-      },
       stats: {
         titulo: "Estadísticas",
         html: () =>
@@ -1966,7 +1958,6 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     ["faq", "Después de las preguntas"],
     ["clientes", "Después del muro de clientes"],
     ["iconos", "Después de los beneficios"],
-    ["tabla", "Después de la tabla"],
     ["stats", "Después de las estadísticas"],
     ["resenas", "Después de las reseñas"],
     ["recomendados", "Al final de la página"]
@@ -2262,7 +2253,6 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     { sel: ".acordeon", id: "acordeones" },
     { sel: ".resena-destacada", id: "destacada" },
     { sel: ".iconos", id: "iconos" },
-    { sel: ".tabla", id: "tabla" },
     { sel: ".stats", id: "stats" },
     { sel: ".faq", id: "faq" },
     { sel: ".resenas", id: "resenas" },
@@ -2424,7 +2414,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
 
   const NOMBRE_BLOQUE = {
     top: "el principio", hero: "el encabezado", clientes: "el muro de clientes",
-    iconos: "los beneficios", tabla: "la tabla", stats: "las estadísticas",
+    iconos: "los beneficios", stats: "las estadísticas",
     faq: "las preguntas", resenas: "las reseñas", recomendados: "los recomendados"
   };
 

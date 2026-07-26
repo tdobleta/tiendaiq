@@ -203,7 +203,7 @@
 /* Barra de urgencia arriba de todo (como SOLUME/Bungee): una TIRA FINA
    full-width en el acento, NO un botón. Mayúsculas, apretada. */
 #app .hero__urgencia {
-  background: var(--acento); color: #fff;
+  background: #ee1414; color: #fff;
   text-align: center; font-size: 11px; font-weight: 700;
   letter-spacing: 1.5px; text-transform: uppercase;
   padding: 6px 12px; border-radius: 3px; margin-bottom: 16px;
@@ -584,6 +584,10 @@ body.publicada #app .resena-destacada__editar { display: none; }
    Sections incrustables — carruseles de video e imágenes
    ============================================================ */
 #app .tiq-sec { padding: 30px 0; }
+/* Muro de clientes (UGC): banda con un tinte suave del acento del nicho,
+   para que la sección acompañe la paleta de la página en vez de quedar en
+   blanco plano. Va justo debajo del FAQ (banda negra). */
+#app .muro { background: var(--acento-suave); padding: 56px 0; }
 /* Muro de clientes (UGC): título + carrusel de cards que auto-reproducen. */
 #app .muro__titulo {
   text-align: center; font-family: var(--fuente-titulo);
