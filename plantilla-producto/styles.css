@@ -156,22 +156,28 @@
    domina y las dos columnas tienen aire de sobra. Solo acá, no en las secciones
    de abajo. */
 #app .hero .contenedor { max-width: 1280px; }
+/* NO son dos columnas: es UN hero donde el producto DOMINA. La foto pesa más
+   (columna asimétrica), es más alta (portrait) y se acopla al texto con poco
+   gap → se lee como una pieza, no como Dawn de dos islas. */
 #app .hero__grid {
   display: grid;
-  grid-template-columns: 1.08fr 1fr;
-  gap: 72px;
+  grid-template-columns: 1.42fr 1fr;
+  gap: 52px;
   align-items: start;
 }
+/* El texto arranca más abajo que la foto: rompe la simetría y crea espacio
+   negativo arriba a la derecha (tensión editorial, no grilla pareja). */
+#app .hero__grid > div:last-child { padding-top: 34px; }
 
-/* La galería acompaña el scroll hasta que la columna derecha se termina.
-   Funciona porque el grid es align-items:start (la columna no se estira). */
+/* La galería acompaña el scroll: la foto persiste y sigue dominando mientras
+   se lee la info (align-items:start deja la columna sin estirar). */
 #app .hero__galeria { position: sticky; top: 24px; }
 
-/* Sin borde, esquinas más redondeadas: la foto llena la caja, como PagePilot. */
+/* La foto DOMINA el viewport: portrait, alta, casi sin caja (rounding sutil). */
 #app .hero__principal {
-  border-radius: 16px;
+  border-radius: 10px;
   overflow: hidden;
-  aspect-ratio: 1 / 1;
+  aspect-ratio: 4 / 5;
   background: var(--fondo-suave);
 }
 #app .hero__principal img { width: 100%; height: 100%; object-fit: cover; }
