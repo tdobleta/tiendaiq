@@ -449,10 +449,17 @@ body.publicada #app .resena-destacada__editar { display: none; }
    SVG, ver render.js). La banda queda negra plana; el contenido no se toca. */
 /* Olas: tapas blancas (= color de la página) con borde ondulado, superpuestas
    arriba y abajo del negro. */
-#app .faq__ola { position: absolute; left: 0; right: 0; height: 80px; line-height: 0; pointer-events: none; z-index: 2; }
-#app .faq__ola svg { width: 100%; height: 100%; display: block; }
+#app .faq__ola { position: absolute; left: 0; right: 0; height: 80px; line-height: 0; pointer-events: none; z-index: 2; overflow: hidden; }
+/* Cada capa mide el doble de ancho (200%) y se desplaza -50% en loop: como el
+   dibujo trae dos períodos iguales, al correr un período calza idéntico → flujo
+   continuo sin saltos. Frente rápida, atrás lenta → parallax tipo agua. */
+#app .faq__ola .ola { position: absolute; top: 0; left: 0; width: 200%; height: 100%; display: block; will-change: transform; }
+#app .faq__ola .ola--frente { animation: olaFluir 6s linear infinite; }
+#app .faq__ola .ola--atras  { animation: olaFluir 11s linear infinite; }
 #app .faq__ola--top { top: 0; }
 #app .faq__ola--bot { bottom: 0; }
+@keyframes olaFluir { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@media (prefers-reduced-motion: reduce) { #app .faq__ola .ola { animation: none; } }
 
 #app .faq__cabecera { text-align: center; margin-bottom: 34px; position: relative; z-index: 1; }
 #app .faq__cabecera h2 { color: #fff; }
