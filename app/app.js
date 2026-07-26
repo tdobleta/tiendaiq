@@ -1337,6 +1337,8 @@
   // selección reusa el flujo existente: estado.producto → ir("informacion").
   function pantallaLista() {
     const IC_LUPA = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>`;
+    const IC_CHISPA = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.8 4.9 4.9 1.8-4.9 1.8L12 15.9l-1.8-4.9L5.3 9.2l4.9-1.8zM19 14l.9 2.4 2.4.9-2.4.9L19 20.6l-.9-2.4-2.4-.9 2.4-.9z"/></svg>`;
+    const IC_GRID = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>`;
 
     // Tienda sin productos: estado honesto, no una grilla vacía.
     if (!estado.productos.length) {
@@ -1352,22 +1354,27 @@
     }
 
     vista.innerHTML = `
-      <button class="volver" id="volver-inicio">← Inicio</button>
-      <div class="cabecera">
-        <h1>Crear página de producto con IA</h1>
-        <p>Buscá el producto y la IA arma la landing completa.</p>
-      </div>
-      <div class="lanzador">
-        <div class="cmd">
-          <span class="cmd__ico">${IC_LUPA}</span>
-          <input class="cmd__input" id="q" type="text" autocomplete="off" spellcheck="false"
-                 placeholder="Buscá un producto para empezar…" value="${esc(estado.filtro || "")}">
-          <span class="cmd__kbd">↑↓ · Enter</span>
+      <div class="crear">
+        <button class="volver" id="volver-inicio">← Inicio</button>
+        <div class="crear__hero">
+          <span class="crear__eyebrow">${IC_CHISPA} Generador con IA</span>
+          <h1>Creá tu página de producto</h1>
+          <p>Elegí un producto y la IA arma la landing completa en segundos.</p>
         </div>
-        <div class="lanzador__res" id="res" role="listbox" aria-label="Productos"></div>
+        <div class="lanzador">
+          <div class="cmd">
+            <span class="cmd__ico">${IC_LUPA}</span>
+            <input class="cmd__input" id="q" type="text" autocomplete="off" spellcheck="false"
+                   placeholder="Buscá un producto para empezar…" value="${esc(estado.filtro || "")}">
+            <span class="cmd__kbd">↑↓ · Enter</span>
+          </div>
+          <button class="crear__vertodos" id="ver-todos">${IC_GRID} Ver todos los productos (${estado.productos.length})</button>
+          <div class="lanzador__res" id="res" role="listbox" aria-label="Productos"></div>
+        </div>
       </div>`;
 
     $("volver-inicio").onclick = () => ir("inicio");
+    $("ver-todos").onclick = abrirPickerTodos;
     const q0 = $("q");
     let navIdx = 0;      // fila activa
     let navLista = [];   // ids en orden de navegación
@@ -1446,6 +1453,66 @@
   function elegirProducto(id) {
     estado.producto = estado.productos.find((p) => p.id === id);
     if (estado.producto) ir("informacion");
+  }
+
+  // "Ver todos los productos": modal con la lista completa, buscable, estilo el
+  // selector nativo de Shopify. Reusa estado.productos (sin backend) y la misma
+  // selección (elegirProducto).
+  function abrirPickerTodos() {
+    const IC_LUPA = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>`;
+    const cont = document.createElement("div");
+    cont.className = "picker-modal";
+    cont.innerHTML = `
+      <div class="picker" role="dialog" aria-modal="true" aria-label="Todos los productos">
+        <div class="picker__cab">
+          <h2>Todos los productos</h2>
+          <button class="picker__x" type="button" aria-label="Cerrar">×</button>
+        </div>
+        <div class="picker__buscar">
+          <span class="picker__lupa">${IC_LUPA}</span>
+          <input id="pk-q" type="text" autocomplete="off" spellcheck="false" placeholder="Buscar productos…">
+        </div>
+        <div class="picker__lista" id="pk-lista"></div>
+        <div class="picker__pie" id="pk-conteo"></div>
+      </div>`;
+    document.body.appendChild(cont);
+
+    const filaP = (p) => `
+      <button class="fila" type="button" data-id="${esc(p.id)}">
+        <span class="fila__thumb">${p.imagen ? `<img src="${esc(p.imagen)}" alt="" loading="lazy">` : `<span class="fila__ph">🛍</span>`}</span>
+        <span class="fila__txt">
+          <span class="fila__tit">${esc(p.titulo)}</span>
+          ${p.precio != null ? `<span class="fila__precio">${esc(precioLindo(p.precio, p.moneda))}</span>` : ""}
+        </span>
+        ${
+          p.estado
+            ? `<span class="chip chip--${p.estado}">${ESTADO_ETQ[p.estado] || p.estado}</span>`
+            : `<span class="fila__cta">Elegir →</span>`
+        }
+      </button>`;
+
+    const lista = cont.querySelector("#pk-lista");
+    const conteo = cont.querySelector("#pk-conteo");
+    const pintar = (q = "") => {
+      const t = q.trim().toLowerCase();
+      const arr = t ? estado.productos.filter((p) => p.titulo.toLowerCase().includes(t)) : estado.productos;
+      lista.innerHTML = arr.length ? arr.map(filaP).join("") : `<div class="vacio">Ningún producto coincide.</div>`;
+      conteo.textContent = `${arr.length} producto${arr.length === 1 ? "" : "s"}`;
+      lista.querySelectorAll(".fila").forEach((b) => {
+        b.onclick = () => { cerrar(); elegirProducto(b.dataset.id); };
+      });
+    };
+    const onKey = (e) => { if (e.key === "Escape") cerrar(); };
+    function cerrar() { cont.remove(); document.removeEventListener("keydown", onKey); }
+
+    cont.addEventListener("click", (e) => {
+      if (e.target === cont || e.target.closest(".picker__x")) cerrar();
+    });
+    document.addEventListener("keydown", onKey);
+    const pkq = cont.querySelector("#pk-q");
+    pkq.oninput = () => pintar(pkq.value);
+    pintar("");
+    pkq.focus();
   }
 
   // ---------- 2. información del producto ----------

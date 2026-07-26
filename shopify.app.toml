@@ -12,7 +12,7 @@
 # ============================================================
 
 client_id = "91ac2b61f8d21cc0e788a34a81f2ad58"
-name = "TiendaIQ"
+name = "TiendaIQ: Páginas con IA"
 
 # El handle que Shopify ya le asignó a ESTA app (se ve en la URL del admin:
 # /store/<tienda>/apps/tiendaiq-3). Los handles "tiendaiq" y "tiendaiq-2" los

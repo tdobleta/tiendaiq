@@ -96,9 +96,12 @@ img { display: block; max-width: 100%; }
   top: 0;
   z-index: 10;
 }
-.barra__marca { font-weight: 600; font-size: 14px; color: var(--negro); display: flex; align-items: center; gap: 9px; }
+.barra__marca { display: flex; align-items: center; gap: 8px; }
 /* La marca: el logo Impulso (rombo + flecha en espacio negativo). */
 .barra__logo { width: 26px; height: 26px; display: block; }
+.barra__nombre { font-weight: 700; font-size: 14px; color: var(--negro); letter-spacing: -.2px; }
+/* Bajada al lado del nombre, tipo "PagePilot: AI Page Builder". */
+.barra__tag { font-size: 12.5px; font-weight: 500; color: var(--suave); padding-left: 9px; margin-left: 1px; border-left: 1px solid var(--borde); }
 
 /* Stepper del flujo de creación: Elegir producto → Información → Publicar.
    Barra ancha, círculos numerados unidos por una línea que se llena con el
@@ -420,6 +423,54 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
 .vacio-panel { max-width: 640px; margin: 8px auto 0; padding: 40px; text-align: center; border: 1px dashed var(--borde); border-radius: var(--radio); }
 .vacio-panel__tit { font-size: 15px; font-weight: 600; color: var(--negro); margin-bottom: 6px; }
 .vacio-panel p { font-size: 13px; color: var(--suave); }
+
+/* Hero de "Crear página": centrado, grande, con un toque de color y un fondo
+   con degradado suave (glow de marca). Profesional, no "AI slop". */
+.crear {
+  position: relative; padding-top: 4px;
+  background:
+    radial-gradient(820px 300px at 50% -70px, rgba(79, 70, 229, .13), transparent 72%),
+    radial-gradient(680px 300px at 88% 20px, rgba(30, 143, 213, .09), transparent 70%);
+}
+.crear .volver { position: relative; z-index: 1; }
+.crear__hero { text-align: center; max-width: 620px; margin: 18px auto 24px; }
+.crear__eyebrow {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 600; color: var(--ia);
+  background: var(--ia-fondo); border: 1px solid var(--ia-borde);
+  padding: 5px 12px; border-radius: 999px; margin-bottom: 16px;
+}
+.crear__eyebrow svg { width: 14px; height: 14px; display: block; }
+.crear__hero h1 { font-size: 34px; font-weight: 700; letter-spacing: -.6px; color: var(--negro); line-height: 1.08; }
+.crear__hero p { font-size: 15px; color: var(--suave); margin-top: 10px; }
+
+.crear__vertodos {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%; height: 42px; margin-top: 10px;
+  background: var(--superficie); border: 1px solid var(--borde); border-radius: var(--radio);
+  color: var(--negro); font-family: inherit; font-size: 13px; font-weight: 500; cursor: pointer;
+  transition: border-color .15s ease-out, background .15s ease-out;
+}
+.crear__vertodos:hover { border-color: var(--negro); background: var(--fondo); }
+.crear__vertodos svg { width: 16px; height: 16px; color: var(--suave); }
+
+/* Modal "Ver todos los productos" — lista completa buscable estilo picker. */
+.picker-modal { position: fixed; inset: 0; z-index: 100; background: rgba(18, 18, 24, .38); display: grid; place-items: center; padding: 20px; }
+.picker {
+  width: 100%; max-width: 560px; max-height: 82vh; display: flex; flex-direction: column;
+  background: var(--superficie); border: 1px solid var(--borde); border-radius: var(--radio);
+  box-shadow: var(--sombra-l); overflow: hidden;
+}
+.picker__cab { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--borde); }
+.picker__cab h2 { font-size: 14px; font-weight: 600; color: var(--negro); }
+.picker__x { width: 28px; height: 28px; border: none; background: none; border-radius: 6px; font-size: 20px; line-height: 1; color: var(--suave); cursor: pointer; }
+.picker__x:hover { background: var(--fondo); color: var(--negro); }
+.picker__buscar { display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-bottom: 1px solid var(--borde); }
+.picker__lupa { width: 16px; height: 16px; color: var(--suave); flex-shrink: 0; }
+.picker__lupa svg { width: 100%; height: 100%; display: block; }
+.picker__buscar input { flex: 1; min-width: 0; border: none; outline: none; background: none; font-family: inherit; font-size: 14px; color: var(--negro); }
+.picker__lista { flex: 1; overflow-y: auto; }
+.picker__pie { padding: 10px 16px; border-top: 1px solid var(--borde); font-size: 12px; color: var(--suave); }
 
 /* ---------- 0. inicio (panel principal) ---------- */
 
