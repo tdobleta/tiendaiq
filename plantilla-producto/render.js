@@ -236,7 +236,7 @@
             <div class="hero__miniaturas">${miniaturas}</div>
           </div>
           <div>
-            <div class="hero__urgencia">${esc(h.urgencia ?? "Ya es viral · Últimas unidades")}</div>
+            <div class="hero__urgencia">${esc(h.urgencia ?? "Ya es viral | Pocas unidades")}</div>
             <div class="hero__resenas">${estrellas(5)} <span>Calificación ${esc(puntaje1(h.puntaje ?? 4.9))}/5.0 (${esc(miles(h.resenas_count))})</span></div>
             <h1 class="hero__titulo">${esc(h.titulo)}</h1>
             <div class="hero__precios">

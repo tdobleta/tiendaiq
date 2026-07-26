@@ -155,9 +155,9 @@ IDIOMA
 aunque tengan texto en otro idioma. Nunca descartes una imagen por su idioma.
 
 URGENCIA
-Una barra corta de escasez/viralidad para arriba de todo (3-6 palabras, va en
-MAYÚSCULAS por CSS). Prueba social + escasez. Ejemplos: "Ya es viral · Últimas
-unidades", "Agotamos 3 veces este mes", "Pocas unidades disponibles". En {idioma}.
+Texto de una TIRA FINA arriba de todo (3-6 palabras, va en MAYÚSCULAS por CSS).
+Escasez/viralidad, cortante. Separá dos ideas con " | ". Ejemplos:
+"Ya es viral | Pocas unidades", "Se agotó 3 veces | Últimas unidades". En {idioma}.
 
 TÍTULO
 Reescribilo: mismo producto, sin ruido de buscador. Máximo 5 palabras.
