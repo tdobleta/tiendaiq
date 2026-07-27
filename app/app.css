@@ -594,9 +594,33 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
 .be-addons { border: 1px solid var(--borde); border-radius: 10px; padding: 14px; background: var(--fondo); }
 .be-addons__t { font-size: 12.5px; font-weight: 600; color: var(--negro); margin-bottom: 10px; }
 .be-addons__row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-.be-addon { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 14px 8px; background: var(--superficie); border: 1px solid var(--borde); border-radius: 10px; font-family: inherit; font-size: 12px; font-weight: 600; color: var(--ia); cursor: pointer; }
-.be-addon[disabled] { opacity: .55; cursor: not-allowed; color: var(--suave); }
-.be-addon span { font-weight: 600; }
+.be-addon { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 18px 8px; background: var(--superficie); border: 1.5px solid var(--borde); border-radius: 12px; font-family: inherit; font-size: 13px; font-weight: 600; color: var(--negro); cursor: pointer; transition: border-color .12s, background .12s; }
+.be-addon svg { width: 30px; height: 30px; color: #4a4a4a; }
+.be-addon:hover { border-color: var(--negro); }
+.be-addon.is-on { border-color: var(--negro); background: var(--fondo); }
+.be-addon.is-on svg { color: var(--negro); }
+
+/* Panel de configuración de un add-on activo */
+.be-addon-cfg { margin-top: 14px; border-top: 1px dashed var(--borde); padding-top: 14px; display: flex; flex-direction: column; gap: 12px; }
+.be-addon-cfg__t { display: flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 600; color: var(--negro); }
+.be-addon-cfg__x { margin-left: auto; background: none; border: none; color: var(--ia); font-family: inherit; font-size: 13px; cursor: pointer; }
+.be-gift-btn { width: 100%; background: var(--negro); color: #fff; border: none; border-radius: 10px; padding: 13px; font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; border: 1.5px dashed transparent; }
+.be-gift-btn:hover { background: #000; }
+.be-gift-sel { display: flex; align-items: center; gap: 10px; font-size: 14px; }
+.be-gift-sel__img { width: 42px; height: 42px; flex-shrink: 0; display: grid; place-items: center; border: 1px solid var(--borde); border-radius: 9px; overflow: hidden; }
+.be-gift-sel__img img { width: 100%; height: 100%; object-fit: cover; }
+.be-gift-sel__n { flex: 1; min-width: 0; font-weight: 600; color: var(--negro); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.be-gift-sel__ch { background: none; border: 1px solid var(--borde); border-radius: 8px; padding: 6px 12px; font-family: inherit; font-size: 13px; cursor: pointer; color: var(--negro); }
+
+/* Add-Ons reflejados en el preview del bundle */
+#bdl-preview .tiq-bdl__card { flex-wrap: wrap; }
+.tiq-bdl__addons { flex-basis: 100%; margin-top: 10px; border-top: 1px solid rgba(0,0,0,.08); padding-top: 10px; display: flex; flex-direction: column; gap: 8px; }
+.tiq-bdl__gift { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+.tiq-bdl__gift-ic { font-size: 18px; }
+.tiq-bdl__gift-main { flex: 1; min-width: 0; }
+.tiq-bdl__gift-free { font-size: 11px; font-weight: 700; color: #fff; background: var(--tiq-badge, #111); padding: 2px 9px; border-radius: 999px; }
+.tiq-bdl__ship { display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 600; color: var(--tiq-txt, #111); }
+.tiq-bdl__adimg img { max-width: 100%; border-radius: 8px; display: block; }
 
 /* --- Estilo de creación tipo Pumper: más grande, más contraste, menos gris.
    Scopeado al editor de bundles para no tocar el resto de la app. --- */

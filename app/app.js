@@ -1500,7 +1500,7 @@
   // "Ver todos los productos": modal con la lista completa, buscable, estilo el
   // selector nativo de Shopify. Reusa estado.productos (sin backend) y la misma
   // selección (elegirProducto).
-  function abrirPickerTodos() {
+  function abrirPickerTodos(onPick) {
     const IC_LUPA = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>`;
     const cont = document.createElement("div");
     cont.className = "picker-modal";
@@ -1541,7 +1541,11 @@
       lista.innerHTML = arr.length ? arr.map(filaP).join("") : `<div class="vacio">Ningún producto coincide.</div>`;
       conteo.textContent = `${arr.length} producto${arr.length === 1 ? "" : "s"}`;
       lista.querySelectorAll(".fila").forEach((b) => {
-        b.onclick = () => { cerrar(); elegirProducto(b.dataset.id); };
+        b.onclick = () => {
+          cerrar();
+          if (onPick) onPick((estado.productos || []).find((p) => p.id === b.dataset.id) || { id: b.dataset.id });
+          else elegirProducto(b.dataset.id);
+        };
       });
     };
     const onKey = (e) => { if (e.key === "Escape") cerrar(); };
@@ -3249,6 +3253,9 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   const BE_DUP = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg>`;
   const BE_STAR = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3.5l2.6 5.3 5.9.9-4.25 4.15 1 5.85L12 16.9l-5.25 2.8 1-5.85L2.5 9.7l5.9-.9z"/></svg>`;
   const BE_CHEV = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>`;
+  const BE_IMG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2.5"/><circle cx="8.5" cy="8.5" r="1.6"/><path d="M21 15l-5-5L5 21"/></svg>`;
+  const BE_GIFT2 = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><rect x="3" y="9" width="18" height="12" rx="1.5"/><path d="M3 13h18M12 9v12M12 9C10 9 8 8 8 6.2 8 5 9 4.5 10 5c1.5.8 2 4 2 4zM12 9c2 0 4-1 4-2.8 0-1.2-1-1.7-2-1.2-1.5.8-2 4-2 4z"/></svg>`;
+  const BE_TRUCK = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M1 6h13v9H1zM14 9h4l3 3v3h-7z"/><circle cx="5.5" cy="18" r="1.8"/><circle cx="17.5" cy="18" r="1.8"/></svg>`;
 
   // Fila con etiqueta + toggle (reemplaza a los checkboxes). attr = el data-* que
   // el bind usa para prender/apagar (data-toggle-b en el bundle, data-lv-bool en la oferta).
@@ -3265,7 +3272,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     if (s.nivelOpen === undefined) s.nivelOpen = null;
     // Semillas de campos nuevos (sin tocar el default del server).
     if (!b.opciones) b.opciones = { variantes: false, volumen: true };
-    (b.ofertas || []).forEach((o) => { if (o.activo === undefined) o.activo = true; if (!o.ver) o.ver = {}; });
+    (b.ofertas || []).forEach((o) => { if (o.activo === undefined) o.activo = true; if (!o.ver) o.ver = {}; if (!o.addons) o.addons = {}; });
 
     vista.innerHTML = `
       <div class="be-top">
@@ -3412,15 +3419,29 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
           ${campoOjo(`ofertas.${i}.badge`, "Insignia (ej. Most Popular / Best Value)", "badge")}
         </div>
         <div class="be-block">${beToggleRow("Marcar como agotado", `data-lv-bool="${i}:agotado"`, !!o.agotado, "Muestra el nivel como sin stock")}</div>
-        <div class="be-addons">
-          <div class="be-addons__t">⊕ Add-Ons</div>
-          <div class="be-addons__row">
-            <button type="button" class="be-addon" disabled>🖼<span>+ Imagen</span></button>
-            <button type="button" class="be-addon" disabled>🎁<span>+ Regalo gratis</span></button>
-            <button type="button" class="be-addon" disabled>🚚<span>+ Envío Gratis</span></button>
-          </div>
-          <div class="panel__sub" style="margin-top:8px">Los Add-Ons se activan en el próximo paso.</div>
-        </div>
+        ${(() => {
+          const ad = o.addons || {};
+          const btn = (key, ic, label) => `<button type="button" class="be-addon ${ad[key]?.on ? "is-on" : ""}" data-addon-toggle="${i}:${key}">${ic}<span>${label}</span></button>`;
+          const cfgImagen = ad.imagen?.on ? `<div class="be-addon-cfg">
+              <div class="be-addon-cfg__t">🖼 Agregar imagen<button class="be-addon-cfg__x" data-addon-toggle="${i}:imagen">Eliminar</button></div>
+              <div class="campo campo--editor"><label>Enlace de la imagen</label><input type="text" data-b="ofertas.${i}.addons.imagen.url" value="${esc(ad.imagen.url || "")}" placeholder="https://…/imagen.png"></div></div>` : "";
+          const g = ad.regalo || {};
+          const cfgRegalo = g.on ? `<div class="be-addon-cfg">
+              <div class="be-addon-cfg__t">🎁 Regalo gratis<button class="be-addon-cfg__x" data-addon-toggle="${i}:regalo">Eliminar</button></div>
+              ${g.nombre ? `<div class="be-gift-sel"><span class="be-gift-sel__img">${g.imagen ? `<img src="${esc(g.imagen)}" alt="">` : "🎁"}</span><span class="be-gift-sel__n">${esc(g.nombre)}</span><button class="be-gift-sel__ch" data-addon-gift="${i}">Cambiar</button></div>` : `<button class="be-gift-btn" data-addon-gift="${i}">＋ Seleccionar producto de regalo</button>`}</div>` : "";
+          const cfgEnvio = ad.envio?.on ? `<div class="be-addon-cfg">
+              <div class="be-addon-cfg__t">🚚 Envío gratis<button class="be-addon-cfg__x" data-addon-toggle="${i}:envio">Eliminar</button></div>
+              <div class="campo campo--editor"><label>Texto</label><input type="text" data-b="ofertas.${i}.addons.envio.texto" value="${esc(ad.envio.texto || "FREE SHIPPING")}"></div></div>` : "";
+          return `<div class="be-addons">
+            <div class="be-addons__t">＋ Add-Ons</div>
+            <div class="be-addons__row">
+              ${btn("imagen", BE_IMG, "+ Imagen")}
+              ${btn("regalo", BE_GIFT2, "+ Regalo gratis")}
+              ${btn("envio", BE_TRUCK, "+ Envío Gratis")}
+            </div>
+            ${cfgImagen}${cfgRegalo}${cfgEnvio}
+          </div>`;
+        })()}
         <button class="be-del" data-lv-del="${i}">🗑 Eliminar nivel ${i + 1}</button>
       </div>`;
     return `<div class="be-lv is-open">${head}${body}</div>`;
@@ -3466,6 +3487,8 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       const ver = t.closest("[data-lv-ver]"); if (ver) { const [i, key] = ver.dataset.lvVer.split(":"); const o = b.ofertas[+i]; o.ver = o.ver || {}; o.ver[key] = o.ver[key] === false ? true : false; marcarSucioBundles(); return pintarEditorBundle(); }
       const tb = t.closest("[data-toggle-b]"); if (tb) { const ruta = tb.dataset.toggleB; fijar(b, ruta, !leer(b, ruta)); marcarSucioBundles(); return pintarEditorBundle(); }
       const lb = t.closest("[data-lv-bool]"); if (lb) { const [i, f] = lb.dataset.lvBool.split(":"); const o = b.ofertas[+i]; o[f] = !o[f]; marcarSucioBundles(); pintarPreviewBundle(); return pintarEditorBundle(); }
+      const at = t.closest("[data-addon-toggle]"); if (at) { const [i, key] = at.dataset.addonToggle.split(":"); const o = b.ofertas[+i]; o.addons = o.addons || {}; o.addons[key] = o.addons[key] || {}; o.addons[key].on = !o.addons[key].on; marcarSucioBundles(); pintarPreviewBundle(); return pintarEditorBundle(); }
+      const ag = t.closest("[data-addon-gift]"); if (ag) { const i = +ag.dataset.addonGift; abrirPickerTodos((p) => { const o = b.ofertas[i]; o.addons = o.addons || {}; o.addons.regalo = { on: true, id: p.id, nombre: p.titulo, imagen: p.imagen || null }; marcarSucioBundles(); pintarPreviewBundle(); pintarEditorBundle(); }); return; }
       const add = t.closest("[data-add-nivel]"); if (add) { const n = b.ofertas.length + 1; b.ofertas.push({ cantidad: n, descuento: 0, titulo: "Buy " + n, subtitulo: "", etiqueta: "", badge: "", popular: false, activo: true, ver: {} }); s.nivelOpen = b.ofertas.length - 1; marcarSucioBundles(); return pintarEditorBundle(); }
     });
 
@@ -3770,6 +3793,16 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     const desc = Number(o.descuento) || 0; return { cant, bruto, total: Math.round(bruto * (1 - desc / 100)) };
   }
 
+  // Add-Ons de un nivel reflejados en el preview (regalo, envío, imagen).
+  function addonsPreviewBdl(o) {
+    const ad = o.addons || {};
+    let h = "";
+    if (ad.imagen?.on && ad.imagen.url) h += `<div class="tiq-bdl__adimg"><img src="${esc(ad.imagen.url)}" alt=""></div>`;
+    if (ad.regalo?.on) h += `<div class="tiq-bdl__gift"><span class="tiq-bdl__gift-ic">🎁</span><span class="tiq-bdl__gift-main"><b>1x ${esc(ad.regalo.nombre || "Regalo")}</b></span><span class="tiq-bdl__gift-free">GRATIS</span></div>`;
+    if (ad.envio?.on) h += `<div class="tiq-bdl__ship">🚚 + ${esc(ad.envio.texto || "FREE SHIPPING")}</div>`;
+    return h ? `<div class="tiq-bdl__addons">${h}</div>` : "";
+  }
+
   function previewBundleHTML(b, PU = PRECIO_DEMO) {
     const d = b.diseno || {};
     const bot = d.boton || {};
@@ -3827,6 +3860,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
               <span class="tiq-bdl__precio-now">${fmtBdl(total)}</span>
               ${total < bruto ? `<span class="tiq-bdl__precio-old">${fmtBdl(bruto)}</span>` : ""}
             </span>
+            ${addonsPreviewBdl(o)}
           </label>`;
         })
         .join("");
