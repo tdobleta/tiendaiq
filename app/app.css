@@ -466,6 +466,60 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
 .tema.is-sel { box-shadow: 0 0 0 2px var(--ia); }
 .tema--auto { background: conic-gradient(from 0deg, #db2777, #2563eb, #16a34a, #7a4a24, #1a1a1a, #db2777); }
 
+/* ============================================================
+   BUNDLES v2 — galería "Elegí el tema" (estilo Pumper).
+   --bt-ac = acento elegido por los swatches; recolorea las previews.
+   ============================================================ */
+.bt { --bt-tint: color-mix(in srgb, var(--bt-ac) 8%, #fff); }
+.bt-cab { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 22px; }
+.bt-cab h1 { font-size: 20px; font-weight: 700; color: var(--negro); letter-spacing: -.2px; }
+.bt-cab p { font-size: 13px; color: var(--suave); margin-top: 2px; }
+.bt-cab .volver-flecha { margin-top: 2px; }
+.bt-sws { margin-left: auto; display: flex; flex-wrap: wrap; gap: 7px; max-width: 340px; justify-content: flex-end; padding: 8px 10px; border: 1px solid var(--borde); border-radius: 999px; }
+.bt-sw { width: 22px; height: 22px; border-radius: 50%; padding: 0; cursor: pointer; background: var(--sw); border: 2px solid #fff; box-shadow: 0 0 0 1px var(--borde); transition: transform .1s; }
+.bt-sw:hover { transform: scale(1.12); }
+.bt-sw.is-sel { box-shadow: 0 0 0 2px var(--sw); }
+
+.bt-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+.bt-card { display: flex; flex-direction: column; background: var(--superficie); border: 1px solid var(--borde); border-radius: 12px; padding: 18px; }
+.bt-card__tit { text-align: center; font-size: 14px; font-weight: 600; color: var(--negro); padding-bottom: 14px; margin-bottom: 14px; border-bottom: 1px solid var(--borde-suave); }
+.bt-card__prev { display: flex; flex-direction: column; gap: 10px; flex: 1; }
+.bt-card__btn { margin-top: 16px; height: 40px; border: none; border-radius: 8px; background: var(--negro); color: #fff; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.bt-card__btn:hover:not(:disabled) { background: #000; }
+.bt-card__btn.is-soon { background: var(--fondo); color: var(--suave); cursor: not-allowed; }
+
+/* Filas de oferta */
+.bt-row { position: relative; display: flex; align-items: center; gap: 10px; padding: 12px 14px; border: 1.5px solid transparent; border-radius: 10px; background: var(--bt-tint); }
+.bt-row.is-sel { border-color: var(--bt-ac); background: #fff; }
+.bt-row__main { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 14px; color: var(--negro); }
+.bt-row__main b { font-weight: 700; }
+.bt-radio { width: 17px; height: 17px; border-radius: 50%; border: 2px solid #c9c9d0; flex-shrink: 0; }
+.bt-row.is-sel .bt-radio { border-color: var(--bt-ac); background: var(--bt-ac); box-shadow: inset 0 0 0 3px #fff; }
+.bt-pill { font-size: 11px; font-weight: 600; color: var(--bt-ac); border: 1px solid color-mix(in srgb, var(--bt-ac) 40%, #fff); border-radius: 5px; padding: 1px 6px; }
+.bt-std { font-size: 12px; color: var(--bt-ac); }
+.bt-sub { font-size: 12px; color: var(--suave); flex-basis: 100%; }
+.bt-price { font-size: 14px; font-weight: 700; color: var(--negro); white-space: nowrap; }
+.bt-price s { font-weight: 500; color: #b0b0b8; font-size: 12px; }
+.bt-bv { position: absolute; top: -9px; right: 12px; background: var(--bt-ac); color: #fff; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 5px; }
+.bt-row--thumb { align-items: center; }
+.bt-thumb { width: 42px; height: 42px; flex-shrink: 0; display: grid; place-items: center; border: 1px solid var(--borde); border-radius: 8px; background: #fff; color: #9aa0a6; }
+.bt-thumb svg { width: 22px; height: 22px; }
+.bt-size { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: var(--suave); flex-basis: 100%; margin-top: 2px; }
+.bt-size select { font-size: 11px; padding: 1px 4px; border: 1px solid var(--borde); border-radius: 5px; }
+.bt-gift { background: color-mix(in srgb, var(--bt-ac) 16%, #fff); }
+.bt-gift__ico { width: 26px; height: 26px; color: var(--bt-ac); flex-shrink: 0; }
+.bt-gift__ico svg { width: 100%; height: 100%; }
+
+/* Combo (Bundle & Save) */
+.bt-combo { background: var(--bt-tint); border-radius: 10px; padding: 22px; display: flex; flex-direction: column; align-items: center; gap: 12px; flex: 1; justify-content: center; }
+.bt-combo__row { display: flex; align-items: center; gap: 10px; }
+.bt-combo__it { width: 52px; height: 52px; display: grid; place-items: center; background: #fff; border: 1px solid var(--borde); border-radius: 10px; color: #9aa0a6; }
+.bt-combo__it svg { width: 26px; height: 26px; }
+.bt-combo__plus { color: var(--suave); font-weight: 700; }
+
+@media (max-width: 900px) { .bt-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 560px) { .bt-grid { grid-template-columns: 1fr; } .bt-sws { max-width: none; } }
+
 /* Modal "Ver todos los productos" — lista completa buscable estilo picker. */
 .picker-modal { position: fixed; inset: 0; z-index: 100; background: rgba(18, 18, 24, .38); display: grid; place-items: center; padding: 20px; }
 .picker {

@@ -2987,6 +2987,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       }
     }
     if (estado.bundles.vista === "editor") pintarEditorBundle();
+    else if (estado.bundles.vista === "temas") pantallaBundleTemas();
     else pintarDashboardBundles();
   }
 
@@ -3026,6 +3027,101 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       <div class="panel__sub" style="margin:-8px 0 18px">
         Últimos ${m.dias} días · moneda ${esc(m.moneda)}${m.parcial ? " · muestra parcial (se recorrieron los 500 pedidos más recientes)" : ""}
       </div>`;
+  }
+
+  // ---------- galería "Elegí el tema" (nueva, estilo Pumper) ----------
+  // Paleta de acentos para los swatches (recolorea las previews en vivo).
+  const BT_COLORES = ["#1a1a1a", "#16a34a", "#0d9488", "#0ea5e9", "#2563eb", "#4f46e5", "#7c3aed", "#db2777", "#e11d48", "#ea580c", "#92400e", "#b45309"];
+
+  // Crea un bundle del tipo elegido y salta al editor.
+  function crearDesdeTema(tipo) {
+    estado.bundles.config.lista.push(nuevoBundleLocal(tipo));
+    estado.bundles.editIdx = estado.bundles.config.lista.length - 1;
+    estado.bundles.vista = "editor";
+    estado.bundles.tab = "ofertas";
+    estado.bundles.sucio = true;
+    pintarEditorBundle();
+  }
+
+  function pantallaBundleTemas() {
+    const ac = estado.bundles.temaColor || "#db2777";
+    const PH = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M3 8l9-5 9 5v8l-9 5-9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>`;
+    const GIFT = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><rect x="3" y="9" width="18" height="12" rx="1.5"/><path d="M3 13h18M12 9v12M12 9C10 9 8 8 8 6.2 8 5 9 4.5 10 5c1.3.7 2 4 2 4zM12 9c2 0 4-1 4-2.8 0-1.2-1-1.7-2-1.2-1.3.7-2 4-2 4z"/></svg>`;
+
+    // --- Card 1: Buy More Save More (volumen) ---
+    const rowVol = (n, pill, price, old, sel, bv) => `
+      <div class="bt-row ${sel ? "is-sel" : ""}">
+        ${bv ? `<span class="bt-bv">Best Value</span>` : ""}
+        <span class="bt-radio"></span>
+        <span class="bt-row__main"><b>Buy ${n}</b> ${pill ? `<span class="bt-pill">${pill}</span>` : `<span class="bt-std">Standard Price</span>`}</span>
+        <span class="bt-price">${price}${old ? ` <s>${old}</s>` : ""}</span>
+      </div>`;
+    const cardVolumen = `
+      ${rowVol(1, "", "$10.00", "", true, false)}
+      ${rowVol(2, "20% OFF", "$16.00", "$20.00", false, false)}
+      ${rowVol(3, "30% OFF", "$21.00", "$30.00", false, false)}
+      ${rowVol(4, "40% OFF", "$24.00", "$40.00", false, true)}`;
+
+    // --- Card 2: BOGO Offers (bxgy) ---
+    const rowBogo = (tit, sub, price, old, sel) => `
+      <div class="bt-row bt-row--thumb ${sel ? "is-sel" : ""}">
+        <span class="bt-thumb">${PH}</span>
+        <span class="bt-row__main"><b>${tit}</b><span class="bt-sub">${sub}</span></span>
+        <span class="bt-price">${price}${old ? ` <s>${old}</s>` : ""}</span>
+      </div>`;
+    const cardBogo = `
+      ${rowBogo("Buy 1", "Standard Price", "$10.00", "", true)}
+      ${rowBogo("Buy 2 Get 1 Free!", "33% OFF", "$20.00", "$30.00", false)}
+      ${rowBogo("Buy 3 Get 2 Free!", "40% OFF", "$30.00", "$50.00", false)}`;
+
+    // --- Card 3: Unlock Free Gifts ---
+    const cardGift = `
+      <div class="bt-row is-sel">
+        <span class="bt-radio"></span>
+        <span class="bt-row__main"><b>Single</b> <span class="bt-std">Standard Price</span>
+          <span class="bt-size">Size <select disabled><option>S</option></select></span></span>
+        <span class="bt-price">$10.00</span>
+      </div>
+      <div class="bt-row">
+        <span class="bt-bv bt-bv--pop">Most Popular</span>
+        <span class="bt-radio"></span>
+        <span class="bt-row__main"><b>Duo</b> <span class="bt-sub">You Save $4.00</span></span>
+        <span class="bt-price">$16.00 <s>$20.00</s></span>
+      </div>
+      <div class="bt-row bt-gift"><span class="bt-gift__ico">${GIFT}</span><span class="bt-row__main"><b>+1 FREE GIFT</b></span><span class="bt-price"><s>$100.00</s></span></div>`;
+
+    // --- Card 4: Bundle & Save (combo) ---
+    const cardCombo = `
+      <div class="bt-combo">
+        <div class="bt-combo__row"><span class="bt-combo__it">${PH}</span><span class="bt-combo__plus">+</span><span class="bt-combo__it">${PH}</span></div>
+        <div class="bt-combo__row"><span class="bt-combo__it">${PH}</span></div>
+      </div>`;
+
+    const card = (tit, prev, btnTxt, tipo, activo) => `
+      <div class="bt-card">
+        <div class="bt-card__tit">${tit}</div>
+        <div class="bt-card__prev">${prev}</div>
+        <button class="bt-card__btn ${activo ? "" : "is-soon"}" ${activo ? `data-tema="${tipo}"` : "disabled"}>${activo ? btnTxt : "Próximamente"}</button>
+      </div>`;
+
+    vista.innerHTML = `
+      <div class="bt" style="--bt-ac:${ac}">
+        <div class="bt-cab">
+          <button class="volver-flecha" id="bt-volver">←</button>
+          <div><h1>Elegí el tema de bundle ganador</h1><p>Personalización completa justo después</p></div>
+          <div class="bt-sws">${BT_COLORES.map((c) => `<button class="bt-sw ${c === ac ? "is-sel" : ""}" data-color="${c}" style="--sw:${c}" aria-label="Color ${c}"></button>`).join("")}</div>
+        </div>
+        <div class="bt-grid">
+          ${card("Buy More Save More", cardVolumen, "Personalizar ahora", "volumen", true)}
+          ${card("BOGO Offers", cardBogo, "Personalizar ahora", "bxgy", false)}
+          ${card("Unlock Free Gifts", cardGift, "Personalizar ahora", "gift", false)}
+          ${card("Bundle y Ahorrá", cardCombo, "Crear un Paquete", "combo", false)}
+        </div>
+      </div>`;
+
+    $("bt-volver").onclick = () => { estado.bundles.vista = "lista"; pintarDashboardBundles(); };
+    vista.querySelectorAll(".bt-sw").forEach((b) => (b.onclick = () => { estado.bundles.temaColor = b.dataset.color; pantallaBundleTemas(); }));
+    vista.querySelectorAll(".bt-card__btn[data-tema]").forEach((b) => (b.onclick = () => crearDesdeTema(b.dataset.tema)));
   }
 
   function pintarDashboardBundles() {
@@ -3108,8 +3204,10 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       m.querySelectorAll("[data-tipo]").forEach((b) => (b.onclick = () => { cerrarMenuTipo(); crearTipo(b.dataset.tipo); }));
       setTimeout(() => document.addEventListener("click", cerrarMenuTipo, { once: true }), 0);
     };
-    if ($("bdl-nuevo")) $("bdl-nuevo").onclick = (e) => { e.stopPropagation(); abrirMenuTipo(e.currentTarget); };
-    if ($("bdl-vacio-crear")) $("bdl-vacio-crear").onclick = (e) => { e.stopPropagation(); abrirMenuTipo(e.currentTarget); };
+    const abrirGaleria = () => { estado.bundles.vista = "temas"; pantallaBundleTemas(); };
+    if ($("bdl-nuevo")) $("bdl-nuevo").onclick = abrirGaleria;
+    if ($("bdl-vacio-crear")) $("bdl-vacio-crear").onclick = abrirGaleria;
+    void abrirMenuTipo; void crearTipo; // (reemplazados por la galería)
     if ($("bdl-instalar")) $("bdl-instalar").onclick = instalarBundlesTema;
 
     vista.querySelectorAll("[data-abrir]").forEach((el) => {
