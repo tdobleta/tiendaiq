@@ -1678,42 +1678,41 @@ summary:focus-visible, label:focus-visible {
 /* --- métricas --- */
 .bdl-metricas {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 12px;
-  margin-bottom: 18px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 20px;
 }
 .bdl-metrica {
   background: var(--superficie);
   border: 1px solid var(--borde);
-  border-radius: var(--radio);
-  padding: 14px 16px;
-  box-shadow: var(--sombra-s);
+  border-radius: 12px;
+  padding: 18px;
 }
-.bdl-metrica__t { font-size: 12px; color: var(--suave); font-weight: 500; display: flex; align-items: center; gap: 5px; }
-.bdl-metrica__i { cursor: help; opacity: .5; font-size: 11px; }
-.bdl-metrica__v { font-size: 22px; font-weight: 700; color: var(--negro); margin-top: 6px; letter-spacing: -.5px; }
+.bdl-metrica__t { font-size: 13px; color: var(--texto); font-weight: 500; display: flex; align-items: center; gap: 6px; }
+.bdl-metrica__i { cursor: help; opacity: .45; font-size: 12px; }
+.bdl-metrica__v { font-size: 27px; font-weight: 700; color: var(--negro); margin-top: 8px; letter-spacing: -.5px; }
 
 @media (max-width: 900px) { .bdl-metricas { grid-template-columns: repeat(2, 1fr); } }
 
 /* --- lista de bundles --- */
 .bdl-lista { display: flex; flex-direction: column; }
 .bdl-fila {
-  display: flex; align-items: center; gap: 14px;
-  padding: 16px 6px;
+  display: flex; align-items: center; gap: 15px;
+  padding: 18px 10px;
   border-bottom: 1px solid var(--borde-suave);
   cursor: pointer;
   transition: background .12s ease;
-  border-radius: 8px;
+  border-radius: 10px;
 }
 .bdl-fila:last-child { border-bottom: none; }
 .bdl-fila:hover { background: var(--fondo); }
 .bdl-fila__ico {
-  flex: 0 0 auto; width: 42px; height: 42px; border-radius: 10px;
-  background: var(--fondo); display: grid; place-items: center; font-size: 20px;
+  flex: 0 0 auto; width: 46px; height: 46px; border-radius: 12px;
+  background: var(--fondo); border: 1px solid var(--borde); display: grid; place-items: center; font-size: 22px;
 }
 .bdl-fila__main { flex: 1 1 auto; min-width: 0; }
-.bdl-fila__nombre { font-weight: 650; color: var(--negro); display: flex; align-items: center; gap: 8px; }
-.bdl-fila__sub { font-size: 13px; color: var(--suave); margin-top: 2px; }
+.bdl-fila__nombre { font-size: 15px; font-weight: 700; color: var(--negro); display: flex; align-items: center; gap: 8px; }
+.bdl-fila__sub { font-size: 13.5px; color: var(--suave); margin-top: 3px; }
 .bdl-fila__del {
   flex: 0 0 auto; background: none; border: none; cursor: pointer;
   font-size: 16px; opacity: .4; padding: 6px; border-radius: 6px; transition: opacity .12s, background .12s;
