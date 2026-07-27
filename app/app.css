@@ -612,15 +612,10 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
 .be-gift-sel__n { flex: 1; min-width: 0; font-weight: 600; color: var(--negro); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .be-gift-sel__ch { background: none; border: 1px solid var(--borde); border-radius: 8px; padding: 6px 12px; font-family: inherit; font-size: 13px; cursor: pointer; color: var(--negro); }
 
-/* Add-Ons reflejados en el preview del bundle */
-#bdl-preview .tiq-bdl__card { flex-wrap: wrap; }
-.tiq-bdl__addons { flex-basis: 100%; margin-top: 10px; border-top: 1px solid rgba(0,0,0,.08); padding-top: 10px; display: flex; flex-direction: column; gap: 8px; }
-.tiq-bdl__gift { display: flex; align-items: center; gap: 10px; font-size: 13px; }
-.tiq-bdl__gift-ic { font-size: 18px; }
-.tiq-bdl__gift-main { flex: 1; min-width: 0; }
-.tiq-bdl__gift-free { font-size: 11px; font-weight: 700; color: #fff; background: var(--tiq-badge, #111); padding: 2px 9px; border-radius: 999px; }
-.tiq-bdl__ship { display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 600; color: var(--tiq-txt, #111); }
-.tiq-bdl__adimg img { max-width: 100%; border-radius: 8px; display: block; }
+/* En el preview del editor, el marco (.bdl-preview__marco) ya es la caja:
+   desboxeamos el .tiq-bdl para no duplicar borde/sombra. (Los estilos del
+   widget viven en tiendaiq-bundle.css y se comparten con la tienda.) */
+#bdl-preview .tiq-bdl { margin: 0; padding: 0; border: none; box-shadow: none; background: none; }
 
 /* --- Estilo de creación tipo Pumper: más grande, más contraste, menos gris.
    Scopeado al editor de bundles para no tocar el resto de la app. --- */

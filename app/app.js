@@ -3039,7 +3039,11 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
 
   // Crea un bundle del tipo elegido y salta al editor.
   function crearDesdeTema(tipo) {
-    estado.bundles.config.lista.push(nuevoBundleLocal(tipo));
+    const nb = nuevoBundleLocal(tipo);
+    // El color elegido en la galería pasa a ser el acento del bundle.
+    const ac = estado.bundles.temaColor;
+    if (ac) { nb.diseno.color_borde = ac; nb.diseno.color_badge = ac; nb.diseno.color_etiqueta = ac; nb.diseno.boton.color_fondo = ac; }
+    estado.bundles.config.lista.push(nb);
     estado.bundles.editIdx = estado.bundles.config.lista.length - 1;
     estado.bundles.vista = "editor";
     estado.bundles.tab = "ofertas";
