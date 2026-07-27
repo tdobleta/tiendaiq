@@ -524,11 +524,11 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
    BUNDLES v2 — EDITOR (Descuento por Cantidad), estilo Pumper.
    Izquierda = secciones colapsables + niveles. Derecha = preview.
    ============================================================ */
-.be-top { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; }
+.be-top { display: flex; align-items: center; gap: 14px; margin: 0 auto 20px; max-width: 1000px; }
 .be-top h1 { font-size: 20px; font-weight: 700; color: var(--negro); letter-spacing: -.2px; }
 .be-top__act { margin-left: auto; display: flex; gap: 10px; }
 
-.be-layout { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 20px; align-items: start; }
+.be-layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 24px; align-items: start; max-width: 1000px; margin: 0 auto; }
 .be-left { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
 
 .be-sec { background: var(--superficie); border: 1px solid var(--borde); border-radius: 12px; }
