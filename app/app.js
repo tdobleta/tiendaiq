@@ -3868,7 +3868,10 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     if (ad.regalo?.on) {
       const items = ad.regalo.items || (ad.regalo.nombre ? [{ nombre: ad.regalo.nombre, cantidad: 1 }] : []);
       items.forEach((it) => {
-        h += `<div class="tiq-bdl__gift"><span class="tiq-bdl__gift-ic">🎁</span><span class="tiq-bdl__gift-main"><b>${it.cantidad || 1}x ${esc(it.nombre || "Regalo")}</b></span><span class="tiq-bdl__gift-free"${it.colorGratis ? ` style="background:${esc(it.colorGratis)}"` : ""}>${esc(it.textoGratis || "GRATIS")}</span></div>`;
+        const ic = it.imagen
+          ? `<span class="tiq-bdl__gift-ic tiq-bdl__gift-ic--img"><img src="${esc(it.imagen)}" alt=""></span>`
+          : `<span class="tiq-bdl__gift-ic">🎁</span>`;
+        h += `<div class="tiq-bdl__gift">${ic}<span class="tiq-bdl__gift-main"><b>${it.cantidad || 1}x ${esc(it.nombre || "Regalo")}</b></span><span class="tiq-bdl__gift-free"${it.colorGratis ? ` style="background:${esc(it.colorGratis)}"` : ""}>${esc(it.textoGratis || "GRATIS")}</span></div>`;
       });
     }
     if (ad.envio?.on) h += `<div class="tiq-bdl__ship">🚚 + ${esc(ad.envio.texto || "FREE SHIPPING")}</div>`;
