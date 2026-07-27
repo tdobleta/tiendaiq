@@ -614,6 +614,23 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
 .be-img-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 22px; border: 1.5px dashed #c9cccf; border-radius: 10px; background: none; color: var(--negro); font-family: inherit; font-size: 13.5px; font-weight: 500; cursor: pointer; }
 .be-img-btn:hover { border-color: var(--negro); background: var(--fondo); }
 
+/* Panel de "Regalo gratis" (estilo Pumper) */
+.be-gift__more { margin-left: auto; color: var(--ia); font-size: 13px; font-weight: 500; cursor: pointer; }
+.be-gift__tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+.be-gift__tab { display: inline-flex; align-items: center; gap: 7px; padding: 6px 8px 6px 12px; border: 1px solid var(--borde); border-radius: 8px; font-size: 13px; color: var(--negro); cursor: pointer; }
+.be-gift__tab.is-sel { border-color: var(--negro); }
+.be-gift__tab button { border: none; background: none; cursor: pointer; color: var(--suave); font-size: 15px; line-height: 1; padding: 0; }
+.be-gift__body { display: flex; gap: 14px; }
+.be-gift__thumb { flex-shrink: 0; width: 90px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.be-gift__thumb > img { width: 90px; height: 90px; object-fit: cover; border-radius: 10px; border: 1px solid var(--borde); }
+.be-gift__cambiar { background: none; border: none; color: var(--ia); font-family: inherit; font-size: 13px; font-weight: 500; cursor: pointer; }
+.be-gift__fields { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+.be-gift__row2 { display: grid; grid-template-columns: 1fr 84px; gap: 12px; }
+.be-gift__inline { display: flex; align-items: stretch; gap: 8px; }
+.be-gift__inline input[type="text"] { flex: 1; min-width: 0; }
+.be-sw2 { width: 40px; padding: 0; border: 1px solid var(--borde); border-radius: 8px; background: none; cursor: pointer; flex-shrink: 0; }
+.be-gift__pill { align-self: flex-start; color: #fff; font-size: 12px; font-weight: 700; letter-spacing: .02em; padding: 5px 16px; border-radius: 999px; }
+
 /* En el preview del editor, el marco (.bdl-preview__marco) ya es la caja:
    desboxeamos el .tiq-bdl para no duplicar borde/sombra. (Los estilos del
    widget viven en tiendaiq-bundle.css y se comparten con la tienda.) */

@@ -3297,7 +3297,14 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     if (s.nivelOpen === undefined) s.nivelOpen = null;
     // Semillas de campos nuevos (sin tocar el default del server).
     if (!b.opciones) b.opciones = { variantes: false, volumen: true };
-    (b.ofertas || []).forEach((o) => { if (o.activo === undefined) o.activo = true; if (!o.ver) o.ver = {}; if (!o.addons) o.addons = {}; });
+    (b.ofertas || []).forEach((o) => {
+      if (o.activo === undefined) o.activo = true;
+      if (!o.ver) o.ver = {};
+      if (!o.addons) o.addons = {};
+      // Migración: modelo viejo de regalo (un solo producto) → items[].
+      const rg = o.addons.regalo;
+      if (rg && rg.nombre && !rg.items) rg.items = [{ id: rg.id, nombre: rg.nombre, imagen: rg.imagen, cantidad: 1, textoGratis: "GRATIS", mostrarPrecio: true }];
+    });
 
     vista.innerHTML = `
       <div class="be-top">
@@ -3458,9 +3465,28 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
                 ? `<div class="be-gift-sel"><span class="be-gift-sel__img"><img src="${esc(ad.imagen.url)}" alt=""></span><span class="be-gift-sel__n">Imagen cargada ✓</span><label class="be-gift-sel__ch" style="cursor:pointer">Cambiar<input type="file" accept="image/*" hidden data-addon-img="${i}"></label></div>`
                 : `<label class="be-img-btn">⬆ Seleccionar imagen de tu computadora<input type="file" accept="image/*" hidden data-addon-img="${i}"></label>`}</div>` : "";
           const g = ad.regalo || {};
+          const gifts = g.items || [];
+          const sel = Math.min(g.sel || 0, Math.max(0, gifts.length - 1));
+          const editorRegalo = (it, gi) => `
+            <div class="be-gift__body">
+              <div class="be-gift__thumb">${it.imagen ? `<img src="${esc(it.imagen)}" alt="">` : "🎁"}<button class="be-gift__cambiar" data-gift-pick="${i}:${gi}">Cambiar regalo</button></div>
+              <div class="be-gift__fields">
+                <div class="be-gift__row2">
+                  <div class="campo campo--editor"><label>Nombre del regalo y colores</label>
+                    <div class="be-gift__inline"><input type="text" data-b="ofertas.${i}.addons.regalo.items.${gi}.nombre" value="${esc(it.nombre || "")}" placeholder="Nombre del regalo"><input type="color" class="be-sw2" data-b="ofertas.${i}.addons.regalo.items.${gi}.colorNombre" value="${esc(it.colorNombre || "#f8d7e5")}"></div></div>
+                  <div class="campo campo--editor be-gift__cant"><label>Cantidad</label><input type="number" min="1" data-b="ofertas.${i}.addons.regalo.items.${gi}.cantidad" data-tipo="numero" value="${esc(it.cantidad || 1)}"></div>
+                </div>
+                <div class="campo campo--editor"><label>Etiqueta "gratis"</label>
+                  <div class="be-gift__inline"><input type="text" data-b="ofertas.${i}.addons.regalo.items.${gi}.textoGratis" value="${esc(it.textoGratis || "GRATIS")}"><input type="color" class="be-sw2" data-b="ofertas.${i}.addons.regalo.items.${gi}.colorGratis" value="${esc(it.colorGratis || "#a90c4e")}"></div></div>
+                <span class="be-gift__pill" style="background:${esc(it.colorGratis || "#a90c4e")}">${esc(it.textoGratis || "GRATIS")}</span>
+                ${beToggleRow("Mostrar precio original", `data-gift-bool="${i}:${gi}:mostrarPrecio"`, it.mostrarPrecio !== false)}
+              </div>
+            </div>`;
           const cfgRegalo = g.on ? `<div class="be-addon-cfg">
-              <div class="be-addon-cfg__t">🎁 Regalo gratis<button class="be-addon-cfg__x" data-addon-toggle="${i}:regalo">Eliminar</button></div>
-              ${g.nombre ? `<div class="be-gift-sel"><span class="be-gift-sel__img">${g.imagen ? `<img src="${esc(g.imagen)}" alt="">` : "🎁"}</span><span class="be-gift-sel__n">${esc(g.nombre)}</span><button class="be-gift-sel__ch" data-addon-gift="${i}">Cambiar</button></div>` : `<button class="be-gift-btn" data-addon-gift="${i}">＋ Seleccionar producto de regalo</button>`}</div>` : "";
+              <div class="be-addon-cfg__t"><span>🎁 Regalo gratis</span>${gifts.length ? `<a class="be-gift__more" data-gift-add="${i}">Agregar más regalo</a>` : ""}</div>
+              ${gifts.length
+                ? `<div class="be-gift__tabs">${gifts.map((_, gi) => `<span class="be-gift__tab ${gi === sel ? "is-sel" : ""}" data-gift-tab="${i}:${gi}">Regalo ${gi + 1}<button data-gift-del="${i}:${gi}" title="Quitar">×</button></span>`).join("")}</div>${editorRegalo(gifts[sel], sel)}`
+                : `<button class="be-gift-btn" data-addon-gift="${i}">＋ Seleccionar producto de regalo</button>`}</div>` : "";
           const cfgEnvio = ad.envio?.on ? `<div class="be-addon-cfg">
               <div class="be-addon-cfg__t">🚚 Envío gratis<button class="be-addon-cfg__x" data-addon-toggle="${i}:envio">Eliminar</button></div>
               <div class="campo campo--editor"><label>Texto</label><input type="text" data-b="ofertas.${i}.addons.envio.texto" value="${esc(ad.envio.texto || "FREE SHIPPING")}"></div></div>` : "";
@@ -3524,7 +3550,12 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       const tb = t.closest("[data-toggle-b]"); if (tb) { const ruta = tb.dataset.toggleB; fijar(b, ruta, !leer(b, ruta)); marcarSucioBundles(); return pintarEditorBundle(); }
       const lb = t.closest("[data-lv-bool]"); if (lb) { const [i, f] = lb.dataset.lvBool.split(":"); const o = b.ofertas[+i]; o[f] = !o[f]; marcarSucioBundles(); pintarPreviewBundle(); return pintarEditorBundle(); }
       const at = t.closest("[data-addon-toggle]"); if (at) { const [i, key] = at.dataset.addonToggle.split(":"); const o = b.ofertas[+i]; o.addons = o.addons || {}; o.addons[key] = o.addons[key] || {}; o.addons[key].on = !o.addons[key].on; marcarSucioBundles(); pintarPreviewBundle(); return pintarEditorBundle(); }
-      const ag = t.closest("[data-addon-gift]"); if (ag) { const i = +ag.dataset.addonGift; abrirPickerTodos((p) => { const o = b.ofertas[i]; o.addons = o.addons || {}; o.addons.regalo = { on: true, id: p.id, nombre: p.titulo, imagen: p.imagen || null }; marcarSucioBundles(); pintarPreviewBundle(); pintarEditorBundle(); }); return; }
+      const ag = t.closest("[data-addon-gift]"); if (ag) { const i = +ag.dataset.addonGift; abrirPickerTodos((p) => { const o = b.ofertas[i]; o.addons = o.addons || {}; const rg = (o.addons.regalo = o.addons.regalo || { on: true, items: [] }); rg.on = true; rg.items = rg.items || []; rg.items.push({ id: p.id, nombre: p.titulo, imagen: p.imagen || null, cantidad: 1, textoGratis: "GRATIS", mostrarPrecio: true }); rg.sel = rg.items.length - 1; marcarSucioBundles(); pintarPreviewBundle(); pintarEditorBundle(); }); return; }
+      const gdel = t.closest("[data-gift-del]"); if (gdel) { const [i, gi] = gdel.dataset.giftDel.split(":").map(Number); const rg = b.ofertas[i].addons.regalo; rg.items.splice(gi, 1); if (!rg.items.length) rg.on = false; rg.sel = 0; marcarSucioBundles(); pintarPreviewBundle(); return pintarEditorBundle(); }
+      const gtab = t.closest("[data-gift-tab]"); if (gtab) { const [i, gi] = gtab.dataset.giftTab.split(":").map(Number); b.ofertas[i].addons.regalo.sel = gi; return pintarEditorBundle(); }
+      const gadd = t.closest("[data-gift-add]"); if (gadd) { const i = +gadd.dataset.giftAdd; const rg = b.ofertas[i].addons.regalo; rg.items = rg.items || []; rg.items.push({ nombre: "", cantidad: 1, textoGratis: "GRATIS", mostrarPrecio: true }); rg.sel = rg.items.length - 1; marcarSucioBundles(); return pintarEditorBundle(); }
+      const gpick = t.closest("[data-gift-pick]"); if (gpick) { const [i, gi] = gpick.dataset.giftPick.split(":").map(Number); abrirPickerTodos((p) => { const it = b.ofertas[i].addons.regalo.items[gi]; it.id = p.id; it.nombre = p.titulo; it.imagen = p.imagen || null; marcarSucioBundles(); pintarPreviewBundle(); pintarEditorBundle(); }); return; }
+      const gbool = t.closest("[data-gift-bool]"); if (gbool) { const [i, gi, f] = gbool.dataset.giftBool.split(":"); const it = b.ofertas[+i].addons.regalo.items[+gi]; it[f] = it[f] === false ? true : it[f] === undefined ? false : !it[f]; marcarSucioBundles(); pintarPreviewBundle(); return pintarEditorBundle(); }
       const add = t.closest("[data-add-nivel]"); if (add) { const n = b.ofertas.length + 1; b.ofertas.push({ cantidad: n, descuento: 0, titulo: "Buy " + n, subtitulo: "", etiqueta: "", badge: "", popular: false, activo: true, ver: {} }); s.nivelOpen = b.ofertas.length - 1; marcarSucioBundles(); return pintarEditorBundle(); }
     });
 
@@ -3834,7 +3865,12 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     const ad = o.addons || {};
     let h = "";
     if (ad.imagen?.on && ad.imagen.url) h += `<div class="tiq-bdl__adimg"><img src="${esc(ad.imagen.url)}" alt=""></div>`;
-    if (ad.regalo?.on) h += `<div class="tiq-bdl__gift"><span class="tiq-bdl__gift-ic">🎁</span><span class="tiq-bdl__gift-main"><b>1x ${esc(ad.regalo.nombre || "Regalo")}</b></span><span class="tiq-bdl__gift-free">GRATIS</span></div>`;
+    if (ad.regalo?.on) {
+      const items = ad.regalo.items || (ad.regalo.nombre ? [{ nombre: ad.regalo.nombre, cantidad: 1 }] : []);
+      items.forEach((it) => {
+        h += `<div class="tiq-bdl__gift"><span class="tiq-bdl__gift-ic">🎁</span><span class="tiq-bdl__gift-main"><b>${it.cantidad || 1}x ${esc(it.nombre || "Regalo")}</b></span><span class="tiq-bdl__gift-free"${it.colorGratis ? ` style="background:${esc(it.colorGratis)}"` : ""}>${esc(it.textoGratis || "GRATIS")}</span></div>`;
+      });
+    }
     if (ad.envio?.on) h += `<div class="tiq-bdl__ship">🚚 + ${esc(ad.envio.texto || "FREE SHIPPING")}</div>`;
     return h ? `<div class="tiq-bdl__addons">${h}</div>` : "";
   }
