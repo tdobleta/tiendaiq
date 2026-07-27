@@ -143,6 +143,36 @@
     };
   }
 
+  // --- add-ons de un nivel (regalo, imagen, envío) — mismo marcado que el
+  // preview del admin (app.js: addonsPreviewBdl / filaRegaloBdl) ---
+  function filaRegalo(it) {
+    var cant = it.cantidad || 1;
+    var ic = it.imagen
+      ? '<span class="tiq-bdl__gift-ic tiq-bdl__gift-ic--img"><img src="' + esc(it.imagen) + '" alt=""></span>'
+      : '<span class="tiq-bdl__gift-ic">🎁</span>';
+    var vars = (it.variantes || []).filter(function (v) { return !it.varSel || it.varSel.indexOf(v.id) !== -1; });
+    var selc = "";
+    if (vars.length > 1) selc = '<select class="tiq-bdl__gift-var" aria-label="' + esc(it.opcionNombre || "Opción") + '">' + vars.map(function (v) { return "<option>" + esc(v.titulo) + "</option>"; }).join("") + "</select>";
+    else if (vars.length === 1) selc = '<span class="tiq-bdl__gift-varone">' + esc(vars[0].titulo) + "</span>";
+    var pill = '<span class="tiq-bdl__gift-free"' + (it.colorGratis ? ' style="background:' + esc(it.colorGratis) + '"' : "") + ">" + esc(it.textoGratis || "GRATIS") + "</span>";
+    var cents = it.precio != null ? Math.round(parseFloat(it.precio) * 100) * cant : 0;
+    var old = (it.mostrarPrecio !== false && cents > 0) ? '<s class="tiq-bdl__gift-old">' + fmt(cents) + "</s>" : "";
+    return '<div class="tiq-bdl__gift">' + ic +
+      '<span class="tiq-bdl__gift-main"><span class="tiq-bdl__gift-name">' + cant + "x " + esc(it.nombre || "Regalo") + "</span>" + selc + "</span>" +
+      '<span class="tiq-bdl__gift-right">' + pill + old + "</span></div>";
+  }
+  function addonsHTML(o) {
+    var ad = o.addons || {};
+    var h = "";
+    if (ad.imagen && ad.imagen.on && ad.imagen.url) h += '<div class="tiq-bdl__adimg"><img src="' + esc(ad.imagen.url) + '" alt=""></div>';
+    if (ad.regalo && ad.regalo.on) {
+      var items = ad.regalo.items || (ad.regalo.nombre ? [{ nombre: ad.regalo.nombre, cantidad: 1 }] : []);
+      items.forEach(function (it) { h += filaRegalo(it); });
+    }
+    if (ad.envio && ad.envio.on) h += '<div class="tiq-bdl__ship">🚚 + ' + esc(ad.envio.texto || "FREE SHIPPING") + "</div>";
+    return h ? '<div class="tiq-bdl__addons">' + h + "</div>" : "";
+  }
+
   function pintar() {
     var pu = precioUnitario();
     var tarjetas, totalSel;
@@ -174,6 +204,7 @@
               '<span class="tiq-bdl__precio-now">' + fmt(total) + "</span>" +
               (desc > 0 ? '<span class="tiq-bdl__precio-old">' + fmt(bruto) + "</span>" : "") +
             "</span>" +
+            addonsHTML(o) +
           "</label>"
         );
       }).join("");

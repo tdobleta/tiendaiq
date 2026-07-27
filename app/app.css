@@ -630,6 +630,14 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
 .be-gift__inline input[type="text"] { flex: 1; min-width: 0; }
 .be-sw2 { width: 40px; padding: 0; border: 1px solid var(--borde); border-radius: 8px; background: none; cursor: pointer; flex-shrink: 0; }
 .be-gift__pill { align-self: flex-start; color: #fff; font-size: 12px; font-weight: 700; letter-spacing: .02em; padding: 5px 16px; border-radius: 999px; }
+.be-gift__vars { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+.be-gift__vars > label { font-size: 13px; font-weight: 600; color: var(--negro); }
+.be-gift__varn { color: var(--suave); font-weight: 500; }
+.be-gift__chips { display: flex; flex-wrap: wrap; gap: 7px; }
+.be-gift__chip { font-family: inherit; font-size: 13px; padding: 6px 13px; border: 1px solid var(--borde); border-radius: 999px; background: #fff; color: var(--negro); cursor: pointer; transition: border-color .12s, background .12s; }
+.be-gift__chip:hover { border-color: var(--negro); }
+.be-gift__chip.is-on { border-color: var(--negro); background: var(--negro); color: #fff; }
+.be-gift__varhint { font-size: 12px; color: var(--suave); }
 
 /* En el preview del editor, el marco (.bdl-preview__marco) ya es la caja:
    desboxeamos el .tiq-bdl para no duplicar borde/sombra. (Los estilos del

@@ -2962,6 +2962,48 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   const fmtBdl = (c) =>
     "$ " + (Math.round(c) / 100).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+  // Vuelca un producto elegido en un ítem de regalo: nombre, imagen, precio y,
+  // si el producto tiene variantes reales (Color, Talle…), la lista para que el
+  // cliente elija. Con una sola variante ("Default") no hay elección.
+  function asignarRegalo(it, p) {
+    it.id = p.id;
+    it.nombre = p.titulo;
+    it.imagen = p.imagen || null;
+    if (p.precio != null) it.precio = p.precio;
+    // Shopify usa la opción sintética "Title" → "Default Title" para productos
+    // sin variantes reales: eso no es una elección.
+    const opt = (p.opciones || [])[0];
+    const real = opt && opt.nombre && opt.nombre !== "Title" && (opt.valores || []).length > 1;
+    const vars = (p.variantes || []).filter((v) => v && v.titulo && v.titulo !== "Default Title");
+    if (real && vars.length > 1) {
+      it.opcionNombre = opt.nombre;
+      it.variantes = vars.map((v) => ({ id: v.id, titulo: v.titulo, imagen: v.imagen || p.imagen || null }));
+      it.varSel = it.variantes.map((v) => v.id); // por defecto: se ofrecen todas
+    } else {
+      delete it.opcionNombre;
+      delete it.variantes;
+      delete it.varSel;
+    }
+  }
+
+  // Fila de un regalo en el preview (imagen, nombre, selector de variante si el
+  // cliente puede elegir, pastilla GRATIS y precio original tachado). El mismo
+  // marcado se replica en el widget del storefront (tiendaiq-bundle.js).
+  function filaRegaloBdl(it) {
+    const cant = it.cantidad || 1;
+    const ic = it.imagen
+      ? `<span class="tiq-bdl__gift-ic tiq-bdl__gift-ic--img"><img src="${esc(it.imagen)}" alt=""></span>`
+      : `<span class="tiq-bdl__gift-ic">🎁</span>`;
+    const vars = (it.variantes || []).filter((v) => !it.varSel || it.varSel.includes(v.id));
+    let sel = "";
+    if (vars.length > 1) sel = `<select class="tiq-bdl__gift-var" aria-label="${esc(it.opcionNombre || "Opción")}">${vars.map((v) => `<option>${esc(v.titulo)}</option>`).join("")}</select>`;
+    else if (vars.length === 1) sel = `<span class="tiq-bdl__gift-varone">${esc(vars[0].titulo)}</span>`;
+    const pill = `<span class="tiq-bdl__gift-free"${it.colorGratis ? ` style="background:${esc(it.colorGratis)}"` : ""}>${esc(it.textoGratis || "GRATIS")}</span>`;
+    const cents = it.precio != null ? Math.round(parseFloat(it.precio) * 100) * cant : 0;
+    const old = it.mostrarPrecio !== false && cents > 0 ? `<s class="tiq-bdl__gift-old">${fmtBdl(cents)}</s>` : "";
+    return `<div class="tiq-bdl__gift">${ic}<span class="tiq-bdl__gift-main"><span class="tiq-bdl__gift-name">${cant}x ${esc(it.nombre || "Regalo")}</span>${sel}</span><span class="tiq-bdl__gift-right">${pill}${old}</span></div>`;
+  }
+
   function cerrarMenuTipo() {
     const m = document.getElementById("bdl-tipomenu");
     if (m) m.remove();
@@ -3480,6 +3522,11 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
                   <div class="be-gift__inline"><input type="text" data-b="ofertas.${i}.addons.regalo.items.${gi}.textoGratis" value="${esc(it.textoGratis || "GRATIS")}"><input type="color" class="be-sw2" data-b="ofertas.${i}.addons.regalo.items.${gi}.colorGratis" value="${esc(it.colorGratis || "#a90c4e")}"></div></div>
                 <span class="be-gift__pill" style="background:${esc(it.colorGratis || "#a90c4e")}">${esc(it.textoGratis || "GRATIS")}</span>
                 ${beToggleRow("Mostrar precio original", `data-gift-bool="${i}:${gi}:mostrarPrecio"`, it.mostrarPrecio !== false)}
+                ${(it.variantes && it.variantes.length) ? `<div class="be-gift__vars">
+                  <label>${esc(it.opcionNombre || "Colores")} que puede elegir el cliente <span class="be-gift__varn">${(it.varSel || []).length}/${it.variantes.length}</span></label>
+                  <div class="be-gift__chips">${it.variantes.map((v, vi) => `<button type="button" class="be-gift__chip ${(it.varSel || []).includes(v.id) ? "is-on" : ""}" data-gift-var="${i}:${gi}:${vi}">${esc(v.titulo)}</button>`).join("")}</div>
+                  <div class="be-gift__varhint">${(it.varSel || []).length > 1 ? "El cliente elige en un desplegable en la tienda." : "Se entrega ese color fijo, sin desplegable."}</div>
+                </div>` : ""}
               </div>
             </div>`;
           const cfgRegalo = g.on ? `<div class="be-addon-cfg">
@@ -3550,12 +3597,13 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       const tb = t.closest("[data-toggle-b]"); if (tb) { const ruta = tb.dataset.toggleB; fijar(b, ruta, !leer(b, ruta)); marcarSucioBundles(); return pintarEditorBundle(); }
       const lb = t.closest("[data-lv-bool]"); if (lb) { const [i, f] = lb.dataset.lvBool.split(":"); const o = b.ofertas[+i]; o[f] = !o[f]; marcarSucioBundles(); pintarPreviewBundle(); return pintarEditorBundle(); }
       const at = t.closest("[data-addon-toggle]"); if (at) { const [i, key] = at.dataset.addonToggle.split(":"); const o = b.ofertas[+i]; o.addons = o.addons || {}; o.addons[key] = o.addons[key] || {}; o.addons[key].on = !o.addons[key].on; marcarSucioBundles(); pintarPreviewBundle(); return pintarEditorBundle(); }
-      const ag = t.closest("[data-addon-gift]"); if (ag) { const i = +ag.dataset.addonGift; abrirPickerTodos((p) => { const o = b.ofertas[i]; o.addons = o.addons || {}; const rg = (o.addons.regalo = o.addons.regalo || { on: true, items: [] }); rg.on = true; rg.items = rg.items || []; rg.items.push({ id: p.id, nombre: p.titulo, imagen: p.imagen || null, cantidad: 1, textoGratis: "GRATIS", mostrarPrecio: true }); rg.sel = rg.items.length - 1; marcarSucioBundles(); pintarPreviewBundle(); pintarEditorBundle(); }); return; }
+      const ag = t.closest("[data-addon-gift]"); if (ag) { const i = +ag.dataset.addonGift; abrirPickerTodos((p) => { const o = b.ofertas[i]; o.addons = o.addons || {}; const rg = (o.addons.regalo = o.addons.regalo || { on: true, items: [] }); rg.on = true; rg.items = rg.items || []; const it = { cantidad: 1, textoGratis: "GRATIS", mostrarPrecio: true }; asignarRegalo(it, p); rg.items.push(it); rg.sel = rg.items.length - 1; marcarSucioBundles(); pintarPreviewBundle(); pintarEditorBundle(); }); return; }
       const gdel = t.closest("[data-gift-del]"); if (gdel) { const [i, gi] = gdel.dataset.giftDel.split(":").map(Number); const rg = b.ofertas[i].addons.regalo; rg.items.splice(gi, 1); if (!rg.items.length) rg.on = false; rg.sel = 0; marcarSucioBundles(); pintarPreviewBundle(); return pintarEditorBundle(); }
       const gtab = t.closest("[data-gift-tab]"); if (gtab) { const [i, gi] = gtab.dataset.giftTab.split(":").map(Number); b.ofertas[i].addons.regalo.sel = gi; return pintarEditorBundle(); }
       const gadd = t.closest("[data-gift-add]"); if (gadd) { const i = +gadd.dataset.giftAdd; const rg = b.ofertas[i].addons.regalo; rg.items = rg.items || []; rg.items.push({ nombre: "", cantidad: 1, textoGratis: "GRATIS", mostrarPrecio: true }); rg.sel = rg.items.length - 1; marcarSucioBundles(); return pintarEditorBundle(); }
-      const gpick = t.closest("[data-gift-pick]"); if (gpick) { const [i, gi] = gpick.dataset.giftPick.split(":").map(Number); abrirPickerTodos((p) => { const it = b.ofertas[i].addons.regalo.items[gi]; it.id = p.id; it.nombre = p.titulo; it.imagen = p.imagen || null; marcarSucioBundles(); pintarPreviewBundle(); pintarEditorBundle(); }); return; }
+      const gpick = t.closest("[data-gift-pick]"); if (gpick) { const [i, gi] = gpick.dataset.giftPick.split(":").map(Number); abrirPickerTodos((p) => { const it = b.ofertas[i].addons.regalo.items[gi]; asignarRegalo(it, p); marcarSucioBundles(); pintarPreviewBundle(); pintarEditorBundle(); }); return; }
       const gbool = t.closest("[data-gift-bool]"); if (gbool) { const [i, gi, f] = gbool.dataset.giftBool.split(":"); const it = b.ofertas[+i].addons.regalo.items[+gi]; it[f] = it[f] === false ? true : it[f] === undefined ? false : !it[f]; marcarSucioBundles(); pintarPreviewBundle(); return pintarEditorBundle(); }
+      const gvar = t.closest("[data-gift-var]"); if (gvar) { const [i, gi, vi] = gvar.dataset.giftVar.split(":").map(Number); const it = b.ofertas[i].addons.regalo.items[gi]; const vid = it.variantes[vi].id; it.varSel = it.varSel || []; const k = it.varSel.indexOf(vid); if (k >= 0) { if (it.varSel.length > 1) it.varSel.splice(k, 1); } else it.varSel.push(vid); marcarSucioBundles(); pintarPreviewBundle(); return pintarEditorBundle(); }
       const add = t.closest("[data-add-nivel]"); if (add) { const n = b.ofertas.length + 1; b.ofertas.push({ cantidad: n, descuento: 0, titulo: "Buy " + n, subtitulo: "", etiqueta: "", badge: "", popular: false, activo: true, ver: {} }); s.nivelOpen = b.ofertas.length - 1; marcarSucioBundles(); return pintarEditorBundle(); }
     });
 
@@ -3867,12 +3915,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     if (ad.imagen?.on && ad.imagen.url) h += `<div class="tiq-bdl__adimg"><img src="${esc(ad.imagen.url)}" alt=""></div>`;
     if (ad.regalo?.on) {
       const items = ad.regalo.items || (ad.regalo.nombre ? [{ nombre: ad.regalo.nombre, cantidad: 1 }] : []);
-      items.forEach((it) => {
-        const ic = it.imagen
-          ? `<span class="tiq-bdl__gift-ic tiq-bdl__gift-ic--img"><img src="${esc(it.imagen)}" alt=""></span>`
-          : `<span class="tiq-bdl__gift-ic">🎁</span>`;
-        h += `<div class="tiq-bdl__gift">${ic}<span class="tiq-bdl__gift-main"><b>${it.cantidad || 1}x ${esc(it.nombre || "Regalo")}</b></span><span class="tiq-bdl__gift-free"${it.colorGratis ? ` style="background:${esc(it.colorGratis)}"` : ""}>${esc(it.textoGratis || "GRATIS")}</span></div>`;
-      });
+      items.forEach((it) => { h += filaRegaloBdl(it); });
     }
     if (ad.envio?.on) h += `<div class="tiq-bdl__ship">🚚 + ${esc(ad.envio.texto || "FREE SHIPPING")}</div>`;
     return h ? `<div class="tiq-bdl__addons">${h}</div>` : "";

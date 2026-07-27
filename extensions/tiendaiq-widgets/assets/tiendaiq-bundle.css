@@ -73,12 +73,17 @@
 
 /* --- add-ons dentro de la tarjeta (regalo / envío / imagen) --- */
 .tiq-bdl__addons { flex-basis: 100%; margin-top: 10px; padding-top: 10px; border-top: 1px solid color-mix(in srgb, var(--tiq-ac) 22%, #fff); display: flex; flex-direction: column; gap: 8px; }
-.tiq-bdl__gift { display: flex; align-items: center; gap: 10px; font-size: .86em; }
-.tiq-bdl__gift-ic { font-size: 1.3em; }
-.tiq-bdl__gift-ic--img { width: 36px; height: 36px; flex: 0 0 auto; border-radius: 7px; overflow: hidden; background: #f4f4f4; border: 1px solid rgba(0,0,0,.06); }
+.tiq-bdl__gift { display: flex; align-items: center; gap: 11px; font-size: .9em; }
+.tiq-bdl__gift-ic { font-size: 1.3em; flex: 0 0 auto; }
+.tiq-bdl__gift-ic--img { width: 42px; height: 42px; flex: 0 0 auto; border-radius: 8px; overflow: hidden; background: #f4f4f4; border: 1px solid rgba(0,0,0,.06); }
 .tiq-bdl__gift-ic--img img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.tiq-bdl__gift-main { flex: 1; min-width: 0; }
-.tiq-bdl__gift-free { font-size: .72em; font-weight: 700; color: #fff; background: var(--tiq-ac); padding: 2px 9px; border-radius: 999px; white-space: nowrap; }
+.tiq-bdl__gift-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 5px; }
+.tiq-bdl__gift-name { font-weight: 600; color: #2e2e2e; line-height: 1.2; }
+.tiq-bdl__gift-var { font: inherit; font-size: .92em; padding: 3px 22px 3px 8px; border: 1px solid var(--tiq-card-bd); border-radius: 6px; background: #fff; color: #2e2e2e; max-width: 150px; cursor: pointer; }
+.tiq-bdl__gift-varone { font-size: .86em; color: #8a8a8a; }
+.tiq-bdl__gift-right { flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
+.tiq-bdl__gift-free { font-size: .72em; font-weight: 700; letter-spacing: .02em; color: #fff; background: var(--tiq-ac); padding: 3px 10px; border-radius: 999px; white-space: nowrap; }
+.tiq-bdl__gift-old { font-size: .82em; color: #8a8a8a; text-decoration: line-through; }
 .tiq-bdl__ship { display: flex; align-items: center; gap: 8px; font-size: .82em; font-weight: 600; color: #2e2e2e; }
 .tiq-bdl__adimg { display: flex; justify-content: center; }
 .tiq-bdl__adimg img { max-width: 100%; max-height: 140px; object-fit: contain; border-radius: 8px; display: block; }

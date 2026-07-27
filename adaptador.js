@@ -84,6 +84,8 @@ const CONSULTA_LISTA = `{
         templateSuffix
         priceRangeV2 { minVariantPrice { amount currencyCode } }
         featuredMedia { id preview { image { url } } }
+        options { name values }
+        variants(first: 20) { edges { node { id title availableForSale } } }
       }
     }
   }

@@ -288,7 +288,13 @@ async function api(req, res, url) {
         imagen: p.featuredMedia?.preview?.image?.url ?? null,
         precio: p.priceRangeV2?.minVariantPrice?.amount ?? null,
         moneda: p.priceRangeV2?.minVariantPrice?.currencyCode ?? null,
-        estado: paginas[idDePagina(p.id)] ?? null
+        estado: paginas[idDePagina(p.id)] ?? null,
+        opciones: (p.options || []).map((o) => ({ nombre: o.name, valores: o.values || [] })),
+        variantes: (p.variants?.edges || []).map((e) => ({
+          id: e.node.id,
+          titulo: e.node.title,
+          disponible: e.node.availableForSale !== false
+        }))
       }))
     );
   }
