@@ -592,6 +592,32 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
 .be-addon[disabled] { opacity: .55; cursor: not-allowed; color: var(--suave); }
 .be-addon span { font-weight: 600; }
 
+/* --- Estilo de creación tipo Pumper: más grande, más contraste, menos gris.
+   Scopeado al editor de bundles para no tocar el resto de la app. --- */
+.be-left .campo--editor { margin: 0; }
+.be-left .campo--editor label { font-size: 13.5px; font-weight: 600; color: var(--negro); margin-bottom: 7px; }
+.be-left .campo--editor input, .be-left .campo--editor select, .be-left .campo--editor textarea {
+  font-size: 14.5px; padding: 12px 13px; border-radius: 9px; border: 1px solid #d3d3db; color: var(--negro);
+}
+.be-left .campo--editor input::placeholder { color: #a9a9b2; }
+.be-sec__head { font-size: 15px; padding: 18px 20px; }
+.be-sec__title { font-size: 15px; margin: 6px 2px 14px; }
+.be-sec__body { gap: 16px; padding: 0 18px 18px; }
+.be-block { padding: 18px; gap: 15px; border-radius: 11px; }
+.be-block__t { font-size: 14px; font-weight: 700; }
+.be-grid2 { gap: 14px; }
+.be-radio { font-size: 14px; padding: 5px 0; }
+.be-radio input { width: 17px; height: 17px; }
+.be-tgl-row { font-size: 13.5px; }
+.be-lv__head { padding: 14px 16px; }
+.be-lv__name { font-size: 14px; }
+.be-dts { gap: 8px; }
+.be-dt { font-size: 13px; padding: 9px 13px; border-radius: 9px; }
+.be-eye { width: 40px; height: 42px; }
+.be-del { font-size: 14px; }
+.be-add { font-size: 14px; padding: 14px; }
+.be-top h1 { font-size: 22px; }
+
 @media (max-width: 900px) { .be-layout { grid-template-columns: 1fr; } }
 
 /* Modal "Ver todos los productos" — lista completa buscable estilo picker. */
