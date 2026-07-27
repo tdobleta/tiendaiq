@@ -3246,6 +3246,10 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   const BE_OJO = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1.5 12S5 5 12 5s10.5 7 10.5 7-3.5 7-10.5 7S1.5 12 1.5 12z"/><circle cx="12" cy="12" r="3"/></svg>`;
   const BE_OJO_OFF = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3l18 18M10.6 10.7a3 3 0 004.2 4.2M9.9 5.2A9.5 9.5 0 0112 5c7 0 10.5 7 10.5 7a17 17 0 01-3.2 4M6.6 6.6A17 17 0 001.5 12S5 19 12 19c3 0 5.2-1.3 6.8-2.7"/></svg>`;
 
+  const BE_DUP = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg>`;
+  const BE_STAR = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3.5l2.6 5.3 5.9.9-4.25 4.15 1 5.85L12 16.9l-5.25 2.8 1-5.85L2.5 9.7l5.9-.9z"/></svg>`;
+  const BE_CHEV = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>`;
+
   // Fila con etiqueta + toggle (reemplaza a los checkboxes). attr = el data-* que
   // el bind usa para prender/apagar (data-toggle-b en el bundle, data-lv-bool en la oferta).
   const beToggleRow = (label, attr, on, help) =>
@@ -3345,10 +3349,10 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       <div class="be-lv__head">
         <span class="be-lv__drag">⠿</span>
         <button class="be-toggle ${activo ? "is-on" : ""}" data-lv-toggle="${i}" title="Prender/apagar nivel"><span></span></button>
-        <span class="be-lv__name">Nivel ${i + 1}: <b>${esc(o.titulo || "Buy " + (Number(o.cantidad) || 1))}</b></span>
-        <button class="be-lv__icn" data-lv-dup="${i}" title="Duplicar">⧉</button>
-        <button class="be-lv__icn ${o.popular ? "is-star" : ""}" data-lv-star="${i}" title="Destacar">★</button>
-        <button class="be-lv__chev ${open ? "is-open" : ""}" data-lv-open="${i}">⌄</button>
+        <span class="be-lv__name"><span class="be-lv__n">Nivel ${i + 1}:</span> <b>${esc(o.titulo || "Buy " + (Number(o.cantidad) || 1))}</b></span>
+        <button class="be-lv__icn" data-lv-dup="${i}" title="Duplicar">${BE_DUP}</button>
+        <button class="be-lv__star ${o.popular ? "is-star" : ""}" data-lv-star="${i}" title="Destacar">${BE_STAR}</button>
+        <button class="be-lv__chev ${open ? "is-open" : ""}" data-lv-open="${i}" title="Abrir/cerrar">${BE_CHEV}</button>
       </div>`;
     if (!open) return `<div class="be-lv">${head}</div>`;
 
