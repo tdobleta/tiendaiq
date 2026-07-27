@@ -3289,8 +3289,13 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       </div>
       <div class="be-layout">
         <div class="be-left" id="be-left">
+          <div class="be-sec__title be-sec__title--top">Las ofertas ganadoras comienzan aquí</div>
           ${bdlSeccionSetup(b, s)}
           ${bdlSeccionNiveles(b, s)}
+          <div class="be-guinda">
+            <div class="be-guinda__t">La guinda del pastel</div>
+            <div class="be-guinda__s">Configuración avanzada · Color y estilo · Opciones visuales</div>
+          </div>
         </div>
         ${previewAsideBundle()}
       </div>`;
