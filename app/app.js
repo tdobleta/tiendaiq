@@ -3246,13 +3246,19 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   const BE_OJO = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1.5 12S5 5 12 5s10.5 7 10.5 7-3.5 7-10.5 7S1.5 12 1.5 12z"/><circle cx="12" cy="12" r="3"/></svg>`;
   const BE_OJO_OFF = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3l18 18M10.6 10.7a3 3 0 004.2 4.2M9.9 5.2A9.5 9.5 0 0112 5c7 0 10.5 7 10.5 7a17 17 0 01-3.2 4M6.6 6.6A17 17 0 001.5 12S5 19 12 19c3 0 5.2-1.3 6.8-2.7"/></svg>`;
 
+  // Fila con etiqueta + toggle (reemplaza a los checkboxes). attr = el data-* que
+  // el bind usa para prender/apagar (data-toggle-b en el bundle, data-lv-bool en la oferta).
+  const beToggleRow = (label, attr, on, help) =>
+    `<div class="be-tgl-row"><span>${label}${help ? ` <span class="be-help" title="${esc(help)}">?</span>` : ""}</span>
+      <button type="button" class="be-toggle ${on ? "is-on" : ""}" ${attr}><span></span></button></div>`;
+
   // ---------- EDITOR estilo Pumper (Tema 1: Descuento por Cantidad) ----------
   function pintarEditorBundle() {
     const b = bundleActual();
     if (!b) { estado.bundles.vista = "lista"; return pintarDashboardBundles(); }
     const s = estado.bundles;
-    if (s.setupOpen === undefined) s.setupOpen = true;
-    if (s.nivelOpen === undefined) s.nivelOpen = 0;
+    if (s.setupOpen === undefined) s.setupOpen = false;
+    if (s.nivelOpen === undefined) s.nivelOpen = null;
     // Semillas de campos nuevos (sin tocar el default del server).
     if (!b.opciones) b.opciones = { variantes: false, volumen: true };
     (b.ofertas || []).forEach((o) => { if (o.activo === undefined) o.activo = true; if (!o.ver) o.ver = {}; });
@@ -3311,8 +3317,8 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         </div>
         <div class="be-block">
           <div class="be-block__t">Configuración básica</div>
-          ${campoBdl("opciones.variantes", "Permitir a los clientes elegir diferentes variantes para cada artículo", "bool")}
-          ${campoBdl("opciones.volumen", "Descuento por volumen (extender el descuento máximo a todas las cantidades)", "bool")}
+          ${beToggleRow("Permitir a los clientes elegir diferentes variantes para cada artículo", `data-toggle-b="opciones.variantes"`, !!leer(b, "opciones.variantes"))}
+          ${beToggleRow("Descuento por volumen (extender el descuento máximo a todas las cantidades)", `data-toggle-b="opciones.volumen"`, leer(b, "opciones.volumen") !== false)}
         </div>
       </div>`;
     return `<section class="be-sec">
@@ -3347,10 +3353,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     if (!open) return `<div class="be-lv">${head}</div>`;
 
     const TIPOS = [["porcentaje", "% Descuento"], ["fijo", "Fijo"], ["especifico", "Precio específico"], ["bogo", "BOGO"], ["ninguno", "Ninguno"]];
-    const tabs = TIPOS.map(([k, t]) => {
-      const soon = k === "fijo" || k === "especifico" || k === "bogo";
-      return `<button class="be-dt ${tipo === k ? "is-sel" : ""} ${soon ? "is-soon" : ""}" ${soon ? "disabled" : `data-lv-tipo="${i}:${k}"`}>${t}</button>`;
-    }).join("");
+    const tabs = TIPOS.map(([k, t]) => `<button class="be-dt ${tipo === k ? "is-sel" : ""}" data-lv-tipo="${i}:${k}">${t}</button>`).join("");
 
     const campoOjo = (ruta, label, verKey) => {
       const on = !verKey || o.ver[verKey] !== false;
@@ -3359,22 +3362,60 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         <input type="text" data-b="${ruta}" value="${esc(leer(b, ruta) ?? "")}" ${on ? "" : "disabled"}></div>${eye}</div>`;
     };
 
+    const cant = campoBdl(`ofertas.${i}.cantidad`, "Cantidad total", "numero", 'min="1"');
+    const redondeo = `<div class="be-tgl-row"><span>Redondeo de precios <span class="be-help" title="Redondea el precio final (ej. terminar en .99)">?</span></span>
+      <select data-b="ofertas.${i}.redondeo_val" ${o.redondeo ? "" : "disabled"}>
+        ${[".99", ".95", ".00"].map((v) => `<option ${o.redondeo_val === v ? "selected" : ""}>${v}</option>`).join("")}
+      </select>
+      <button type="button" class="be-toggle ${o.redondeo ? "is-on" : ""}" data-lv-bool="${i}:redondeo"><span></span></button></div>`;
+
+    let campos;
+    if (tipo === "fijo") {
+      campos = `<div class="be-grid2">
+          <div class="campo campo--editor"><label>Descuento fijo</label><input type="text" data-b="ofertas.${i}.monto_fijo" value="${esc(o.monto_fijo ?? "")}" placeholder="ARS 10"></div>${cant}</div>
+        ${beToggleRow("Descuento fijo por unidad", `data-lv-bool="${i}:fijo_unidad"`, !!o.fijo_unidad)}${redondeo}`;
+    } else if (tipo === "especifico") {
+      campos = `<div class="be-warn">⚠ Este tipo de descuento solo puede usarse con un producto seleccionado.</div>
+        <div class="be-grid2">
+          <div class="campo campo--editor"><label>Introducir precio objetivo (total)</label><input type="text" data-b="ofertas.${i}.precio_objetivo" value="${esc(o.precio_objetivo ?? "")}" placeholder="ARS 10"></div>${cant}</div>${redondeo}`;
+    } else if (tipo === "bogo") {
+      const c = Math.max(1, Number(o.bogo_compra) || 1), g = Math.max(1, Number(o.bogo_obten) || 1);
+      campos = `<div class="be-bogo">
+          <div class="campo campo--editor"><label>Compra X</label><input type="number" data-b="ofertas.${i}.bogo_compra" data-tipo="numero" min="1" value="${c}"></div>
+          <span class="be-bogo__op">+</span>
+          <div class="campo campo--editor"><label>Obtén Y gratis</label><input type="number" data-b="ofertas.${i}.bogo_obten" data-tipo="numero" min="1" value="${g}"></div>
+          <span class="be-bogo__op">=</span>
+          <div class="campo campo--editor"><label>Cantidad total</label><input type="number" value="${c + g}" disabled></div></div>`;
+    } else if (tipo === "ninguno") {
+      campos = `<div class="be-grid2">
+          <div class="campo campo--editor"><label>Descuento</label><input type="number" value="${esc(o.descuento ?? 0)}" disabled></div>${cant}</div>`;
+    } else {
+      campos = `<div class="be-grid2">
+          <div class="campo campo--editor"><label>Descuento en %</label><input type="number" data-b="ofertas.${i}.descuento" data-tipo="numero" min="0" max="100" value="${esc(o.descuento ?? 0)}"></div>${cant}</div>${redondeo}`;
+    }
+
     const body = `
       <div class="be-lv__body">
         <div class="be-block">
           <div class="be-block__t">Seleccionar tipo de descuento</div>
           <div class="be-dts">${tabs}</div>
-          <div class="be-grid2">
-            <div class="campo campo--editor"><label>Descuento %</label>
-              <input type="number" data-b="ofertas.${i}.descuento" data-tipo="numero" min="0" max="100" value="${esc(o.descuento ?? 0)}" ${tipo === "ninguno" ? "disabled" : ""}></div>
-            ${campoBdl(`ofertas.${i}.cantidad`, "Cantidad total", "numero", 'min="1"')}
-          </div>
+          ${campos}
         </div>
         <div class="be-block">
           ${campoOjo(`ofertas.${i}.titulo`, "Título (ej. Buy 2)")}
           ${campoOjo(`ofertas.${i}.etiqueta`, "Etiqueta (ej. 20% OFF / Standard Price)", "etiqueta")}
           ${campoOjo(`ofertas.${i}.subtitulo`, "Subtítulo (ej. You Save $4.00)", "subtitulo")}
           ${campoOjo(`ofertas.${i}.badge`, "Insignia (ej. Most Popular / Best Value)", "badge")}
+        </div>
+        <div class="be-block">${beToggleRow("Marcar como agotado", `data-lv-bool="${i}:agotado"`, !!o.agotado, "Muestra el nivel como sin stock")}</div>
+        <div class="be-addons">
+          <div class="be-addons__t">⊕ Add-Ons</div>
+          <div class="be-addons__row">
+            <button type="button" class="be-addon" disabled>🖼<span>+ Imagen</span></button>
+            <button type="button" class="be-addon" disabled>🎁<span>+ Regalo gratis</span></button>
+            <button type="button" class="be-addon" disabled>🚚<span>+ Envío Gratis</span></button>
+          </div>
+          <div class="panel__sub" style="margin-top:8px">Los Add-Ons se activan en el próximo paso.</div>
         </div>
         <button class="be-del" data-lv-del="${i}">🗑 Eliminar nivel ${i + 1}</button>
       </div>`;
@@ -3393,6 +3434,8 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       fijar(b, ruta, v);
       marcarSucioBundles();
       pintarPreviewBundle();
+      // BOGO: la "cantidad total" es X+Y (campo calculado) → re-render.
+      if (/bogo_(compra|obten)$/.test(ruta)) pintarEditorBundle();
     });
 
     root.addEventListener("change", (e) => {
@@ -3417,7 +3460,8 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       const del = t.closest("[data-lv-del]"); if (del) { b.ofertas.splice(+del.dataset.lvDel, 1); if (!b.ofertas.length) b.ofertas.push({ cantidad: 1, descuento: 0, titulo: "Buy 1", ver: {}, activo: true }); s.nivelOpen = null; marcarSucioBundles(); return pintarEditorBundle(); }
       const tp = t.closest("[data-lv-tipo]"); if (tp) { const [i, k] = tp.dataset.lvTipo.split(":"); const o = b.ofertas[+i]; o.tipo_desc = k; if (k === "ninguno") o.descuento = 0; marcarSucioBundles(); return pintarEditorBundle(); }
       const ver = t.closest("[data-lv-ver]"); if (ver) { const [i, key] = ver.dataset.lvVer.split(":"); const o = b.ofertas[+i]; o.ver = o.ver || {}; o.ver[key] = o.ver[key] === false ? true : false; marcarSucioBundles(); return pintarEditorBundle(); }
-      const tb = t.closest("[data-toggle-b]"); if (tb) { const ruta = tb.dataset.toggleB; fijar(b, ruta, leer(b, ruta) === false ? true : false); marcarSucioBundles(); return pintarEditorBundle(); }
+      const tb = t.closest("[data-toggle-b]"); if (tb) { const ruta = tb.dataset.toggleB; fijar(b, ruta, !leer(b, ruta)); marcarSucioBundles(); return pintarEditorBundle(); }
+      const lb = t.closest("[data-lv-bool]"); if (lb) { const [i, f] = lb.dataset.lvBool.split(":"); const o = b.ofertas[+i]; o[f] = !o[f]; marcarSucioBundles(); pintarPreviewBundle(); return pintarEditorBundle(); }
       const add = t.closest("[data-add-nivel]"); if (add) { const n = b.ofertas.length + 1; b.ofertas.push({ cantidad: n, descuento: 0, titulo: "Buy " + n, subtitulo: "", etiqueta: "", badge: "", popular: false, activo: true, ver: {} }); s.nivelOpen = b.ofertas.length - 1; marcarSucioBundles(); return pintarEditorBundle(); }
     });
 
@@ -3710,6 +3754,18 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     });
   }
 
+  // Precio de un nivel según su tipo de descuento (para el preview).
+  function totalOfertaBdl(o, PU) {
+    const tipo = o.tipo_desc || (Number(o.descuento) > 0 ? "porcentaje" : "ninguno");
+    if (tipo === "bogo") { const c = Math.max(1, Number(o.bogo_compra) || 1), g = Math.max(1, Number(o.bogo_obten) || 1); return { cant: c + g, bruto: PU * (c + g), total: PU * c }; }
+    const cant = Math.max(1, Number(o.cantidad) || 1);
+    const bruto = PU * cant;
+    if (tipo === "fijo") { const m = (parseFloat(o.monto_fijo) || 0) * 100; return { cant, bruto, total: Math.max(0, bruto - (o.fijo_unidad ? m * cant : m)) }; }
+    if (tipo === "especifico") { const tt = (parseFloat(o.precio_objetivo) || 0) * 100; return { cant, bruto, total: tt > 0 ? tt : bruto }; }
+    if (tipo === "ninguno") return { cant, bruto, total: bruto };
+    const desc = Number(o.descuento) || 0; return { cant, bruto, total: Math.round(bruto * (1 - desc / 100)) };
+  }
+
   function previewBundleHTML(b, PU = PRECIO_DEMO) {
     const d = b.diseno || {};
     const bot = d.boton || {};
@@ -3750,15 +3806,12 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       const verF = (o, k) => !o.ver || o.ver[k] !== false;
       cards = activos
         .map((o, i) => {
-          const cant = Math.max(1, Number(o.cantidad) || 1);
-          const desc = Number(o.descuento) || 0;
-          const bruto = PU * cant;
-          const total = Math.round(bruto * (1 - desc / 100));
+          const { cant, bruto, total } = totalOfertaBdl(o, PU);
           const ahorro = bruto - total;
           const etq = verF(o, "etiqueta") ? o.etiqueta : "";
           const sub = verF(o, "subtitulo") ? o.subtitulo : "";
           const badge = verF(o, "badge") ? o.badge : "";
-          return `<label class="tiq-bdl__card ${i === predIdx ? "is-sel" : ""} ${o.popular ? "is-pop" : ""}">
+          return `<label class="tiq-bdl__card ${i === predIdx ? "is-sel" : ""} ${o.popular ? "is-pop" : ""} ${o.agotado ? "is-agotado" : ""}">
             ${badge ? `<span class="tiq-bdl__badge">${esc(badge)}</span>` : ""}
             <span class="tiq-bdl__radio"></span>
             <span class="tiq-bdl__main">
@@ -3768,13 +3821,13 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
             </span>
             <span class="tiq-bdl__precio">
               <span class="tiq-bdl__precio-now">${fmtBdl(total)}</span>
-              ${desc > 0 ? `<span class="tiq-bdl__precio-old">${fmtBdl(bruto)}</span>` : ""}
+              ${total < bruto ? `<span class="tiq-bdl__precio-old">${fmtBdl(bruto)}</span>` : ""}
             </span>
           </label>`;
         })
         .join("");
       const oSel = activos[predIdx] || { cantidad: 1, descuento: 0 };
-      totalSel = Math.round(PU * Math.max(1, Number(oSel.cantidad) || 1) * (1 - (Number(oSel.descuento) || 0) / 100));
+      totalSel = totalOfertaBdl(oSel, PU).total;
     }
     const textoBoton = (bot.texto || "Agregar al carrito — {total}").replace(/\{total\}/g, fmtBdl(totalSel));
 
