@@ -658,37 +658,41 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
 
 .be-sec__title { font-size: 14px; font-weight: 600; color: #202223; margin: 20px 2px 12px; }
 .be-sec__title--top { margin-top: 0; }
-.be-sec { border-color: #c9cccf; border-radius: 12px; }
-.be-sec__head { min-height: 46px; padding: 12px 14px; font-size: 14px; font-weight: 500; color: #303030; }
-.be-chev { color: #616161; }
+.be-sec { border-color: #d9d9d9; border-radius: 12px; }
+.be-sec__head { min-height: 48px; padding: 14px 16px; font-size: 14px; font-weight: 500; color: #202223; }
+.be-chev { color: #6d7175; font-size: 16px; }
 
-.be-lv { border-color: #c9cccf; border-radius: 12px; }
-.be-lv__head { padding: 12px 14px; gap: 12px; }
-.be-lv__drag { color: #b5b5b5; }
+.be-lvs { gap: 8px; }
+.be-lv { border-color: #d9d9d9; border-radius: 12px; }
+.be-lv__head { padding: 14px 16px; gap: 12px; }
+.be-lv__drag { color: #b8b8b8; }
 .be-lv__name { font-size: 14px; }
-.be-lv__n { color: #0d9488; font-weight: 600; }
-.be-lv__name b { color: #202223; font-weight: 600; }
-.be-toggle { width: 36px; height: 20px; }
-.be-toggle span { width: 16px; height: 16px; }
-.be-toggle.is-on span { left: 18px; }
-.be-lv__icn { width: 30px; height: 30px; border-radius: 6px; border-color: #c9cccf; }
-.be-lv__icn svg { width: 15px; height: 15px; }
-.be-lv__star { width: 30px; height: 30px; border: none; background: #d2d5d8; color: #fff; }
-.be-lv__star svg { width: 15px; height: 15px; }
+.be-lv__n { color: #202223; font-weight: 600; margin-right: 2px; }
+.be-lv__name b { color: #202223; font-weight: 400; }
+.be-toggle { width: 30px; height: 16px; }
+.be-toggle span { width: 12px; height: 12px; top: 2px; }
+.be-toggle.is-on span { left: 16px; }
+.be-lv__icn { width: 24px; height: 24px; border-radius: 6px; border-color: #c9cccf; color: #6d7175; }
+.be-lv__icn svg { width: 16px; height: 16px; }
+.be-lv__star { width: 24px; height: 24px; border: none; background: #d2d5d8; color: #fff; }
+.be-lv__star svg { width: 14px; height: 14px; }
 .be-lv__star.is-star { background: #6d7175; color: #fff; }
-.be-lv__chev { color: #616161; width: 30px; }
+.be-lv__chev { color: #6d7175; width: 24px; }
+.be-lv__chev svg { width: 16px; height: 16px; }
 
-.be-add { min-height: 34px; padding: 9px; border: 1px dashed #bfc3c8; border-radius: 8px; font-size: 13px; font-weight: 500; color: #202223; }
-.be-block { border-color: #c9cccf; }
-.be-left .campo--editor input, .be-left .campo--editor select, .be-left .campo--editor textarea { border-color: #c9cccf; }
+.be-add { min-height: 34px; padding: 10px; border: 1px dashed #bfc3c8; border-radius: 8px; font-size: 13px; font-weight: 500; color: #202223; }
+.be-block { border-color: #d9d9d9; }
+.be-left .campo--editor input, .be-left .campo--editor select, .be-left .campo--editor textarea { border-color: #d9d9d9; }
 
 /* "La guinda del pastel" */
 .be-guinda { margin-top: 22px; }
 .be-guinda__t { font-size: 16px; font-weight: 600; color: #202223; }
 .be-guinda__s { font-size: 11.5px; color: #6d7175; margin-top: 3px; }
 
-/* Panel de preview: 330px, radius 12, padding 16, sombra sutil, sin borde duro */
-.be-layout .cod-preview.tarjeta { padding: 16px; border-radius: 12px; border: none; box-shadow: 0 1px 3px rgba(0, 0, 0, .08); margin: 0; }
+/* Preview: UNA sola caja (padding 16). El marco deja de ser caja para no
+   duplicar padding → el widget queda más ancho (panel ~330, widget ~298). */
+.be-layout .cod-preview.tarjeta { padding: 16px; border-radius: 12px; border: 1px solid #e5e5e5; box-shadow: 0 1px 4px rgba(0, 0, 0, .06); margin: 0; }
+.be-layout .bdl-preview__marco { padding: 0; border: none; background: none; margin-top: 14px; }
 
 /* Modal "Ver todos los productos" — lista completa buscable estilo picker. */
 .picker-modal { position: fixed; inset: 0; z-index: 100; background: rgba(18, 18, 24, .38); display: grid; place-items: center; padding: 20px; }
