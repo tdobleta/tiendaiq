@@ -611,6 +611,8 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
 .be-gift-sel__img img { width: 100%; height: 100%; object-fit: cover; }
 .be-gift-sel__n { flex: 1; min-width: 0; font-weight: 600; color: var(--negro); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .be-gift-sel__ch { background: none; border: 1px solid var(--borde); border-radius: 8px; padding: 6px 12px; font-family: inherit; font-size: 13px; cursor: pointer; color: var(--negro); }
+.be-img-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 22px; border: 1.5px dashed #c9cccf; border-radius: 10px; background: none; color: var(--negro); font-family: inherit; font-size: 13.5px; font-weight: 500; cursor: pointer; }
+.be-img-btn:hover { border-color: var(--negro); background: var(--fondo); }
 
 /* En el preview del editor, el marco (.bdl-preview__marco) ya es la caja:
    desboxeamos el .tiq-bdl para no duplicar borde/sombra. (Los estilos del

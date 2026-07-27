@@ -1497,6 +1497,27 @@
     if (estado.producto) ir("informacion");
   }
 
+  // Sube una imagen (add-on del bundle) a Shopify Files y guarda su URL en la
+  // oferta. Reusa /cod/imagen (subida por tienda, no atada a página). Nada de links.
+  async function subirImagenBundle(archivo, oferta) {
+    try {
+      const base64 = await new Promise((res, rej) => {
+        const fr = new FileReader();
+        fr.onload = () => res(String(fr.result).split(",")[1]);
+        fr.onerror = () => rej(new Error("No se pudo leer el archivo"));
+        fr.readAsDataURL(archivo);
+      });
+      const r = await api("/cod/imagen", { method: "POST", body: { nombre: archivo.name, mime: archivo.type, base64 } });
+      oferta.addons = oferta.addons || {};
+      oferta.addons.imagen = { on: true, url: r.url };
+      marcarSucioBundles();
+      pintarPreviewBundle();
+      pintarEditorBundle();
+    } catch (e) {
+      vista.insertAdjacentHTML("afterbegin", `<div class="error">✖ No se pudo subir la imagen: ${esc(e.message)}</div>`);
+    }
+  }
+
   // "Ver todos los productos": modal con la lista completa, buscable, estilo el
   // selector nativo de Shopify. Reusa estado.productos (sin backend) y la misma
   // selección (elegirProducto).
@@ -3433,7 +3454,9 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
           const btn = (key, ic, label) => `<button type="button" class="be-addon ${ad[key]?.on ? "is-on" : ""}" data-addon-toggle="${i}:${key}">${ic}<span>${label}</span></button>`;
           const cfgImagen = ad.imagen?.on ? `<div class="be-addon-cfg">
               <div class="be-addon-cfg__t">🖼 Agregar imagen<button class="be-addon-cfg__x" data-addon-toggle="${i}:imagen">Eliminar</button></div>
-              <div class="campo campo--editor"><label>Enlace de la imagen</label><input type="text" data-b="ofertas.${i}.addons.imagen.url" value="${esc(ad.imagen.url || "")}" placeholder="https://…/imagen.png"></div></div>` : "";
+              ${ad.imagen.url
+                ? `<div class="be-gift-sel"><span class="be-gift-sel__img"><img src="${esc(ad.imagen.url)}" alt=""></span><span class="be-gift-sel__n">Imagen cargada ✓</span><label class="be-gift-sel__ch" style="cursor:pointer">Cambiar<input type="file" accept="image/*" hidden data-addon-img="${i}"></label></div>`
+                : `<label class="be-img-btn">⬆ Seleccionar imagen de tu computadora<input type="file" accept="image/*" hidden data-addon-img="${i}"></label>`}</div>` : "";
           const g = ad.regalo || {};
           const cfgRegalo = g.on ? `<div class="be-addon-cfg">
               <div class="be-addon-cfg__t">🎁 Regalo gratis<button class="be-addon-cfg__x" data-addon-toggle="${i}:regalo">Eliminar</button></div>
@@ -3481,6 +3504,10 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         if (e.target.checked) { if (!b.activador.ids.includes(gid)) b.activador.ids.push(gid); }
         else b.activador.ids = b.activador.ids.filter((x) => x !== gid);
         marcarSucioBundles(); pintarPreviewBundle();
+      }
+      // Add-on Imagen: subir archivo desde la compu (no un link).
+      if (e.target.dataset.addonImg !== undefined && e.target.files?.length) {
+        subirImagenBundle(e.target.files[0], b.ofertas[+e.target.dataset.addonImg]);
       }
     });
 
