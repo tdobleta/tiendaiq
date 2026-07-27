@@ -3242,59 +3242,187 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
 
   // ---------- editor ----------
 
+  // Íconos de ojo (mostrar/ocultar campo) para el editor de niveles.
+  const BE_OJO = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1.5 12S5 5 12 5s10.5 7 10.5 7-3.5 7-10.5 7S1.5 12 1.5 12z"/><circle cx="12" cy="12" r="3"/></svg>`;
+  const BE_OJO_OFF = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3l18 18M10.6 10.7a3 3 0 004.2 4.2M9.9 5.2A9.5 9.5 0 0112 5c7 0 10.5 7 10.5 7a17 17 0 01-3.2 4M6.6 6.6A17 17 0 001.5 12S5 19 12 19c3 0 5.2-1.3 6.8-2.7"/></svg>`;
+
+  // ---------- EDITOR estilo Pumper (Tema 1: Descuento por Cantidad) ----------
   function pintarEditorBundle() {
     const b = bundleActual();
     if (!b) { estado.bundles.vista = "lista"; return pintarDashboardBundles(); }
-    const inst = estado.bundles.config.instalado;
     const s = estado.bundles;
+    if (s.setupOpen === undefined) s.setupOpen = true;
+    if (s.nivelOpen === undefined) s.nivelOpen = 0;
+    // Semillas de campos nuevos (sin tocar el default del server).
+    if (!b.opciones) b.opciones = { variantes: false, volumen: true };
+    (b.ofertas || []).forEach((o) => { if (o.activo === undefined) o.activo = true; if (!o.ver) o.ver = {}; });
 
     vista.innerHTML = `
-      <div class="inicio-cabecera">
-        <h1><button class="volver-flecha" id="bdl-volver">←</button> ${esc(b.nombre) || "Bundle"}</h1>
-        <div class="inicio-cabecera__acciones">
-          <label class="cod-switch" title="Prende o apaga este bundle en tu tienda.">
-            <input type="checkbox" id="bdl-activo" ${b.activo ? "checked" : ""}>
-            <span class="cod-switch__pista"></span>
-            <span class="cod-switch__texto">${b.activo ? "Activo" : "Pausado"}</span>
-          </label>
-          <button class="btn ${s.sucio ? "btn--acento" : "btn--fantasma"}" id="bdl-guardar" ${s.sucio ? "" : "disabled"}>${s.sucio ? "Guardar cambios" : "✓ Guardado"}</button>
+      <div class="be-top">
+        <button class="volver-flecha" id="bdl-volver">←</button>
+        <h1>Crear un descuento por cantidad</h1>
+        <div class="be-top__act">
+          <button class="btn btn--fantasma" id="bdl-borrador">Guardar como borrador</button>
+          <button class="btn" id="bdl-guardar">Publicar</button>
         </div>
       </div>
-
-      ${
-        inst
-          ? ""
-          : `<div class="cod-banner cod-banner--aviso">⚠ Cuando termines, inyectá el widget desde la pantalla anterior para que aparezca en la tienda.</div>`
-      }
-
-      <div class="cod-tabs">
-        <button class="cod-tab ${s.tab === "ofertas" ? "cod-tab--activa" : ""}" data-btab="ofertas">Ofertas</button>
-        <button class="cod-tab ${s.tab === "diseno" ? "cod-tab--activa" : ""}" data-btab="diseno">Diseño</button>
-      </div>
-
-      <div class="cod-layout">
-        <div class="tarjeta" id="bdl-panel">${s.tab === "ofertas" ? panelOfertas(b) : panelDiseno(b)}</div>
+      <div class="be-layout">
+        <div class="be-left" id="be-left">
+          ${bdlSeccionSetup(b, s)}
+          ${bdlSeccionNiveles(b, s)}
+        </div>
         ${previewAsideBundle()}
       </div>`;
 
     $("bdl-volver").onclick = () => salirBundles();
-    $("bdl-activo").onchange = (e) => { b.activo = e.target.checked; marcarSucioBundles(); pintarEditorBundle(); };
-    $("bdl-guardar").onclick = guardarBundles;
-    vista.querySelectorAll("[data-btab]").forEach((t) => {
-      t.onclick = () => { s.tab = t.dataset.btab; pintarEditorBundle(); };
-    });
+    $("bdl-guardar").onclick = async () => { b.activo = true; await guardarBundles(); };
+    $("bdl-borrador").onclick = async () => { b.activo = false; await guardarBundles(); };
     const selProd = $("bdl-preview-prod");
     if (selProd) selProd.onchange = (e) => { estado.bundles.previewProd = e.target.value || null; pintarEditorBundle(); };
 
-    bindPanelBundle();
+    bindEditorBundle(b, s);
     pintarPreviewBundle();
 
-    // Cargar productos para el selector del preview (una vez).
     if (!(estado.productos || []).length) {
-      api("/productos").then((prods) => {
-        estado.productos = prods;
-        if (estado.bundles.vista === "editor") pintarEditorBundle();
-      }).catch(() => {});
+      api("/productos").then((prods) => { estado.productos = prods; if (estado.bundles.vista === "editor") pintarEditorBundle(); }).catch(() => {});
+    }
+  }
+
+  // Sección colapsable "Select Product & Basic Setup".
+  function bdlSeccionSetup(b, s) {
+    const a = b.activador || { tipo: "todos", ids: [] };
+    const verEnc = leer(b, "diseno.mostrar_encabezado") !== false;
+    const cuerpo = !s.setupOpen ? "" : `
+      <div class="be-sec__body">
+        <div class="be-block">
+          ${campoBdl("nombre", "Nombre de la oferta")}
+          <div class="be-field-row">
+            <div class="campo campo--editor" style="flex:1">${campoBdl("diseno.titulo", "Texto de encabezado").replace(/^<div class="campo campo--editor">|<\/div>$/g, "")}</div>
+            <button class="be-eye ${verEnc ? "" : "is-off"}" data-toggle-b="diseno.mostrar_encabezado" title="Mostrar/ocultar">${verEnc ? BE_OJO : BE_OJO_OFF}</button>
+          </div>
+        </div>
+        <div class="be-block">
+          <div class="be-block__t">Aplicar oferta en</div>
+          <label class="be-radio"><input type="radio" name="be-act" data-act="todos" ${a.tipo === "todos" ? "checked" : ""}> Todos los productos</label>
+          <label class="be-radio"><input type="radio" name="be-act" data-act="productos" ${a.tipo === "productos" ? "checked" : ""}> Producto(s) específico(s) seleccionado(s)</label>
+          <label class="be-radio"><input type="radio" name="be-act" data-act="coleccion" ${a.tipo === "coleccion" ? "checked" : ""}> Productos en colecciones seleccionadas</label>
+          ${a.tipo === "productos" ? selectorProductos(a.ids || []) : ""}
+          ${a.tipo === "coleccion" ? `<div class="panel__sub" style="margin-top:8px">La selección de colecciones llega pronto.</div>` : ""}
+        </div>
+        <div class="be-block">
+          <div class="be-block__t">Configuración básica</div>
+          ${campoBdl("opciones.variantes", "Permitir a los clientes elegir diferentes variantes para cada artículo", "bool")}
+          ${campoBdl("opciones.volumen", "Descuento por volumen (extender el descuento máximo a todas las cantidades)", "bool")}
+        </div>
+      </div>`;
+    return `<section class="be-sec">
+      <button class="be-sec__head" data-sec="setup"><span>Select Product & Basic Setup</span><span class="be-chev ${s.setupOpen ? "is-open" : ""}">⌄</span></button>
+      ${cuerpo}
+    </section>`;
+  }
+
+  // Sección "Editar Ofertas de Nivel": tarjetas colapsables por nivel.
+  function bdlSeccionNiveles(b, s) {
+    const cards = (b.ofertas || []).map((o, i) => bdlNivelCard(o, i, b, s)).join("");
+    return `<section class="be-sec be-sec--plain">
+      <div class="be-sec__title">Editar ofertas de nivel</div>
+      <div class="be-lvs">${cards}</div>
+      <button class="be-add" data-add-nivel>⊕ Agregar nivel</button>
+    </section>`;
+  }
+
+  function bdlNivelCard(o, i, b, s) {
+    const open = s.nivelOpen === i;
+    const activo = o.activo !== false;
+    const tipo = o.tipo_desc || (Number(o.descuento) > 0 ? "porcentaje" : "ninguno");
+    const head = `
+      <div class="be-lv__head">
+        <span class="be-lv__drag">⠿</span>
+        <button class="be-toggle ${activo ? "is-on" : ""}" data-lv-toggle="${i}" title="Prender/apagar nivel"><span></span></button>
+        <span class="be-lv__name">Nivel ${i + 1}: <b>${esc(o.titulo || "Buy " + (Number(o.cantidad) || 1))}</b></span>
+        <button class="be-lv__icn" data-lv-dup="${i}" title="Duplicar">⧉</button>
+        <button class="be-lv__icn ${o.popular ? "is-star" : ""}" data-lv-star="${i}" title="Destacar">★</button>
+        <button class="be-lv__chev ${open ? "is-open" : ""}" data-lv-open="${i}">⌄</button>
+      </div>`;
+    if (!open) return `<div class="be-lv">${head}</div>`;
+
+    const TIPOS = [["porcentaje", "% Descuento"], ["fijo", "Fijo"], ["especifico", "Precio específico"], ["bogo", "BOGO"], ["ninguno", "Ninguno"]];
+    const tabs = TIPOS.map(([k, t]) => {
+      const soon = k === "fijo" || k === "especifico" || k === "bogo";
+      return `<button class="be-dt ${tipo === k ? "is-sel" : ""} ${soon ? "is-soon" : ""}" ${soon ? "disabled" : `data-lv-tipo="${i}:${k}"`}>${t}</button>`;
+    }).join("");
+
+    const campoOjo = (ruta, label, verKey) => {
+      const on = !verKey || o.ver[verKey] !== false;
+      const eye = verKey ? `<button class="be-eye ${on ? "" : "is-off"}" data-lv-ver="${i}:${verKey}" title="Mostrar/ocultar">${on ? BE_OJO : BE_OJO_OFF}</button>` : "";
+      return `<div class="be-field-row"><div class="campo campo--editor" style="flex:1"><label>${label}</label>
+        <input type="text" data-b="${ruta}" value="${esc(leer(b, ruta) ?? "")}" ${on ? "" : "disabled"}></div>${eye}</div>`;
+    };
+
+    const body = `
+      <div class="be-lv__body">
+        <div class="be-block">
+          <div class="be-block__t">Seleccionar tipo de descuento</div>
+          <div class="be-dts">${tabs}</div>
+          <div class="be-grid2">
+            <div class="campo campo--editor"><label>Descuento %</label>
+              <input type="number" data-b="ofertas.${i}.descuento" data-tipo="numero" min="0" max="100" value="${esc(o.descuento ?? 0)}" ${tipo === "ninguno" ? "disabled" : ""}></div>
+            ${campoBdl(`ofertas.${i}.cantidad`, "Cantidad total", "numero", 'min="1"')}
+          </div>
+        </div>
+        <div class="be-block">
+          ${campoOjo(`ofertas.${i}.titulo`, "Título (ej. Buy 2)")}
+          ${campoOjo(`ofertas.${i}.etiqueta`, "Etiqueta (ej. 20% OFF / Standard Price)", "etiqueta")}
+          ${campoOjo(`ofertas.${i}.subtitulo`, "Subtítulo (ej. You Save $4.00)", "subtitulo")}
+          ${campoOjo(`ofertas.${i}.badge`, "Insignia (ej. Most Popular / Best Value)", "badge")}
+        </div>
+        <button class="be-del" data-lv-del="${i}">🗑 Eliminar nivel ${i + 1}</button>
+      </div>`;
+    return `<div class="be-lv is-open">${head}${body}</div>`;
+  }
+
+  function bindEditorBundle(b, s) {
+    const root = $("be-left");
+    if (!root) return;
+
+    root.addEventListener("input", (e) => {
+      const ruta = e.target.dataset.b;
+      if (!ruta) return;
+      let v = e.target.type === "checkbox" ? e.target.checked : e.target.value;
+      if (e.target.dataset.tipo === "numero") v = Number(v) || 0;
+      fijar(b, ruta, v);
+      marcarSucioBundles();
+      pintarPreviewBundle();
+    });
+
+    root.addEventListener("change", (e) => {
+      const act = e.target.dataset.act;
+      if (act) { b.activador = b.activador || { tipo: "todos", ids: [] }; b.activador.tipo = act; b.activador.ids = b.activador.ids || []; marcarSucioBundles(); return pintarEditorBundle(); }
+      if (e.target.dataset.prod !== undefined) {
+        const gid = e.target.dataset.prod;
+        b.activador.ids = b.activador.ids || [];
+        if (e.target.checked) { if (!b.activador.ids.includes(gid)) b.activador.ids.push(gid); }
+        else b.activador.ids = b.activador.ids.filter((x) => x !== gid);
+        marcarSucioBundles(); pintarPreviewBundle();
+      }
+    });
+
+    root.addEventListener("click", (e) => {
+      const t = e.target;
+      const sec = t.closest("[data-sec]"); if (sec) { s.setupOpen = !s.setupOpen; return pintarEditorBundle(); }
+      const op = t.closest("[data-lv-open]"); if (op) { const i = +op.dataset.lvOpen; s.nivelOpen = s.nivelOpen === i ? null : i; return pintarEditorBundle(); }
+      const tg = t.closest("[data-lv-toggle]"); if (tg) { const o = b.ofertas[+tg.dataset.lvToggle]; o.activo = o.activo === false; marcarSucioBundles(); return pintarEditorBundle(); }
+      const st = t.closest("[data-lv-star]"); if (st) { const o = b.ofertas[+st.dataset.lvStar]; o.popular = !o.popular; marcarSucioBundles(); return pintarEditorBundle(); }
+      const dup = t.closest("[data-lv-dup]"); if (dup) { const i = +dup.dataset.lvDup; b.ofertas.splice(i + 1, 0, JSON.parse(JSON.stringify(b.ofertas[i]))); s.nivelOpen = i + 1; marcarSucioBundles(); return pintarEditorBundle(); }
+      const del = t.closest("[data-lv-del]"); if (del) { b.ofertas.splice(+del.dataset.lvDel, 1); if (!b.ofertas.length) b.ofertas.push({ cantidad: 1, descuento: 0, titulo: "Buy 1", ver: {}, activo: true }); s.nivelOpen = null; marcarSucioBundles(); return pintarEditorBundle(); }
+      const tp = t.closest("[data-lv-tipo]"); if (tp) { const [i, k] = tp.dataset.lvTipo.split(":"); const o = b.ofertas[+i]; o.tipo_desc = k; if (k === "ninguno") o.descuento = 0; marcarSucioBundles(); return pintarEditorBundle(); }
+      const ver = t.closest("[data-lv-ver]"); if (ver) { const [i, key] = ver.dataset.lvVer.split(":"); const o = b.ofertas[+i]; o.ver = o.ver || {}; o.ver[key] = o.ver[key] === false ? true : false; marcarSucioBundles(); return pintarEditorBundle(); }
+      const tb = t.closest("[data-toggle-b]"); if (tb) { const ruta = tb.dataset.toggleB; fijar(b, ruta, leer(b, ruta) === false ? true : false); marcarSucioBundles(); return pintarEditorBundle(); }
+      const add = t.closest("[data-add-nivel]"); if (add) { const n = b.ofertas.length + 1; b.ofertas.push({ cantidad: n, descuento: 0, titulo: "Buy " + n, subtitulo: "", etiqueta: "", badge: "", popular: false, activo: true, ver: {} }); s.nivelOpen = b.ofertas.length - 1; marcarSucioBundles(); return pintarEditorBundle(); }
+    });
+
+    if (b.activador?.tipo === "productos" && !(estado.productos || []).length) {
+      api("/productos").then((prods) => { estado.productos = prods; if (estado.bundles.vista === "editor") pintarEditorBundle(); }).catch(() => {});
     }
   }
 
@@ -3615,21 +3743,27 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         </span>
       </label>`;
     } else {
-      let predIdx = (b.ofertas || []).findIndex((o) => o.predeterminada);
+      // Solo niveles prendidos (o.activo !== false).
+      const activos = (b.ofertas || []).filter((o) => o.activo !== false);
+      let predIdx = activos.findIndex((o) => o.predeterminada);
       if (predIdx < 0) predIdx = 0;
-      cards = (b.ofertas || [])
+      const verF = (o, k) => !o.ver || o.ver[k] !== false;
+      cards = activos
         .map((o, i) => {
           const cant = Math.max(1, Number(o.cantidad) || 1);
           const desc = Number(o.descuento) || 0;
           const bruto = PU * cant;
           const total = Math.round(bruto * (1 - desc / 100));
           const ahorro = bruto - total;
+          const etq = verF(o, "etiqueta") ? o.etiqueta : "";
+          const sub = verF(o, "subtitulo") ? o.subtitulo : "";
+          const badge = verF(o, "badge") ? o.badge : "";
           return `<label class="tiq-bdl__card ${i === predIdx ? "is-sel" : ""} ${o.popular ? "is-pop" : ""}">
-            ${o.badge ? `<span class="tiq-bdl__badge">${esc(o.badge)}</span>` : ""}
+            ${badge ? `<span class="tiq-bdl__badge">${esc(badge)}</span>` : ""}
             <span class="tiq-bdl__radio"></span>
             <span class="tiq-bdl__main">
-              <span class="tiq-bdl__titulo">${esc(o.titulo || cant + " unidades")}${o.etiqueta ? ` <span class="tiq-bdl__etq">${esc(o.etiqueta)}</span>` : ""}</span>
-              ${o.subtitulo ? `<span class="tiq-bdl__sub">${esc(o.subtitulo)}</span>` : ""}
+              <span class="tiq-bdl__titulo">${esc(o.titulo || cant + " unidades")}${etq ? ` <span class="tiq-bdl__etq">${esc(etq)}</span>` : ""}</span>
+              ${sub ? `<span class="tiq-bdl__sub">${esc(sub)}</span>` : ""}
               ${d.mostrar_ahorro && ahorro > 0 ? `<span class="tiq-bdl__ahorro">Ahorrás ${fmtBdl(ahorro)}</span>` : ""}
             </span>
             <span class="tiq-bdl__precio">
@@ -3639,7 +3773,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
           </label>`;
         })
         .join("");
-      const oSel = (b.ofertas || [])[predIdx] || { cantidad: 1, descuento: 0 };
+      const oSel = activos[predIdx] || { cantidad: 1, descuento: 0 };
       totalSel = Math.round(PU * Math.max(1, Number(oSel.cantidad) || 1) * (1 - (Number(oSel.descuento) || 0) / 100));
     }
     const textoBoton = (bot.texto || "Agregar al carrito — {total}").replace(/\{total\}/g, fmtBdl(totalSel));

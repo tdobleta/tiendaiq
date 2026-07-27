@@ -218,6 +218,7 @@ async function crearDescuentos(sesion, bundle, log = () => {}) {
 
 async function crearPeldanos(sesion, bundle, items, creados, log) {
   for (const oferta of bundle.ofertas || []) {
+    if (oferta.activo === false) continue; // nivel apagado: no crea descuento
     const desc = Number(oferta.descuento) || 0;
     const cant = Math.max(1, Number(oferta.cantidad) || 1);
     if (desc <= 0) continue;

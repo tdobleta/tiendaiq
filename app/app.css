@@ -520,6 +520,65 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
 @media (max-width: 900px) { .bt-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 560px) { .bt-grid { grid-template-columns: 1fr; } .bt-sws { max-width: none; } }
 
+/* ============================================================
+   BUNDLES v2 — EDITOR (Descuento por Cantidad), estilo Pumper.
+   Izquierda = secciones colapsables + niveles. Derecha = preview.
+   ============================================================ */
+.be-top { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; }
+.be-top h1 { font-size: 20px; font-weight: 700; color: var(--negro); letter-spacing: -.2px; }
+.be-top__act { margin-left: auto; display: flex; gap: 10px; }
+
+.be-layout { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 20px; align-items: start; }
+.be-left { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+
+.be-sec { background: var(--superficie); border: 1px solid var(--borde); border-radius: 12px; }
+.be-sec--plain { background: none; border: none; }
+.be-sec__head { width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 16px 18px; background: none; border: none; cursor: pointer; font-family: inherit; font-size: 14px; font-weight: 600; color: var(--negro); }
+.be-sec__title { font-size: 13px; font-weight: 700; color: var(--negro); margin: 4px 2px 12px; }
+.be-chev { color: var(--suave); transition: transform .15s; display: inline-block; }
+.be-chev.is-open { transform: rotate(180deg); }
+.be-sec__body { padding: 0 18px 18px; display: flex; flex-direction: column; gap: 14px; }
+
+.be-block { border: 1px solid var(--borde); border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.be-block__t { font-size: 12.5px; font-weight: 600; color: var(--negro); }
+.be-block .campo--editor { margin: 0; }
+.be-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.be-field-row { display: flex; align-items: flex-end; gap: 8px; }
+.be-eye { flex-shrink: 0; width: 34px; height: 34px; display: grid; place-items: center; border: 1px solid var(--borde); border-radius: 8px; background: var(--superficie); color: var(--suave); cursor: pointer; margin-bottom: 1px; }
+.be-eye svg { width: 15px; height: 15px; }
+.be-eye.is-off { color: #c0c0c6; background: var(--fondo); }
+.be-radio { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--texto); cursor: pointer; }
+.be-radio input { accent-color: var(--negro); }
+
+/* Tarjeta de nivel */
+.be-lvs { display: flex; flex-direction: column; gap: 10px; }
+.be-lv { background: var(--superficie); border: 1px solid var(--borde); border-radius: 12px; }
+.be-lv.is-open { border-color: #d0d0d6; }
+.be-lv__head { display: flex; align-items: center; gap: 10px; padding: 12px 14px; }
+.be-lv__drag { color: #c4c4cc; cursor: grab; font-size: 14px; }
+.be-lv__name { flex: 1; min-width: 0; font-size: 13px; color: var(--suave); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.be-lv__name b { color: var(--negro); font-weight: 600; }
+.be-toggle { width: 36px; height: 20px; border-radius: 999px; background: #d0d0d6; border: none; position: relative; cursor: pointer; padding: 0; flex-shrink: 0; transition: background .15s; }
+.be-toggle span { position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: left .15s; }
+.be-toggle.is-on { background: var(--negro); }
+.be-toggle.is-on span { left: 18px; }
+.be-lv__icn { width: 30px; height: 30px; display: grid; place-items: center; border: 1px solid var(--borde); border-radius: 8px; background: var(--superficie); color: var(--suave); cursor: pointer; font-size: 14px; }
+.be-lv__icn.is-star { color: #eab308; border-color: #eab308; }
+.be-lv__chev { width: 30px; height: 30px; border: none; background: none; color: var(--suave); cursor: pointer; transition: transform .15s; }
+.be-lv__chev.is-open { transform: rotate(180deg); }
+.be-lv__body { padding: 0 14px 14px; display: flex; flex-direction: column; gap: 14px; border-top: 1px solid var(--borde-suave); padding-top: 14px; }
+
+.be-dts { display: flex; gap: 6px; flex-wrap: wrap; }
+.be-dt { font-size: 12px; padding: 7px 11px; border: 1px solid var(--borde); border-radius: 8px; background: var(--fondo); color: var(--texto); cursor: pointer; font-family: inherit; }
+.be-dt.is-sel { background: #fff; color: var(--negro); font-weight: 600; box-shadow: inset 0 0 0 1.5px var(--negro); border-color: var(--negro); }
+.be-dt.is-soon { opacity: .4; cursor: not-allowed; }
+
+.be-del { align-self: flex-start; background: none; border: none; color: var(--peligro); font-family: inherit; font-size: 13px; cursor: pointer; padding: 4px 0; }
+.be-add { width: 100%; margin-top: 10px; padding: 12px; border: 1.5px dashed var(--borde); border-radius: 10px; background: none; color: var(--negro); font-family: inherit; font-size: 13px; font-weight: 500; cursor: pointer; }
+.be-add:hover { border-color: var(--negro); background: var(--fondo); }
+
+@media (max-width: 900px) { .be-layout { grid-template-columns: 1fr; } }
+
 /* Modal "Ver todos los productos" — lista completa buscable estilo picker. */
 .picker-modal { position: fixed; inset: 0; z-index: 100; background: rgba(18, 18, 24, .38); display: grid; place-items: center; padding: 20px; }
 .picker {
