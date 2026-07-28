@@ -3588,9 +3588,19 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   function bdlSeccionesExtra(b, s) {
     s.secOpen = s.secOpen || {};
     const d = b.diseno || {};
-    const presets = Object.keys(PRESETS_BDL)
-      .map((k) => `<button type="button" class="bdl-preset ${d.preset === k ? "is-sel" : ""}" data-preset="${k}"><span class="bdl-preset__dot" style="background:${PRESETS_BDL[k].bot}"></span>${NOMBRE_PRESET[k]}</button>`)
-      .join("");
+    // Swatch = mini-preview real de la paleta (no texto): 3 barras apiladas, la
+    // primera con el borde/acento del preset (como una tarjeta seleccionada).
+    const swatch = (k) => {
+      const p = PRESETS_BDL[k];
+      return `<button type="button" class="bdl-pal ${d.preset === k ? "is-sel" : ""}" data-preset="${k}" title="${esc(NOMBRE_PRESET[k])}" aria-label="Paleta ${esc(NOMBRE_PRESET[k])}">
+        <span class="bdl-pal__mini">
+          <span class="bdl-pal__bar bdl-pal__bar--sel" style="border-color:${p.borde}"><i style="background:${p.bot}"></i></span>
+          <span class="bdl-pal__bar"></span>
+          <span class="bdl-pal__bar"></span>
+        </span></button>`;
+    };
+    const presets = Object.keys(PRESETS_BDL).map(swatch).join("") +
+      `<button type="button" class="bdl-pal-undo" data-palette-undo ${estado.bundles.snapPaleta ? "" : "disabled"} title="Deshacer paleta">↩</button>`;
     const colorYEstilo = `
       <div class="bdl-subsec">Diseño</div>
       ${sliderBdl("diseno.geometry.radius", IC_ESQUINA, "Redondeo de esquinas", 0, 50)}
@@ -3667,7 +3677,8 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     root.addEventListener("click", (e) => {
       const t = e.target;
       const sec = t.closest("[data-sec]"); if (sec) { const k = sec.dataset.sec; if (k === "setup") s.setupOpen = !s.setupOpen; else { s.secOpen = s.secOpen || {}; s.secOpen[k] = !s.secOpen[k]; } return pintarEditorBundle(); }
-      const pr = t.closest("[data-preset]"); if (pr) { const p = PRESETS_BDL[pr.dataset.preset]; b.diseno = b.diseno || {}; b.diseno.boton = b.diseno.boton || {}; b.diseno.preset = pr.dataset.preset; b.diseno.color_borde = p.borde; b.diseno.color_badge = p.badge; b.diseno.color_etiqueta = p.etq; b.diseno.color_texto = p.texto; b.diseno.boton.color_fondo = p.bot; marcarSucioBundles(); pintarPreviewBundle(); return pintarEditorBundle(); }
+      const undo = t.closest("[data-palette-undo]"); if (undo) { if (estado.bundles.snapPaleta) { b.diseno = estado.bundles.snapPaleta; estado.bundles.snapPaleta = null; marcarSucioBundles(); pintarPreviewBundle(); return pintarEditorBundle(); } return; }
+      const pr = t.closest("[data-preset]"); if (pr) { estado.bundles.snapPaleta = JSON.parse(JSON.stringify(b.diseno || {})); const p = PRESETS_BDL[pr.dataset.preset]; b.diseno = b.diseno || {}; b.diseno.boton = b.diseno.boton || {}; b.diseno.preset = pr.dataset.preset; b.diseno.color_borde = p.borde; b.diseno.color_badge = p.badge; b.diseno.color_etiqueta = p.etq; b.diseno.color_texto = p.texto; b.diseno.boton.color_fondo = p.bot; marcarSucioBundles(); pintarPreviewBundle(); return pintarEditorBundle(); }
       const op = t.closest("[data-lv-open]"); if (op) { const i = +op.dataset.lvOpen; s.nivelOpen = s.nivelOpen === i ? null : i; return pintarEditorBundle(); }
       const tg = t.closest("[data-lv-toggle]"); if (tg) { const o = b.ofertas[+tg.dataset.lvToggle]; o.activo = o.activo === false; marcarSucioBundles(); return pintarEditorBundle(); }
       const st = t.closest("[data-lv-star]"); if (st) { const o = b.ofertas[+st.dataset.lvStar]; o.popular = !o.popular; marcarSucioBundles(); return pintarEditorBundle(); }

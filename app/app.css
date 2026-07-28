@@ -1891,17 +1891,18 @@ summary:focus-visible, label:focus-visible {
   color: var(--suave); margin: 20px 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--borde-suave);
 }
 
-/* --- presets de color --- */
-.bdl-presets { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 4px; }
-.bdl-preset {
-  display: inline-flex; align-items: center; gap: 7px;
-  border: 1.5px solid var(--borde); background: var(--superficie);
-  border-radius: 999px; padding: 6px 13px 6px 10px; font-size: 13px; font-weight: 500;
-  cursor: pointer; color: var(--texto); transition: border-color .12s;
-}
-.bdl-preset:hover { border-color: var(--suave); }
-.bdl-preset.is-sel { border-color: var(--negro); background: var(--fondo); font-weight: 600; }
-.bdl-preset__dot { width: 14px; height: 14px; border-radius: 50%; }
+/* --- paletas de color: swatches como mini-preview real --- */
+.bdl-presets { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 8px 0 4px; }
+.bdl-pal { padding: 3px; border: 1.5px solid transparent; border-radius: 9px; background: #fff; cursor: pointer; line-height: 0; transition: border-color .12s, box-shadow .12s; }
+.bdl-pal:hover { border-color: #c9cccf; }
+.bdl-pal.is-sel { border-color: var(--negro); box-shadow: 0 0 0 2px rgba(0,0,0,.06); }
+.bdl-pal__mini { display: flex; flex-direction: column; gap: 3px; width: 30px; }
+.bdl-pal__bar { height: 7px; border-radius: 3px; background: #f0f0f2; border: 1px solid #e6e6ea; }
+.bdl-pal__bar--sel { position: relative; height: 11px; border-width: 1.5px; display: flex; align-items: center; padding-left: 3px; background: #fff; }
+.bdl-pal__bar--sel i { width: 5px; height: 5px; border-radius: 50%; display: block; }
+.bdl-pal-undo { margin-left: 4px; width: 32px; height: 32px; display: grid; place-items: center; border: 1px solid #c9cccf; border-radius: 8px; background: #fff; color: #202223; font-size: 15px; cursor: pointer; }
+.bdl-pal-undo:hover:not(:disabled) { background: var(--fondo); }
+.bdl-pal-undo:disabled { opacity: .4; cursor: not-allowed; }
 
 /* --- selector de productos --- */
 .bdl-prodsel {
