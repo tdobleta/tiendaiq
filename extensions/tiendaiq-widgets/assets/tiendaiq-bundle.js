@@ -193,6 +193,7 @@
       totalSel = c.total;
     } else {
       tarjetas = bundle.ofertas.map(function (o, i) {
+        if (o.activo === false) return ""; // nivel desactivado: no se muestra (paridad con el editor)
         var cant = Math.max(1, Number(o.cantidad) || 1);
         var desc = Number(o.descuento) || 0;
         var bruto = pu * cant;

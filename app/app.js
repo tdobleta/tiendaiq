@@ -3339,6 +3339,9 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     if (s.nivelOpen === undefined) s.nivelOpen = null;
     // Semillas de campos nuevos (sin tocar el default del server).
     if (!b.opciones) b.opciones = { variantes: false, volumen: true };
+    // Bundles muy viejos podían no tener `diseno`: sin esto, escribir
+    // "diseno.geometry.radius" desde el slider tira TypeError (fijar no crea rutas).
+    if (!b.diseno) b.diseno = {};
     // Geometría (Paso 2): radius unificado desde el legacy `radio`; breathing
     // arranca en 10 (≈ densidad actual, así el look no cambia en bundles viejos).
     if (b.diseno && !b.diseno.geometry) b.diseno.geometry = { radius: b.diseno.radio ?? 12, breathing: 10 };
@@ -3624,7 +3627,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         </span></button>`;
     };
     const presets = Object.keys(PRESETS_BDL).map(swatch).join("") +
-      `<button type="button" class="bdl-pal-undo" data-palette-undo ${estado.bundles.snapPaleta ? "" : "disabled"} title="Deshacer paleta">↩</button>`;
+      `<button type="button" class="bdl-pal-undo" data-palette-undo ${estado.bundles.snapPaleta && estado.bundles.snapPaleta.bundle === b ? "" : "disabled"} title="Deshacer paleta">↩</button>`;
     const tpl = (d.layout && d.layout.template) || "vertical";
     const tplCard = (id, nombre, mods) => `<button type="button" class="bdl-tpl ${tpl === id ? "is-sel" : ""}" data-tpl="${id}" aria-label="Plantilla ${nombre}">
         <span class="bdl-tpl__mini bdl-tpl__mini--${mods}"><i></i><i></i><i></i></span>
@@ -3699,6 +3702,12 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       let v = e.target.type === "checkbox" ? e.target.checked : e.target.value;
       if (e.target.dataset.tipo === "numero") v = Number(v) || 0;
       fijar(b, ruta, v);
+      // Editar un color a mano rompe el vínculo con el preset: deja de marcarlo
+      // como "Rosa" y pasa a "personalizado" (el swatch se des-resalta al re-render).
+      if (/^diseno\.(color_|boton\.color)/.test(ruta) && b.diseno && b.diseno.preset) {
+        b.diseno.palette = { active: b.diseno.preset, source: "custom" };
+        b.diseno.preset = null;
+      }
       // Slider de geometría: reflejar el valor a la derecha en vivo (sin re-render).
       if (e.target.dataset.slider !== undefined) {
         const out = e.target.parentElement.querySelector(".bdl-slider__val");
@@ -3732,8 +3741,8 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       const t = e.target;
       const sec = t.closest("[data-sec]"); if (sec) { const k = sec.dataset.sec; if (k === "setup") s.setupOpen = !s.setupOpen; else { s.secOpen = s.secOpen || {}; s.secOpen[k] = !s.secOpen[k]; } return pintarEditorBundle(); }
       const tplBtn = t.closest("[data-tpl]"); if (tplBtn) { b.diseno = b.diseno || {}; b.diseno.layout = b.diseno.layout || {}; b.diseno.layout.template = tplBtn.dataset.tpl; marcarSucioBundles(); pintarPreviewBundle(); return pintarEditorBundle(); }
-      const undo = t.closest("[data-palette-undo]"); if (undo) { if (estado.bundles.snapPaleta) { b.diseno = estado.bundles.snapPaleta; estado.bundles.snapPaleta = null; marcarSucioBundles(); pintarPreviewBundle(); return pintarEditorBundle(); } return; }
-      const pr = t.closest("[data-preset]"); if (pr) { estado.bundles.snapPaleta = JSON.parse(JSON.stringify(b.diseno || {})); const p = PRESETS_BDL[pr.dataset.preset]; b.diseno = b.diseno || {}; b.diseno.boton = b.diseno.boton || {}; b.diseno.preset = pr.dataset.preset; b.diseno.color_borde = p.borde; b.diseno.color_badge = p.badge; b.diseno.color_etiqueta = p.etq; b.diseno.color_texto = p.texto; b.diseno.boton.color_fondo = p.bot; marcarSucioBundles(); pintarPreviewBundle(); return pintarEditorBundle(); }
+      const undo = t.closest("[data-palette-undo]"); if (undo) { const sp = estado.bundles.snapPaleta; if (sp && sp.bundle === b) { b.diseno = sp.snap; estado.bundles.snapPaleta = null; marcarSucioBundles(); pintarPreviewBundle(); return pintarEditorBundle(); } return; }
+      const pr = t.closest("[data-preset]"); if (pr) { estado.bundles.snapPaleta = { bundle: b, snap: JSON.parse(JSON.stringify(b.diseno || {})) }; const p = PRESETS_BDL[pr.dataset.preset]; b.diseno = b.diseno || {}; b.diseno.boton = b.diseno.boton || {}; b.diseno.preset = pr.dataset.preset; b.diseno.palette = { active: pr.dataset.preset, source: "preset" }; b.diseno.color_borde = p.borde; b.diseno.color_badge = p.badge; b.diseno.color_badge_texto = "#ffffff"; b.diseno.color_etiqueta = p.etq; b.diseno.color_texto = p.texto; b.diseno.boton.color_fondo = p.bot; marcarSucioBundles(); pintarPreviewBundle(); return pintarEditorBundle(); }
       const op = t.closest("[data-lv-open]"); if (op) { const i = +op.dataset.lvOpen; s.nivelOpen = s.nivelOpen === i ? null : i; return pintarEditorBundle(); }
       const tg = t.closest("[data-lv-toggle]"); if (tg) { const o = b.ofertas[+tg.dataset.lvToggle]; o.activo = o.activo === false; marcarSucioBundles(); return pintarEditorBundle(); }
       const st = t.closest("[data-lv-star]"); if (st) { const o = b.ofertas[+st.dataset.lvStar]; o.popular = !o.popular; marcarSucioBundles(); return pintarEditorBundle(); }
