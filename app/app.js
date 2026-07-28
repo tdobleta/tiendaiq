@@ -3020,6 +3020,35 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   };
   const NOMBRE_PRESET = { negro: "Negro", rosa: "Rosa", azul: "Azul", verde: "Verde", violeta: "Violeta", naranja: "Naranja" };
 
+  // Contraste WCAG: evita que el merchant guarde una insignia ilegible.
+  function luminanciaHex(hex) {
+    const m = /^#?([0-9a-fA-F]{6})$/.exec((hex || "").trim());
+    if (!m) return 1;
+    const n = parseInt(m[1], 16);
+    const c = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => {
+      v /= 255;
+      return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+    });
+    return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+  }
+  function contrasteWCAG(a, b) {
+    const l1 = luminanciaHex(a), l2 = luminanciaHex(b);
+    return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+  }
+  // Refresca en vivo el aviso de contraste de la insignia (sin re-render total).
+  function refrescarAvisoContraste(b) {
+    const el = document.getElementById("bdl-aviso-contraste");
+    if (!el) return;
+    const c = contrasteWCAG(leer(b, "diseno.color_badge") || "#111111", leer(b, "diseno.color_badge_texto") || "#ffffff");
+    if (c < 4.5) {
+      el.className = "perso-aviso";
+      el.innerHTML = `⚠ El texto de la insignia se lee mal (contraste ${c.toFixed(1)}:1). <button type="button" class="bdl-fixc" data-fix-contraste>Arreglar</button>`;
+    } else {
+      el.className = "perso-aviso perso-aviso--ok";
+      el.innerHTML = "";
+    }
+  }
+
   // Bundle nuevo (espeja bundleDefault del server; el server lo completa igual).
   function nuevoBundleLocal(tipo = "volumen") {
     return {
@@ -3660,7 +3689,13 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
             ${sw("color_texto", "Texto", "#111111")}
             ${sw("color_badge_texto", "Texto insignia", "#ffffff")}
           </div>
-        </div>`;
+        </div>
+        ${(() => {
+          const c = contrasteWCAG(leer(b, "diseno.color_badge") || "#111111", leer(b, "diseno.color_badge_texto") || "#ffffff");
+          return c < 4.5
+            ? `<div class="perso-aviso" id="bdl-aviso-contraste">⚠ El texto de la insignia se lee mal (contraste ${c.toFixed(1)}:1). <button type="button" class="bdl-fixc" data-fix-contraste>Arreglar</button></div>`
+            : `<div class="perso-aviso perso-aviso--ok" id="bdl-aviso-contraste"></div>`;
+        })()}`;
       })()}`;
     const avanzada = `
       <div class="bdl-subsec">Textos</div>
@@ -3715,6 +3750,8 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       }
       // Mapa "Personalizar": actualizar la mini-tarjeta central en vivo.
       if (e.target.dataset.mid) actualizarMiniPerso(e.target.dataset.mid, v);
+      // Aviso de contraste de la insignia, en vivo.
+      if (/^diseno\.color_badge/.test(ruta)) refrescarAvisoContraste(b);
       marcarSucioBundles();
       pintarPreviewBundle();
       // BOGO: la "cantidad total" es X+Y (campo calculado) → re-render.
@@ -3743,6 +3780,8 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       const tplBtn = t.closest("[data-tpl]"); if (tplBtn) { b.diseno = b.diseno || {}; b.diseno.layout = b.diseno.layout || {}; b.diseno.layout.template = tplBtn.dataset.tpl; marcarSucioBundles(); pintarPreviewBundle(); return pintarEditorBundle(); }
       const undo = t.closest("[data-palette-undo]"); if (undo) { const sp = estado.bundles.snapPaleta; if (sp && sp.bundle === b) { b.diseno = sp.snap; estado.bundles.snapPaleta = null; marcarSucioBundles(); pintarPreviewBundle(); return pintarEditorBundle(); } return; }
       const pr = t.closest("[data-preset]"); if (pr) { estado.bundles.snapPaleta = { bundle: b, snap: JSON.parse(JSON.stringify(b.diseno || {})) }; const p = PRESETS_BDL[pr.dataset.preset]; b.diseno = b.diseno || {}; b.diseno.boton = b.diseno.boton || {}; b.diseno.preset = pr.dataset.preset; b.diseno.palette = { active: pr.dataset.preset, source: "preset" }; b.diseno.color_borde = p.borde; b.diseno.color_badge = p.badge; b.diseno.color_badge_texto = "#ffffff"; b.diseno.color_etiqueta = p.etq; b.diseno.color_texto = p.texto; b.diseno.boton.color_fondo = p.bot; marcarSucioBundles(); pintarPreviewBundle(); return pintarEditorBundle(); }
+      const pv = t.closest("[data-pv]"); if (pv) { estado.bundles.previewMobile = pv.dataset.pv === "mobile"; const marco = document.querySelector(".bdl-preview__marco"); if (marco) marco.classList.toggle("is-mobile", estado.bundles.previewMobile); document.querySelectorAll("[data-pv]").forEach((x) => x.classList.toggle("is-sel", x === pv)); return; }
+      const fx = t.closest("[data-fix-contraste]"); if (fx) { const bg = leer(b, "diseno.color_badge") || "#111111"; const mejor = contrasteWCAG(bg, "#ffffff") >= contrasteWCAG(bg, "#111111") ? "#ffffff" : "#111111"; b.diseno = b.diseno || {}; b.diseno.color_badge_texto = mejor; marcarSucioBundles(); pintarPreviewBundle(); return pintarEditorBundle(); }
       const op = t.closest("[data-lv-open]"); if (op) { const i = +op.dataset.lvOpen; s.nivelOpen = s.nivelOpen === i ? null : i; return pintarEditorBundle(); }
       const tg = t.closest("[data-lv-toggle]"); if (tg) { const o = b.ofertas[+tg.dataset.lvToggle]; o.activo = o.activo === false; marcarSucioBundles(); return pintarEditorBundle(); }
       const st = t.closest("[data-lv-star]"); if (st) { const o = b.ofertas[+st.dataset.lvStar]; o.popular = !o.popular; marcarSucioBundles(); return pintarEditorBundle(); }
@@ -4017,6 +4056,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       prods.map((p) => `<option value="${esc(p.id)}" ${estado.bundles.previewProd === p.id ? "selected" : ""}>${esc(p.titulo)}</option>`).join("");
     const nombre = sel ? sel.titulo : "Producto de ejemplo";
     const foto = sel && sel.imagen ? `<img src="${esc(sel.imagen)}" alt="">` : "🛍";
+    const mobile = !!estado.bundles.previewMobile;
     return `<aside class="tarjeta cod-preview">
       <div class="tarjeta__titulo">Vista previa</div>
       <div class="panel__sub">Elegí un producto de tu tienda para verlo real</div>
@@ -4025,7 +4065,11 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
           ? `<div class="campo campo--editor"><label>Producto de prueba</label><select id="bdl-preview-prod">${opciones}</select></div>`
           : ""
       }
-      <div class="bdl-preview__marco">
+      <div class="bdl-pvtoggle" role="group" aria-label="Ancho de la vista previa">
+        <button type="button" class="bdl-pvbtn ${mobile ? "" : "is-sel"}" data-pv="desktop">Escritorio</button>
+        <button type="button" class="bdl-pvbtn ${mobile ? "is-sel" : ""}" data-pv="mobile">Móvil</button>
+      </div>
+      <div class="bdl-preview__marco ${mobile ? "is-mobile" : ""}">
         <div id="bdl-preview"></div>
       </div>
     </aside>`;

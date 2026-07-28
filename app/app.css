@@ -1918,6 +1918,17 @@ summary:focus-visible, label:focus-visible {
 /* --- Personalizar: mapa de manipulación directa (swatches → mini-tarjeta) --- */
 .perso { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; margin: 6px 0 4px; }
 .perso-col { display: flex; flex-direction: column; gap: 12px; }
+.perso-aviso { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 12px; color: #8a5a00; background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 8px 10px; }
+.perso-aviso--ok { display: none; }
+.bdl-pvtoggle { display: inline-flex; margin: 2px 0 12px; border: 1px solid #c9cccf; border-radius: 8px; overflow: hidden; }
+.bdl-pvbtn { font-size: 12px; padding: 5px 14px; border: 0; background: #fff; cursor: pointer; color: #6d7175; }
+.bdl-pvbtn + .bdl-pvbtn { border-left: 1px solid #c9cccf; }
+.bdl-pvbtn.is-sel { background: #f1f1f2; color: #202223; font-weight: 600; }
+.bdl-pvbtn:focus-visible { outline: 2px solid #2c6ecb; outline-offset: -2px; }
+.bdl-preview__marco.is-mobile #bdl-preview { max-width: 380px; margin: 0 auto; }
+.bdl-fixc { margin-left: auto; font-size: 12px; border: 1px solid #d2d5d8; background: #fff; border-radius: 6px; padding: 3px 9px; cursor: pointer; color: #202223; }
+.bdl-fixc:hover { background: #f6f6f7; }
+.bdl-fixc:focus-visible { outline: 2px solid #2c6ecb; outline-offset: 1px; }
 .perso-sw { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
 .perso-col--r .perso-sw { flex-direction: row-reverse; }
 .perso-sw input[type="color"] { width: 26px; height: 26px; padding: 0; border: 1px solid #d2d5d8; border-radius: 6px; background: none; cursor: pointer; flex-shrink: 0; }
