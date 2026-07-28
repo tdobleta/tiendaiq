@@ -11,17 +11,16 @@
 # 4 alcances mientras auth.js pedía 11 (ver abajo).
 # ============================================================
 
-client_id = "91ac2b61f8d21cc0e788a34a81f2ad58"
+client_id = "59ad704eec8ec59e82d848f09e8d9097"
 name = "TiendaIQ: Páginas con IA"
 
-# El handle que Shopify ya le asignó a ESTA app (se ve en la URL del admin:
-# /store/<tienda>/apps/tiendaiq-3). Los handles "tiendaiq" y "tiendaiq-2" los
-# ocupan apps viejas de la misma cuenta de Partners, hechas en pruebas.
-#
-# PENDIENTE antes de publicar la ficha: borrar esas apps de prueba en el
-# Partner Dashboard para liberar "tiendaiq" y quedarse con el handle limpio.
-# El handle sale en la URL pública, así que conviene resolverlo antes del
-# review y no después, cuando ya haya merchants con la URL vieja.
+# OJO (2026-07-28): el client_id REAL de la app (la del dev dashboard, con las
+# instalaciones) es `59ad704eec8ec59e82d848f09e8d9097` — TERMINA EN ...9097.
+# Todo el drama de "firma inválida" / "emitido para otra app" / OAuth
+# "application_cannot_be_found" fue un TYPO de un carácter: se venía usando
+# `...9897` (un 8 en vez del 0) en Render y acá. El valor `91ac2b61…` que estuvo
+# antes era de una app vieja/equivocada. Verificado por diagnóstico: la tienda
+# manda aud=...9097 y firmaOk=true (el secreto siempre estuvo bien).
 handle = "tiendaiq-3"
 
 # El dominio propio. Ver pruebas/coherencia.js: los dos app embeds tienen que
