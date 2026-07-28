@@ -674,18 +674,18 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
    SPEC EXACTO (extraído de la referencia): medidas y colores finos.
    Va al final → gana en la cascada sobre las reglas de arriba.
    ============================================================ */
-.be-top { max-width: 860px; margin: 0 auto 24px; gap: 10px; }
+.be-top { max-width: 800px; margin: 0 auto 24px; gap: 10px; }
 .be-top h1 { font-size: 20px; font-weight: 650; color: #202223; letter-spacing: -.2px; }
 .be-top .volver-flecha { color: #616161; font-size: 18px; }
 .be-top__act { gap: 12px; }
 .be-top .btn { height: 30px; font-size: 12px; font-weight: 600; border-radius: 8px; padding: 0 14px; }
 .be-top .btn--fantasma { font-weight: 500; border: 1px solid #c9cccf; color: #202223; }
 
-.be-layout { max-width: 860px; grid-template-columns: minmax(0, 1fr) 320px; gap: 32px; }
+.be-layout { max-width: 800px; grid-template-columns: minmax(0, 1fr) 320px; gap: 24px; }
 /* Bloque del producto en el preview: compacto (foto chica, poco margen) para
    que la preview no se estire tanto para abajo. */
 .be-layout .bdl-preview__prod { margin-bottom: 16px; gap: 12px; }
-.be-layout .bdl-preview__foto { width: 40px; height: 40px; border-radius: 8px; font-size: 18px; }
+.be-layout .bdl-preview__foto { width: 32px; height: 32px; border-radius: 6px; font-size: 15px; }
 .be-layout .bdl-preview__nombre { font-size: 14px; font-weight: 600; }
 .be-layout .bdl-preview__precio { font-size: 13px; margin-top: 1px; }
 
@@ -734,7 +734,7 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
 .be-layout .cod-preview.tarjeta { padding: 16px; border-radius: 12px; border: 1px solid #d2d5d8; box-shadow: 0 1px 2px rgba(0, 0, 0, .05); margin: 0; }
 /* Panel de vista previa: ritmo Polaris (8/16), selector nativo, divisor antes
    del widget. Specs derivadas del análisis vs Pumper. */
-.be-layout .cod-preview .tarjeta__titulo { font-size: 15px; font-weight: 600; margin-bottom: 2px; }
+.be-layout .cod-preview .tarjeta__titulo { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
 .be-layout .cod-preview .panel__sub { font-size: 13px; color: #6d7175; margin: 0 0 16px; }
 .be-layout .cod-preview .campo--editor { margin: 0; }
 .be-layout .cod-preview .campo--editor label { font-size: 13px; font-weight: 500; color: #202223; margin-bottom: 8px; display: block; }
