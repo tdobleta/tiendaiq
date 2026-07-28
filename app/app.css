@@ -742,7 +742,7 @@ ui-save-bar { display: none; }
 .be-layout .cod-preview .campo--editor { margin: 0; }
 .be-layout .cod-preview .campo--editor label { font-size: 13px; font-weight: 500; color: #202223; margin-bottom: 8px; display: block; }
 .be-layout .cod-preview .campo--editor select { width: 100%; height: 44px; border-radius: 8px; padding: 0 12px; font-size: 14px; border: 1px solid #c9cccf; background: #fff; color: #202223; }
-.be-layout #bdl-preview { border-top: 1px solid #e3e3e3; margin-top: 16px; padding-top: 16px; }
+.be-layout #bdl-preview { border-top: 1px solid #e3e3e3; padding-top: 16px; }
 .be-layout .bdl-preview__marco { padding: 0; border: none; background: none; margin-top: 16px; }
 
 /* Modal "Ver todos los productos" — lista completa buscable estilo picker. */

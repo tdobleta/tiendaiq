@@ -3925,13 +3925,6 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
           : ""
       }
       <div class="bdl-preview__marco">
-        <div class="bdl-preview__prod">
-          <div class="bdl-preview__foto">${foto}</div>
-          <div>
-            <div class="bdl-preview__nombre">${esc(nombre)}</div>
-            <div class="bdl-preview__precio">${fmtBdl(precioPreviewCents())}</div>
-          </div>
-        </div>
         <div id="bdl-preview"></div>
       </div>
     </aside>`;
