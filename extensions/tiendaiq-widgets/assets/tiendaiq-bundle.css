@@ -63,6 +63,15 @@
 .tiq-bdl__precio { flex: 0 0 auto; text-align: right; display: flex; flex-direction: column; align-items: flex-end; }
 .tiq-bdl__precio-now { font-weight: var(--tiq-price-w, 700); font-size: 18px; color: var(--tiq-txt, #2e2e2e); line-height: 1.2; }
 .tiq-bdl__precio-old { font-size: 12px; color: #8a8a8a; text-decoration: line-through; }
+.tiq-bdl__unit { font-size: 11px; color: #8a8a8a; line-height: 1.2; margin-top: 1px; white-space: nowrap; }
+
+/* --- nivel agotado --- */
+.tiq-bdl__card.is-agotado { opacity: .55; cursor: not-allowed; }
+.tiq-bdl__card.is-agotado .tiq-bdl__precio-now { text-decoration: line-through; }
+
+/* --- accesibilidad: foco visible en la tarjeta (role=radio) y en el CTA --- */
+.tiq-bdl__card:focus-visible, .tiq-bdl__cta:focus-visible { outline: 2px solid var(--tiq-ac); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .tiq-bdl *, .tiq-bdl *::before, .tiq-bdl *::after { transition: none !important; animation: none !important; } }
 
 /* --- badge (cinta superior derecha) --- */
 .tiq-bdl__badge {

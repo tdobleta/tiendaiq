@@ -192,6 +192,15 @@
       tarjetas = c.html;
       totalSel = c.total;
     } else {
+      // La selección tiene que caer SIEMPRE en un nivel disponible (ni desactivado
+      // ni agotado); si no, el botón agregaría un nivel que no se muestra.
+      var actualSel = bundle.ofertas[seleccion];
+      if (!actualSel || actualSel.activo === false || actualSel.agotado) {
+        for (var kSel = 0; kSel < bundle.ofertas.length; kSel++) {
+          var okSel = bundle.ofertas[kSel];
+          if (okSel && okSel.activo !== false && !okSel.agotado) { seleccion = kSel; break; }
+        }
+      }
       tarjetas = bundle.ofertas.map(function (o, i) {
         if (o.activo === false) return ""; // nivel desactivado: no se muestra (paridad con el editor)
         var cant = Math.max(1, Number(o.cantidad) || 1);
@@ -199,21 +208,30 @@
         var bruto = pu * cant;
         var total = Math.round(bruto * (1 - desc / 100));
         var ahorro = bruto - total;
-        var sel = i === seleccion;
+        var pct = bruto > 0 ? Math.round((ahorro / bruto) * 100) : 0;
+        var etq = o.etiqueta || (desc > 0 ? pct + "% OFF" : ""); // % calculado si el merchant no lo tipeó
+        var puUnit = Math.round(total / cant);                   // precio por unidad (el número que convierte)
+        var agot = !!o.agotado;
+        var sel = i === seleccion && !agot;
         return (
-          '<label class="tiq-bdl__card' + (sel ? " is-sel" : "") + (o.popular ? " is-pop" : "") + '" data-i="' + i + '">' +
+          '<label class="tiq-bdl__card' + (sel ? " is-sel" : "") + (o.popular ? " is-pop" : "") + (agot ? " is-agotado" : "") + '"' +
+            ' data-i="' + i + '" role="radio" aria-checked="' + (sel ? "true" : "false") + '"' +
+            (agot ? ' aria-disabled="true"' : ' tabindex="' + (sel ? "0" : "-1") + '"') + ">" +
             (o.badge ? '<span class="tiq-bdl__badge">' + esc(o.badge) + "</span>" : "") +
             '<span class="tiq-bdl__radio" aria-hidden="true"></span>' +
             '<span class="tiq-bdl__main">' +
               '<span class="tiq-bdl__titulo">' + esc(o.titulo || (cant + " unidades")) +
-                (o.etiqueta ? ' <span class="tiq-bdl__etq">' + esc(o.etiqueta) + "</span>" : "") +
+                (etq ? ' <span class="tiq-bdl__etq">' + esc(etq) + "</span>" : "") +
               "</span>" +
               (o.subtitulo ? '<span class="tiq-bdl__sub">' + esc(o.subtitulo) + "</span>" : "") +
-              (D.mostrar_ahorro && ahorro > 0 ? '<span class="tiq-bdl__ahorro">Ahorrás ' + fmt(ahorro) + "</span>" : "") +
+              (agot
+                ? '<span class="tiq-bdl__sub">Agotado</span>'
+                : (D.mostrar_ahorro && ahorro > 0 ? '<span class="tiq-bdl__ahorro">Ahorrás ' + fmt(ahorro) + "</span>" : "")) +
             "</span>" +
             '<span class="tiq-bdl__precio">' +
               '<span class="tiq-bdl__precio-now">' + fmt(total) + "</span>" +
               (desc > 0 ? '<span class="tiq-bdl__precio-old">' + fmt(bruto) + "</span>" : "") +
+              (cant > 1 ? '<span class="tiq-bdl__unit">' + fmt(puUnit) + " c/u</span>" : "") +
             "</span>" +
             addonsHTML(o) +
           "</label>"
@@ -232,14 +250,37 @@
             (D.subtitulo ? '<div class="tiq-bdl__h2">' + esc(D.subtitulo) + "</div>" : "") +
           "</div>"
         : "") +
-      '<div class="tiq-bdl__cards">' + tarjetas + "</div>" +
+      '<div class="tiq-bdl__cards"' + (esBxgy ? "" : ' role="radiogroup" aria-label="Elegí tu paquete"') + ">" + tarjetas + "</div>" +
       '<button type="button" class="tiq-bdl__cta">' + esc(textoBoton) + "</button>";
 
     if (!esBxgy) {
-      raiz.querySelectorAll(".tiq-bdl__card").forEach(function (el) {
+      var tarjs = [].slice.call(raiz.querySelectorAll(".tiq-bdl__card"));
+      var elegibles = function () {
+        var r = [];
+        tarjs.forEach(function (c) {
+          var idx = Number(c.dataset.i), o = bundle.ofertas[idx];
+          if (o && o.activo !== false && !o.agotado) r.push(idx);
+        });
+        return r;
+      };
+      var elegir = function (idx) {
+        seleccion = idx; pintar();
+        var s = raiz.querySelector(".tiq-bdl__card.is-sel");
+        if (s) s.focus();
+      };
+      tarjs.forEach(function (el) {
         el.addEventListener("click", function () {
-          seleccion = Number(el.dataset.i);
-          pintar();
+          var o = bundle.ofertas[Number(el.dataset.i)];
+          if (o && o.agotado) return; // agotado no es seleccionable
+          seleccion = Number(el.dataset.i); pintar();
+        });
+        // Accesibilidad: navegación por flechas + Enter/Espacio (radiogroup).
+        el.addEventListener("keydown", function (e) {
+          var elig = elegibles(); if (!elig.length) return;
+          var pos = elig.indexOf(Number(el.dataset.i));
+          if (e.key === "ArrowDown" || e.key === "ArrowRight") { e.preventDefault(); elegir(elig[(pos + 1) % elig.length]); }
+          else if (e.key === "ArrowUp" || e.key === "ArrowLeft") { e.preventDefault(); elegir(elig[(pos - 1 + elig.length) % elig.length]); }
+          else if (e.key === "Enter" || e.key === " ") { e.preventDefault(); elegir(Number(el.dataset.i)); }
         });
       });
     }

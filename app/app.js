@@ -4145,7 +4145,9 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         .map((o, i) => {
           const { cant, bruto, total } = totalOfertaBdl(o, PU);
           const ahorro = bruto - total;
-          const etq = verF(o, "etiqueta") ? o.etiqueta : "";
+          const pct = bruto > 0 ? Math.round((ahorro / bruto) * 100) : 0;
+          const puUnit = Math.round(total / cant);
+          const etq = verF(o, "etiqueta") ? (o.etiqueta || (total < bruto ? pct + "% OFF" : "")) : "";
           const sub = verF(o, "subtitulo") ? o.subtitulo : "";
           const badge = verF(o, "badge") ? o.badge : "";
           return `<label class="tiq-bdl__card ${i === predIdx ? "is-sel" : ""} ${o.popular ? "is-pop" : ""} ${o.agotado ? "is-agotado" : ""}">
@@ -4159,6 +4161,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
             <span class="tiq-bdl__precio">
               <span class="tiq-bdl__precio-now">${fmtBdl(total)}</span>
               ${total < bruto ? `<span class="tiq-bdl__precio-old">${fmtBdl(bruto)}</span>` : ""}
+              ${cant > 1 ? `<span class="tiq-bdl__unit">${fmtBdl(puUnit)} c/u</span>` : ""}
             </span>
             ${addonsPreviewBdl(o)}
           </label>`;
