@@ -1904,6 +1904,17 @@ summary:focus-visible, label:focus-visible {
 .bdl-pal-undo:hover:not(:disabled) { background: var(--fondo); }
 .bdl-pal-undo:disabled { opacity: .4; cursor: not-allowed; }
 
+/* --- picker de plantilla (vertical / horizontal) con mini-preview --- */
+.bdl-tpls { display: flex; gap: 10px; margin: 4px 0 8px; }
+.bdl-tpl { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 12px; border: 1.5px solid #d2d5d8; border-radius: 10px; background: #fff; cursor: pointer; font-family: inherit; transition: border-color .12s, box-shadow .12s; }
+.bdl-tpl:hover { border-color: #9aa0a6; }
+.bdl-tpl.is-sel { border-color: var(--negro); box-shadow: 0 0 0 2px rgba(0,0,0,.06); }
+.bdl-tpl__mini { display: flex; gap: 4px; width: 76px; height: 46px; padding: 6px; border: 1px solid #e6e6ea; border-radius: 6px; background: #fafafb; }
+.bdl-tpl__mini--v { flex-direction: column; }
+.bdl-tpl__mini i { flex: 1; border-radius: 3px; background: #d2d5d8; }
+.bdl-tpl.is-sel .bdl-tpl__mini i { background: var(--negro); }
+.bdl-tpl__name { font-size: 13px; font-weight: 500; color: #202223; }
+
 /* --- selector de productos --- */
 .bdl-prodsel {
   border: 1px solid var(--borde); border-radius: var(--radio);

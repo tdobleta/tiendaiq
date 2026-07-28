@@ -90,7 +90,7 @@
   (bundle.ofertas || []).forEach(function (o, i) { if (o.predeterminada) seleccion = i; });
 
   var raiz = document.createElement("div");
-  raiz.className = "tiq-bdl";
+  raiz.className = "tiq-bdl" + ((D.layout && D.layout.template === "horizontal") ? " tiq-bdl--horizontal" : "");
   raiz.style.setProperty("--tiq-borde", D.color_borde || "#111");
   raiz.style.setProperty("--tiq-badge", D.color_badge || "#111");
   raiz.style.setProperty("--tiq-badge-txt", D.color_badge_texto || "#fff");
