@@ -39,7 +39,7 @@
 .tiq-bdl__h2 { font-size: .88em; color: #8a8a8a; margin-top: 4px; }
 
 /* --- tarjetas --- */
-.tiq-bdl__cards { display: flex; flex-direction: column; gap: 7px; }
+.tiq-bdl__cards { display: flex; flex-direction: column; gap: var(--tiq-gap, 7px); }
 .tiq-bdl__card {
   position: relative; display: flex; align-items: center; flex-wrap: wrap; gap: 12px;
   padding: 11px 14px; border: 1px solid var(--tiq-card-bd); border-radius: 12px;

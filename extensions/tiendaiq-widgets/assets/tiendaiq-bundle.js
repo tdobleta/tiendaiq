@@ -96,7 +96,11 @@
   raiz.style.setProperty("--tiq-badge-txt", D.color_badge_texto || "#fff");
   raiz.style.setProperty("--tiq-etq", D.color_etiqueta || "#e11d48");
   raiz.style.setProperty("--tiq-txt", D.color_texto || "#111");
-  raiz.style.setProperty("--tiq-radio", (D.radio != null ? D.radio : 12) + "px");
+  // Geometría (Paso 2): radius unificado (fallback al legacy `radio`); breathing
+  // → --tiq-gap (densidad entre tarjetas). Mismo contrato que disenoAVars() del admin.
+  var G = D.geometry || {};
+  raiz.style.setProperty("--tiq-radio", (G.radius != null ? G.radius : (D.radio != null ? D.radio : 12)) + "px");
+  if (G.breathing != null) raiz.style.setProperty("--tiq-gap", G.breathing + "px");
   raiz.style.setProperty("--tiq-bot-fondo", BOT.color_fondo || "#111");
   raiz.style.setProperty("--tiq-bot-txt", BOT.color_texto || "#fff");
   raiz.style.setProperty("--tiq-bot-radio", (BOT.radio != null ? BOT.radio : 8) + "px");

@@ -3339,6 +3339,9 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     if (s.nivelOpen === undefined) s.nivelOpen = null;
     // Semillas de campos nuevos (sin tocar el default del server).
     if (!b.opciones) b.opciones = { variantes: false, volumen: true };
+    // Geometría (Paso 2): radius unificado desde el legacy `radio`; breathing
+    // arranca en 10 (≈ densidad actual, así el look no cambia en bundles viejos).
+    if (b.diseno && !b.diseno.geometry) b.diseno.geometry = { radius: b.diseno.radio ?? 12, breathing: 10 };
     (b.ofertas || []).forEach((o) => {
       if (o.activo === undefined) o.activo = true;
       if (!o.ver) o.ver = {};
@@ -3557,6 +3560,20 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   const IC_PALETA = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r="1.3"/><circle cx="17" cy="10.5" r="1.3"/><circle cx="8.5" cy="7.5" r="1.3"/><circle cx="6.5" cy="12.5" r="1.3"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.9 0 1.5-.7 1.5-1.5 0-.4-.2-.7-.4-1-.2-.3-.4-.6-.4-1 0-.8.7-1.5 1.5-1.5H16c3.3 0 6-2.7 6-6 0-4.4-4.5-8-10-8z"/></svg>`;
   const IC_ENGRANAJE = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`;
   const IC_GRID = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>`;
+  const IC_ESQUINA = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12V8a4 4 0 0 1 4-4h4"/><path d="M20 12v4a4 4 0 0 1-4 4h-4"/></svg>`;
+  const IC_AIRE = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M8 7 4 12l4 5M16 7l4 5-4 5"/></svg>`;
+
+  // Slider de geometría (Redondeo / Aire) — control continuo con valor a la
+  // derecha, estilo Pumper. Escribe una ruta numérica del modelo (data-b).
+  function sliderBdl(ruta, ico, etiqueta, min, max) {
+    const v = leer(bundleActual(), ruta) ?? min;
+    return `<div class="bdl-slider">
+      <span class="bdl-slider__ico">${ico}</span>
+      <label class="bdl-slider__lab" for="sl-${ruta.replace(/\W/g, "-")}">${esc(etiqueta)}</label>
+      <input type="range" id="sl-${ruta.replace(/\W/g, "-")}" min="${min}" max="${max}" step="1" data-b="${ruta}" data-tipo="numero" data-slider value="${esc(v)}">
+      <output class="bdl-slider__val">${esc(v)} / ${max}</output>
+    </div>`;
+  }
 
   // Un acordeón de la columna izquierda (mismo componente que "Select Product").
   function bdlAcordeon(id, ico, titulo, cuerpo, abierto) {
@@ -3575,14 +3592,18 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       .map((k) => `<button type="button" class="bdl-preset ${d.preset === k ? "is-sel" : ""}" data-preset="${k}"><span class="bdl-preset__dot" style="background:${PRESETS_BDL[k].bot}"></span>${NOMBRE_PRESET[k]}</button>`)
       .join("");
     const colorYEstilo = `
+      <div class="bdl-subsec">Diseño</div>
+      ${sliderBdl("diseno.geometry.radius", IC_ESQUINA, "Redondeo de esquinas", 0, 50)}
+      ${sliderBdl("diseno.geometry.breathing", IC_AIRE, "Espacio de aire", 4, 24)}
+      <div class="bdl-subsec">Paletas de colores</div>
       <div class="bdl-presets">${presets}</div>
+      <div class="bdl-subsec">Personalizar</div>
       <div class="bdl-grid2">
         ${campoBdl("diseno.color_borde", "Borde seleccionado", "color")}
         ${campoBdl("diseno.color_etiqueta", "Etiqueta", "color")}
         ${campoBdl("diseno.color_badge", "Fondo insignia", "color")}
         ${campoBdl("diseno.color_badge_texto", "Texto insignia", "color")}
         ${campoBdl("diseno.color_texto", "Texto general", "color")}
-        ${campoBdl("diseno.radio", "Redondeo (px)", "numero", 'min="0" max="30"')}
       </div>`;
     const avanzada = `
       ${campoBdl("diseno.mostrar_encabezado", "Mostrar encabezado", "bool")}
@@ -3616,6 +3637,11 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       let v = e.target.type === "checkbox" ? e.target.checked : e.target.value;
       if (e.target.dataset.tipo === "numero") v = Number(v) || 0;
       fijar(b, ruta, v);
+      // Slider de geometría: reflejar el valor a la derecha en vivo (sin re-render).
+      if (e.target.dataset.slider !== undefined) {
+        const out = e.target.parentElement.querySelector(".bdl-slider__val");
+        if (out) out.textContent = v + " / " + e.target.max;
+      }
       marcarSucioBundles();
       pintarPreviewBundle();
       // BOGO: la "cantidad total" es X+Y (campo calculado) → re-render.
@@ -3977,9 +4003,16 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   function disenoAVars(d) {
     d = d || {};
     const bot = d.boton || {};
+    const g = d.geometry || {};
+    // geometry.radius unifica el redondeo de la tarjeta (fallback al legacy
+    // `radio`). geometry.breathing → --tiq-gap (densidad/aire entre tarjetas);
+    // si no está seteado NO se emite → el widget usa su fallback → look intacto.
+    const radio = g.radius ?? d.radio ?? 12;
+    const gap = g.breathing;
     return (
       `--tiq-borde:${d.color_borde || "#111"};--tiq-badge:${d.color_badge || "#111"};--tiq-badge-txt:${d.color_badge_texto || "#fff"};` +
-      `--tiq-etq:${d.color_etiqueta || "#e11d48"};--tiq-txt:${d.color_texto || "#111"};--tiq-radio:${d.radio ?? 12}px;` +
+      `--tiq-etq:${d.color_etiqueta || "#e11d48"};--tiq-txt:${d.color_texto || "#111"};--tiq-radio:${radio}px;` +
+      (gap != null ? `--tiq-gap:${gap}px;` : "") +
       `--tiq-bot-fondo:${bot.color_fondo || "#111"};--tiq-bot-txt:${bot.color_texto || "#fff"};--tiq-bot-radio:${bot.radio ?? 8}px;--tiq-bot-tam:${bot.tamano ?? 16}px`
     );
   }

@@ -732,6 +732,21 @@ ui-save-bar { display: none; }
 .be-sec__ico { display: flex; color: #6d7175; flex-shrink: 0; }
 .be-sec__ico svg { width: 20px; height: 20px; display: block; }
 
+/* Sub-secciones dentro de un acordeón (Diseño / Paletas / Personalizar) */
+.bdl-subsec { font-size: 13px; font-weight: 600; color: #202223; margin: 8px 0 4px; }
+.bdl-subsec:first-child { margin-top: 0; }
+
+/* Slider de geometría (Redondeo / Aire) — estilo Polaris */
+.bdl-slider { display: flex; align-items: center; gap: 12px; padding: 4px 0; }
+.bdl-slider__ico { display: flex; color: #6d7175; flex-shrink: 0; }
+.bdl-slider__ico svg { width: 20px; height: 20px; display: block; }
+.bdl-slider__lab { flex: 0 0 auto; font-size: 13px; color: #202223; min-width: 118px; }
+.bdl-slider input[type="range"] { flex: 1 1 auto; height: 4px; -webkit-appearance: none; appearance: none; background: #e3e3e3; border-radius: 999px; cursor: pointer; }
+.bdl-slider input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #202223; border: 2px solid #fff; box-shadow: 0 1px 2px rgba(0,0,0,.25); cursor: pointer; }
+.bdl-slider input[type="range"]::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: #202223; border: 2px solid #fff; box-shadow: 0 1px 2px rgba(0,0,0,.25); cursor: pointer; }
+.bdl-slider input[type="range"]:focus-visible { outline: 2px solid var(--ia); outline-offset: 3px; }
+.bdl-slider__val { flex: 0 0 auto; font-size: 12.5px; color: #6d7175; min-width: 44px; text-align: right; font-variant-numeric: tabular-nums; }
+
 /* Preview: UNA sola caja (padding 16). El marco deja de ser caja para no
    duplicar padding → el widget queda más ancho (panel ~330, widget ~298). */
 .be-layout .cod-preview.tarjeta { padding: 16px; border-radius: 12px; border: 1px solid #d2d5d8; box-shadow: 0 1px 2px rgba(0, 0, 0, .05); margin: 0; }
