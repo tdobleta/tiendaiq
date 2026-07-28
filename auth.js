@@ -168,13 +168,21 @@ function tiendaDelPase(pase) {
     .replace(/\//g, "_")
     .replace(/=+$/, "");
 
-  if (!igualSeguro(esperada, firma)) throw new Error("Pase de sesión con firma inválida");
+  // DIAG TEMPORAL (2026-07-28): mostrar en el error qué app pide la tienda
+  // (token aud) vs qué espera Render (client_id), para desambiguar el lío de
+  // las dos apps. SACAR cuando la app abra bien.
+  const firmaOk = igualSeguro(esperada, firma);
+  let audDiag = "?";
+  try { audDiag = JSON.parse(b64url(cuerpo)).aud; } catch {}
+  const diag = ` [tienda pide app=${audDiag} · Render espera=${env.SHOPIFY_CLIENT_ID} · firmaOk=${firmaOk}]`;
+
+  if (!firmaOk) throw new Error("Pase de sesión con firma inválida" + diag);
 
   const c = JSON.parse(b64url(cuerpo));
   const ahora = Math.floor(Date.now() / 1000);
   if (c.exp && ahora >= c.exp) throw new Error("Pase de sesión vencido");
   if (c.nbf && ahora < c.nbf - 5) throw new Error("Pase de sesión todavía no válido");
-  if (c.aud !== env.SHOPIFY_CLIENT_ID) throw new Error("Pase de sesión emitido para otra app");
+  if (c.aud !== env.SHOPIFY_CLIENT_ID) throw new Error("Pase de sesión emitido para otra app" + diag);
 
   const tienda = normalizar(c.dest);
   if (!esDominioValido(tienda)) throw new Error("El pase no trae una tienda válida");
