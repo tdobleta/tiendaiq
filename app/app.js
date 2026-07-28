@@ -3969,13 +3969,25 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     return h ? `<div class="tiq-bdl__addons">${h}</div>` : "";
   }
 
+  // Serializador único: modelo de diseño (b.diseno) → string de variables CSS
+  // que consume el widget. Única fuente de verdad model→vars (spec §5.1). El
+  // storefront (tiendaiq-bundle.js) replica este MISMO contrato → paridad
+  // admin↔tienda. Función pura: sin DOM, testeable, base del editor "Color y
+  // estilo". PASO 1 de la reconstrucción (docs/editor-color-estilo-spec.md §6).
+  function disenoAVars(d) {
+    d = d || {};
+    const bot = d.boton || {};
+    return (
+      `--tiq-borde:${d.color_borde || "#111"};--tiq-badge:${d.color_badge || "#111"};--tiq-badge-txt:${d.color_badge_texto || "#fff"};` +
+      `--tiq-etq:${d.color_etiqueta || "#e11d48"};--tiq-txt:${d.color_texto || "#111"};--tiq-radio:${d.radio ?? 12}px;` +
+      `--tiq-bot-fondo:${bot.color_fondo || "#111"};--tiq-bot-txt:${bot.color_texto || "#fff"};--tiq-bot-radio:${bot.radio ?? 8}px;--tiq-bot-tam:${bot.tamano ?? 16}px`
+    );
+  }
+
   function previewBundleHTML(b, PU = PRECIO_DEMO) {
     const d = b.diseno || {};
     const bot = d.boton || {};
-    const vars =
-      `--tiq-borde:${d.color_borde || "#111"};--tiq-badge:${d.color_badge || "#111"};--tiq-badge-txt:${d.color_badge_texto || "#fff"};` +
-      `--tiq-etq:${d.color_etiqueta || "#e11d48"};--tiq-txt:${d.color_texto || "#111"};--tiq-radio:${d.radio ?? 12}px;` +
-      `--tiq-bot-fondo:${bot.color_fondo || "#111"};--tiq-bot-txt:${bot.color_texto || "#fff"};--tiq-bot-radio:${bot.radio ?? 8}px;--tiq-bot-tam:${bot.tamano ?? 16}px`;
+    const vars = disenoAVars(d);
 
     let cards, totalSel;
     if (b.tipo === "bxgy") {
