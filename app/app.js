@@ -3577,6 +3577,19 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     </div>`;
   }
 
+  // Mapa "Personalizar": refleja el color tocado en la mini-tarjeta del editor
+  // sin re-renderizar (targeted update, como el valor del slider).
+  function actualizarMiniPerso(token, v) {
+    const card = document.querySelector("[data-mid-card]");
+    if (!card) return;
+    const el = (k) => card.querySelector(`[data-mid-el="${k}"]`);
+    if (token === "color_borde") { card.style.borderColor = v; const d = el("dot"); if (d) d.style.borderColor = v; }
+    else if (token === "color_badge") { const b = el("badge"); if (b) b.style.background = v; }
+    else if (token === "color_badge_texto") { const b = el("badge"); if (b) b.style.color = v; }
+    else if (token === "color_etiqueta") { const e = el("etq"); if (e) { e.style.color = v; e.style.borderColor = v; } }
+    else if (token === "color_texto") { const t = el("title"); if (t) t.style.color = v; }
+  }
+
   // Un acordeón de la columna izquierda (mismo componente que "Select Product").
   function bdlAcordeon(id, ico, titulo, cuerpo, abierto) {
     return `<div class="be-sec">
@@ -3616,13 +3629,27 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       <div class="bdl-subsec">Paletas de colores</div>
       <div class="bdl-presets">${presets}</div>
       <div class="bdl-subsec">Personalizar</div>
-      <div class="bdl-grid2">
-        ${campoBdl("diseno.color_borde", "Borde seleccionado", "color")}
-        ${campoBdl("diseno.color_etiqueta", "Etiqueta", "color")}
-        ${campoBdl("diseno.color_badge", "Fondo insignia", "color")}
-        ${campoBdl("diseno.color_badge_texto", "Texto insignia", "color")}
-        ${campoBdl("diseno.color_texto", "Texto general", "color")}
-      </div>`;
+      ${(() => {
+        const dc = (t, def) => esc(leer(b, "diseno." + t) || def);
+        const sw = (token, etiqueta, def) => `<label class="perso-sw"><input type="color" data-b="diseno.${token}" data-mid="${token}" value="${dc(token, def)}"><span class="perso-sw__lab">${etiqueta}</span><span class="perso-sw__line"></span></label>`;
+        return `<div class="perso">
+          <div class="perso-col perso-col--l">
+            ${sw("color_borde", "Borde", "#111111")}
+            ${sw("color_badge", "Insignia", "#111111")}
+            ${sw("color_etiqueta", "Etiqueta", "#e11d48")}
+          </div>
+          <div class="perso-mid" data-mid-card style="border-color:${dc("color_borde", "#111")}">
+            <span class="perso-mid__badge" data-mid-el="badge" style="background:${dc("color_badge", "#111")};color:${dc("color_badge_texto", "#fff")}">Más elegido</span>
+            <span class="perso-mid__dot" data-mid-el="dot" style="border-color:${dc("color_borde", "#111")}"></span>
+            <span class="perso-mid__title" data-mid-el="title" style="color:${dc("color_texto", "#111")}">Comprá 2</span>
+            <span class="perso-mid__etq" data-mid-el="etq" style="color:${dc("color_etiqueta", "#e11d48")};border-color:${dc("color_etiqueta", "#e11d48")}">10% OFF</span>
+          </div>
+          <div class="perso-col perso-col--r">
+            ${sw("color_texto", "Texto", "#111111")}
+            ${sw("color_badge_texto", "Texto insignia", "#ffffff")}
+          </div>
+        </div>`;
+      })()}`;
     const avanzada = `
       ${campoBdl("diseno.mostrar_encabezado", "Mostrar encabezado", "bool")}
       ${campoBdl("diseno.titulo", "Título del paquete")}
@@ -3660,6 +3687,8 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         const out = e.target.parentElement.querySelector(".bdl-slider__val");
         if (out) out.textContent = v + " / " + e.target.max;
       }
+      // Mapa "Personalizar": actualizar la mini-tarjeta central en vivo.
+      if (e.target.dataset.mid) actualizarMiniPerso(e.target.dataset.mid, v);
       marcarSucioBundles();
       pintarPreviewBundle();
       // BOGO: la "cantidad total" es X+Y (campo calculado) → re-render.

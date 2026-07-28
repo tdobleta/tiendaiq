@@ -1915,6 +1915,20 @@ summary:focus-visible, label:focus-visible {
 .bdl-tpl.is-sel .bdl-tpl__mini i { background: var(--negro); }
 .bdl-tpl__name { font-size: 13px; font-weight: 500; color: #202223; }
 
+/* --- Personalizar: mapa de manipulación directa (swatches → mini-tarjeta) --- */
+.perso { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; margin: 6px 0 4px; }
+.perso-col { display: flex; flex-direction: column; gap: 12px; }
+.perso-sw { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+.perso-col--r .perso-sw { flex-direction: row-reverse; }
+.perso-sw input[type="color"] { width: 26px; height: 26px; padding: 0; border: 1px solid #d2d5d8; border-radius: 6px; background: none; cursor: pointer; flex-shrink: 0; }
+.perso-sw__lab { font-size: 12px; color: #6d7175; white-space: nowrap; }
+.perso-sw__line { width: 14px; height: 1px; background: #d2d5d8; flex-shrink: 0; }
+.perso-mid { position: relative; border: 2px solid #111; border-radius: 10px; padding: 12px 8px; display: flex; flex-direction: column; align-items: center; gap: 6px; background: #fff; min-width: 0; }
+.perso-mid__badge { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; padding: 3px 8px; border-radius: 4px; white-space: nowrap; }
+.perso-mid__dot { width: 14px; height: 14px; border: 2px solid #111; border-radius: 50%; }
+.perso-mid__title { font-size: 13px; font-weight: 600; }
+.perso-mid__etq { font-size: 9px; font-weight: 600; border: 1px solid; border-radius: 4px; padding: 2px 6px; white-space: nowrap; }
+
 /* --- selector de productos --- */
 .bdl-prodsel {
   border: 1px solid var(--borde); border-radius: var(--radio);
