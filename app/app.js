@@ -3364,8 +3364,9 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
           ${bdlSeccionNiveles(b, s)}
           <div class="be-guinda">
             <div class="be-guinda__t">La guinda del pastel</div>
-            <div class="be-guinda__s">Configuración avanzada · Color y estilo · Opciones visuales</div>
+            <div class="be-guinda__s">Ajustá colores, encabezado y botón sin salir de acá.</div>
           </div>
+          ${bdlSeccionesExtra(b, s)}
         </div>
         ${previewAsideBundle()}
       </div>`;
@@ -3552,6 +3553,59 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     return `<div class="be-lv is-open">${head}${body}</div>`;
   }
 
+  // Íconos de las secciones extra (estilo Polaris: 20px, stroke fino).
+  const IC_PALETA = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r="1.3"/><circle cx="17" cy="10.5" r="1.3"/><circle cx="8.5" cy="7.5" r="1.3"/><circle cx="6.5" cy="12.5" r="1.3"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.9 0 1.5-.7 1.5-1.5 0-.4-.2-.7-.4-1-.2-.3-.4-.6-.4-1 0-.8.7-1.5 1.5-1.5H16c3.3 0 6-2.7 6-6 0-4.4-4.5-8-10-8z"/></svg>`;
+  const IC_ENGRANAJE = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`;
+  const IC_GRID = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>`;
+
+  // Un acordeón de la columna izquierda (mismo componente que "Select Product").
+  function bdlAcordeon(id, ico, titulo, cuerpo, abierto) {
+    return `<div class="be-sec">
+      <button class="be-sec__head" data-sec="${id}"><span class="be-sec__lead"><span class="be-sec__ico">${ico}</span><span>${esc(titulo)}</span></span><span class="be-chev ${abierto ? "is-open" : ""}">⌄</span></button>
+      ${abierto ? `<div class="be-sec__body">${cuerpo}</div>` : ""}
+    </div>`;
+  }
+
+  // Las secciones "guinda del pastel": diseño/avanzado/visual como acordeones en
+  // la MISMA columna (estilo Pumper), reusando los controles de panelDiseno.
+  function bdlSeccionesExtra(b, s) {
+    s.secOpen = s.secOpen || {};
+    const d = b.diseno || {};
+    const presets = Object.keys(PRESETS_BDL)
+      .map((k) => `<button type="button" class="bdl-preset ${d.preset === k ? "is-sel" : ""}" data-preset="${k}"><span class="bdl-preset__dot" style="background:${PRESETS_BDL[k].bot}"></span>${NOMBRE_PRESET[k]}</button>`)
+      .join("");
+    const colorYEstilo = `
+      <div class="bdl-presets">${presets}</div>
+      <div class="bdl-grid2">
+        ${campoBdl("diseno.color_borde", "Borde seleccionado", "color")}
+        ${campoBdl("diseno.color_etiqueta", "Etiqueta", "color")}
+        ${campoBdl("diseno.color_badge", "Fondo insignia", "color")}
+        ${campoBdl("diseno.color_badge_texto", "Texto insignia", "color")}
+        ${campoBdl("diseno.color_texto", "Texto general", "color")}
+        ${campoBdl("diseno.radio", "Redondeo (px)", "numero", 'min="0" max="30"')}
+      </div>`;
+    const avanzada = `
+      ${campoBdl("diseno.mostrar_encabezado", "Mostrar encabezado", "bool")}
+      ${campoBdl("diseno.titulo", "Título del paquete")}
+      ${campoBdl("diseno.subtitulo", "Subtítulo del paquete")}
+      ${campoBdl("diseno.mostrar_ahorro", "Mostrar “Ahorrás $X”", "bool")}
+      ${beToggleRow("Permitir a los clientes elegir diferentes variantes para cada artículo", `data-toggle-b="opciones.variantes"`, !!leer(b, "opciones.variantes"))}
+      ${beToggleRow("Descuento por volumen (extender el descuento máximo a todas las cantidades)", `data-toggle-b="opciones.volumen"`, leer(b, "opciones.volumen") !== false)}`;
+    const visuales = `
+      ${campoBdl("diseno.boton.texto", "Texto del botón (usá {total} para el precio)")}
+      <div class="bdl-grid2">
+        ${campoBdl("diseno.boton.color_fondo", "Fondo del botón", "color")}
+        ${campoBdl("diseno.boton.color_texto", "Texto del botón", "color")}
+        ${campoBdl("diseno.boton.radio", "Redondeo (px)", "numero", 'min="0" max="30"')}
+        ${campoBdl("diseno.boton.tamano", "Tamaño de texto (px)", "numero", 'min="10" max="28"')}
+      </div>`;
+    return `<div class="be-secs-extra">
+      ${bdlAcordeon("color", IC_PALETA, "Color y estilo", colorYEstilo, !!s.secOpen.color)}
+      ${bdlAcordeon("avanzada", IC_ENGRANAJE, "Configuración avanzada", avanzada, !!s.secOpen.avanzada)}
+      ${bdlAcordeon("visuales", IC_GRID, "Opciones visuales", visuales, !!s.secOpen.visuales)}
+    </div>`;
+  }
+
   function bindEditorBundle(b, s) {
     const root = $("be-left");
     if (!root) return;
@@ -3586,7 +3640,8 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
 
     root.addEventListener("click", (e) => {
       const t = e.target;
-      const sec = t.closest("[data-sec]"); if (sec) { s.setupOpen = !s.setupOpen; return pintarEditorBundle(); }
+      const sec = t.closest("[data-sec]"); if (sec) { const k = sec.dataset.sec; if (k === "setup") s.setupOpen = !s.setupOpen; else { s.secOpen = s.secOpen || {}; s.secOpen[k] = !s.secOpen[k]; } return pintarEditorBundle(); }
+      const pr = t.closest("[data-preset]"); if (pr) { const p = PRESETS_BDL[pr.dataset.preset]; b.diseno = b.diseno || {}; b.diseno.boton = b.diseno.boton || {}; b.diseno.preset = pr.dataset.preset; b.diseno.color_borde = p.borde; b.diseno.color_badge = p.badge; b.diseno.color_etiqueta = p.etq; b.diseno.color_texto = p.texto; b.diseno.boton.color_fondo = p.bot; marcarSucioBundles(); pintarPreviewBundle(); return pintarEditorBundle(); }
       const op = t.closest("[data-lv-open]"); if (op) { const i = +op.dataset.lvOpen; s.nivelOpen = s.nivelOpen === i ? null : i; return pintarEditorBundle(); }
       const tg = t.closest("[data-lv-toggle]"); if (tg) { const o = b.ofertas[+tg.dataset.lvToggle]; o.activo = o.activo === false; marcarSucioBundles(); return pintarEditorBundle(); }
       const st = t.closest("[data-lv-star]"); if (st) { const o = b.ofertas[+st.dataset.lvStar]; o.popular = !o.popular; marcarSucioBundles(); return pintarEditorBundle(); }

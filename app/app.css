@@ -716,9 +716,16 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
 .be-left .campo--editor input, .be-left .campo--editor select, .be-left .campo--editor textarea { border-color: #d9d9d9; }
 
 /* "La guinda del pastel" */
-.be-guinda { margin-top: 22px; }
+.be-guinda { margin-top: 24px; margin-bottom: 12px; }
 .be-guinda__t { font-size: 16px; font-weight: 600; color: #202223; }
-.be-guinda__s { font-size: 11.5px; color: #6d7175; margin-top: 3px; }
+.be-guinda__s { font-size: 13px; color: #6d7175; margin-top: 4px; }
+
+/* Secciones-acordeón de abajo (Color y estilo, etc.) — mismo lenguaje que
+   "Select Product & Basic Setup", con ícono a la izquierda estilo Polaris. */
+.be-secs-extra { display: flex; flex-direction: column; gap: 12px; }
+.be-sec__lead { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.be-sec__ico { display: flex; color: #6d7175; flex-shrink: 0; }
+.be-sec__ico svg { width: 20px; height: 20px; display: block; }
 
 /* Preview: UNA sola caja (padding 16). El marco deja de ser caja para no
    duplicar padding → el widget queda más ancho (panel ~330, widget ~298). */
