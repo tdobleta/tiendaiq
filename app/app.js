@@ -3344,6 +3344,8 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     if (b.diseno && !b.diseno.geometry) b.diseno.geometry = { radius: b.diseno.radio ?? 12, breathing: 10 };
     // Layout (Paso 4): plantilla vertical por defecto = comportamiento actual.
     if (b.diseno && !b.diseno.layout) b.diseno.layout = { template: "vertical" };
+    // Tipografía (Paso 6): fuente heredada, pesos = los actuales (700/700).
+    if (b.diseno && !b.diseno.type) b.diseno.type = { font: "heredar", titleWeight: 700, priceWeight: 700 };
     (b.ofertas || []).forEach((o) => {
       if (o.activo === undefined) o.activo = true;
       if (!o.ver) o.ver = {};
@@ -3577,6 +3579,13 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     </div>`;
   }
 
+  // Select atado a una ruta del modelo. opciones = [[valor, etiqueta], ...].
+  function selectBdl(ruta, etiqueta, opciones, tipo) {
+    const v = leer(bundleActual(), ruta);
+    const opts = opciones.map(([val, lab]) => `<option value="${esc(val)}" ${String(v) === String(val) ? "selected" : ""}>${esc(lab)}</option>`).join("");
+    return `<div class="campo campo--editor"><label>${esc(etiqueta)}</label><select data-b="${ruta}"${tipo ? ` data-tipo="${tipo}"` : ""}>${opts}</select></div>`;
+  }
+
   // Mapa "Personalizar": refleja el color tocado en la mini-tarjeta del editor
   // sin re-renderizar (targeted update, como el valor del slider).
   function actualizarMiniPerso(token, v) {
@@ -3651,9 +3660,17 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         </div>`;
       })()}`;
     const avanzada = `
+      <div class="bdl-subsec">Textos</div>
       ${campoBdl("diseno.mostrar_encabezado", "Mostrar encabezado", "bool")}
       ${campoBdl("diseno.titulo", "Título del paquete")}
       ${campoBdl("diseno.subtitulo", "Subtítulo del paquete")}
+      <div class="bdl-subsec">Tipografía</div>
+      ${selectBdl("diseno.type.font", "Fuente", [["heredar", "Del tema"], ["sans", "Sans"], ["serif", "Serif"], ["redondeada", "Redondeada"], ["mono", "Mono"]])}
+      <div class="bdl-grid2">
+        ${selectBdl("diseno.type.titleWeight", "Peso del título", [[400, "Normal"], [500, "Medio"], [600, "Semibold"], [700, "Bold"], [800, "Extra bold"]], "numero")}
+        ${selectBdl("diseno.type.priceWeight", "Peso del precio", [[400, "Normal"], [500, "Medio"], [600, "Semibold"], [700, "Bold"], [800, "Extra bold"]], "numero")}
+      </div>
+      <div class="bdl-subsec">Opciones</div>
       ${campoBdl("diseno.mostrar_ahorro", "Mostrar “Ahorrás $X”", "bool")}
       ${beToggleRow("Permitir a los clientes elegir diferentes variantes para cada artículo", `data-toggle-b="opciones.variantes"`, !!leer(b, "opciones.variantes"))}
       ${beToggleRow("Descuento por volumen (extender el descuento máximo a todas las cantidades)", `data-toggle-b="opciones.volumen"`, leer(b, "opciones.volumen") !== false)}`;
@@ -4049,10 +4066,20 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   // storefront (tiendaiq-bundle.js) replica este MISMO contrato → paridad
   // admin↔tienda. Función pura: sin DOM, testeable, base del editor "Color y
   // estilo". PASO 1 de la reconstrucción (docs/editor-color-estilo-spec.md §6).
+  // Familias de fuente ofrecidas (clave → stack CSS). "heredar" = la del tema.
+  const FONTS_BDL = {
+    heredar: "inherit",
+    sans: "system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif",
+    serif: "Georgia,'Times New Roman',serif",
+    redondeada: "'Nunito','Quicksand','Varela Round',system-ui,sans-serif",
+    mono: "'SF Mono',ui-monospace,'Courier New',monospace"
+  };
+
   function disenoAVars(d) {
     d = d || {};
     const bot = d.boton || {};
     const g = d.geometry || {};
+    const ty = d.type || {};
     // geometry.radius unifica el redondeo de la tarjeta (fallback al legacy
     // `radio`). geometry.breathing → --tiq-gap (densidad/aire entre tarjetas);
     // si no está seteado NO se emite → el widget usa su fallback → look intacto.
@@ -4062,6 +4089,10 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       `--tiq-borde:${d.color_borde || "#111"};--tiq-badge:${d.color_badge || "#111"};--tiq-badge-txt:${d.color_badge_texto || "#fff"};` +
       `--tiq-etq:${d.color_etiqueta || "#e11d48"};--tiq-txt:${d.color_texto || "#111"};--tiq-radio:${radio}px;` +
       (gap != null ? `--tiq-gap:${gap}px;` : "") +
+      // Tipografía (Paso 6): fuente solo si no es "heredar"; pesos por rol.
+      (ty.font && ty.font !== "heredar" ? `--tiq-font:${FONTS_BDL[ty.font] || "inherit"};` : "") +
+      (ty.titleWeight ? `--tiq-title-w:${ty.titleWeight};` : "") +
+      (ty.priceWeight ? `--tiq-price-w:${ty.priceWeight};` : "") +
       `--tiq-bot-fondo:${bot.color_fondo || "#111"};--tiq-bot-txt:${bot.color_texto || "#fff"};--tiq-bot-radio:${bot.radio ?? 8}px;--tiq-bot-tam:${bot.tamano ?? 16}px`
     );
   }

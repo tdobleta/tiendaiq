@@ -101,6 +101,12 @@
   var G = D.geometry || {};
   raiz.style.setProperty("--tiq-radio", (G.radius != null ? G.radius : (D.radio != null ? D.radio : 12)) + "px");
   if (G.breathing != null) raiz.style.setProperty("--tiq-gap", G.breathing + "px");
+  // Tipografía (Paso 6): fuente + pesos por rol. Mismo contrato que el admin.
+  var FONTS = { heredar: "inherit", sans: "system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif", serif: "Georgia,'Times New Roman',serif", redondeada: "'Nunito','Quicksand','Varela Round',system-ui,sans-serif", mono: "'SF Mono',ui-monospace,'Courier New',monospace" };
+  var TY = D.type || {};
+  if (TY.font && TY.font !== "heredar") raiz.style.setProperty("--tiq-font", FONTS[TY.font] || "inherit");
+  if (TY.titleWeight) raiz.style.setProperty("--tiq-title-w", TY.titleWeight);
+  if (TY.priceWeight) raiz.style.setProperty("--tiq-price-w", TY.priceWeight);
   raiz.style.setProperty("--tiq-bot-fondo", BOT.color_fondo || "#111");
   raiz.style.setProperty("--tiq-bot-txt", BOT.color_texto || "#fff");
   raiz.style.setProperty("--tiq-bot-radio", (BOT.radio != null ? BOT.radio : 8) + "px");
