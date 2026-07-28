@@ -28,6 +28,13 @@
     <a href="/bundles">Bundles y descuentos</a>
   </ui-nav-menu>
 
+  <!-- Save Bar contextual de Shopify (App Bridge la dibuja en el chrome del
+       admin cuando hay cambios sin guardar). La controla app.js. -->
+  <ui-save-bar id="tiq-save-bar">
+    <button variant="primary" id="tiq-sb-save">Guardar</button>
+    <button id="tiq-sb-discard">Descartar</button>
+  </ui-save-bar>
+
   <!-- Adentro del admin, Shopify ya pone su propio header: el nuestro sobra.
        app.js le pone la clase "embebida" al body y este header se oculta. -->
   <header class="barra">

@@ -4053,22 +4053,68 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   }
 
   // ---------- guardar / instalar / salir ----------
+  // Save Bar contextual de App Bridge (barra nativa de "cambios sin guardar" en
+  // el chrome del admin). Fuera del admin embebido (window.shopify ausente) es
+  // un no-op silencioso: los botones inline siguen funcionando igual.
+  const saveBar = {
+    _wired: false,
+    _ctx: null,
+    _wire() {
+      if (this._wired) return;
+      this._wired = true;
+      const save = $("tiq-sb-save");
+      const disc = $("tiq-sb-discard");
+      if (save) save.addEventListener("click", () => this._ctx?.onSave?.());
+      if (disc) disc.addEventListener("click", () => this._ctx?.onDiscard?.());
+    },
+    show(ctx) {
+      this._ctx = ctx;
+      this._wire();
+      try { window.shopify?.saveBar?.show("tiq-save-bar"); } catch {}
+    },
+    hide() {
+      this._ctx = null;
+      try { window.shopify?.saveBar?.hide("tiq-save-bar"); } catch {}
+    },
+    guardando(on) {
+      const s = $("tiq-sb-save");
+      if (s) { s.toggleAttribute("loading", on); }
+    }
+  };
+
   function marcarSucioBundles() {
     estado.bundles.sucio = true;
     const b = $("bdl-guardar");
     if (b) { b.disabled = false; b.textContent = "Guardar cambios"; b.classList.add("btn--acento"); b.classList.remove("btn--fantasma"); }
+    saveBar.show({ onSave: () => guardarBundles(), onDiscard: () => descartarBundles() });
+  }
+
+  // Descartar: vuelve a la última versión guardada en el server y repinta.
+  async function descartarBundles() {
+    try {
+      estado.bundles.config = await api("/bundles");
+      estado.bundles.sucio = false;
+      saveBar.hide();
+      pintarEditorBundle();
+    } catch (e) {
+      vista.insertAdjacentHTML("afterbegin", `<div class="error">✖ No se pudo descartar: ${esc(e.message)}</div>`);
+    }
   }
 
   async function guardarBundles() {
     const b = $("bdl-guardar");
     if (b) { b.disabled = true; b.textContent = "Guardando…"; }
+    saveBar.guardando(true);
     try {
       estado.bundles.config = await api("/bundles", { method: "PUT", body: { config: estado.bundles.config } });
       estado.bundles.sucio = false;
       if (b) { b.textContent = "✓ Guardado"; b.classList.remove("btn--acento"); b.classList.add("btn--fantasma"); }
+      saveBar.guardando(false);
+      saveBar.hide();
       return true;
     } catch (e) {
       if (b) { b.disabled = false; b.textContent = "Guardar cambios"; }
+      saveBar.guardando(false);
       vista.insertAdjacentHTML("afterbegin", `<div class="error">✖ No se pudo guardar: ${esc(e.message)}</div>`);
       return false;
     }
@@ -4091,6 +4137,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     if (estado.bundles?.sucio && !confirm("Hay cambios sin guardar. ¿Salir igual?")) return;
     estado.bundles.vista = "lista";
     estado.bundles.sucio = false;
+    saveBar.hide();
     pintarDashboardBundles();
   }
 

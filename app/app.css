@@ -678,8 +678,11 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
 .be-top h1 { font-size: 20px; font-weight: 650; color: #202223; letter-spacing: -.2px; }
 .be-top .volver-flecha { color: #616161; font-size: 18px; }
 .be-top__act { gap: 12px; }
-.be-top .btn { height: 30px; font-size: 12px; font-weight: 600; border-radius: 8px; padding: 0 14px; }
+.be-top .btn { height: 32px; font-size: 13px; font-weight: 600; border-radius: 8px; padding: 0 12px; }
 .be-top .btn--fantasma { font-weight: 500; border: 1px solid #c9cccf; color: #202223; }
+/* Save Bar de App Bridge: se renderiza en el chrome de Shopify; fuera del admin
+   embebido no debe mostrarse cruda en la página. */
+ui-save-bar { display: none; }
 
 .be-layout { max-width: 800px; grid-template-columns: minmax(0, 1fr) 320px; gap: 24px; }
 /* Bloque del producto en el preview: compacto (foto chica, poco margen) para
