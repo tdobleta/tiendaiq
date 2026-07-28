@@ -2004,3 +2004,79 @@ summary:focus-visible, label:focus-visible {
 .herramienta__preview--bdl .tiq-bdl { margin: 0; width: 100%; }
 .herramienta__preview--bdl .tiq-bdl__card { padding: 9px 11px; cursor: default; }
 .herramienta__preview--bdl .tiq-bdl__card:hover { border-color: rgba(0,0,0,.12); }
+
+/* ============================================================
+   PASO 7 — Estados interactivos consistentes (hover · focus-visible ·
+   active · disabled) para todos los controles del editor de bundles.
+   Pase SOLO-CSS y aditivo: vive al final para unificar la cascada sin
+   editar las reglas previas (ninguna pierde su estado anterior).
+   Convención Polaris: hover #f6f6f7 / borde #8c9196 · anillo de foco
+   #005bd3 reutilizado en TODOS · active sutil · disabled .45 + no-drop.
+   ============================================================ */
+
+/* -- 1. Anillo de foco de teclado unificado (misma declaración en todos) -- */
+.be-top .btn:focus-visible,
+.be-left .campo--editor select:focus-visible,
+.be-layout .cod-preview .campo--editor select:focus-visible,
+.perso-sw input[type="color"]:focus-visible,
+.bdl-pal:focus-visible,
+.bdl-pal-undo:focus-visible,
+.bdl-slider input[type="range"]:focus-visible,
+.be-gift__chip:focus-visible,
+.be-lv__icn:focus-visible,
+.be-lv__star:focus-visible,
+.be-sec__head:focus-visible,
+.bdl-tpl:focus-visible {
+  outline: 2px solid #005bd3;
+  outline-offset: 2px;
+}
+/* Toggle: el foco de teclado se refleja con focus-within (el thumb/estado
+   real puede vivir en un elemento interno) además de focus-visible. */
+.be-toggle:focus-visible,
+.be-toggle:focus-within { outline: 2px solid #005bd3; outline-offset: 2px; }
+
+/* -- 2. Selects (Personalizar y preview COD): hover + foco con borde acento + disabled -- */
+.be-left .campo--editor select,
+.be-layout .cod-preview .campo--editor select { transition: border-color .12s, box-shadow .12s; }
+.be-left .campo--editor select:hover:not(:disabled),
+.be-layout .cod-preview .campo--editor select:hover:not(:disabled) { border-color: #8c9196; }
+.be-left .campo--editor select:focus-visible,
+.be-layout .cod-preview .campo--editor select:focus-visible { border-color: #005bd3; }
+.be-left .campo--editor select:disabled,
+.be-layout .cod-preview .campo--editor select:disabled { opacity: .45; cursor: not-allowed; }
+
+/* -- 3. Inputs de color (swatches del mapa Personalizar): hover borde -- */
+.perso-sw input[type="color"] { transition: border-color .12s, box-shadow .12s; }
+.perso-sw input[type="color"]:hover { border-color: #8c9196; }
+
+/* -- 4. Swatches de paleta + botón deshacer: active sutil (focus-visible ya arriba) -- */
+.bdl-pal:active { transform: scale(.99); }
+.bdl-pal-undo:active:not(:disabled) { transform: translateY(1px); }
+
+/* -- 5. Sliders de geometría: hover/active del thumb (grab → grabbing) -- */
+.bdl-slider input[type="range"]::-webkit-slider-thumb {
+  cursor: grab; transition: transform .12s ease-out, box-shadow .12s ease-out;
+}
+.bdl-slider input[type="range"]::-moz-range-thumb {
+  cursor: grab; transition: transform .12s ease-out, box-shadow .12s ease-out;
+}
+.bdl-slider input[type="range"]:hover::-webkit-slider-thumb { transform: scale(1.12); box-shadow: 0 1px 5px rgba(0,0,0,.32); }
+.bdl-slider input[type="range"]:hover::-moz-range-thumb { transform: scale(1.12); box-shadow: 0 1px 5px rgba(0,0,0,.32); }
+.bdl-slider input[type="range"]:active { cursor: grabbing; }
+.bdl-slider input[type="range"]:active::-webkit-slider-thumb { cursor: grabbing; transform: scale(1.05); }
+.bdl-slider input[type="range"]:active::-moz-range-thumb { cursor: grabbing; transform: scale(1.05); }
+
+/* -- 6. Chips de color de regalo: active sutil (hover + is-on + focus ya cubiertos) -- */
+.be-gift__chip:active:not(.is-on) { background: #f6f6f7; }
+
+/* -- 7. Icon-buttons de nivel: hover en star + active en ambos (focus ya arriba) -- */
+.be-lv__icn, .be-lv__star { transition: border-color .12s, background .12s, color .12s, transform .12s; }
+.be-lv__star:hover:not(.is-star) { border-color: #8c9196; color: var(--negro); }
+.be-lv__icn:active, .be-lv__star:active { transform: translateY(1px); }
+
+/* -- 8. Cabeceras de acordeón: hover de fondo muy sutil (focus ya arriba) -- */
+.be-sec__head { transition: background .12s; }
+.be-sec__head:hover { background: #fafafa; }
+
+/* -- 9. Cards de plantilla vertical/horizontal: active sutil (hover + is-sel + focus cubiertos) -- */
+.bdl-tpl:active { transform: scale(.99); }
