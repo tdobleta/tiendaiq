@@ -675,7 +675,7 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
    Va al final → gana en la cascada sobre las reglas de arriba.
    ============================================================ */
 .be-top { max-width: 820px; margin: 0 auto 22px; gap: 10px; }
-.be-top h1 { font-size: 16px; font-weight: 700; color: #202223; }
+.be-top h1 { font-size: 20px; font-weight: 700; color: #202223; letter-spacing: -.2px; }
 .be-top .volver-flecha { color: #616161; font-size: 18px; }
 .be-top__act { gap: 12px; }
 .be-top .btn { height: 30px; font-size: 12px; font-weight: 600; border-radius: 8px; padding: 0 14px; }
@@ -687,7 +687,7 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
 .be-layout .bdl-preview__prod { margin-bottom: 12px; gap: 10px; }
 .be-layout .bdl-preview__foto { width: 42px; height: 42px; font-size: 20px; }
 
-.be-sec__title { font-size: 14px; font-weight: 600; color: #202223; margin: 20px 2px 12px; }
+.be-sec__title { font-size: 14px; font-weight: 700; color: #202223; margin: 20px 2px 12px; }
 .be-sec__title--top { margin-top: 0; }
 .be-sec { border-color: #d9d9d9; border-radius: 12px; }
 .be-sec__head { min-height: 48px; padding: 14px 16px; font-size: 14px; font-weight: 500; color: #202223; }
@@ -699,7 +699,7 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
 .be-lv__drag { color: #b8b8b8; }
 .be-lv__name { font-size: 14px; }
 .be-lv__n { color: #202223; font-weight: 600; margin-right: 2px; }
-.be-lv__name b { color: #202223; font-weight: 400; }
+.be-lv__name b { color: #202223; font-weight: 600; }
 .be-toggle { width: 30px; height: 16px; }
 .be-toggle span { width: 12px; height: 12px; top: 2px; }
 .be-toggle.is-on span { left: 16px; }
