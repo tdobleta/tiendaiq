@@ -15,9 +15,9 @@
    ============================================================ */
 :root {
   /* texto */
-  --negro: #1a1a1a;
+  --negro: #202223;
   --texto: #303030;
-  --suave: #6b7280;
+  --suave: #6d7175;
 
   /* superficies y bordes */
   --fondo: #f6f6f7;
@@ -674,41 +674,41 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
    SPEC EXACTO (extraído de la referencia): medidas y colores finos.
    Va al final → gana en la cascada sobre las reglas de arriba.
    ============================================================ */
-.be-top { max-width: 820px; margin: 0 auto 22px; gap: 10px; }
-.be-top h1 { font-size: 20px; font-weight: 700; color: #202223; letter-spacing: -.2px; }
+.be-top { max-width: 860px; margin: 0 auto 24px; gap: 10px; }
+.be-top h1 { font-size: 20px; font-weight: 650; color: #202223; letter-spacing: -.2px; }
 .be-top .volver-flecha { color: #616161; font-size: 18px; }
 .be-top__act { gap: 12px; }
 .be-top .btn { height: 30px; font-size: 12px; font-weight: 600; border-radius: 8px; padding: 0 14px; }
 .be-top .btn--fantasma { font-weight: 500; border: 1px solid #c9cccf; color: #202223; }
 
-.be-layout { max-width: 820px; grid-template-columns: minmax(0, 1fr) 350px; gap: 16px; }
+.be-layout { max-width: 860px; grid-template-columns: minmax(0, 1fr) 320px; gap: 32px; }
 /* Bloque del producto en el preview: compacto (foto chica, poco margen) para
    que la preview no se estire tanto para abajo. */
 .be-layout .bdl-preview__prod { margin-bottom: 12px; gap: 10px; }
 .be-layout .bdl-preview__foto { width: 42px; height: 42px; font-size: 20px; }
 
-.be-sec__title { font-size: 14px; font-weight: 700; color: #202223; margin: 20px 2px 12px; }
+.be-sec__title { font-size: 14px; font-weight: 600; color: #202223; margin: 24px 2px 12px; }
 .be-sec__title--top { margin-top: 0; }
-.be-sec { border-color: #d9d9d9; border-radius: 12px; }
-.be-sec__head { min-height: 48px; padding: 14px 16px; font-size: 14px; font-weight: 500; color: #202223; }
+.be-sec { border-color: #d2d5d8; border-radius: 12px; box-shadow: 0 1px 2px rgba(0,0,0,.06); }
+.be-sec__head { min-height: 52px; padding: 16px; font-size: 14px; font-weight: 600; color: #202223; }
 .be-chev { color: #6d7175; font-size: 16px; }
 
-.be-lvs { gap: 8px; }
-.be-lv { border-color: #d9d9d9; border-radius: 12px; }
-.be-lv__head { padding: 14px 16px; gap: 12px; }
+.be-lvs { gap: 12px; }
+.be-lv { border-color: #d2d5d8; border-radius: 12px; box-shadow: 0 1px 2px rgba(0,0,0,.06); }
+.be-lv__head { padding: 16px; gap: 12px; }
 .be-lv__drag { color: #b8b8b8; }
 .be-lv__name { font-size: 14px; }
 .be-lv__n { color: #202223; font-weight: 600; margin-right: 2px; }
-.be-lv__name b { color: #202223; font-weight: 600; }
+.be-lv__name b { color: #202223; font-weight: 500; }
 .be-toggle { width: 30px; height: 16px; }
 .be-toggle span { width: 12px; height: 12px; top: 2px; }
 .be-toggle.is-on span { left: 16px; }
-.be-lv__icn { width: 24px; height: 24px; border-radius: 6px; border-color: #c9cccf; color: #6d7175; }
-.be-lv__icn svg { width: 16px; height: 16px; }
-.be-lv__star { width: 24px; height: 24px; border: none; background: #d2d5d8; color: #fff; }
-.be-lv__star svg { width: 14px; height: 14px; }
-.be-lv__star.is-star { background: #6d7175; color: #fff; }
-.be-lv__chev { color: #6d7175; width: 24px; }
+.be-lv__icn { width: 30px; height: 30px; border-radius: 8px; border: 1px solid #d2d5d8; color: #6d7175; }
+.be-lv__icn svg { width: 17px; height: 17px; }
+.be-lv__star { width: 30px; height: 30px; border: 1px solid #d2d5d8; border-radius: 8px; background: #fff; color: #8c9196; }
+.be-lv__star svg { width: 15px; height: 15px; }
+.be-lv__star.is-star { background: #202223; border-color: #202223; color: #fff; }
+.be-lv__chev { color: #6d7175; width: 28px; }
 .be-lv__chev svg { width: 16px; height: 16px; }
 
 .be-add { min-height: 34px; padding: 10px; border: 1px dashed #bfc3c8; border-radius: 8px; font-size: 13px; font-weight: 500; color: #202223; }
