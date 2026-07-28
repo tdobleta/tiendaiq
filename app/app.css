@@ -1926,6 +1926,11 @@ summary:focus-visible, label:focus-visible {
 .bdl-pvbtn.is-sel { background: #f1f1f2; color: #202223; font-weight: 600; }
 .bdl-pvbtn:focus-visible { outline: 2px solid #2c6ecb; outline-offset: -2px; }
 .bdl-preview__marco.is-mobile #bdl-preview { max-width: 380px; margin: 0 auto; }
+.bdl-hist { display: flex; justify-content: flex-end; gap: 6px; margin-bottom: 6px; }
+.bdl-histbtn { width: 30px; height: 30px; border: 1px solid #c9cccf; background: #fff; border-radius: 8px; cursor: pointer; color: #202223; font-size: 15px; line-height: 1; }
+.bdl-histbtn:hover:not(:disabled) { background: #f6f6f7; }
+.bdl-histbtn:disabled { opacity: .4; cursor: default; }
+.bdl-histbtn:focus-visible { outline: 2px solid #2c6ecb; outline-offset: 1px; }
 .bdl-fixc { margin-left: auto; font-size: 12px; border: 1px solid #d2d5d8; background: #fff; border-radius: 6px; padding: 3px 9px; cursor: pointer; color: #202223; }
 .bdl-fixc:hover { background: #f6f6f7; }
 .bdl-fixc:focus-visible { outline: 2px solid #2c6ecb; outline-offset: 1px; }

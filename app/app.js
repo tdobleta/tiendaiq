@@ -3035,6 +3035,40 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     const l1 = luminanciaHex(a), l2 = luminanciaHex(b);
     return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
   }
+  // --- Historial de diseño (undo/redo general, no solo paletas) ---
+  const clonD = (x) => JSON.parse(JSON.stringify(x || {}));
+  let histTimer = null;
+  function histDe(b) {
+    let h = estado.bundles.hist;
+    if (!h || h.bundle !== b) h = estado.bundles.hist = { bundle: b, stack: [clonD(b.diseno)], idx: 0 };
+    return h;
+  }
+  function actualizarBotonesHist(b) {
+    const h = histDe(b);
+    const u = document.getElementById("bdl-undo"), r = document.getElementById("bdl-redo");
+    if (u) u.disabled = h.idx <= 0;
+    if (r) r.disabled = h.idx >= h.stack.length - 1;
+  }
+  function commitHist(b) {
+    const h = histDe(b);
+    const snap = clonD(b.diseno);
+    if (JSON.stringify(snap) === JSON.stringify(h.stack[h.idx])) return; // sin cambios reales
+    h.stack = h.stack.slice(0, h.idx + 1); // corta cualquier "rehacer" pendiente
+    h.stack.push(snap);
+    if (h.stack.length > 30) h.stack.shift(); else h.idx = h.stack.length - 1;
+    h.idx = h.stack.length - 1;
+    actualizarBotonesHist(b);
+  }
+  function pushHist(b) { clearTimeout(histTimer); histTimer = setTimeout(() => commitHist(b), 350); }
+  function restaurarHist(b, dir) {
+    clearTimeout(histTimer);
+    const h = histDe(b), ni = h.idx + dir;
+    if (ni < 0 || ni >= h.stack.length) return;
+    h.idx = ni;
+    b.diseno = clonD(h.stack[ni]);
+    marcarSucioBundles(); pintarPreviewBundle(); pintarEditorBundle();
+  }
+
   // Refresca en vivo el aviso de contraste de la insignia (sin re-render total).
   function refrescarAvisoContraste(b) {
     const el = document.getElementById("bdl-aviso-contraste");
@@ -3655,13 +3689,16 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
           <span class="bdl-pal__bar"></span>
         </span></button>`;
     };
-    const presets = Object.keys(PRESETS_BDL).map(swatch).join("") +
-      `<button type="button" class="bdl-pal-undo" data-palette-undo ${estado.bundles.snapPaleta && estado.bundles.snapPaleta.bundle === b ? "" : "disabled"} title="Deshacer paleta">↩</button>`;
+    const presets = Object.keys(PRESETS_BDL).map(swatch).join("");
     const tpl = (d.layout && d.layout.template) || "vertical";
     const tplCard = (id, nombre, mods) => `<button type="button" class="bdl-tpl ${tpl === id ? "is-sel" : ""}" data-tpl="${id}" aria-label="Plantilla ${nombre}">
         <span class="bdl-tpl__mini bdl-tpl__mini--${mods}"><i></i><i></i><i></i></span>
         <span class="bdl-tpl__name">${nombre}${tpl === id ? " ✓" : ""}</span></button>`;
     const colorYEstilo = `
+      <div class="bdl-hist">
+        <button type="button" id="bdl-undo" class="bdl-histbtn" data-hist="-1" title="Deshacer" ${histDe(b).idx <= 0 ? "disabled" : ""}>↩</button>
+        <button type="button" id="bdl-redo" class="bdl-histbtn" data-hist="1" title="Rehacer" ${histDe(b).idx >= histDe(b).stack.length - 1 ? "disabled" : ""}>↪</button>
+      </div>
       <div class="bdl-subsec">Diseño de plantilla</div>
       <div class="bdl-tpls">${tplCard("vertical", "Vertical", "v")}${tplCard("horizontal", "Horizontal", "h")}</div>
       <div class="bdl-subsec">Diseño</div>
@@ -3752,6 +3789,8 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       if (e.target.dataset.mid) actualizarMiniPerso(e.target.dataset.mid, v);
       // Aviso de contraste de la insignia, en vivo.
       if (/^diseno\.color_badge/.test(ruta)) refrescarAvisoContraste(b);
+      // Historial (undo/redo): registrar cambios de diseño, con debounce.
+      if (/^diseno\./.test(ruta)) pushHist(b);
       marcarSucioBundles();
       pintarPreviewBundle();
       // BOGO: la "cantidad total" es X+Y (campo calculado) → re-render.
@@ -3777,11 +3816,11 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     root.addEventListener("click", (e) => {
       const t = e.target;
       const sec = t.closest("[data-sec]"); if (sec) { const k = sec.dataset.sec; if (k === "setup") s.setupOpen = !s.setupOpen; else { s.secOpen = s.secOpen || {}; s.secOpen[k] = !s.secOpen[k]; } return pintarEditorBundle(); }
-      const tplBtn = t.closest("[data-tpl]"); if (tplBtn) { b.diseno = b.diseno || {}; b.diseno.layout = b.diseno.layout || {}; b.diseno.layout.template = tplBtn.dataset.tpl; marcarSucioBundles(); pintarPreviewBundle(); return pintarEditorBundle(); }
-      const undo = t.closest("[data-palette-undo]"); if (undo) { const sp = estado.bundles.snapPaleta; if (sp && sp.bundle === b) { b.diseno = sp.snap; estado.bundles.snapPaleta = null; marcarSucioBundles(); pintarPreviewBundle(); return pintarEditorBundle(); } return; }
-      const pr = t.closest("[data-preset]"); if (pr) { estado.bundles.snapPaleta = { bundle: b, snap: JSON.parse(JSON.stringify(b.diseno || {})) }; const p = PRESETS_BDL[pr.dataset.preset]; b.diseno = b.diseno || {}; b.diseno.boton = b.diseno.boton || {}; b.diseno.preset = pr.dataset.preset; b.diseno.palette = { active: pr.dataset.preset, source: "preset" }; b.diseno.color_borde = p.borde; b.diseno.color_badge = p.badge; b.diseno.color_badge_texto = "#ffffff"; b.diseno.color_etiqueta = p.etq; b.diseno.color_texto = p.texto; b.diseno.boton.color_fondo = p.bot; marcarSucioBundles(); pintarPreviewBundle(); return pintarEditorBundle(); }
+      const tplBtn = t.closest("[data-tpl]"); if (tplBtn) { b.diseno = b.diseno || {}; b.diseno.layout = b.diseno.layout || {}; b.diseno.layout.template = tplBtn.dataset.tpl; marcarSucioBundles(); commitHist(b); pintarPreviewBundle(); return pintarEditorBundle(); }
+      const hb = t.closest("[data-hist]"); if (hb) { restaurarHist(b, +hb.dataset.hist); return; }
+      const pr = t.closest("[data-preset]"); if (pr) { const p = PRESETS_BDL[pr.dataset.preset]; b.diseno = b.diseno || {}; b.diseno.boton = b.diseno.boton || {}; b.diseno.preset = pr.dataset.preset; b.diseno.palette = { active: pr.dataset.preset, source: "preset" }; b.diseno.color_borde = p.borde; b.diseno.color_badge = p.badge; b.diseno.color_badge_texto = "#ffffff"; b.diseno.color_etiqueta = p.etq; b.diseno.color_texto = p.texto; b.diseno.boton.color_fondo = p.bot; marcarSucioBundles(); commitHist(b); pintarPreviewBundle(); return pintarEditorBundle(); }
       const pv = t.closest("[data-pv]"); if (pv) { estado.bundles.previewMobile = pv.dataset.pv === "mobile"; const marco = document.querySelector(".bdl-preview__marco"); if (marco) marco.classList.toggle("is-mobile", estado.bundles.previewMobile); document.querySelectorAll("[data-pv]").forEach((x) => x.classList.toggle("is-sel", x === pv)); return; }
-      const fx = t.closest("[data-fix-contraste]"); if (fx) { const bg = leer(b, "diseno.color_badge") || "#111111"; const mejor = contrasteWCAG(bg, "#ffffff") >= contrasteWCAG(bg, "#111111") ? "#ffffff" : "#111111"; b.diseno = b.diseno || {}; b.diseno.color_badge_texto = mejor; marcarSucioBundles(); pintarPreviewBundle(); return pintarEditorBundle(); }
+      const fx = t.closest("[data-fix-contraste]"); if (fx) { const bg = leer(b, "diseno.color_badge") || "#111111"; const mejor = contrasteWCAG(bg, "#ffffff") >= contrasteWCAG(bg, "#111111") ? "#ffffff" : "#111111"; b.diseno = b.diseno || {}; b.diseno.color_badge_texto = mejor; marcarSucioBundles(); commitHist(b); pintarPreviewBundle(); return pintarEditorBundle(); }
       const op = t.closest("[data-lv-open]"); if (op) { const i = +op.dataset.lvOpen; s.nivelOpen = s.nivelOpen === i ? null : i; return pintarEditorBundle(); }
       const tg = t.closest("[data-lv-toggle]"); if (tg) { const o = b.ofertas[+tg.dataset.lvToggle]; o.activo = o.activo === false; marcarSucioBundles(); return pintarEditorBundle(); }
       const st = t.closest("[data-lv-star]"); if (st) { const o = b.ofertas[+st.dataset.lvStar]; o.popular = !o.popular; marcarSucioBundles(); return pintarEditorBundle(); }
@@ -3898,50 +3937,8 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   }
 
   // --- pestaña Diseño ---
-  function panelDiseno(b) {
-    const d = b.diseno || {};
-    const bot = d.boton || {};
-    const presets = Object.keys(PRESETS_BDL)
-      .map(
-        (k) => `<button class="bdl-preset ${d.preset === k ? "is-sel" : ""}" data-preset="${k}">
-          <span class="bdl-preset__dot" style="background:${PRESETS_BDL[k].bot}"></span>${NOMBRE_PRESET[k]}
-        </button>`
-      )
-      .join("");
-
-    return `
-      <div class="tarjeta__titulo">Diseño</div>
-      <div class="panel__sub">Elegí una paleta o ajustá los colores a mano.</div>
-
-      <div class="bdl-presets">${presets}</div>
-
-      <div class="bdl-seccion">Encabezado</div>
-      ${campoBdl("diseno.mostrar_encabezado", "Mostrar encabezado", "bool")}
-      ${campoBdl("diseno.titulo", "Título")}
-      ${campoBdl("diseno.subtitulo", "Subtítulo")}
-
-      <div class="bdl-seccion">Colores</div>
-      <div class="bdl-grid2">
-        ${campoBdl("diseno.color_borde", "Borde seleccionado", "color")}
-        ${campoBdl("diseno.color_etiqueta", "Etiqueta", "color")}
-        ${campoBdl("diseno.color_badge", "Fondo insignia", "color")}
-        ${campoBdl("diseno.color_badge_texto", "Texto insignia", "color")}
-        ${campoBdl("diseno.color_texto", "Texto general", "color")}
-      </div>
-      <div class="bdl-grid2">
-        ${campoBdl("diseno.radio", "Redondeo (px)", "numero", 'min="0" max="30"')}
-        ${campoBdl("diseno.mostrar_ahorro", "Mostrar “Ahorrás $X”", "bool")}
-      </div>
-
-      <div class="bdl-seccion">Botón</div>
-      ${campoBdl("diseno.boton.texto", "Texto (usá {total} para el precio)")}
-      <div class="bdl-grid2">
-        ${campoBdl("diseno.boton.color_fondo", "Fondo", "color")}
-        ${campoBdl("diseno.boton.color_texto", "Texto", "color")}
-        ${campoBdl("diseno.boton.radio", "Redondeo (px)", "numero", 'min="0" max="30"')}
-        ${campoBdl("diseno.boton.tamano", "Tamaño de texto (px)", "numero", 'min="10" max="28"')}
-      </div>`;
-  }
+  // (panelDiseno eliminado: era la versión vieja del editor de diseño, ya
+  //  reemplazada por bdlSeccionesExtra → acordeón "Color y estilo".)
 
   // Campo genérico atado a una ruta del bundle actual: data-b.
   function campoBdl(ruta, etiqueta, tipo = "text", extra = "") {
