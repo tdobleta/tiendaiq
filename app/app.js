@@ -3140,9 +3140,10 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   function bloqueMetricas() {
     const m = estado.bundles.metricas;
     if (!m) {
-      const vacia = (t) => tarjetaMetrica(t, "—", "Calculando sobre tus pedidos…");
+      // Skeleton mientras cargan (un "0" o "—" fijo lee a dato falso).
+      const sk = (t) => `<div class="bdl-metrica"><div class="bdl-metrica__t">${esc(t)}</div><div class="bdl-metrica__v"><span class="bdl-sk"></span></div></div>`;
       return `<div class="bdl-metricas">
-        ${vacia("Pedidos con bundle")}${vacia("Ingresos")}${vacia("Ticket promedio")}${vacia("Descuento aplicado")}
+        ${sk("Pedidos con bundle")}${sk("Ingresos")}${sk("Ticket promedio")}${sk("Descuento aplicado")}
       </div>`;
     }
     const plata = (n) =>
@@ -3262,57 +3263,91 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     const lista = estado.bundles.config.lista || [];
     const inst = estado.bundles.config.instalado;
 
-    const filas = lista
-      .map((b, i) => {
-        const alcance =
-          b.activador?.tipo === "todos" ? "Todos los productos"
-          : b.activador?.tipo === "coleccion" ? `${b.activador.ids?.length || 0} colección(es)`
-          : `${b.activador?.ids?.length || 0} producto(s)`;
-        const resumen =
-          b.tipo === "bxgy"
-            ? `Comprá X y obtené Y · comprá ${b.bxgy?.compra_cantidad || 2}, llevás ${b.bxgy?.regalo_cantidad || 1}`
-            : `Descuento por volumen · ${(b.ofertas || []).filter((o) => Number(o.descuento) > 0).length} peldaño(s) con descuento`;
-        return `<div class="bdl-fila" data-abrir="${i}">
-          <div class="bdl-fila__ico">${b.tipo === "bxgy" ? "🎁" : "📦"}</div>
-          <div class="bdl-fila__main">
-            <div class="bdl-fila__nombre">${esc(b.nombre)} ${b.activo ? "" : '<span class="bdl-chip bdl-chip--off">Pausado</span>'}</div>
-            <div class="bdl-fila__sub">${esc(resumen)} · ${esc(alcance)}</div>
-          </div>
-          <button class="bdl-fila__del" data-del="${i}" title="Eliminar bundle">🗑</button>
-        </div>`;
-      })
-      .join("");
+    const filtro = estado.bundles.filtro || "todas";
+    // Íconos mono (no emoji: los emojis delatan MVP en el admin de Shopify).
+    const ICO_BOX = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8.5v9L12 22l-9-4.5v-9L12 4l9 4.5z"/><path d="M3 8.5l9 4.5 9-4.5"/><path d="M12 13v9"/></svg>`;
+    const ICO_GIFT = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8.5" width="18" height="4" rx="1"/><path d="M4.5 12.5V20h15v-7.5"/><path d="M12 8.5V20"/><path d="M12 8.5C11 6 9.5 4.5 8 4.5a2 2 0 0 0 0 4z"/><path d="M12 8.5c1-2.5 2.5-4 4-4a2 2 0 0 1 0 4z"/></svg>`;
+
+    const nAct = lista.filter((b) => b.activo !== false).length;
+    const nPaus = lista.length - nAct;
+    const visibles = lista
+      .map((b, i) => ({ b, i }))
+      .filter(({ b }) => (filtro === "activas" ? b.activo !== false : filtro === "pausadas" ? b.activo === false : true));
+
+    const filaHTML = ({ b, i }) => {
+      const alcance =
+        b.activador?.tipo === "todos" ? "Todos los productos"
+        : b.activador?.tipo === "coleccion" ? `${b.activador.ids?.length || 0} colección(es)`
+        : `${b.activador?.ids?.length || 0} producto(s)`;
+      const resumen =
+        b.tipo === "bxgy"
+          ? `Comprá ${b.bxgy?.compra_cantidad || 2}, llevás ${b.bxgy?.regalo_cantidad || 1}`
+          : `${(b.ofertas || []).filter((o) => Number(o.descuento) > 0).length} peldaño(s) con descuento`;
+      const on = b.activo !== false;
+      return `<div class="bdl-fila2" data-abrir="${i}">
+        <div class="bdl-fila2__ico">${b.tipo === "bxgy" ? ICO_GIFT : ICO_BOX}</div>
+        <div class="bdl-fila2__main">
+          <div class="bdl-fila2__nombre">${esc(b.nombre)}</div>
+          <div class="bdl-fila2__sub">${b.tipo === "bxgy" ? "Comprá X y obtené Y" : "Descuento por volumen"} · ${esc(resumen)}</div>
+        </div>
+        <div class="bdl-fila2__alcance">${esc(alcance)}</div>
+        <div class="bdl-fila2__estado">
+          <button class="be-toggle ${on ? "is-on" : ""}" data-toggle-activo="${i}" role="switch" aria-checked="${on}" title="${on ? "Activo — clic para pausar" : "Pausado — clic para activar"}"><span></span></button>
+        </div>
+        <div class="bdl-fila2__acc"><button class="bdl-acc-btn" data-acc="${i}" aria-label="Más acciones">⋯</button></div>
+      </div>`;
+    };
+
+    const tabsHTML = `<div class="cod-tabs bdl-filtros">
+      <button class="cod-tab ${filtro === "todas" ? "cod-tab--activa" : ""}" data-filtro="todas">Todas <span class="bdl-filtros__n">${lista.length}</span></button>
+      <button class="cod-tab ${filtro === "activas" ? "cod-tab--activa" : ""}" data-filtro="activas">Activas <span class="bdl-filtros__n">${nAct}</span></button>
+      <button class="cod-tab ${filtro === "pausadas" ? "cod-tab--activa" : ""}" data-filtro="pausadas">Pausadas <span class="bdl-filtros__n">${nPaus}</span></button>
+    </div>`;
+
+    const cuerpoTabla = visibles.length
+      ? `<div class="tarjeta bdl-tabla2">
+          <div class="bdl-tabla2__cab"><span></span><span>Bundle</span><span>Alcance</span><span>Estado</span><span></span></div>
+          ${visibles.map(filaHTML).join("")}
+        </div>`
+      : `<div class="tarjeta bdl-vacio"><div class="bdl-vacio__s">No hay bundles ${filtro === "activas" ? "activos" : "pausados"}.</div></div>`;
+
+    // Estado del widget: sutil cuando está OK (no un banner verde permanente,
+    // que grita MVP), banner de aviso solo si NO está inyectado.
+    const widgetEstado = inst
+      ? `<div class="bdl-wstatus">✓ Widget activo en <strong>${esc(inst.tema)}</strong> · ${esc(fechaCorta(inst.fecha))} <button class="bdl-wlink" id="bdl-instalar">Reinyectar</button></div>`
+      : lista.length
+        ? `<div class="cod-banner cod-banner--aviso">⚠ Los bundles no están inyectados en tu tema: no aparecen en la tienda. <button class="btn btn--chico" id="bdl-instalar">▲ Inyectar en el tema</button></div>`
+        : "";
+
+    const pasoOnb = (hecho, texto, accion) =>
+      `<div class="bdl-paso ${hecho ? "is-ok" : ""}"><span class="bdl-paso__c">${hecho ? "✓" : ""}</span><span class="bdl-paso__t">${texto}</span><span class="bdl-paso__a">${hecho ? "Listo" : accion}</span></div>`;
+    const nHechos = inst ? 1 : 0;
+    const onboarding = `
+      <div class="tarjeta bdl-onboard">
+        <div class="bdl-onboard__cab"><strong>Primeros pasos</strong><span class="panel__sub">${nHechos} de 3 completado${nHechos === 1 ? "" : "s"}</span></div>
+        <div class="bdl-onboard__bar"><i style="width:${Math.round((nHechos / 3) * 100)}%"></i></div>
+        ${pasoOnb(!!inst, "Activá el widget en tu tema", `<button class="btn btn--chico" id="bdl-instalar">Inyectar</button>`)}
+        ${pasoOnb(false, "Creá tu primer bundle", `<button class="btn btn--chico bdl-onb-crear">Crear</button>`)}
+        ${pasoOnb(false, "Previsualizá en tu tienda", `<span class="panel__sub">tras crear</span>`)}
+      </div>
+      <div class="tarjeta bdl-vacio">
+        <div class="bdl-vacio__ico">${ICO_BOX}</div>
+        <div class="bdl-vacio__t">Creá tu primer bundle</div>
+        <div class="bdl-vacio__s">Subí el ticket promedio con descuentos por volumen (comprá más, pagá menos) o "comprá X y obtené Y".</div>
+        <div class="bdl-plantillas">
+          <button class="bdl-plant" data-plant="volumen">${ICO_BOX}<strong>Descuento por volumen</strong><span>Comprá más, pagá menos</span></button>
+          <button class="bdl-plant" data-plant="bxgy">${ICO_GIFT}<strong>Comprá X y obtené Y</strong><span>Llevá una cantidad de regalo</span></button>
+        </div>
+      </div>`;
 
     vista.innerHTML = `
       <div class="inicio-cabecera">
         <h1><button class="volver-flecha" id="volver-inicio">←</button> Bundles, upsells y regalos</h1>
-        <div class="inicio-cabecera__acciones">
-          <button class="btn btn--marca" id="bdl-nuevo">＋ Crear bundle</button>
-        </div>
+        <div class="inicio-cabecera__acciones"><button class="btn btn--marca" id="bdl-nuevo">＋ Crear bundle</button></div>
       </div>
-
-      ${
-        inst
-          ? `<div class="cod-banner cod-banner--ok">✓ Widget inyectado en el tema <strong>${esc(inst.tema)}</strong> · ${esc(fechaCorta(inst.fecha))}
-               <button class="btn btn--fantasma btn--chico" id="bdl-instalar">↻ Volver a inyectar</button></div>`
-          : lista.length
-            ? `<div class="cod-banner cod-banner--aviso">⚠ Los bundles todavía no están inyectados en tu tema: no aparecen en la tienda.
-                 <button class="btn btn--chico" id="bdl-instalar">▲ Inyectar en el tema</button></div>`
-            : ""
-      }
-
-      ${bloqueMetricas()}
-
-      ${
-        lista.length
-          ? `<div class="tarjeta"><div class="bdl-lista">${filas}</div></div>`
-          : `<div class="tarjeta bdl-vacio">
-               <div class="bdl-vacio__ico">🛒</div>
-               <div class="bdl-vacio__t">Aún no hay bundles</div>
-               <div class="bdl-vacio__s">Creá un descuento por volumen (comprá más, pagá menos) para subir el valor del pedido.</div>
-               <button class="btn btn--marca" id="bdl-vacio-crear">Creá tu primer bundle</button>
-             </div>`
-      }`;
+      ${widgetEstado}
+      ${lista.length ? bloqueMetricas() + tabsHTML + cuerpoTabla : onboarding}
+      <div class="pagina-help">¿Dudas? Revisá la documentación de bundles.</div>`;
 
     $("volver-inicio").onclick = () => ir("inicio");
     const crearTipo = (tipo) => {
@@ -3344,22 +3379,73 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     void abrirMenuTipo; void crearTipo; // (reemplazados por la galería)
     if ($("bdl-instalar")) $("bdl-instalar").onclick = instalarBundlesTema;
 
+    // Onboarding (primer uso): crear / plantillas.
+    vista.querySelectorAll(".bdl-onb-crear").forEach((el) => (el.onclick = abrirGaleria));
+    vista.querySelectorAll("[data-plant]").forEach((el) => (el.onclick = () => crearDesdeTema(el.dataset.plant)));
+
+    // Filtros de estado (client-side).
+    vista.querySelectorAll("[data-filtro]").forEach((el) => (el.onclick = () => { estado.bundles.filtro = el.dataset.filtro; pintarDashboardBundles(); }));
+
+    // Abrir el editor al click en la fila (menos si se tocó el toggle o ⋯).
     vista.querySelectorAll("[data-abrir]").forEach((el) => {
       el.onclick = (e) => {
-        if (e.target.closest("[data-del]")) return;
+        if (e.target.closest("[data-toggle-activo]") || e.target.closest("[data-acc]")) return;
         estado.bundles.editIdx = Number(el.dataset.abrir);
         estado.bundles.vista = "editor";
         estado.bundles.tab = "ofertas";
         pintarEditorBundle();
       };
     });
-    vista.querySelectorAll("[data-del]").forEach((el) => {
+
+    // Toggle activo/pausado por fila (guarda y re-sincroniza descuentos en Shopify).
+    vista.querySelectorAll("[data-toggle-activo]").forEach((el) => {
       el.onclick = async (e) => {
         e.stopPropagation();
-        if (!confirm("¿Eliminar este bundle? Se borran también sus descuentos en Shopify.")) return;
-        estado.bundles.config.lista.splice(Number(el.dataset.del), 1);
+        const bb = estado.bundles.config.lista[Number(el.dataset.toggleActivo)];
+        bb.activo = bb.activo === false;
+        el.classList.toggle("is-on", bb.activo !== false); // feedback inmediato
         await guardarBundles();
         pintarDashboardBundles();
+      };
+    });
+
+    // Menú de acciones ⋯ (Editar / Duplicar / Eliminar).
+    const cerrarAccMenu = () => { const m = document.getElementById("bdl-accmenu"); if (m) m.remove(); };
+    vista.querySelectorAll("[data-acc]").forEach((el) => {
+      el.onclick = (e) => {
+        e.stopPropagation();
+        cerrarAccMenu();
+        const i = Number(el.dataset.acc);
+        const m = document.createElement("div");
+        m.className = "bdl-tipomenu bdl-accmenu";
+        m.id = "bdl-accmenu";
+        m.innerHTML = `
+          <button data-a="editar"><strong>Editar</strong></button>
+          <button data-a="duplicar"><strong>Duplicar</strong></button>
+          <button data-a="eliminar" class="bdl-accmenu__del"><strong>Eliminar</strong></button>`;
+        document.body.appendChild(m);
+        const r = el.getBoundingClientRect();
+        m.style.top = r.bottom + window.scrollY + 6 + "px";
+        m.style.left = Math.max(12, r.right + window.scrollX - 170) + "px";
+        m.querySelector('[data-a="editar"]').onclick = () => { cerrarAccMenu(); estado.bundles.editIdx = i; estado.bundles.vista = "editor"; estado.bundles.tab = "ofertas"; pintarEditorBundle(); };
+        m.querySelector('[data-a="duplicar"]').onclick = async () => {
+          cerrarAccMenu();
+          const orig = estado.bundles.config.lista[i];
+          const copia = JSON.parse(JSON.stringify(orig));
+          copia.id = "b_" + Date.now().toString(36);
+          copia.nombre = (orig.nombre || "Bundle") + " (copia)";
+          estado.bundles.config.lista.splice(i + 1, 0, copia);
+          await guardarBundles();
+          pintarDashboardBundles();
+        };
+        m.querySelector('[data-a="eliminar"]').onclick = async () => {
+          cerrarAccMenu();
+          if (!confirm("¿Eliminar este bundle? Se borran también sus descuentos en Shopify.")) return;
+          estado.bundles.config.lista.splice(i, 1);
+          await guardarBundles();
+          pintarDashboardBundles();
+        };
+        setTimeout(() => document.addEventListener("click", cerrarAccMenu, { once: true }), 0);
       };
     });
 

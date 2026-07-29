@@ -1866,6 +1866,61 @@ summary:focus-visible, label:focus-visible {
 }
 .bdl-vacio__t { font-size: 17px; font-weight: 700; color: var(--negro); }
 .bdl-vacio__s { color: var(--suave); max-width: 420px; margin: 6px auto 20px; font-size: 14px; }
+.bdl-vacio__ico svg { width: 28px; height: 28px; color: var(--suave); }
+
+/* --- dashboard v2: estado de widget sutil, tabla, filtros, onboarding --- */
+.bdl-wstatus { font-size: 12.5px; color: var(--suave); margin: -6px 0 16px; display: flex; align-items: center; gap: 8px; }
+.bdl-wstatus strong { color: var(--texto); font-weight: 600; }
+.bdl-wlink { border: 0; background: none; color: var(--acento, #4f46e5); font: inherit; font-size: 12.5px; cursor: pointer; padding: 0; text-decoration: underline; }
+
+.bdl-filtros { margin: 4px 0 12px; }
+.bdl-filtros__n { opacity: .6; font-variant-numeric: tabular-nums; }
+
+.bdl-sk { display: inline-block; width: 72px; height: 22px; border-radius: 6px; background: linear-gradient(90deg, #eee 25%, #f5f5f5 37%, #eee 63%); background-size: 400% 100%; animation: bdl-sk 1.3s ease infinite; }
+@keyframes bdl-sk { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
+
+/* Tabla de bundles (grid, clona el patrón .pagina-tabla) */
+.bdl-tabla2 { padding: 4px 16px 8px; }
+.bdl-tabla2__cab, .bdl-fila2 { display: grid; grid-template-columns: 40px 1fr 150px 64px 40px; align-items: center; gap: 14px; }
+.bdl-tabla2__cab { font-size: 12px; color: var(--suave); font-weight: 500; padding: 10px 0; border-bottom: 1px solid var(--borde); }
+.bdl-fila2 { padding: 12px 8px; margin: 0 -8px; border-radius: var(--radio-s); border-bottom: 1px solid var(--borde-suave); cursor: pointer; transition: background .15s ease-out; }
+.bdl-fila2:last-child { border-bottom: none; }
+.bdl-fila2:hover { background: #fafafb; }
+.bdl-fila2__ico { width: 38px; height: 38px; border-radius: 9px; background: var(--fondo); border: 1px solid var(--borde); display: grid; place-items: center; color: var(--texto); }
+.bdl-fila2__ico svg { width: 20px; height: 20px; }
+.bdl-fila2__nombre { font-size: 13.5px; font-weight: 600; color: var(--negro); }
+.bdl-fila2__sub { font-size: 12px; color: var(--suave); margin-top: 1px; }
+.bdl-fila2__alcance { font-size: 12.5px; color: var(--suave); }
+.bdl-acc-btn { width: 30px; height: 30px; border: 0; background: none; border-radius: 7px; cursor: pointer; color: var(--suave); font-size: 18px; line-height: 1; justify-self: end; }
+.bdl-acc-btn:hover { background: var(--fondo); color: var(--negro); }
+.bdl-accmenu__del strong { color: var(--peligro, #d02e3f); }
+
+/* Onboarding de primer uso */
+.bdl-onboard { padding: 18px 20px; margin-bottom: 16px; }
+.bdl-onboard__cab { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 10px; }
+.bdl-onboard__bar { height: 6px; border-radius: 999px; background: var(--borde); overflow: hidden; margin-bottom: 14px; }
+.bdl-onboard__bar i { display: block; height: 100%; background: var(--ok, #16a34a); transition: width .3s ease; }
+.bdl-paso { display: flex; align-items: center; gap: 12px; padding: 9px 0; border-top: 1px solid var(--borde-suave); font-size: 13.5px; }
+.bdl-paso__c { width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid var(--borde); display: grid; place-items: center; font-size: 12px; color: #fff; flex-shrink: 0; }
+.bdl-paso.is-ok .bdl-paso__c { background: var(--ok, #16a34a); border-color: var(--ok, #16a34a); }
+.bdl-paso__t { flex: 1; color: var(--texto); }
+.bdl-paso__a { font-size: 12.5px; color: var(--suave); }
+
+.bdl-plantillas { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; max-width: 560px; margin: 0 auto; }
+.bdl-plant { text-align: left; border: 1px solid var(--borde); border-radius: var(--radio); background: #fff; padding: 14px; cursor: pointer; display: flex; flex-direction: column; gap: 4px; transition: border-color .12s, box-shadow .12s; }
+.bdl-plant:hover { border-color: var(--negro); box-shadow: 0 2px 8px rgba(0,0,0,.06); }
+.bdl-plant svg { width: 22px; height: 22px; color: var(--texto); margin-bottom: 4px; }
+.bdl-plant strong { font-size: 13.5px; color: var(--negro); }
+.bdl-plant span { font-size: 12px; color: var(--suave); }
+
+.pagina-help { text-align: center; color: var(--suave); font-size: 12.5px; margin: 24px 0 8px; }
+
+@media (max-width: 860px) {
+  .bdl-tabla2__cab { display: none; }
+  .bdl-fila2 { grid-template-columns: 38px 1fr 64px 40px; }
+  .bdl-fila2__alcance { display: none; }
+  .bdl-plantillas { grid-template-columns: 1fr; }
+}
 
 /* --- editor: ofertas --- */
 .bdl-ofertas { display: flex; flex-direction: column; gap: 14px; margin: 14px 0; }
