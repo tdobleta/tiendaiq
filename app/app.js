@@ -3358,7 +3358,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     // Estado del widget: sutil cuando está OK (no un banner verde permanente,
     // que grita MVP), banner de aviso solo si NO está inyectado.
     const widgetEstado = inst
-      ? `<div class="bdl-wstatus">✓ Widget activo en <strong>${esc(inst.tema)}</strong> · ${esc(fechaCorta(inst.fecha))} <button class="bdl-wlink" id="bdl-instalar">Reinyectar</button></div>`
+      ? `<div class="bdl-wstatus"><span class="bdl-wdot" aria-hidden="true"></span><span class="bdl-wtxt">Widget activo en <strong>${esc(inst.tema)}</strong></span><span class="bdl-wfecha">${esc(fechaCorta(inst.fecha))}</span><button class="bdl-wlink" id="bdl-instalar">Reinyectar</button></div>`
       : lista.length
         ? `<div class="cod-banner cod-banner--aviso">⚠ Los bundles no están inyectados en tu tema: no aparecen en la tienda. <button class="btn btn--chico" id="bdl-instalar">▲ Inyectar en el tema</button></div>`
         : "";
@@ -4510,6 +4510,9 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   }
 
   function ir(pantalla) {
+    // Entrar a Bundles desde el menú/nav siempre lleva al dashboard (no deja
+    // pegado el editor de un bundle que se estaba viendo antes).
+    if (pantalla === "bundles" && estado.bundles) { estado.bundles.vista = "lista"; estado.bundles.editIdx = null; }
     estado.pantalla = pantalla;
     sincronizarURL(pantalla);
     pintarPasos();

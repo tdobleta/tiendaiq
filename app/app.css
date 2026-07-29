@@ -676,7 +676,7 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
    ============================================================ */
 .be-top { max-width: 800px; margin: 0 auto 24px; gap: 10px; }
 .be-top h1 { font-size: 20px; font-weight: 650; color: #202223; letter-spacing: -.2px; }
-.be-top .volver-flecha { color: #616161; font-size: 18px; }
+.be-top .volver-flecha { color: #616161; }
 .be-top__act { gap: 12px; }
 .be-top .btn { height: 32px; font-size: 13px; font-weight: 600; border-radius: 8px; padding: 0 12px; }
 .be-top .btn--fantasma { font-weight: 500; border: 1px solid #c9cccf; color: #202223; }
@@ -1018,11 +1018,21 @@ ui-save-bar { display: none; }
 
 /* ---------- tabla de páginas ---------- */
 
+/* Botón de volver: ícono en una caja sutil (estilo admin maduro), no un "←" suelto. */
 .volver-flecha {
-  background: none; border: none; font-size: 18px; color: var(--negro);
-  cursor: pointer; padding: 0 6px 0 0; vertical-align: middle;
+  width: 32px; height: 32px; border-radius: 8px;
+  border: 1px solid var(--borde); background: #fff; color: var(--texto);
+  cursor: pointer; padding: 0; margin-right: 10px; vertical-align: middle;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 0; transition: background .12s, border-color .12s, color .12s;
 }
-.volver-flecha:hover { color: var(--suave); }
+.volver-flecha::before {
+  content: ""; width: 18px; height: 18px; background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M19 12H5'/%3E%3Cpath d='M12 19l-7-7 7-7'/%3E%3C/svg%3E") center / 18px no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M19 12H5'/%3E%3Cpath d='M12 19l-7-7 7-7'/%3E%3C/svg%3E") center / 18px no-repeat;
+}
+.volver-flecha:hover { background: var(--fondo); border-color: #b8bcc0; color: var(--negro); }
+.volver-flecha:focus-visible { outline: 2px solid var(--negro); outline-offset: 1px; }
 
 .pagina-tabla { border-top: 1px solid var(--borde); }
 .pagina-tabla__cabecera,
@@ -1869,9 +1879,14 @@ summary:focus-visible, label:focus-visible {
 .bdl-vacio__ico svg { width: 28px; height: 28px; color: var(--suave); }
 
 /* --- dashboard v2: estado de widget sutil, tabla, filtros, onboarding --- */
-.bdl-wstatus { font-size: 12.5px; color: var(--suave); margin: -6px 0 16px; display: flex; align-items: center; gap: 8px; }
-.bdl-wstatus strong { color: var(--texto); font-weight: 600; }
-.bdl-wlink { border: 0; background: none; color: var(--acento, #4f46e5); font: inherit; font-size: 12.5px; cursor: pointer; padding: 0; text-decoration: underline; }
+.bdl-wstatus { font-size: 13px; color: var(--texto); margin: -2px 0 18px; display: flex; align-items: center; gap: 9px; }
+.bdl-wdot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok, #16a34a); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok, #16a34a) 20%, transparent); flex-shrink: 0; }
+.bdl-wstatus strong { color: var(--negro); font-weight: 600; }
+.bdl-wfecha { color: var(--suave); }
+.bdl-wfecha::before { content: "·"; margin-right: 9px; color: var(--borde); }
+.bdl-wlink { margin-left: 6px; border: 1px solid var(--borde); background: #fff; color: var(--texto); font: inherit; font-size: 12px; font-weight: 500; cursor: pointer; padding: 3px 11px; border-radius: 7px; }
+.bdl-wlink:hover { background: var(--fondo); border-color: #b8bcc0; }
+.bdl-wlink:focus-visible { outline: 2px solid var(--negro); outline-offset: 1px; }
 
 .bdl-filtros { margin: 4px 0 12px; }
 .bdl-filtros__n { opacity: .6; font-variant-numeric: tabular-nums; }
