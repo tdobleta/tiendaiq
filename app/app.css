@@ -1918,6 +1918,20 @@ summary:focus-visible, label:focus-visible {
 
 .pagina-help { text-align: center; color: var(--suave); font-size: 12.5px; margin: 24px 0 8px; }
 
+/* Selector de rango temporal de las métricas */
+.bdl-rango { display: inline-flex; margin: 2px 0 14px; border: 1px solid var(--borde); border-radius: 8px; overflow: hidden; }
+.bdl-rango__b { font-size: 12.5px; padding: 5px 13px; border: 0; background: #fff; color: var(--suave); cursor: pointer; font-family: inherit; }
+.bdl-rango__b + .bdl-rango__b { border-left: 1px solid var(--borde); }
+.bdl-rango__b.is-sel { background: var(--fondo); color: var(--negro); font-weight: 600; }
+.bdl-rango__b:focus-visible { outline: 2px solid var(--negro); outline-offset: -2px; }
+.bdl-fila2:focus-visible { outline: 2px solid var(--negro); outline-offset: -1px; }
+
+/* Toasts (feedback de acciones, con deshacer) */
+#tiq-toasts { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 9999; display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none; }
+.tiq-toast { pointer-events: auto; background: #1a1a1a; color: #fff; font-size: 13px; padding: 10px 14px; border-radius: 10px; box-shadow: 0 6px 24px rgba(0,0,0,.24); display: flex; align-items: center; gap: 16px; opacity: 0; transform: translateY(8px); transition: opacity .2s, transform .2s; }
+.tiq-toast.is-in { opacity: 1; transform: translateY(0); }
+.tiq-toast__undo { background: none; border: 0; color: #8ab4ff; font: inherit; font-weight: 600; cursor: pointer; padding: 0; }
+
 @media (max-width: 860px) {
   .bdl-tabla2__cab { display: none; }
   .bdl-fila2 { grid-template-columns: 38px 1fr 84px 60px 40px; }

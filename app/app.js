@@ -3107,6 +3107,23 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     };
   }
 
+  // Toast reutilizable: feedback de acciones, con "Deshacer" opcional.
+  function toast(msg, opts = {}) {
+    let cont = document.getElementById("tiq-toasts");
+    if (!cont) { cont = document.createElement("div"); cont.id = "tiq-toasts"; document.body.appendChild(cont); }
+    const t = document.createElement("div");
+    t.className = "tiq-toast";
+    t.setAttribute("role", "status");
+    t.innerHTML = `<span>${esc(msg)}</span>` + (opts.undo ? `<button class="tiq-toast__undo">Deshacer</button>` : "");
+    cont.appendChild(t);
+    requestAnimationFrame(() => t.classList.add("is-in"));
+    let cerrado = false;
+    const cerrar = () => { if (cerrado) return; cerrado = true; t.classList.remove("is-in"); setTimeout(() => t.remove(), 220); };
+    if (opts.undo) t.querySelector(".tiq-toast__undo").onclick = () => { cerrar(); opts.undo(); };
+    setTimeout(cerrar, opts.undo ? 6000 : 3000);
+    return cerrar;
+  }
+
   async function pantallaBundles() {
     if (!estado.bundles) {
       try {
@@ -3139,16 +3156,20 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   // en vez de ceros (un cero acá es un dato, no un placeholder).
   function bloqueMetricas() {
     const m = estado.bundles.metricas;
+    const rango = estado.bundles.rango || 30;
+    const selector = `<div class="bdl-rango" role="group" aria-label="Rango de tiempo">
+      ${[7, 30, 90].map((d) => `<button class="bdl-rango__b ${rango === d ? "is-sel" : ""}" data-rango="${d}">${d} días</button>`).join("")}
+    </div>`;
     if (!m) {
       // Skeleton mientras cargan (un "0" o "—" fijo lee a dato falso).
       const sk = (t) => `<div class="bdl-metrica"><div class="bdl-metrica__t">${esc(t)}</div><div class="bdl-metrica__v"><span class="bdl-sk"></span></div></div>`;
-      return `<div class="bdl-metricas">
+      return selector + `<div class="bdl-metricas">
         ${sk("Pedidos con bundle")}${sk("Ingresos")}${sk("Ticket promedio")}${sk("Descuento aplicado")}
       </div>`;
     }
     const plata = (n) =>
       "$ " + Number(n).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    return `
+    return selector + `
       <div class="bdl-metricas">
         ${tarjetaMetrica("Pedidos con bundle", String(m.pedidos), `Pedidos de los últimos ${m.dias} días que llegaron con un descuento de TiendaIQ aplicado.`)}
         ${tarjetaMetrica("Ingresos", plata(m.ingresos), "Suma del total de esos pedidos.")}
@@ -3293,7 +3314,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
           ? `Comprá ${b.bxgy?.compra_cantidad || 2}, llevás ${b.bxgy?.regalo_cantidad || 1}`
           : `${(b.ofertas || []).filter((o) => Number(o.descuento) > 0).length} peldaño(s) con descuento`;
       const on = b.activo !== false;
-      return `<div class="bdl-fila2" data-abrir="${i}">
+      return `<div class="bdl-fila2" data-abrir="${i}" role="button" tabindex="0" aria-label="Editar ${esc(b.nombre)}">
         <div class="bdl-fila2__ico">${b.tipo === "bxgy" ? ICO_GIFT : ICO_BOX}</div>
         <div class="bdl-fila2__main">
           <div class="bdl-fila2__nombre">${esc(b.nombre)}</div>
@@ -3396,15 +3417,12 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     // Filtros de estado (client-side).
     vista.querySelectorAll("[data-filtro]").forEach((el) => (el.onclick = () => { estado.bundles.filtro = el.dataset.filtro; pintarDashboardBundles(); }));
 
-    // Abrir el editor al click en la fila (menos si se tocó el toggle o ⋯).
+    // Abrir el editor al click/Enter en la fila (menos si se tocó el toggle o ⋯).
     vista.querySelectorAll("[data-abrir]").forEach((el) => {
-      el.onclick = (e) => {
-        if (e.target.closest("[data-toggle-activo]") || e.target.closest("[data-acc]")) return;
-        estado.bundles.editIdx = Number(el.dataset.abrir);
-        estado.bundles.vista = "editor";
-        estado.bundles.tab = "ofertas";
-        pintarEditorBundle();
-      };
+      const abrir = () => { estado.bundles.editIdx = Number(el.dataset.abrir); estado.bundles.vista = "editor"; estado.bundles.tab = "ofertas"; pintarEditorBundle(); };
+      const enControl = (e) => e.target.closest("[data-toggle-activo]") || e.target.closest("[data-acc]");
+      el.onclick = (e) => { if (!enControl(e)) abrir(); };
+      el.onkeydown = (e) => { if ((e.key === "Enter" || e.key === " ") && !enControl(e)) { e.preventDefault(); abrir(); } };
     });
 
     // Toggle activo/pausado por fila (guarda y re-sincroniza descuentos en Shopify).
@@ -3416,6 +3434,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         el.classList.toggle("is-on", bb.activo !== false); // feedback inmediato
         await guardarBundles();
         pintarDashboardBundles();
+        toast(bb.activo !== false ? "Bundle activado" : "Bundle pausado");
       };
     });
 
@@ -3447,21 +3466,30 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
           estado.bundles.config.lista.splice(i + 1, 0, copia);
           await guardarBundles();
           pintarDashboardBundles();
+          toast("Bundle duplicado");
         };
         m.querySelector('[data-a="eliminar"]').onclick = async () => {
           cerrarAccMenu();
           if (!confirm("¿Eliminar este bundle? Se borran también sus descuentos en Shopify.")) return;
-          estado.bundles.config.lista.splice(i, 1);
+          const [borrado] = estado.bundles.config.lista.splice(i, 1);
           await guardarBundles();
           pintarDashboardBundles();
+          toast("Bundle eliminado", { undo: async () => { estado.bundles.config.lista.splice(i, 0, borrado); await guardarBundles(); pintarDashboardBundles(); toast("Bundle restaurado"); } });
         };
         setTimeout(() => document.addEventListener("click", cerrarAccMenu, { once: true }), 0);
       };
     });
 
-    // Métricas reales: se piden una vez y se repintan al llegar.
+    // Selector de rango temporal: refetch con el nuevo rango.
+    vista.querySelectorAll("[data-rango]").forEach((el) => (el.onclick = () => {
+      estado.bundles.rango = Number(el.dataset.rango);
+      estado.bundles.metricas = null; // fuerza skeleton + refetch
+      pintarDashboardBundles();
+    }));
+
+    // Métricas reales: se piden (según el rango) y se repintan al llegar.
     if (!estado.bundles.metricas) {
-      api("/bundles/metricas")
+      api("/bundles/metricas?dias=" + (estado.bundles.rango || 30))
         .then((m) => {
           estado.bundles.metricas = m;
           if (estado.bundles.vista === "lista") pintarDashboardBundles();
