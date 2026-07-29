@@ -2209,13 +2209,16 @@ summary:focus-visible, label:focus-visible {
    ============================================================ */
 .be-layout { --bdl-teal: #0d9488; --bdl-oro: #f59e0b; }
 
-/* Íconos de nivel: botón suave, hover con tinte teal (antes se ponía negro plano) */
-.be-lv__icn { background: #fff; }
-.be-lv__icn:hover { border-color: var(--bdl-teal); color: var(--bdl-teal); background: color-mix(in srgb, var(--bdl-teal) 8%, #fff); }
+/* Íconos de nivel: chip relleno suave (no caja outline finita), glyph sólido.
+   Hover = tinte teal. */
+.be-lv__icn { background: #f4f5f7; border-color: #e7e9ec; color: #5c6470; }
+.be-lv__icn svg { width: 18px; height: 18px; }
+.be-lv__icn:hover { border-color: var(--bdl-teal); color: var(--bdl-teal); background: color-mix(in srgb, var(--bdl-teal) 10%, #fff); }
 
-/* Estrella "destacar": activa = DORADO con glow suave (antes negro plano).
+/* Estrella "por defecto": chip relleno suave; activa = DORADO con glow.
    Inactiva: hover dorado tenue en vez de gris. */
-.be-lv__star { background: #fff; color: #b0b4b8; }
+.be-lv__star { background: #f4f5f7; border-color: #e7e9ec; color: #b3b7bd; }
+.be-lv__star svg { width: 17px; height: 17px; }
 .be-lv__star:hover:not(.is-star) { border-color: var(--bdl-oro); color: var(--bdl-oro); background: color-mix(in srgb, var(--bdl-oro) 9%, #fff); }
 .be-lv__star.is-star {
   background: linear-gradient(135deg, #fbbf24, #f59e0b);
