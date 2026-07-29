@@ -11,7 +11,7 @@
 
 databases:
   - name: tiendaiq-db
-    plan: free
+    plan: basic-256mb
     databaseName: tiendaiq
     postgresMajorVersion: "16"
 
@@ -19,7 +19,7 @@ services:
   - type: web
     name: tiendaiq
     runtime: node
-    plan: free
+    plan: starter
     buildCommand: npm install
     startCommand: node server.js
     healthCheckPath: /
