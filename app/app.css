@@ -2209,17 +2209,17 @@ summary:focus-visible, label:focus-visible {
    ============================================================ */
 .be-layout { --bdl-teal: #0d9488; --bdl-oro: #f59e0b; }
 
-/* Íconos de nivel: chip relleno suave (no caja outline finita), glyph sólido.
-   Hover = tinte teal. */
-.be-lv__icn { background: #f4f5f7; border-color: #e7e9ec; color: #5c6470; }
+/* Íconos de nivel: glyph SOLO, sin caja (como la referencia). El fondo/borde
+   aparecen apenas en hover; la estrella activa es la única con fondo (dorado). */
+.be-lv__icn { background: none; border-color: transparent; color: #6a7280; }
 .be-lv__icn svg { width: 18px; height: 18px; }
-.be-lv__icn:hover { border-color: var(--bdl-teal); color: var(--bdl-teal); background: color-mix(in srgb, var(--bdl-teal) 10%, #fff); }
+.be-lv__icn:hover { border-color: transparent; color: var(--bdl-teal); background: color-mix(in srgb, var(--bdl-teal) 12%, #fff); }
 
-/* Estrella "por defecto": chip relleno suave; activa = DORADO con glow.
-   Inactiva: hover dorado tenue en vez de gris. */
-.be-lv__star { background: #f4f5f7; border-color: #e7e9ec; color: #b3b7bd; }
+/* Estrella "por defecto": glyph solo; activa = DORADO con glow.
+   Inactiva: hover dorado tenue. */
+.be-lv__star { background: none; border-color: transparent; color: #b3b7bd; }
 .be-lv__star svg { width: 17px; height: 17px; }
-.be-lv__star:hover:not(.is-star) { border-color: var(--bdl-oro); color: var(--bdl-oro); background: color-mix(in srgb, var(--bdl-oro) 9%, #fff); }
+.be-lv__star:hover:not(.is-star) { border-color: transparent; color: var(--bdl-oro); background: color-mix(in srgb, var(--bdl-oro) 12%, #fff); }
 .be-lv__star.is-star {
   background: linear-gradient(135deg, #fbbf24, #f59e0b);
   border-color: #f59e0b; color: #fff;
@@ -2288,3 +2288,24 @@ summary:focus-visible, label:focus-visible {
 .be-subacc__note { font-size: 12.5px; line-height: 1.5; color: #6d7175; margin: 8px 0 4px; }
 .be-subacc__note a { color: var(--bdl-teal); text-decoration: underline; }
 .be-subacc .be-adv__group .be-tgl-row { padding: 10px 0; }
+
+/* Tooltip del "?" (data-tip): burbuja legible al pasar el mouse o al tocar (foco).
+   Solo cuando hay data-tip, para no pisar los be-help que usan title nativo. */
+.be-help[data-tip] { position: relative; outline: none; }
+.be-help[data-tip]:hover, .be-help[data-tip]:focus { background: var(--bdl-teal, #0d9488); border-color: var(--bdl-teal, #0d9488); color: #fff; }
+.be-help[data-tip]::after {
+  content: attr(data-tip);
+  position: absolute; bottom: calc(100% + 9px); left: 50%; transform: translateX(-50%) translateY(4px);
+  width: max-content; max-width: 250px; white-space: normal; text-align: left;
+  background: #202223; color: #fff; font-size: 12px; font-weight: 400; line-height: 1.5; letter-spacing: 0;
+  padding: 9px 11px; border-radius: 9px; box-shadow: 0 8px 24px -6px rgba(0,0,0,.4);
+  opacity: 0; visibility: hidden; pointer-events: none; z-index: 80;
+  transition: opacity .15s ease, transform .15s ease;
+}
+.be-help[data-tip]::before {
+  content: ""; position: absolute; bottom: calc(100% + 4px); left: 50%; transform: translateX(-50%);
+  border: 5px solid transparent; border-top-color: #202223;
+  opacity: 0; visibility: hidden; pointer-events: none; z-index: 80; transition: opacity .15s ease;
+}
+.be-help[data-tip]:hover::after, .be-help[data-tip]:focus::after { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(0); }
+.be-help[data-tip]:hover::before, .be-help[data-tip]:focus::before { opacity: 1; visibility: visible; }

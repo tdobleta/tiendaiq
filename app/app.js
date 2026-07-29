@@ -3569,7 +3569,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   // Fila con etiqueta + toggle (reemplaza a los checkboxes). attr = el data-* que
   // el bind usa para prender/apagar (data-toggle-b en el bundle, data-lv-bool en la oferta).
   const beToggleRow = (label, attr, on, help) =>
-    `<div class="be-tgl-row"><span>${label}${help ? ` <span class="be-help" title="${esc(help)}">?</span>` : ""}</span>
+    `<div class="be-tgl-row"><span>${label}${help ? ` <span class="be-help" data-tip="${esc(help)}" tabindex="0" aria-label="${esc(help)}">?</span>` : ""}</span>
       <button type="button" class="be-toggle ${on ? "is-on" : ""}" ${attr}><span></span></button></div>`;
 
   // ---------- EDITOR estilo Pumper (Tema 1: Descuento por Cantidad) ----------
@@ -3966,7 +3966,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         </div>
         <div class="be-subacc ${combOpen ? "is-open" : ""}">
           <button type="button" class="be-subacc__head" data-subsec="combinar">
-            <span>Habilitar Combinación de Descuentos <span class="be-help" title="Con qué otros descuentos de Shopify puede combinarse este bundle. Se aplica al guardar.">?</span></span>
+            <span>Habilitar Combinación de Descuentos <span class="be-help" data-tip="Con qué otros descuentos de Shopify puede combinarse este bundle. Se aplica al guardar." tabindex="0" aria-label="Con qué otros descuentos de Shopify puede combinarse este bundle. Se aplica al guardar.">?</span></span>
             <span class="be-chev ${combOpen ? "is-open" : ""}">${BE_CHEV}</span>
           </button>
           ${combOpen ? `<div class="be-subacc__body">
