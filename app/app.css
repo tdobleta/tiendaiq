@@ -684,7 +684,9 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
    embebido no debe mostrarse cruda en la página. */
 ui-save-bar { display: none; }
 
-.be-layout { max-width: 800px; grid-template-columns: minmax(0, 1fr) 320px; gap: 24px; }
+/* Preview más ANCHA (antes 320px, angosta → forzaba wrap del precio y tarjetas
+   altas). Ahora 400px: cada nivel entra en una fila corta, como Pumper. */
+.be-layout { max-width: 880px; grid-template-columns: minmax(0, 1fr) 400px; gap: 24px; }
 /* Bloque del producto en el preview: compacto (foto chica, poco margen) para
    que la preview no se estire tanto para abajo. */
 .be-layout .bdl-preview__prod { margin-bottom: 16px; gap: 12px; }
