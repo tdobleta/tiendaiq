@@ -3598,6 +3598,9 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     if (b.diseno && !b.diseno.layout) b.diseno.layout = { template: "vertical" };
     // Tipografía (Paso 6): fuente heredada, pesos = los actuales (700/700).
     if (b.diseno && !b.diseno.type) b.diseno.type = { font: "heredar", titleWeight: 700, priceWeight: 700 };
+    // Estilo por elemento (editor "Estilo del texto"): sub-objetos vacíos para que
+    // fijar() pueda escribir type.el.<k>.<prop>. Todo opcional → look intacto.
+    if (b.diseno.type && !b.diseno.type.el) b.diseno.type.el = { enc: {}, titulo: {}, precio: {}, etq: {}, badge: {}, oos: {} };
     (b.ofertas || []).forEach((o) => {
       if (o.activo === undefined) o.activo = true;
       if (!o.ver) o.ver = {};
@@ -3882,6 +3885,55 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     const tplCard = (id, nombre, mods) => `<button type="button" class="bdl-tpl ${tpl === id ? "is-sel" : ""}" data-tpl="${id}" aria-label="Plantilla ${nombre}">
         <span class="bdl-tpl__mini bdl-tpl__mini--${mods}"><i></i><i></i><i></i></span>
         <span class="bdl-tpl__name">${nombre}${tpl === id ? " ✓" : ""}</span></button>`;
+    // --- Editor "Estilo del texto" (lista por elemento, estilo Pumper). Fase 1:
+    //     encabezado / título de nivel / precio. Cada fila: ejemplo en vivo →
+    //     flecha → botón "Aa" que abre un popover (Fuente/Peso/Tamaño/Color). ---
+    const FAM_TX = [["heredar", "Del tema"], ["sans", "Sans"], ["serif", "Serif"], ["redondeada", "Redondeada"], ["mono", "Mono"]];
+    const PESOS_TX = [[400, "Normal"], [500, "Medio"], [600, "Semibold"], [700, "Bold"], [800, "Extra"]];
+    const SIZE_DEF_TX = { enc: 16, titulo: 15, precio: 17 };
+    const elGet = (k) => leer(b, `diseno.type.el.${k}`) || {};
+    const optsTx = (val, list) => list.map(([v, l]) => `<option value="${v}"${String(val ?? "") === String(v) ? " selected" : ""}>${esc(l)}</option>`).join("");
+    const elExStyle = (k) => {
+      const el = elGet(k); let s = "";
+      if (el.font && el.font !== "heredar") s += `font-family:${FONTS_BDL[el.font] || "inherit"};`;
+      if (el.size) s += `font-size:${el.size}px;`;
+      if (el.weight) s += `font-weight:${el.weight};`;
+      if (el.color) s += `color:${el.color};`;
+      return s;
+    };
+    const aaPopover = (k, colorDef) => {
+      const el = elGet(k);
+      return `<div class="be-aapop" data-aapop="${k}" hidden>
+        <div class="be-aapop__row"><label>Fuente</label>
+          <select data-b="diseno.type.el.${k}.font">${optsTx(el.font || "heredar", FAM_TX)}</select></div>
+        <div class="be-aapop__grid">
+          <label>Peso<select data-b="diseno.type.el.${k}.weight" data-tipo="numero">${optsTx(el.weight || 700, PESOS_TX)}</select></label>
+          <label>Tamaño<span class="be-aapop__step">
+            <button type="button" data-aastep="${k}:-1" aria-label="Reducir">−</button>
+            <output data-aaout="${k}">${el.size || SIZE_DEF_TX[k]}</output>
+            <button type="button" data-aastep="${k}:1" aria-label="Aumentar">+</button>
+            <input type="hidden" data-b="diseno.type.el.${k}.size" data-tipo="numero" data-aasize="${k}" value="${esc(el.size ?? "")}">
+          </span></label>
+        </div>
+        <div class="be-aapop__row"><label>Color de texto</label>
+          <label class="be-txel__sw be-txel__sw--pop"><input type="color" data-b="diseno.type.el.${k}.color" value="${esc(el.color || colorDef)}"></label></div>
+      </div>`;
+    };
+    const txEl = (k, cls, texto, colorDef) => `<div class="be-txel" data-txel="${k}">
+      <div class="be-txel__ex"><span class="${cls}" style="${elExStyle(k)}">${esc(texto)}</span></div>
+      <svg class="be-txel__arrow" viewBox="0 0 24 12" aria-hidden="true"><path d="M1 6h20m0 0-5-4m5 4-5 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <div class="be-txel__ctrls">
+        <button type="button" class="be-txel__aa" data-aa="${k}" aria-haspopup="true" aria-expanded="false" title="Tipografía">Aa</button>
+        ${aaPopover(k, colorDef)}
+      </div></div>`;
+    const estiloTexto = `
+      <div class="bdl-subsec">Estilo del texto</div>
+      <div class="be-txlist">
+        ${txEl("enc", "tiq-bdl__h1", "Elegí tu paquete", "#2a2a2a")}
+        ${txEl("titulo", "tiq-bdl__titulo", "Comprá 2", "#111111")}
+        ${txEl("precio", "tiq-bdl__precio-now", "$ 29,90", "#111111")}
+      </div>`;
+
     const colorYEstilo = `
       <div class="bdl-hist">
         <button type="button" id="bdl-undo" class="bdl-histbtn" data-hist="-1" title="Deshacer" ${histDe(b).idx <= 0 ? "disabled" : ""}>↩</button>
@@ -3982,7 +4034,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         </div>
       </div>`;
     return `<div class="be-secs-extra">
-      ${bdlAcordeon("color", IC_PALETA, "Color y estilo", colorYEstilo + textosYTipo, !!s.secOpen.color)}
+      ${bdlAcordeon("color", IC_PALETA, "Color y estilo", colorYEstilo + estiloTexto + textosYTipo, !!s.secOpen.color)}
       ${bdlAcordeon("avanzada", IC_ENGRANAJE, "Configuración avanzada", avanzada, !!s.secOpen.avanzada)}
     </div>`;
   }
@@ -3990,6 +4042,17 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   function bindEditorBundle(b, s) {
     const root = $("be-left");
     if (!root) return;
+
+    // Cerrar los popovers "Aa" al clickear afuera. Document persiste entre
+    // renders → se registra una sola vez (be-left se recrea, esto no).
+    if (!window.__bdlAaOutside) {
+      window.__bdlAaOutside = true;
+      document.addEventListener("mousedown", (e) => {
+        if (e.target.closest && e.target.closest(".be-txel__ctrls")) return;
+        document.querySelectorAll(".be-aapop").forEach((p) => (p.hidden = true));
+        document.querySelectorAll(".be-txel__aa").forEach((x) => x.setAttribute("aria-expanded", "false"));
+      });
+    }
 
     root.addEventListener("input", (e) => {
       const ruta = e.target.dataset.b;
@@ -4010,6 +4073,18 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       }
       // Mapa "Personalizar": actualizar la mini-tarjeta central en vivo.
       if (e.target.dataset.mid) actualizarMiniPerso(e.target.dataset.mid, v);
+      // "Estilo del texto": reflejar el cambio en el ejemplo en vivo de la lista
+      // (sin re-render, para no cerrar el popover).
+      const mEl = ruta.match(/^diseno\.type\.el\.([a-z]+)\.(font|size|weight|color)$/);
+      if (mEl) {
+        const ex = root.querySelector(`[data-txel="${mEl[1]}"] .be-txel__ex > *`);
+        if (ex) {
+          if (mEl[2] === "font") ex.style.fontFamily = v && v !== "heredar" ? (FONTS_BDL[v] || "inherit") : "";
+          else if (mEl[2] === "size") ex.style.fontSize = v ? v + "px" : "";
+          else if (mEl[2] === "weight") ex.style.fontWeight = v || "";
+          else if (mEl[2] === "color") ex.style.color = v || "";
+        }
+      }
       // Aviso de contraste de la insignia, en vivo.
       if (/^diseno\.color_badge/.test(ruta)) refrescarAvisoContraste(b);
       // Historial (undo/redo): registrar cambios de diseño, con debounce.
@@ -4038,6 +4113,33 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
 
     root.addEventListener("click", (e) => {
       const t = e.target;
+      // "Estilo del texto": abrir/cerrar el popover del Aa (sin re-render, para no
+      // perder el estado). Al abrir uno, cierra los demás.
+      const aaBtn = t.closest("[data-aa]"); if (aaBtn) {
+        const k = aaBtn.dataset.aa;
+        const pop = root.querySelector(`[data-aapop="${k}"]`);
+        const abrir = pop && pop.hidden;
+        root.querySelectorAll(".be-aapop").forEach((p) => (p.hidden = true));
+        root.querySelectorAll(".be-txel__aa").forEach((x) => x.setAttribute("aria-expanded", "false"));
+        if (pop && abrir) { pop.hidden = false; aaBtn.setAttribute("aria-expanded", "true"); }
+        return;
+      }
+      // Stepper de tamaño: actualiza el input oculto + el output y dispara el
+      // camino normal de input (fijar + preview), sin re-render del editor.
+      const aaStep = t.closest("[data-aastep]"); if (aaStep) {
+        const [k, dir] = aaStep.dataset.aastep.split(":");
+        const inp = root.querySelector(`[data-aasize="${k}"]`);
+        const out = root.querySelector(`[data-aaout="${k}"]`);
+        if (inp) {
+          const DEF = { enc: 16, titulo: 15, precio: 17 };
+          const cur = Number(inp.value) || DEF[k] || 14;
+          const next = Math.max(8, Math.min(48, cur + Number(dir)));
+          inp.value = next;
+          if (out) out.textContent = next;
+          inp.dispatchEvent(new Event("input", { bubbles: true }));
+        }
+        return;
+      }
       const sec = t.closest("[data-sec]"); if (sec) { const k = sec.dataset.sec; if (k === "setup") s.setupOpen = !s.setupOpen; else { s.secOpen = s.secOpen || {}; s.secOpen[k] = !s.secOpen[k]; } return pintarEditorBundle(); }
       const ssec = t.closest("[data-subsec]"); if (ssec) { s.subOpen = s.subOpen || {}; const k = ssec.dataset.subsec; s.subOpen[k] = !s.subOpen[k]; return pintarEditorBundle(); }
       const tplBtn = t.closest("[data-tpl]"); if (tplBtn) { b.diseno = b.diseno || {}; b.diseno.layout = b.diseno.layout || {}; b.diseno.layout.template = tplBtn.dataset.tpl; marcarSucioBundles(); commitHist(b); pintarPreviewBundle(); return pintarEditorBundle(); }
@@ -4377,7 +4479,24 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       (ty.font && ty.font !== "heredar" ? `--tiq-font:${FONTS_BDL[ty.font] || "inherit"};` : "") +
       (ty.titleWeight ? `--tiq-title-w:${ty.titleWeight};` : "") +
       (ty.priceWeight ? `--tiq-price-w:${ty.priceWeight};` : "") +
+      // Estilo por elemento (editor "Estilo del texto"): cada prop solo si está
+      // seteada → el widget cae al literal actual (look intacto). Fase 1: enc/titulo/precio.
+      vElAVars("h1", (ty.el || {}).enc) +
+      vElAVars("titulo", (ty.el || {}).titulo) +
+      vElAVars("precio", (ty.el || {}).precio) +
       `--tiq-bot-fondo:${bot.color_fondo || "#111"};--tiq-bot-txt:${bot.color_texto || "#fff"};--tiq-bot-radio:${bot.radio ?? 8}px;--tiq-bot-tam:${bot.tamano ?? 16}px`
+    );
+  }
+
+  // model type.el.<k> → CSS vars --tiq-<name>-font/-size/-w/-color. Solo emite las
+  // props seteadas. Compartido conceptualmente con el gemelo del widget.
+  function vElAVars(name, o) {
+    o = o || {};
+    return (
+      (o.font && o.font !== "heredar" ? `--tiq-${name}-font:${FONTS_BDL[o.font] || "inherit"};` : "") +
+      (o.size ? `--tiq-${name}-size:${o.size}px;` : "") +
+      (o.weight ? `--tiq-${name}-w:${o.weight};` : "") +
+      (o.color ? `--tiq-${name}-color:${o.color};` : "")
     );
   }
 

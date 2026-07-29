@@ -2051,6 +2051,42 @@ summary:focus-visible, label:focus-visible {
 .perso-mid__title { font-size: 13px; font-weight: 600; }
 .perso-mid__etq { font-size: 9px; font-weight: 600; border: 1px solid; border-radius: 4px; padding: 2px 6px; white-space: nowrap; }
 
+/* ---- "Estilo del texto": lista por elemento (referencia Pumper) ---- */
+.be-txlist { display: flex; flex-direction: column; }
+.be-txel { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 10px; padding: 10px 0; }
+.be-txel + .be-txel { border-top: 1px solid #ececec; }
+/* Ejemplo en vivo (usa clases reales del widget, ya cargadas en el admin). */
+.be-txel__ex { min-width: 0; overflow: hidden; }
+.be-txel__ex > * { max-width: 100%; }
+.be-txel__ex .tiq-bdl__h1 { font-size: 14px; }
+.be-txel__ex .tiq-bdl__h1::before, .be-txel__ex .tiq-bdl__h1::after { display: none; }
+.be-txel__ex .tiq-bdl__titulo { font-size: 14px; }
+.be-txel__ex .tiq-bdl__precio-now { font-size: 15px; }
+.be-txel__arrow { width: 22px; height: 11px; color: #babec2; flex-shrink: 0; }
+.be-txel__ctrls { position: relative; display: inline-flex; align-items: center; gap: 6px; }
+/* Botón "Aa" */
+.be-txel__aa { width: 32px; height: 28px; border: 1px solid #c9cccf; border-radius: 7px; background: #fff; color: #202223; font-size: 13px; font-weight: 700; line-height: 1; cursor: pointer; letter-spacing: -.02em; transition: border-color .12s, box-shadow .12s, background .12s; }
+.be-txel__aa:hover { border-color: var(--bdl-teal); }
+.be-txel__aa[aria-expanded="true"] { border-color: var(--bdl-teal); background: color-mix(in srgb, var(--bdl-teal) 8%, #fff); box-shadow: 0 0 0 2px color-mix(in srgb, var(--bdl-teal) 22%, transparent); }
+/* Swatch (fondo/color de texto) */
+.be-txel__sw { display: inline-flex; cursor: pointer; }
+.be-txel__sw input[type="color"] { width: 30px; height: 28px; padding: 0; border: 1px solid #d2d5d8; border-radius: 7px; background: none; cursor: pointer; transition: border-color .12s; }
+.be-txel__sw input[type="color"]:hover { border-color: #8c9196; }
+/* Popover del Aa */
+.be-aapop { position: absolute; top: calc(100% + 7px); right: 0; z-index: 90; width: 232px; padding: 12px; background: #fff; border: 1px solid #e1e3e5; border-radius: 10px; box-shadow: 0 8px 24px -4px rgba(0,0,0,.18), 0 2px 6px rgba(0,0,0,.08); }
+.be-aapop[hidden] { display: none; }
+.be-aapop::before { content: ""; position: absolute; top: -5px; right: 13px; width: 9px; height: 9px; background: #fff; border-left: 1px solid #e1e3e5; border-top: 1px solid #e1e3e5; transform: rotate(45deg); }
+.be-aapop__row { display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px; }
+.be-aapop__row:last-child { margin-bottom: 0; }
+.be-aapop__grid { display: grid; grid-template-columns: 1fr auto; gap: 10px; margin-bottom: 10px; align-items: end; }
+.be-aapop label { font-size: 12px; color: #6d7175; display: flex; flex-direction: column; gap: 5px; }
+.be-aapop select { height: 30px; border: 1px solid #c9cccf; border-radius: 7px; padding: 0 8px; font-size: 13px; background: #fff; color: #202223; }
+.be-aapop select:focus-visible { outline: 2px solid #005bd3; outline-offset: 1px; }
+.be-aapop__step { display: inline-flex; align-items: center; border: 1px solid #c9cccf; border-radius: 7px; overflow: hidden; }
+.be-aapop__step button { width: 26px; height: 30px; border: 0; background: #f6f6f7; color: #202223; font-size: 15px; cursor: pointer; line-height: 1; }
+.be-aapop__step button:hover { background: color-mix(in srgb, var(--bdl-teal) 12%, #f6f6f7); color: var(--bdl-teal); }
+.be-aapop__step output { min-width: 30px; text-align: center; font-size: 13px; font-variant-numeric: tabular-nums; }
+
 /* --- selector de productos --- */
 .bdl-prodsel {
   border: 1px solid var(--borde); border-radius: var(--radio);

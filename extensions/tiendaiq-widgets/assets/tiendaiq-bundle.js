@@ -133,6 +133,18 @@
   if (TY.font && TY.font !== "heredar") raiz.style.setProperty("--tiq-font", FONTS[TY.font] || "inherit");
   if (TY.titleWeight) raiz.style.setProperty("--tiq-title-w", TY.titleWeight);
   if (TY.priceWeight) raiz.style.setProperty("--tiq-price-w", TY.priceWeight);
+  // Estilo por elemento (paridad con disenoAVars/vElAVars del admin). Fase 1.
+  (function () {
+    var EL = TY.el || {};
+    function setEl(name, o) {
+      o = o || {};
+      if (o.font && o.font !== "heredar") raiz.style.setProperty("--tiq-" + name + "-font", FONTS[o.font] || "inherit");
+      if (o.size) raiz.style.setProperty("--tiq-" + name + "-size", o.size + "px");
+      if (o.weight) raiz.style.setProperty("--tiq-" + name + "-w", o.weight);
+      if (o.color) raiz.style.setProperty("--tiq-" + name + "-color", o.color);
+    }
+    setEl("h1", EL.enc); setEl("titulo", EL.titulo); setEl("precio", EL.precio);
+  })();
   raiz.style.setProperty("--tiq-bot-fondo", BOT.color_fondo || "#111");
   raiz.style.setProperty("--tiq-bot-txt", BOT.color_texto || "#fff");
   raiz.style.setProperty("--tiq-bot-radio", (BOT.radio != null ? BOT.radio : 8) + "px");
