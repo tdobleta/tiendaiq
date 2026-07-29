@@ -3594,6 +3594,9 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     // Geometría (Paso 2): radius unificado desde el legacy `radio`; breathing
     // arranca en 10 (≈ densidad actual, así el look no cambia en bundles viejos).
     if (b.diseno && !b.diseno.geometry) b.diseno.geometry = { radius: b.diseno.radio ?? 12, breathing: 10 };
+    // Ancho de borde editable (Fase 2). Seed = 2px (≈ el 1.5 actual, imperceptible)
+    // para que el slider arranque en un valor real y no en 0.
+    if (b.diseno.geometry && b.diseno.geometry.borderWidth == null) b.diseno.geometry.borderWidth = 2;
     // Layout (Paso 4): plantilla vertical por defecto = comportamiento actual.
     if (b.diseno && !b.diseno.layout) b.diseno.layout = { template: "vertical" };
     // Tipografía (Paso 6): fuente heredada, pesos = los actuales (700/700).
@@ -3890,7 +3893,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     //     flecha → botón "Aa" que abre un popover (Fuente/Peso/Tamaño/Color). ---
     const FAM_TX = [["heredar", "Del tema"], ["sans", "Sans"], ["serif", "Serif"], ["redondeada", "Redondeada"], ["mono", "Mono"]];
     const PESOS_TX = [[400, "Normal"], [500, "Medio"], [600, "Semibold"], [700, "Bold"], [800, "Extra"]];
-    const SIZE_DEF_TX = { enc: 16, titulo: 15, precio: 17 };
+    const SIZE_DEF_TX = { enc: 16, titulo: 15, precio: 17, etq: 11, badge: 9, oos: 12 };
     const elGet = (k) => leer(b, `diseno.type.el.${k}`) || {};
     const optsTx = (val, list) => list.map(([v, l]) => `<option value="${v}"${String(val ?? "") === String(v) ? " selected" : ""}>${esc(l)}</option>`).join("");
     const elExStyle = (k) => {
@@ -3901,7 +3904,9 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       if (el.color) s += `color:${el.color};`;
       return s;
     };
-    const aaPopover = (k, colorDef) => {
+    // colorRoute = ruta del color de TEXTO (para enc/titulo/precio va a type.el.<k>.color;
+    // para etq/badge/oos reusa las rutas de color que ya existen).
+    const aaPopover = (k, colorRoute, colorDef) => {
       const el = elGet(k);
       return `<div class="be-aapop" data-aapop="${k}" hidden>
         <div class="be-aapop__row"><label>Fuente</label>
@@ -3916,22 +3921,34 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
           </span></label>
         </div>
         <div class="be-aapop__row"><label>Color de texto</label>
-          <label class="be-txel__sw be-txel__sw--pop"><input type="color" data-b="diseno.type.el.${k}.color" value="${esc(el.color || colorDef)}"></label></div>
+          <label class="be-txel__sw be-txel__sw--pop"><input type="color" data-b="${colorRoute}" value="${esc(leer(b, colorRoute) || colorDef)}"></label></div>
       </div>`;
     };
-    const txEl = (k, cls, texto, colorDef) => `<div class="be-txel" data-txel="${k}">
-      <div class="be-txel__ex"><span class="${cls}" style="${elExStyle(k)}">${esc(texto)}</span></div>
+    // bg = { route, def } (swatch de fondo, para etiqueta/insignia) o null.
+    // extra = estilo inline extra del ejemplo (color/fondo/borde de rutas propias).
+    const txEl = (k, cls, texto, colorRoute, colorDef, bg, extra) => `<div class="be-txel" data-txel="${k}">
+      <div class="be-txel__ex"><span class="${cls}" style="${elExStyle(k)}${extra || ""}">${esc(texto)}</span></div>
       <svg class="be-txel__arrow" viewBox="0 0 24 12" aria-hidden="true"><path d="M1 6h20m0 0-5-4m5 4-5 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
       <div class="be-txel__ctrls">
+        ${bg ? `<label class="be-txel__sw" title="Color de fondo"><input type="color" data-b="${bg.route}" value="${esc(leer(b, bg.route) || bg.def)}"></label>` : ""}
         <button type="button" class="be-txel__aa" data-aa="${k}" aria-haspopup="true" aria-expanded="false" title="Tipografía">Aa</button>
-        ${aaPopover(k, colorDef)}
+        ${aaPopover(k, colorRoute, colorDef)}
       </div></div>`;
+    const cL = (t, d) => esc(leer(b, "diseno." + t) || d); // color de una ruta (para el ejemplo)
     const estiloTexto = `
       <div class="bdl-subsec">Estilo del texto</div>
       <div class="be-txlist">
-        ${txEl("enc", "tiq-bdl__h1", "Elegí tu paquete", "#2a2a2a")}
-        ${txEl("titulo", "tiq-bdl__titulo", "Comprá 2", "#111111")}
-        ${txEl("precio", "tiq-bdl__precio-now", "$ 29,90", "#111111")}
+        ${txEl("enc", "tiq-bdl__h1", "Elegí tu paquete", "diseno.type.el.enc.color", "#2a2a2a")}
+        ${txEl("titulo", "tiq-bdl__titulo", "Comprá 2", "diseno.type.el.titulo.color", "#111111")}
+        ${txEl("precio", "tiq-bdl__precio-now", "$ 29,90", "diseno.type.el.precio.color", "#111111")}
+        ${txEl("etq", "tiq-bdl__etq", "10% OFF", "diseno.color_etiqueta", "#e11d48",
+            { route: "diseno.color_etiqueta_fondo", def: "#ffffff" },
+            `color:${cL("color_etiqueta", "#e11d48")};background:${cL("color_etiqueta_fondo", "#ffffff")};border:1px solid ${cL("color_etiqueta", "#e11d48")};`)}
+        ${txEl("badge", "tiq-bdl__badge tiq-bdl__badge--soft", "Más elegido", "diseno.color_badge_texto", "#ffffff",
+            { route: "diseno.color_badge", def: "#111111" },
+            `color:${cL("color_badge_texto", "#ffffff")};background:${cL("color_badge", "#111111")};`)}
+        ${txEl("oos", "tiq-bdl__sub", "¡Los artículos resaltados están agotados!", "diseno.color_oos", "#dc2626", null,
+            `color:${cL("color_oos", "#dc2626")};`)}
       </div>`;
 
     const colorYEstilo = `
@@ -3944,22 +3961,20 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       <div class="bdl-subsec">Diseño</div>
       ${sliderBdl("diseno.geometry.radius", IC_ESQUINA, "Redondeo de esquinas", 0, 50)}
       ${sliderBdl("diseno.geometry.breathing", IC_AIRE, "Espacio de aire", 4, 24)}
+      ${sliderBdl("diseno.geometry.borderWidth", IC_ESQUINA, "Ancho del borde", 0, 5)}
       <div class="bdl-subsec">Paletas de colores</div>
       <div class="bdl-presets">${presets}</div>
       <div class="bdl-subsec">Forma de la insignia</div>
       <div class="bdl-badgeformas">
         ${FORMAS_BADGE.map(([k, nombre]) => `<button type="button" class="bdl-bform ${(leer(b, "diseno.badge_forma") || "soft") === k ? "is-sel" : ""}" data-badgeforma="${k}" aria-label="Insignia ${nombre}"><span class="bdl-bform__prev"><span class="tiq-bdl__badge tiq-bdl__badge--${k}">Top</span></span><span class="bdl-bform__n">${nombre}</span></button>`).join("")}
       </div>
-      <div class="bdl-subsec">Personalizar</div>
+      <div class="bdl-subsec">Colores de la tarjeta</div>
       ${(() => {
         const dc = (t, def) => esc(leer(b, "diseno." + t) || def);
         const sw = (token, etiqueta, def) => `<label class="perso-sw"><input type="color" data-b="diseno.${token}" data-mid="${token}" value="${dc(token, def)}"><span class="perso-sw__lab">${etiqueta}</span><span class="perso-sw__line"></span></label>`;
         return `<div class="perso">
           <div class="perso-col perso-col--l">
             ${sw("color_borde", "Borde", "#111111")}
-            ${sw("color_fondo", "Fondo", "#f6f6f7")}
-            ${sw("color_badge", "Insignia", "#111111")}
-            ${sw("color_etiqueta", "Etiqueta", "#e11d48")}
           </div>
           <div class="perso-mid" data-mid-card style="border-color:${dc("color_borde", "#111")};background:${dc("color_fondo", "#ffffff")}">
             <span class="perso-mid__badge" data-mid-el="badge" style="background:${dc("color_badge", "#111")};color:${dc("color_badge_texto", "#fff")}">Más elegido</span>
@@ -3968,8 +3983,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
             <span class="perso-mid__etq" data-mid-el="etq" style="color:${dc("color_etiqueta", "#e11d48")};border-color:${dc("color_etiqueta", "#e11d48")}">10% OFF</span>
           </div>
           <div class="perso-col perso-col--r">
-            ${sw("color_texto", "Texto", "#111111")}
-            ${sw("color_badge_texto", "Texto insignia", "#ffffff")}
+            ${sw("color_fondo", "Fondo", "#f6f6f7")}
           </div>
         </div>
         ${(() => {
@@ -4062,7 +4076,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       fijar(b, ruta, v);
       // Editar un color a mano rompe el vínculo con el preset: deja de marcarlo
       // como "Rosa" y pasa a "personalizado" (el swatch se des-resalta al re-render).
-      if (/^diseno\.(color_|boton\.color)/.test(ruta) && b.diseno && b.diseno.preset) {
+      if (/^diseno\.color_(borde|fondo|badge|badge_texto|etiqueta|texto)$|^diseno\.boton\.color/.test(ruta) && b.diseno && b.diseno.preset) {
         b.diseno.palette = { active: b.diseno.preset, source: "custom" };
         b.diseno.preset = null;
       }
@@ -4084,6 +4098,19 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
           else if (mEl[2] === "weight") ex.style.fontWeight = v || "";
           else if (mEl[2] === "color") ex.style.color = v || "";
         }
+      }
+      // etiqueta/insignia/agotado: sus colores/fondo van a rutas propias → reflejar
+      // el ejemplo en vivo de la lista (el regex de arriba solo cubre type.el.*).
+      const EXCOL = {
+        "diseno.color_etiqueta": ["etq", (ex) => { ex.style.color = v; ex.style.borderColor = v; }],
+        "diseno.color_etiqueta_fondo": ["etq", (ex) => { ex.style.background = v; }],
+        "diseno.color_badge_texto": ["badge", (ex) => { ex.style.color = v; }],
+        "diseno.color_badge": ["badge", (ex) => { ex.style.background = v; }],
+        "diseno.color_oos": ["oos", (ex) => { ex.style.color = v; }]
+      };
+      if (EXCOL[ruta]) {
+        const ex = root.querySelector(`[data-txel="${EXCOL[ruta][0]}"] .be-txel__ex > *`);
+        if (ex) EXCOL[ruta][1](ex);
       }
       // Aviso de contraste de la insignia, en vivo.
       if (/^diseno\.color_badge/.test(ruta)) refrescarAvisoContraste(b);
@@ -4131,7 +4158,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         const inp = root.querySelector(`[data-aasize="${k}"]`);
         const out = root.querySelector(`[data-aaout="${k}"]`);
         if (inp) {
-          const DEF = { enc: 16, titulo: 15, precio: 17 };
+          const DEF = { enc: 16, titulo: 15, precio: 17, etq: 11, badge: 9, oos: 12 };
           const cur = Number(inp.value) || DEF[k] || 14;
           const next = Math.max(8, Math.min(48, cur + Number(dir)));
           inp.value = next;
@@ -4484,6 +4511,13 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       vElAVars("h1", (ty.el || {}).enc) +
       vElAVars("titulo", (ty.el || {}).titulo) +
       vElAVars("precio", (ty.el || {}).precio) +
+      vElAVars("etq", (ty.el || {}).etq) +
+      vElAVars("badge", (ty.el || {}).badge) +
+      vElAVars("oos", (ty.el || {}).oos) +
+      // Fondo de la etiqueta, color del mensaje de agotado, ancho de borde.
+      (d.color_etiqueta_fondo ? `--tiq-etq-bg:${d.color_etiqueta_fondo};` : "") +
+      (d.color_oos ? `--tiq-agotado-color:${d.color_oos};` : "") +
+      (g.borderWidth != null ? `--tiq-bd-w:${g.borderWidth}px;` : "") +
       `--tiq-bot-fondo:${bot.color_fondo || "#111"};--tiq-bot-txt:${bot.color_texto || "#fff"};--tiq-bot-radio:${bot.radio ?? 8}px;--tiq-bot-tam:${bot.tamano ?? 16}px`
     );
   }
@@ -4550,9 +4584,11 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
             ${thumbBdlHTML(o)}
             <span class="tiq-bdl__main">
               <span class="tiq-bdl__titulo">${esc(o.titulo || cant + " unidades")}${etq ? ` <span class="tiq-bdl__etq">${esc(etq)}</span>` : ""}</span>
-              ${sub
-                ? `<span class="tiq-bdl__sub">${esc(sub)}</span>`
-                : (d.mostrar_ahorro && ahorro > 0 ? `<span class="tiq-bdl__ahorro">Ahorrás ${fmtBdl(ahorro)}</span>` : "")}
+              ${o.agotado
+                ? `<span class="tiq-bdl__sub">${esc(d.avanzado?.oos_on && d.avanzado?.oos_texto ? d.avanzado.oos_texto : "Agotado")}</span>`
+                : sub
+                  ? `<span class="tiq-bdl__sub">${esc(sub)}</span>`
+                  : (d.mostrar_ahorro && ahorro > 0 ? `<span class="tiq-bdl__ahorro">Ahorrás ${fmtBdl(ahorro)}</span>` : "")}
             </span>
             <span class="tiq-bdl__precio">
               <span class="tiq-bdl__precio-now">${fmtBdl(total)}</span>

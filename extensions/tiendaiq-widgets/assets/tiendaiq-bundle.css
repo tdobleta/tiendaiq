@@ -35,7 +35,7 @@
 .tiq-bdl__cards { display: flex; flex-direction: column; gap: var(--tiq-gap, 9px); }
 .tiq-bdl__card {
   position: relative; display: flex; align-items: center; flex-wrap: wrap; gap: 12px;
-  padding: 12px 15px; border: 1.5px solid var(--tiq-card-bd); border-radius: var(--tiq-radio);
+  padding: 12px 15px; border: var(--tiq-bd-w, 1.5px) solid var(--tiq-card-bd); border-radius: var(--tiq-radio);
   background: var(--tiq-card-bg); cursor: pointer;
   transition: border-color .15s ease, background .15s ease, box-shadow .15s ease;
 }
@@ -55,7 +55,7 @@
 .tiq-bdl__main { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .tiq-bdl__titulo { font-family: var(--tiq-titulo-font, inherit); font-weight: var(--tiq-titulo-w, 700); font-size: var(--tiq-titulo-size, 15px); color: var(--tiq-titulo-color, var(--tiq-txt, #1f1f1f)); line-height: 1.3; letter-spacing: -.01em; display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
 /* pill de descuento: chip suave (tinte del acento), un solo indicador */
-.tiq-bdl__etq { font-size: 11px; font-weight: 700; letter-spacing: .01em; color: var(--tiq-etq, var(--tiq-ac)); background: color-mix(in srgb, var(--tiq-ac) 11%, #fff); border-radius: 6px; padding: 2px 7px; line-height: 1.35; white-space: nowrap; }
+.tiq-bdl__etq { font-family: var(--tiq-etq-font, inherit); font-size: var(--tiq-etq-size, 11px); font-weight: var(--tiq-etq-w, 700); letter-spacing: .01em; color: var(--tiq-etq, var(--tiq-ac)); background: var(--tiq-etq-bg, color-mix(in srgb, var(--tiq-ac) 11%, #fff)); border: 1px solid var(--tiq-etq-borde, transparent); border-radius: 6px; padding: 2px 7px; line-height: 1.35; white-space: nowrap; }
 .tiq-bdl__sub { font-size: 12.5px; color: #8f8f8f; line-height: 1.35; }
 /* ahorro: muteado (no compite con el precio) */
 .tiq-bdl__ahorro { font-size: 12.5px; font-weight: 600; color: color-mix(in srgb, var(--tiq-ac) 68%, #5a5a5a); line-height: 1.35; }
@@ -73,6 +73,7 @@
 /* --- nivel agotado --- */
 .tiq-bdl__card.is-agotado { opacity: .55; cursor: not-allowed; }
 .tiq-bdl__card.is-agotado .tiq-bdl__precio-now { text-decoration: line-through; }
+.tiq-bdl__card.is-agotado .tiq-bdl__sub { color: var(--tiq-agotado-color, #8f8f8f); font-family: var(--tiq-oos-font, inherit); font-size: var(--tiq-oos-size, 12.5px); font-weight: var(--tiq-oos-w, inherit); }
 
 /* --- accesibilidad: foco visible en la tarjeta (role=radio) --- */
 .tiq-bdl__card:focus-visible { outline: 2px solid var(--tiq-ac); outline-offset: 2px; }
@@ -82,7 +83,7 @@
 .tiq-bdl__badge {
   position: absolute; top: -8px; right: 12px;
   background: var(--tiq-badge, var(--tiq-ac)); color: var(--tiq-badge-txt, #fff);
-  font-size: 9.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+  font-family: var(--tiq-badge-font, inherit); font-size: var(--tiq-badge-size, 9.5px); font-weight: var(--tiq-badge-w, 700); letter-spacing: .04em; text-transform: uppercase;
   padding: 3px 9px; border-radius: 5px; line-height: 1.3; white-space: nowrap;
 }
 /* Plantillas de forma de la insignia (la global la elige el merchant). */

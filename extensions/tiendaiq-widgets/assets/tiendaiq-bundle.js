@@ -144,7 +144,12 @@
       if (o.color) raiz.style.setProperty("--tiq-" + name + "-color", o.color);
     }
     setEl("h1", EL.enc); setEl("titulo", EL.titulo); setEl("precio", EL.precio);
+    setEl("etq", EL.etq); setEl("badge", EL.badge); setEl("oos", EL.oos);
   })();
+  // Fondo de etiqueta, color de agotado, ancho de borde (Fase 2).
+  if (D.color_etiqueta_fondo) raiz.style.setProperty("--tiq-etq-bg", D.color_etiqueta_fondo);
+  if (D.color_oos) raiz.style.setProperty("--tiq-agotado-color", D.color_oos);
+  if (G.borderWidth != null) raiz.style.setProperty("--tiq-bd-w", G.borderWidth + "px");
   raiz.style.setProperty("--tiq-bot-fondo", BOT.color_fondo || "#111");
   raiz.style.setProperty("--tiq-bot-txt", BOT.color_texto || "#fff");
   raiz.style.setProperty("--tiq-bot-radio", (BOT.radio != null ? BOT.radio : 8) + "px");

@@ -2062,6 +2062,9 @@ summary:focus-visible, label:focus-visible {
 .be-txel__ex .tiq-bdl__h1::before, .be-txel__ex .tiq-bdl__h1::after { display: none; }
 .be-txel__ex .tiq-bdl__titulo { font-size: 14px; }
 .be-txel__ex .tiq-bdl__precio-now { font-size: 15px; }
+/* La insignia es position:absolute en el widget → static para verse en la lista. */
+.be-txel__ex .tiq-bdl__badge { position: static; top: auto; right: auto; }
+.be-txel__ex .tiq-bdl__etq, .be-txel__ex .tiq-bdl__badge { display: inline-block; }
 .be-txel__arrow { width: 22px; height: 11px; color: #babec2; flex-shrink: 0; }
 .be-txel__ctrls { position: relative; display: inline-flex; align-items: center; gap: 6px; }
 /* Botón "Aa" */
