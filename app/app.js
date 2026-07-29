@@ -3696,8 +3696,8 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         <span class="be-lv__drag">⠿</span>
         <button class="be-toggle ${activo ? "is-on" : ""}" data-lv-toggle="${i}" title="Prender/apagar nivel"><span></span></button>
         <span class="be-lv__name"><span class="be-lv__n">Nivel ${i + 1}:</span> <b>${esc(o.titulo || "Buy " + (Number(o.cantidad) || 1))}</b>${o.predeterminada ? '<span class="be-lv__chip">★ Por defecto</span>' : ""}</span>
-        <button class="be-lv__icn" data-lv-dup="${i}" title="Duplicar nivel" aria-label="Duplicar nivel ${i + 1}">${BE_DUP}</button>
-        <button class="be-lv__star ${o.predeterminada ? "is-star" : ""}" data-lv-star="${i}" title="Oferta predeterminada: es la que los clientes ven pre-seleccionada al entrar por primera vez" aria-label="Marcar como oferta predeterminada" aria-pressed="${o.predeterminada ? "true" : "false"}">${BE_STAR}</button>
+        <button class="be-lv__icn" data-lv-dup="${i}" data-tip="Duplicar este nivel" aria-label="Duplicar nivel ${i + 1}">${BE_DUP}</button>
+        <button class="be-lv__star ${o.predeterminada ? "is-star" : ""}" data-lv-star="${i}" data-tip="Oferta predeterminada: es la que los clientes ven pre-seleccionada al entrar a la página." aria-label="Marcar como oferta predeterminada" aria-pressed="${o.predeterminada ? "true" : "false"}">${BE_STAR}</button>
         <button class="be-lv__chev ${open ? "is-open" : ""}" data-lv-open="${i}" title="Abrir/cerrar">${BE_CHEV}</button>
       </div>`;
     if (!open) return `<div class="be-lv${o.predeterminada ? " is-def" : ""}">${head}</div>`;

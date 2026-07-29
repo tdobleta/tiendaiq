@@ -2209,23 +2209,44 @@ summary:focus-visible, label:focus-visible {
    ============================================================ */
 .be-layout { --bdl-teal: #0d9488; --bdl-oro: #f59e0b; }
 
-/* Íconos de nivel: glyph SOLO, sin caja (como la referencia). El fondo/borde
-   aparecen apenas en hover; la estrella activa es la única con fondo (dorado). */
-.be-lv__icn { background: none; border-color: transparent; color: #6a7280; }
-.be-lv__icn svg { width: 18px; height: 18px; }
-.be-lv__icn:hover { border-color: transparent; color: var(--bdl-teal); background: color-mix(in srgb, var(--bdl-teal) 12%, #fff); }
-
-/* Estrella "por defecto": glyph solo; activa = DORADO con glow.
-   Inactiva: hover dorado tenue. */
-.be-lv__star { background: none; border-color: transparent; color: #b3b7bd; }
-.be-lv__star svg { width: 17px; height: 17px; }
-.be-lv__star:hover:not(.is-star) { border-color: transparent; color: var(--bdl-oro); background: color-mix(in srgb, var(--bdl-oro) 12%, #fff); }
-.be-lv__star.is-star {
-  background: linear-gradient(135deg, #fbbf24, #f59e0b);
-  border-color: #f59e0b; color: #fff;
-  box-shadow: 0 2px 9px -2px color-mix(in srgb, var(--bdl-oro) 60%, transparent);
+/* Íconos de nivel: chip REDONDO (no cuadrado) con relleno suave y glyph grande —
+   con presencia y prolijo, estilo Pumper. La estrella activa = dorado con glow. */
+.be-lv__icn, .be-lv__star {
+  width: 34px; height: 34px; border: none; border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgba(20, 23, 28, .05);
 }
-.be-lv__star.is-star svg { filter: drop-shadow(0 1px 1px rgba(0,0,0,.18)); }
+.be-lv__icn { background: #eef0f3; color: #5b626e; }
+.be-lv__icn svg { width: 19px; height: 19px; }
+.be-lv__icn:hover { color: var(--bdl-teal); background: color-mix(in srgb, var(--bdl-teal) 15%, #fff); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--bdl-teal) 32%, transparent); }
+
+.be-lv__star { background: #eef0f3; color: #adb1b9; }
+.be-lv__star svg { width: 18px; height: 18px; }
+.be-lv__star:hover:not(.is-star) { color: var(--bdl-oro); background: color-mix(in srgb, var(--bdl-oro) 16%, #fff); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--bdl-oro) 38%, transparent); }
+.be-lv__star.is-star {
+  background: linear-gradient(140deg, #fbbf24, #f59e0b); color: #fff;
+  box-shadow: 0 3px 11px -2px color-mix(in srgb, var(--bdl-oro) 62%, transparent);
+}
+.be-lv__star.is-star svg { filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .18)); }
+
+/* Cartel (tooltip) de los botones de la fila (duplicar / estrella): reemplaza el
+   title nativo horrible. Alineado a la derecha porque los botones están al borde. */
+.be-lv__head [data-tip] { position: relative; }
+.be-lv__head [data-tip]::after {
+  content: attr(data-tip);
+  position: absolute; bottom: calc(100% + 9px); right: -4px;
+  width: max-content; max-width: 232px; white-space: normal; text-align: left;
+  background: #202223; color: #fff; font-size: 12px; font-weight: 400; line-height: 1.5;
+  padding: 9px 11px; border-radius: 9px; box-shadow: 0 8px 24px -6px rgba(0, 0, 0, .4);
+  opacity: 0; visibility: hidden; pointer-events: none; z-index: 80;
+  transform: translateY(4px); transition: opacity .15s ease, transform .15s ease;
+}
+.be-lv__head [data-tip]::before {
+  content: ""; position: absolute; bottom: calc(100% + 4px); right: 12px;
+  border: 5px solid transparent; border-top-color: #202223;
+  opacity: 0; visibility: hidden; pointer-events: none; z-index: 80; transition: opacity .15s ease;
+}
+.be-lv__head [data-tip]:hover::after, .be-lv__head [data-tip]:focus-visible::after { opacity: 1; visibility: visible; transform: translateY(0); }
+.be-lv__head [data-tip]:hover::before, .be-lv__head [data-tip]:focus-visible::before { opacity: 1; visibility: visible; }
 
 /* Chip "★ Destacado" junto al título del nivel */
 .be-lv__chip {
