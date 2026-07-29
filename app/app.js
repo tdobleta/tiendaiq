@@ -3274,6 +3274,15 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       .map((b, i) => ({ b, i }))
       .filter(({ b }) => (filtro === "activas" ? b.activo !== false : filtro === "pausadas" ? b.activo === false : true));
 
+    // Ingresos por-bundle (atribuidos por el título del descuento). Skeleton
+    // mientras cargan; un bundle sin ventas todavía muestra $0 (dato real).
+    const met = estado.bundles.metricas;
+    const fmtIngr = (nombre) => {
+      if (!met) return `<span class="bdl-sk bdl-sk--s"></span>`;
+      const pb = met.porBundle && met.porBundle[nombre];
+      const v = pb ? pb.ingresos : 0;
+      return `<span class="bdl-fila2__ingr-v" title="Ingresos atribuidos en ${met.dias} días">$${Number(v).toLocaleString("es-AR", { maximumFractionDigits: 0 })}</span>`;
+    };
     const filaHTML = ({ b, i }) => {
       const alcance =
         b.activador?.tipo === "todos" ? "Todos los productos"
@@ -3291,6 +3300,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
           <div class="bdl-fila2__sub">${b.tipo === "bxgy" ? "Comprá X y obtené Y" : "Descuento por volumen"} · ${esc(resumen)}</div>
         </div>
         <div class="bdl-fila2__alcance">${esc(alcance)}</div>
+        <div class="bdl-fila2__ingr">${fmtIngr(b.nombre)}</div>
         <div class="bdl-fila2__estado">
           <button class="be-toggle ${on ? "is-on" : ""}" data-toggle-activo="${i}" role="switch" aria-checked="${on}" title="${on ? "Activo — clic para pausar" : "Pausado — clic para activar"}"><span></span></button>
         </div>
@@ -3306,7 +3316,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
 
     const cuerpoTabla = visibles.length
       ? `<div class="tarjeta bdl-tabla2">
-          <div class="bdl-tabla2__cab"><span></span><span>Bundle</span><span>Alcance</span><span>Estado</span><span></span></div>
+          <div class="bdl-tabla2__cab"><span></span><span>Bundle</span><span>Alcance</span><span>Ingresos${met ? ` (${met.dias}d)` : ""}</span><span>Estado</span><span></span></div>
           ${visibles.map(filaHTML).join("")}
         </div>`
       : `<div class="tarjeta bdl-vacio"><div class="bdl-vacio__s">No hay bundles ${filtro === "activas" ? "activos" : "pausados"}.</div></div>`;

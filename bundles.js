@@ -328,6 +328,9 @@ const Q_ORDENES = `query($q: String!, $cursor: String) {
 const dos = (n) => Math.round(n * 100) / 100;
 const ES_NUESTRO = (a) =>
   String(a?.title || a?.code || "").startsWith("TiendaIQ Bundle");
+// El título es "TiendaIQ Bundle · <nombre> · ..." → el nombre del bundle es el
+// segundo segmento. Sirve para atribuir ingresos/pedidos por oferta.
+const NOMBRE_DE_TITULO = (a) => String(a?.title || "").split(" · ")[1] || null;
 
 async function metricasBundles(sesion, dias = 30) {
   const desde = new Date(Date.now() - dias * 86400000).toISOString().slice(0, 10);
@@ -339,16 +342,27 @@ async function metricasBundles(sesion, dias = 30) {
   let ingresos = 0;
   let descuento = 0;
   let moneda = null;
+  const porBundle = {}; // { "<nombre>": { pedidos, ingresos } }
 
   do {
     const conn = (await gql(Q_ORDENES, { q, cursor }, sesion)).orders;
     for (const o of conn.nodes || []) {
-      if (!(o.discountApplications?.nodes || []).some(ES_NUESTRO)) continue;
+      const apps = o.discountApplications?.nodes || [];
+      const nuestro = apps.find(ES_NUESTRO);
+      if (!nuestro) continue;
       pedidos++;
       const m = o.currentTotalPriceSet?.shopMoney;
-      ingresos += Number(m?.amount || 0);
+      const monto = Number(m?.amount || 0);
+      ingresos += monto;
       descuento += Number(o.totalDiscountsSet?.shopMoney?.amount || 0);
       moneda = moneda || m?.currencyCode;
+      // Atribución por-bundle: el pedido cuenta para el bundle de su descuento.
+      const nom = NOMBRE_DE_TITULO(nuestro);
+      if (nom) {
+        const pb = (porBundle[nom] = porBundle[nom] || { pedidos: 0, ingresos: 0 });
+        pb.pedidos++;
+        pb.ingresos += monto;
+      }
     }
     cursor = conn.pageInfo?.hasNextPage ? conn.pageInfo.endCursor : null;
     vueltas++;
@@ -361,7 +375,10 @@ async function metricasBundles(sesion, dias = 30) {
     descuento: dos(descuento),
     ticket: pedidos ? dos(ingresos / pedidos) : 0,
     moneda: moneda || "USD",
-    parcial: !!cursor // había más pedidos de los que recorrimos
+    parcial: !!cursor, // había más pedidos de los que recorrimos
+    porBundle: Object.fromEntries(
+      Object.entries(porBundle).map(([k, v]) => [k, { pedidos: v.pedidos, ingresos: dos(v.ingresos) }])
+    )
   };
 }
 
