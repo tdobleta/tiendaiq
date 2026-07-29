@@ -3285,6 +3285,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     const inst = estado.bundles.config.instalado;
 
     const filtro = estado.bundles.filtro || "todas";
+    const sel = estado.bundles.sel || (estado.bundles.sel = []); // ids seleccionados (bulk)
     // Íconos mono (no emoji: los emojis delatan MVP en el admin de Shopify).
     const ICO_BOX = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8.5v9L12 22l-9-4.5v-9L12 4l9 4.5z"/><path d="M3 8.5l9 4.5 9-4.5"/><path d="M12 13v9"/></svg>`;
     const ICO_GIFT = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8.5" width="18" height="4" rx="1"/><path d="M4.5 12.5V20h15v-7.5"/><path d="M12 8.5V20"/><path d="M12 8.5C11 6 9.5 4.5 8 4.5a2 2 0 0 0 0 4z"/><path d="M12 8.5c1-2.5 2.5-4 4-4a2 2 0 0 1 0 4z"/></svg>`;
@@ -3314,7 +3315,8 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
           ? `Comprá ${b.bxgy?.compra_cantidad || 2}, llevás ${b.bxgy?.regalo_cantidad || 1}`
           : `${(b.ofertas || []).filter((o) => Number(o.descuento) > 0).length} peldaño(s) con descuento`;
       const on = b.activo !== false;
-      return `<div class="bdl-fila2" data-abrir="${i}" role="button" tabindex="0" aria-label="Editar ${esc(b.nombre)}">
+      return `<div class="bdl-fila2 ${sel.includes(b.id) ? "is-sel-row" : ""}" data-abrir="${i}" role="button" tabindex="0" aria-label="Editar ${esc(b.nombre)}">
+        <label class="bdl-check"><input type="checkbox" data-sel="${esc(b.id)}" ${sel.includes(b.id) ? "checked" : ""} aria-label="Seleccionar ${esc(b.nombre)}"></label>
         <div class="bdl-fila2__ico">${b.tipo === "bxgy" ? ICO_GIFT : ICO_BOX}</div>
         <div class="bdl-fila2__main">
           <div class="bdl-fila2__nombre">${esc(b.nombre)}</div>
@@ -3337,10 +3339,21 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
 
     const cuerpoTabla = visibles.length
       ? `<div class="tarjeta bdl-tabla2">
-          <div class="bdl-tabla2__cab"><span></span><span>Bundle</span><span>Alcance</span><span>Ingresos${met ? ` (${met.dias}d)` : ""}</span><span>Estado</span><span></span></div>
+          <div class="bdl-tabla2__cab"><span class="bdl-check"><input type="checkbox" data-selall ${visibles.length && visibles.every(({ b }) => sel.includes(b.id)) ? "checked" : ""} aria-label="Seleccionar todo"></span><span></span><span>Bundle</span><span>Alcance</span><span>Ingresos${met ? ` (${met.dias}d)` : ""}</span><span>Estado</span><span></span></div>
           ${visibles.map(filaHTML).join("")}
         </div>`
       : `<div class="tarjeta bdl-vacio"><div class="bdl-vacio__s">No hay bundles ${filtro === "activas" ? "activos" : "pausados"}.</div></div>`;
+
+    // Barra de acciones en lote (aparece al seleccionar filas).
+    const bulkBar = sel.length
+      ? `<div class="bdl-bulk">
+          <span class="bdl-bulk__n">${sel.length} seleccionado${sel.length === 1 ? "" : "s"}</span>
+          <button class="btn btn--fantasma btn--chico" data-bulk="activar">Activar</button>
+          <button class="btn btn--fantasma btn--chico" data-bulk="pausar">Pausar</button>
+          <button class="btn btn--fantasma btn--chico bdl-bulk__del" data-bulk="eliminar">Eliminar</button>
+          <button class="bdl-bulk__x" data-bulk="limpiar" aria-label="Deseleccionar">✕</button>
+        </div>`
+      : "";
 
     // Estado del widget: sutil cuando está OK (no un banner verde permanente,
     // que grita MVP), banner de aviso solo si NO está inyectado.
@@ -3377,7 +3390,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         <div class="inicio-cabecera__acciones"><button class="btn btn--marca" id="bdl-nuevo">＋ Crear bundle</button></div>
       </div>
       ${widgetEstado}
-      ${lista.length ? bloqueMetricas() + tabsHTML + cuerpoTabla : onboarding}
+      ${lista.length ? bloqueMetricas() + tabsHTML + bulkBar + cuerpoTabla : onboarding}
       <div class="pagina-help">¿Dudas? Revisá la documentación de bundles.</div>`;
 
     $("volver-inicio").onclick = () => ir("inicio");
@@ -3414,13 +3427,46 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     vista.querySelectorAll(".bdl-onb-crear").forEach((el) => (el.onclick = abrirGaleria));
     vista.querySelectorAll("[data-plant]").forEach((el) => (el.onclick = () => crearDesdeTema(el.dataset.plant)));
 
-    // Filtros de estado (client-side).
-    vista.querySelectorAll("[data-filtro]").forEach((el) => (el.onclick = () => { estado.bundles.filtro = el.dataset.filtro; pintarDashboardBundles(); }));
+    // Filtros de estado (client-side). Cambiar de filtro limpia la selección.
+    vista.querySelectorAll("[data-filtro]").forEach((el) => (el.onclick = () => { estado.bundles.filtro = el.dataset.filtro; estado.bundles.sel = []; pintarDashboardBundles(); }));
+
+    // Selección (bulk): checkbox por fila + "seleccionar todo".
+    vista.querySelectorAll("[data-sel]").forEach((el) => (el.onchange = () => {
+      const s = estado.bundles.sel, k = s.indexOf(el.dataset.sel);
+      if (el.checked && k < 0) s.push(el.dataset.sel); else if (!el.checked && k >= 0) s.splice(k, 1);
+      pintarDashboardBundles();
+    }));
+    const selAll = vista.querySelector("[data-selall]");
+    if (selAll) selAll.onchange = () => {
+      const f = estado.bundles.filtro;
+      const ids = (estado.bundles.config.lista || [])
+        .filter((b) => (f === "activas" ? b.activo !== false : f === "pausadas" ? b.activo === false : true))
+        .map((b) => b.id);
+      estado.bundles.sel = selAll.checked ? ids.slice() : [];
+      pintarDashboardBundles();
+    };
+    vista.querySelectorAll("[data-bulk]").forEach((el) => (el.onclick = async () => {
+      const acc = el.dataset.bulk;
+      if (acc === "limpiar") { estado.bundles.sel = []; return pintarDashboardBundles(); }
+      const ids = estado.bundles.sel.slice();
+      if (!ids.length) return;
+      if (acc === "eliminar") {
+        if (!confirm(`¿Eliminar ${ids.length} bundle(s)? Se borran también sus descuentos en Shopify.`)) return;
+        estado.bundles.config.lista = estado.bundles.config.lista.filter((b) => !ids.includes(b.id));
+      } else {
+        const activo = acc === "activar";
+        estado.bundles.config.lista.forEach((b) => { if (ids.includes(b.id)) b.activo = activo; });
+      }
+      estado.bundles.sel = [];
+      await guardarBundles();
+      pintarDashboardBundles();
+      toast(acc === "eliminar" ? `${ids.length} bundle(s) eliminado(s)` : acc === "activar" ? `${ids.length} activado(s)` : `${ids.length} pausado(s)`);
+    }));
 
     // Abrir el editor al click/Enter en la fila (menos si se tocó el toggle o ⋯).
     vista.querySelectorAll("[data-abrir]").forEach((el) => {
       const abrir = () => { estado.bundles.editIdx = Number(el.dataset.abrir); estado.bundles.vista = "editor"; estado.bundles.tab = "ofertas"; pintarEditorBundle(); };
-      const enControl = (e) => e.target.closest("[data-toggle-activo]") || e.target.closest("[data-acc]");
+      const enControl = (e) => e.target.closest("[data-toggle-activo]") || e.target.closest("[data-acc]") || e.target.closest(".bdl-check");
       el.onclick = (e) => { if (!enControl(e)) abrir(); };
       el.onkeydown = (e) => { if ((e.key === "Enter" || e.key === " ") && !enControl(e)) { e.preventDefault(); abrir(); } };
     });
