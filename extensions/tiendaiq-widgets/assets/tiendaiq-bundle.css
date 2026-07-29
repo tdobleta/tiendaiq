@@ -2,108 +2,100 @@
    TiendaIQ Bundles — estilos del widget de producto.
    Namespaced en .tiq-bdl. El acento es --tiq-borde (lo setea el JS
    del storefront y el preview del editor); de ahí derivan los tintes.
-   Spec visual espejando el widget de referencia (Pumper).
+   Diseño limpio y plano espejando el widget de referencia (Pumper):
+   una tarjeta = título + UN dato + precio. Sin CTA propio (el botón de
+   compra es el de la página de producto). Sin box-in-box ni scale.
    ============================================================ */
 
 .tiq-bdl {
   --tiq-ac: var(--tiq-borde, #a90c4e);              /* acento (elegido por el merchant) */
-  --tiq-radio: 14px;
-  --tiq-radio-h: 16px;                              /* horizontal, más redondeado */
-  --tiq-bot-fondo: var(--tiq-ac);
-  --tiq-bot-txt: #fff;
-  --tiq-bot-radio: 12px;
-  --tiq-bot-tam: 16px;
-  /* tintes del acento: en no-seleccionada manda el tinte, el borde casi no se ve */
-  --tiq-card-bg: color-mix(in srgb, var(--tiq-ac) 7%, #fff);
-  --tiq-card-bd: color-mix(in srgb, var(--tiq-ac) 16%, #fff);
-  --tiq-radio-bd: color-mix(in srgb, var(--tiq-ac) 45%, #fff);
-  --tiq-pill-bd: color-mix(in srgb, var(--tiq-ac) 34%, #fff);
-  --tiq-pill-tx: color-mix(in srgb, var(--tiq-ac) 82%, #fff);
+  --tiq-radio: 12px;
+  --tiq-radio-h: 12px;
+  /* no-seleccionada = gris neutro (sin tinte pesado); el acento solo marca lo elegido */
+  --tiq-card-bg: #f6f6f7;
+  --tiq-card-bd: #e6e6e8;
+  --tiq-radio-bd: #c8c8cd;
 
   font: inherit;
   font-family: var(--tiq-font, inherit);
   font-size: 15px;
-  color: var(--tiq-txt, #2e2e2e);
-  margin: 20px 0;
+  color: var(--tiq-txt, #1f1f1f);
+  margin: 18px 0;
   -webkit-font-smoothing: antialiased;
-  background: #fff;
-  border: 1px solid #ececec;
-  border-radius: 16px;
-  padding: 18px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, .06);
 }
 .tiq-bdl *, .tiq-bdl *::before, .tiq-bdl *::after { box-sizing: border-box; }
 
-/* --- encabezado con líneas a los costados --- */
-.tiq-bdl__head { margin-bottom: 14px; text-align: center; }
-.tiq-bdl__h1 { display: inline-flex; align-items: center; gap: 12px; font-size: 1.02em; font-weight: var(--tiq-title-w, 700); color: #3b3b3b; letter-spacing: -.01em; }
-.tiq-bdl__h1::before, .tiq-bdl__h1::after { content: ""; width: 44px; height: 1px; background: #e3e3e3; }
-.tiq-bdl__h2 { font-size: .88em; color: #8a8a8a; margin-top: 4px; }
+/* --- encabezado con líneas finas a los costados --- */
+.tiq-bdl__head { margin-bottom: 13px; text-align: center; }
+.tiq-bdl__h1 { display: inline-flex; align-items: center; gap: 12px; font-size: 1em; font-weight: var(--tiq-title-w, 700); color: #2a2a2a; letter-spacing: -.01em; }
+.tiq-bdl__h1::before, .tiq-bdl__h1::after { content: ""; width: 40px; height: 1px; background: #e5e5e5; }
+.tiq-bdl__h2 { font-size: .86em; color: #9a9a9a; margin-top: 3px; }
 
 /* --- tarjetas --- */
-.tiq-bdl__cards { display: flex; flex-direction: column; gap: var(--tiq-gap, 10px); }
+.tiq-bdl__cards { display: flex; flex-direction: column; gap: var(--tiq-gap, 9px); }
 .tiq-bdl__card {
-  position: relative; display: flex; align-items: center; flex-wrap: wrap; gap: 14px;
-  padding: 16px 18px; border: 1.5px solid var(--tiq-card-bd); border-radius: var(--tiq-radio);
+  position: relative; display: flex; align-items: center; flex-wrap: wrap; gap: 13px;
+  padding: 14px 16px; border: 1.5px solid var(--tiq-card-bd); border-radius: var(--tiq-radio);
   background: var(--tiq-card-bg); cursor: pointer;
-  transition: border-color .15s cubic-bezier(.4,0,.2,1), background .15s cubic-bezier(.4,0,.2,1), box-shadow .15s cubic-bezier(.4,0,.2,1), transform .12s cubic-bezier(.4,0,.2,1);
+  transition: border-color .15s ease, background .15s ease, box-shadow .15s ease;
 }
-.tiq-bdl__card:hover { border-color: color-mix(in srgb, var(--tiq-ac) 40%, #fff); transform: translateY(-1px); box-shadow: 0 4px 12px -6px rgba(0,0,0,.15); }
+.tiq-bdl__card:hover { border-color: var(--tiq-radio-bd); }
+/* seleccionada: blanca + doble filo de acento (borde + shadow-ring), SIN scale ni sombra difusa */
 .tiq-bdl__card.is-sel {
-  padding: 15.5px 17.5px; border: 2px solid var(--tiq-ac); background: #fff; transform: scale(1.015);
-  box-shadow: 0 6px 16px -6px color-mix(in srgb, var(--tiq-ac) 40%, transparent), 0 2px 4px rgba(0,0,0,.05);
+  border-color: var(--tiq-ac); background: #fff;
+  box-shadow: 0 0 0 1.5px var(--tiq-ac);
 }
-.tiq-bdl__card.is-sel:hover { transform: scale(1.015); }
 
-.tiq-bdl__radio { flex: 0 0 auto; width: 18px; height: 18px; border: 1.5px solid var(--tiq-radio-bd); border-radius: 50%; position: relative; transition: border-color .15s ease; }
+.tiq-bdl__radio { flex: 0 0 auto; width: 19px; height: 19px; border: 1.5px solid var(--tiq-radio-bd); border-radius: 50%; position: relative; transition: border-color .15s ease; }
 .tiq-bdl__card.is-sel .tiq-bdl__radio { border-color: var(--tiq-ac); }
-.tiq-bdl__card.is-sel .tiq-bdl__radio::after { content: ""; position: absolute; inset: 4.5px; border-radius: 50%; background: var(--tiq-ac); box-shadow: 0 0 0 1px #fff inset; }
+.tiq-bdl__card.is-sel .tiq-bdl__radio::after { content: ""; position: absolute; inset: 4px; border-radius: 50%; background: var(--tiq-ac); }
 
-.tiq-bdl__main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
-.tiq-bdl__titulo { font-weight: 700; font-size: 16.5px; color: var(--tiq-txt, #2e2e2e); line-height: 1.25; letter-spacing: -.01em; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.tiq-bdl__etq { font-size: 11px; font-weight: 700; letter-spacing: .01em; color: var(--tiq-etq, var(--tiq-pill-tx)); background: #fff; border: 1px solid var(--tiq-pill-bd); border-radius: 999px; padding: 3px 9px; line-height: 1.3; white-space: nowrap; }
+.tiq-bdl__main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.tiq-bdl__titulo { font-weight: 700; font-size: 15px; color: var(--tiq-txt, #1f1f1f); line-height: 1.3; letter-spacing: -.01em; display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+/* pill de descuento: chip suave (tinte del acento), un solo indicador */
+.tiq-bdl__etq { font-size: 11px; font-weight: 700; letter-spacing: .01em; color: var(--tiq-etq, var(--tiq-ac)); background: color-mix(in srgb, var(--tiq-ac) 11%, #fff); border-radius: 6px; padding: 2px 7px; line-height: 1.35; white-space: nowrap; }
 .tiq-bdl__sub { font-size: 12.5px; color: #8f8f8f; line-height: 1.35; }
-.tiq-bdl__ahorro { font-size: 12px; font-weight: 700; color: var(--tiq-ac); line-height: 1.3; }
+/* ahorro: muteado (no compite con el precio) */
+.tiq-bdl__ahorro { font-size: 12.5px; font-weight: 600; color: color-mix(in srgb, var(--tiq-ac) 68%, #5a5a5a); line-height: 1.35; }
 
-.tiq-bdl__precio { flex: 0 0 auto; text-align: right; display: flex; flex-direction: column; align-items: flex-end; }
-.tiq-bdl__precio-now { font-weight: var(--tiq-price-w, 800); font-size: 20px; color: var(--tiq-txt, #2e2e2e); line-height: 1.15; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
-.tiq-bdl__precio-old { font-size: 13px; color: #9a9a9a; text-decoration: line-through; line-height: 1.2; font-variant-numeric: tabular-nums; }
-.tiq-bdl__unit { font-size: 11.5px; color: #9a9a9a; line-height: 1.3; margin-top: 1px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.tiq-bdl__precio { flex: 0 0 auto; text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 1px; }
+.tiq-bdl__precio-now { font-weight: var(--tiq-price-w, 700); font-size: 17px; color: var(--tiq-txt, #1f1f1f); line-height: 1.2; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
+.tiq-bdl__precio-old { font-size: 12.5px; color: #a2a2a2; text-decoration: line-through; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.tiq-bdl__unit { font-size: 11px; color: #aaa; line-height: 1.25; white-space: nowrap; font-variant-numeric: tabular-nums; }
 
 /* Thumbnail de imagen por nivel (integrado a la tarjeta, no un bloque suelto). */
-.tiq-bdl__thumb { flex: 0 0 auto; width: 44px; height: 44px; border-radius: 10px; overflow: hidden; background: #f4f4f4; border: 1px solid var(--tiq-card-bd); box-shadow: 0 1px 2px rgba(0,0,0,.06); transition: border-color .15s ease, box-shadow .15s ease; }
+.tiq-bdl__thumb { flex: 0 0 auto; width: 42px; height: 42px; border-radius: 8px; overflow: hidden; background: #f0f0f0; border: 1px solid var(--tiq-card-bd); transition: border-color .15s ease; }
 .tiq-bdl__thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.tiq-bdl__card:hover .tiq-bdl__thumb { border-color: var(--tiq-ac); }
-.tiq-bdl__card.is-sel .tiq-bdl__thumb { border-color: var(--tiq-ac); box-shadow: 0 0 0 1px var(--tiq-ac), 0 2px 6px color-mix(in srgb, var(--tiq-ac) 22%, transparent); }
+.tiq-bdl__card.is-sel .tiq-bdl__thumb { border-color: var(--tiq-ac); }
 
 /* --- nivel agotado --- */
 .tiq-bdl__card.is-agotado { opacity: .55; cursor: not-allowed; }
 .tiq-bdl__card.is-agotado .tiq-bdl__precio-now { text-decoration: line-through; }
 
-/* --- accesibilidad: foco visible en la tarjeta (role=radio) y en el CTA --- */
-.tiq-bdl__card:focus-visible, .tiq-bdl__cta:focus-visible { outline: 2px solid var(--tiq-ac); outline-offset: 2px; }
+/* --- accesibilidad: foco visible en la tarjeta (role=radio) --- */
+.tiq-bdl__card:focus-visible { outline: 2px solid var(--tiq-ac); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { .tiq-bdl *, .tiq-bdl *::before, .tiq-bdl *::after { transition: none !important; animation: none !important; } }
 
-/* --- badge (cinta superior derecha) --- */
+/* --- badge (etiqueta chica, esquina superior derecha) --- */
 .tiq-bdl__badge {
-  position: absolute; top: -10px; right: 12px;
+  position: absolute; top: -8px; right: 12px;
   background: var(--tiq-badge, var(--tiq-ac)); color: var(--tiq-badge-txt, #fff);
-  font-size: 10px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase;
-  padding: 4px 10px; border-radius: 4px; line-height: 1.3; white-space: nowrap;
+  font-size: 9.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+  padding: 3px 9px; border-radius: 5px; line-height: 1.3; white-space: nowrap;
 }
 /* Plantillas de forma de la insignia (la global la elige el merchant). */
 .tiq-bdl__badge--soft { border-radius: 5px; }
-.tiq-bdl__badge--pill { border-radius: 999px; padding: 4px 12px; }
+.tiq-bdl__badge--pill { border-radius: 999px; padding: 3px 11px; }
 .tiq-bdl__badge--rect { border-radius: 0; }
-.tiq-bdl__badge--ribbon { border-radius: 0; padding-left: 15px; clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, 9px 50%); }
-.tiq-bdl__badge--tag { border-radius: 0 4px 4px 0; padding-left: 16px; clip-path: polygon(9px 0, 100% 0, 100% 100%, 9px 100%, 0 50%); }
+.tiq-bdl__badge--ribbon { border-radius: 0; padding-left: 14px; clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, 8px 50%); }
+.tiq-bdl__badge--tag { border-radius: 0 4px 4px 0; padding-left: 15px; clip-path: polygon(8px 0, 100% 0, 100% 100%, 8px 100%, 0 50%); }
 .tiq-bdl__badge--tag::before { content: ""; position: absolute; left: 4px; top: 50%; width: 4px; height: 4px; border-radius: 50%; background: var(--tiq-badge-txt, #fff); transform: translateY(-50%); }
 
 /* --- add-ons dentro de la tarjeta (regalo / envío / imagen) --- */
-.tiq-bdl__addons { flex-basis: 100%; margin-top: 10px; padding-top: 10px; border-top: 1px solid color-mix(in srgb, var(--tiq-ac) 22%, #fff); display: flex; flex-direction: column; gap: 8px; }
+.tiq-bdl__addons { flex-basis: 100%; margin-top: 10px; padding-top: 10px; border-top: 1px solid #ececec; display: flex; flex-direction: column; gap: 8px; }
 .tiq-bdl__gift { display: flex; align-items: center; gap: 11px; font-size: .9em; }
 .tiq-bdl__gift-ic { font-size: 1.3em; flex: 0 0 auto; }
-.tiq-bdl__gift-ic--img { width: 42px; height: 42px; flex: 0 0 auto; border-radius: 8px; overflow: hidden; background: #f4f4f4; border: 1px solid rgba(0,0,0,.06); }
+.tiq-bdl__gift-ic--img { width: 42px; height: 42px; flex: 0 0 auto; border-radius: 8px; overflow: hidden; background: #f0f0f0; border: 1px solid var(--tiq-card-bd); }
 .tiq-bdl__gift-ic--img img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .tiq-bdl__gift-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 5px; }
 .tiq-bdl__gift-name { font-weight: 600; color: #2e2e2e; line-height: 1.2; }
@@ -112,35 +104,23 @@
 .tiq-bdl__gift-right { flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
 .tiq-bdl__gift-free { font-size: .72em; font-weight: 700; letter-spacing: .02em; color: #fff; background: var(--tiq-ac); padding: 3px 10px; border-radius: 999px; white-space: nowrap; }
 .tiq-bdl__gift-old { font-size: .82em; color: #8a8a8a; text-decoration: line-through; }
-.tiq-bdl__ship { display: flex; align-items: center; gap: 8px; font-size: .82em; font-weight: 600; color: #2e2e2e; }
-.tiq-bdl__ship { align-self: flex-start; gap: 6px; padding: 5px 10px; border-radius: 8px; background: color-mix(in srgb, var(--tiq-ac) 8%, #fff); color: color-mix(in srgb, var(--tiq-ac) 55%, #2e2e2e); }
+.tiq-bdl__ship { align-self: flex-start; display: flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 8px; font-size: .82em; font-weight: 600; background: color-mix(in srgb, var(--tiq-ac) 8%, #fff); color: color-mix(in srgb, var(--tiq-ac) 55%, #2e2e2e); }
 
-/* --- Plantilla HORIZONTAL: las tarjetas se acomodan en columnas (mismo markup,
-   distinto layout). Cada tarjeta pasa a ser una columna con el contenido
-   apilado y centrado. --- */
-.tiq-bdl--horizontal .tiq-bdl__cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; align-items: stretch; }
-.tiq-bdl--horizontal .tiq-bdl__card { min-width: 0; flex-direction: column; align-items: center; text-align: center; gap: 12px; padding: 22px 16px; flex-wrap: nowrap; border-radius: var(--tiq-radio-h, 16px); }
-.tiq-bdl--horizontal .tiq-bdl__card.is-sel { padding: 21.5px 15.5px; }
-.tiq-bdl--horizontal .tiq-bdl__thumb { order: -1; width: 64px; height: 64px; border-radius: 12px; margin: 0 auto 2px; }
-.tiq-bdl--horizontal .tiq-bdl__ship { align-self: center; }
-@media (max-width: 560px) { .tiq-bdl--horizontal .tiq-bdl__cards { grid-template-columns: 1fr; } }
-.tiq-bdl--horizontal .tiq-bdl__main { flex: 0 0 auto; align-items: center; }
+/* Nota del preview del admin: aclara que la compra la hace el botón del tema. */
+.tiq-bdl__nota { margin-top: 12px; text-align: center; font-size: 12px; color: #a0a0a0; }
+
+/* --- Plantilla HORIZONTAL: tarjetas en columnas (mismo markup, distinto layout).
+   Cada tarjeta apila su contenido centrado: badge, imagen, radio, título, precio. --- */
+.tiq-bdl--horizontal .tiq-bdl__cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; align-items: stretch; }
+.tiq-bdl--horizontal .tiq-bdl__card { min-width: 0; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 8px; padding: 18px 14px 15px; flex-wrap: nowrap; border-radius: var(--tiq-radio-h, 12px); }
+.tiq-bdl--horizontal .tiq-bdl__badge { position: static; top: auto; right: auto; order: -2; margin-bottom: 1px; align-self: center; }
+.tiq-bdl--horizontal .tiq-bdl__thumb { order: -1; width: 56px; height: 56px; border-radius: 10px; margin: 0 auto; }
+.tiq-bdl--horizontal .tiq-bdl__main { flex: 0 0 auto; align-items: center; gap: 3px; }
 .tiq-bdl--horizontal .tiq-bdl__titulo { justify-content: center; }
 .tiq-bdl--horizontal .tiq-bdl__precio { flex: 0 0 auto; align-items: center; text-align: center; }
-.tiq-bdl--horizontal .tiq-bdl__badge { position: static; top: auto; right: auto; margin-bottom: 2px; align-self: center; }
 .tiq-bdl--horizontal .tiq-bdl__addons { flex-basis: auto; width: 100%; }
+.tiq-bdl--horizontal .tiq-bdl__ship { align-self: center; }
 .tiq-bdl--horizontal .tiq-bdl__gift-main { align-items: center; }
-
-/* --- botón --- */
-.tiq-bdl__cta {
-  display: block; width: 100%; margin-top: 14px; padding: 18px 20px;
-  border: none; border-radius: var(--tiq-bot-radio);
-  background: var(--tiq-bot-fondo); color: var(--tiq-bot-txt);
-  font: inherit; font-size: var(--tiq-bot-tam); font-weight: 700; letter-spacing: .01em;
-  cursor: pointer; transition: filter .15s ease, transform .05s ease;
-}
-.tiq-bdl__cta:hover { filter: brightness(1.08); }
-.tiq-bdl__cta:active { transform: translateY(1px); }
-.tiq-bdl__cta:disabled { opacity: .6; cursor: default; }
+@media (max-width: 520px) { .tiq-bdl--horizontal .tiq-bdl__cards { grid-template-columns: 1fr; } }
 
 @media (max-width: 480px) { .tiq-bdl__card { gap: 10px; } }

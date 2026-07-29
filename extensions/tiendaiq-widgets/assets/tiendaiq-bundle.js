@@ -237,10 +237,13 @@
               '<span class="tiq-bdl__titulo">' + esc(o.titulo || (cant + " unidades")) +
                 (etq ? ' <span class="tiq-bdl__etq">' + esc(etq) + "</span>" : "") +
               "</span>" +
-              (o.subtitulo ? '<span class="tiq-bdl__sub">' + esc(o.subtitulo) + "</span>" : "") +
+              // UNA sola línea secundaria: agotado > subtítulo del merchant > ahorro
+              // automático. Antes se apilaban subtítulo + ahorro (redundante con el pill).
               (agot
                 ? '<span class="tiq-bdl__sub">Agotado</span>'
-                : (D.mostrar_ahorro && ahorro > 0 ? '<span class="tiq-bdl__ahorro">Ahorrás ' + fmt(ahorro) + "</span>" : "")) +
+                : o.subtitulo
+                  ? '<span class="tiq-bdl__sub">' + esc(o.subtitulo) + "</span>"
+                  : (D.mostrar_ahorro && ahorro > 0 ? '<span class="tiq-bdl__ahorro">Ahorrás ' + fmt(ahorro) + "</span>" : "")) +
             "</span>" +
             '<span class="tiq-bdl__precio">' +
               '<span class="tiq-bdl__precio-now">' + fmt(total) + "</span>" +
@@ -255,8 +258,6 @@
       totalSel = Math.round(pu * Math.max(1, Number(oSel.cantidad) || 1) * (1 - (Number(oSel.descuento) || 0) / 100));
     }
 
-    var textoBoton = (BOT.texto || "Agregar al carrito — {total}").replace(/\{total\}/g, fmt(totalSel));
-
     raiz.innerHTML =
       (D.mostrar_encabezado !== false
         ? '<div class="tiq-bdl__head">' +
@@ -264,8 +265,7 @@
             (D.subtitulo ? '<div class="tiq-bdl__h2">' + esc(D.subtitulo) + "</div>" : "") +
           "</div>"
         : "") +
-      '<div class="tiq-bdl__cards"' + (esBxgy ? "" : ' role="radiogroup" aria-label="Elegí tu paquete"') + ">" + tarjetas + "</div>" +
-      '<button type="button" class="tiq-bdl__cta">' + esc(textoBoton) + "</button>";
+      '<div class="tiq-bdl__cards"' + (esBxgy ? "" : ' role="radiogroup" aria-label="Elegí tu paquete"') + ">" + tarjetas + "</div>";
 
     if (!esBxgy) {
       var tarjs = [].slice.call(raiz.querySelectorAll(".tiq-bdl__card"));
@@ -298,36 +298,32 @@
         });
       });
     }
-    raiz.querySelector(".tiq-bdl__cta").addEventListener("click", agregar);
+    // El widget NO agrega al carrito: la compra la hace el botón del tema. Solo
+    // sincroniza la cantidad elegida en el form del producto para que ese botón
+    // agregue la cantidad del nivel (y aplique el descuento automático).
+    sincronizarCantidad();
   }
 
-  var enviando = false;
-  function agregar() {
-    if (enviando) return;
-    var cant = cantidadElegida();
-    var vid = varianteActual();
-    if (!vid) { window.location.href = "/cart"; return; }
-
-    enviando = true;
-    var btn = raiz.querySelector(".tiq-bdl__cta");
-    var txt = btn.textContent;
-    btn.textContent = "Agregando…";
-    btn.disabled = true;
-
-    fetch("/cart/add.js", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify({ items: [{ id: Number(vid), quantity: cant }] })
-    })
-      .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.description || "No se pudo agregar"); return j; }); })
-      .then(function () { window.location.href = "/cart"; })
-      .catch(function (e) {
-        enviando = false;
-        btn.disabled = false;
-        btn.textContent = txt;
-        console.warn("[TiendaIQ Bundles]", e);
-        alert("No pudimos agregar el producto. Probá de nuevo.");
-      });
+  // Refleja cantidadElegida() en el input de cantidad del form de producto. Si el
+  // tema no tiene input visible, inyecta uno oculto para que /cart/add lo lea.
+  function sincronizarCantidad() {
+    try {
+      var form = document.querySelector('form[action*="/cart/add"]');
+      if (!form) return;
+      var n = cantidadElegida();
+      var inp = form.querySelector('input[name="quantity"], select[name="quantity"]');
+      if (!inp) {
+        inp = document.createElement("input");
+        inp.type = "hidden";
+        inp.name = "quantity";
+        form.appendChild(inp);
+      }
+      if (String(inp.value) !== String(n)) {
+        inp.value = n;
+        inp.dispatchEvent(new Event("input", { bubbles: true }));
+        inp.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+    } catch (e) { if (window.console) console.warn("[TiendaIQ Bundles] cantidad", e); }
   }
 
   // Busca el botón/zona de "Agregar al carrito" del tema. Primero los
@@ -356,8 +352,9 @@
     var ancla = buscarAncla();
     if (!ancla) return false;
 
-    // El widget toma la compra: ocultamos los botones nativos para no dejar
-    // dos "Agregar al carrito".
+    // El botón de compra es el DEL TEMA (no lo tocamos): el widget se monta
+    // JUSTO ARRIBA y solo sincroniza la cantidad. Así no hay dos botones y la
+    // compra sigue siendo la nativa de la página de producto.
     var cont =
       (ancla.classList && ancla.classList.contains("product-form__buttons"))
         ? ancla
@@ -365,7 +362,6 @@
 
     if (cont.parentNode) {
       cont.parentNode.insertBefore(raiz, cont);
-      cont.style.display = "none";
     } else {
       ancla.insertBefore(raiz, ancla.firstChild);
     }

@@ -3096,8 +3096,8 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       activador: { tipo: "todos", ids: [] },
       ofertas: [
         { cantidad: 1, descuento: 0,  titulo: "Comprá 1", subtitulo: "Precio normal", etiqueta: "",        badge: "",            popular: false, predeterminada: false },
-        { cantidad: 2, descuento: 10, titulo: "Comprá 2", subtitulo: "Ahorás un 10%", etiqueta: "10% OFF", badge: "Más elegido", popular: true,  predeterminada: true },
-        { cantidad: 3, descuento: 15, titulo: "Comprá 3", subtitulo: "Mejor precio",  etiqueta: "15% OFF", badge: "Mejor valor", popular: false, predeterminada: false }
+        { cantidad: 2, descuento: 10, titulo: "Comprá 2", subtitulo: "",              etiqueta: "10% OFF", badge: "Más elegido", popular: true,  predeterminada: true },
+        { cantidad: 3, descuento: 15, titulo: "Comprá 3", subtitulo: "",              etiqueta: "15% OFF", badge: "Mejor valor", popular: false, predeterminada: false }
       ],
       bxgy: { compra_cantidad: 2, regalo_cantidad: 1, regalo_descuento: 100 },
       diseno: {
@@ -4379,8 +4379,9 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
             ${thumbBdlHTML(o)}
             <span class="tiq-bdl__main">
               <span class="tiq-bdl__titulo">${esc(o.titulo || cant + " unidades")}${etq ? ` <span class="tiq-bdl__etq">${esc(etq)}</span>` : ""}</span>
-              ${sub ? `<span class="tiq-bdl__sub">${esc(sub)}</span>` : ""}
-              ${d.mostrar_ahorro && ahorro > 0 ? `<span class="tiq-bdl__ahorro">Ahorrás ${fmtBdl(ahorro)}</span>` : ""}
+              ${sub
+                ? `<span class="tiq-bdl__sub">${esc(sub)}</span>`
+                : (d.mostrar_ahorro && ahorro > 0 ? `<span class="tiq-bdl__ahorro">Ahorrás ${fmtBdl(ahorro)}</span>` : "")}
             </span>
             <span class="tiq-bdl__precio">
               <span class="tiq-bdl__precio-now">${fmtBdl(total)}</span>
@@ -4391,10 +4392,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
           </label>`;
         })
         .join("");
-      const oSel = activos[predIdx] || { cantidad: 1, descuento: 0 };
-      totalSel = totalOfertaBdl(oSel, PU).total;
     }
-    const textoBoton = (bot.texto || "Agregar al carrito — {total}").replace(/\{total\}/g, fmtBdl(totalSel));
 
     return `<div class="tiq-bdl${d.layout?.template === "horizontal" ? " tiq-bdl--horizontal" : ""}" style="${vars}">
       ${d.mostrar_encabezado !== false ? `<div class="tiq-bdl__head">
@@ -4402,7 +4400,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         ${d.subtitulo ? `<div class="tiq-bdl__h2">${esc(d.subtitulo)}</div>` : ""}
       </div>` : ""}
       <div class="tiq-bdl__cards">${cards}</div>
-      <button type="button" class="tiq-bdl__cta">${esc(textoBoton)}</button>
+      <div class="tiq-bdl__nota">El cliente agrega con el botón de tu página de producto ↓</div>
     </div>`;
   }
 
