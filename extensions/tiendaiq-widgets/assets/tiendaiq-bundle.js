@@ -177,10 +177,17 @@
     var v = (d || {}).badge_forma;
     return f[v] ? v : "soft";
   }
+  // Thumbnail de imagen del nivel: va integrado a la tarjeta (izq en vertical,
+  // arriba en horizontal), NO como bloque suelto abajo.
+  function thumbHTML(o) {
+    var im = (o.addons || {}).imagen;
+    return im && im.on && im.url
+      ? '<span class="tiq-bdl__thumb"><img src="' + esc(im.url) + '" alt="" loading="lazy"></span>'
+      : "";
+  }
   function addonsHTML(o) {
     var ad = o.addons || {};
     var h = "";
-    if (ad.imagen && ad.imagen.on && ad.imagen.url) h += '<div class="tiq-bdl__adimg"><img src="' + esc(ad.imagen.url) + '" alt=""></div>';
     if (ad.regalo && ad.regalo.on) {
       var items = ad.regalo.items || (ad.regalo.nombre ? [{ nombre: ad.regalo.nombre, cantidad: 1 }] : []);
       items.forEach(function (it) { h += filaRegalo(it); });
@@ -225,6 +232,7 @@
             (agot ? ' aria-disabled="true"' : ' tabindex="' + (sel ? "0" : "-1") + '"') + ">" +
             (o.badge ? '<span class="tiq-bdl__badge tiq-bdl__badge--' + FORMA_BADGE(bundle.diseno) + '">' + esc(o.badge) + "</span>" : "") +
             '<span class="tiq-bdl__radio" aria-hidden="true"></span>' +
+            thumbHTML(o) +
             '<span class="tiq-bdl__main">' +
               '<span class="tiq-bdl__titulo">' + esc(o.titulo || (cant + " unidades")) +
                 (etq ? ' <span class="tiq-bdl__etq">' + esc(etq) + "</span>" : "") +

@@ -4277,10 +4277,14 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   }
 
   // Add-Ons de un nivel reflejados en el preview (regalo, envío, imagen).
+  // Thumbnail de imagen del nivel (integrado a la tarjeta) — paridad con el widget.
+  function thumbBdlHTML(o) {
+    const im = (o.addons || {}).imagen;
+    return im?.on && im.url ? `<span class="tiq-bdl__thumb"><img src="${esc(im.url)}" alt="" loading="lazy"></span>` : "";
+  }
   function addonsPreviewBdl(o) {
     const ad = o.addons || {};
     let h = "";
-    if (ad.imagen?.on && ad.imagen.url) h += `<div class="tiq-bdl__adimg"><img src="${esc(ad.imagen.url)}" alt=""></div>`;
     if (ad.regalo?.on) {
       const items = ad.regalo.items || (ad.regalo.nombre ? [{ nombre: ad.regalo.nombre, cantidad: 1 }] : []);
       items.forEach((it) => { h += filaRegaloBdl(it); });
@@ -4372,6 +4376,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
           return `<label class="tiq-bdl__card ${i === predIdx ? "is-sel" : ""} ${o.popular ? "is-pop" : ""} ${o.agotado ? "is-agotado" : ""}">
             ${badge ? `<span class="tiq-bdl__badge tiq-bdl__badge--${formaBadgeBdl(d)}">${esc(badge)}</span>` : ""}
             <span class="tiq-bdl__radio"></span>
+            ${thumbBdlHTML(o)}
             <span class="tiq-bdl__main">
               <span class="tiq-bdl__titulo">${esc(o.titulo || cant + " unidades")}${etq ? ` <span class="tiq-bdl__etq">${esc(etq)}</span>` : ""}</span>
               ${sub ? `<span class="tiq-bdl__sub">${esc(sub)}</span>` : ""}
