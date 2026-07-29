@@ -3682,12 +3682,12 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       <div class="be-lv__head">
         <span class="be-lv__drag">⠿</span>
         <button class="be-toggle ${activo ? "is-on" : ""}" data-lv-toggle="${i}" title="Prender/apagar nivel"><span></span></button>
-        <span class="be-lv__name"><span class="be-lv__n">Nivel ${i + 1}:</span> <b>${esc(o.titulo || "Buy " + (Number(o.cantidad) || 1))}</b>${o.popular ? '<span class="be-lv__chip">★ Destacado</span>' : ""}</span>
+        <span class="be-lv__name"><span class="be-lv__n">Nivel ${i + 1}:</span> <b>${esc(o.titulo || "Buy " + (Number(o.cantidad) || 1))}</b>${o.predeterminada ? '<span class="be-lv__chip">★ Por defecto</span>' : ""}</span>
         <button class="be-lv__icn" data-lv-dup="${i}" title="Duplicar nivel" aria-label="Duplicar nivel ${i + 1}">${BE_DUP}</button>
-        <button class="be-lv__star ${o.popular ? "is-star" : ""}" data-lv-star="${i}" title="Destacar como “más elegido”" aria-label="Destacar nivel ${i + 1}" aria-pressed="${o.popular ? "true" : "false"}">${BE_STAR}</button>
+        <button class="be-lv__star ${o.predeterminada ? "is-star" : ""}" data-lv-star="${i}" title="Oferta predeterminada: es la que los clientes ven pre-seleccionada al entrar por primera vez" aria-label="Marcar como oferta predeterminada" aria-pressed="${o.predeterminada ? "true" : "false"}">${BE_STAR}</button>
         <button class="be-lv__chev ${open ? "is-open" : ""}" data-lv-open="${i}" title="Abrir/cerrar">${BE_CHEV}</button>
       </div>`;
-    if (!open) return `<div class="be-lv${o.popular ? " is-pop" : ""}">${head}</div>`;
+    if (!open) return `<div class="be-lv${o.predeterminada ? " is-def" : ""}">${head}</div>`;
 
     const TIPOS = [["porcentaje", "% Descuento"], ["fijo", "Fijo"], ["especifico", "Precio específico"], ["bogo", "BOGO"], ["ninguno", "Ninguno"]];
     const tabs = TIPOS.map(([k, t]) => `<button class="be-dt ${tipo === k ? "is-sel" : ""}" data-lv-tipo="${i}:${k}">${t}</button>`).join("");
@@ -3796,7 +3796,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         })()}
         <button class="be-del" data-lv-del="${i}">🗑 Eliminar nivel ${i + 1}</button>
       </div>`;
-    return `<div class="be-lv is-open${o.popular ? " is-pop" : ""}">${head}${body}</div>`;
+    return `<div class="be-lv is-open${o.predeterminada ? " is-def" : ""}">${head}${body}</div>`;
   }
 
   // Íconos de las secciones extra (estilo Polaris: 20px, stroke fino).
@@ -4001,8 +4001,10 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       const fx = t.closest("[data-fix-contraste]"); if (fx) { const bg = leer(b, "diseno.color_badge") || "#111111"; const mejor = contrasteWCAG(bg, "#ffffff") >= contrasteWCAG(bg, "#111111") ? "#ffffff" : "#111111"; b.diseno = b.diseno || {}; b.diseno.color_badge_texto = mejor; marcarSucioBundles(); commitHist(b); pintarPreviewBundle(); return pintarEditorBundle(); }
       const op = t.closest("[data-lv-open]"); if (op) { const i = +op.dataset.lvOpen; s.nivelOpen = s.nivelOpen === i ? null : i; return pintarEditorBundle(); }
       const tg = t.closest("[data-lv-toggle]"); if (tg) { const o = b.ofertas[+tg.dataset.lvToggle]; o.activo = o.activo === false; marcarSucioBundles(); return pintarEditorBundle(); }
-      const st = t.closest("[data-lv-star]"); if (st) { const o = b.ofertas[+st.dataset.lvStar]; o.popular = !o.popular; marcarSucioBundles(); return pintarEditorBundle(); }
-      const dup = t.closest("[data-lv-dup]"); if (dup) { const i = +dup.dataset.lvDup; b.ofertas.splice(i + 1, 0, JSON.parse(JSON.stringify(b.ofertas[i]))); s.nivelOpen = i + 1; marcarSucioBundles(); return pintarEditorBundle(); }
+      // Estrella = oferta PREDETERMINADA (la pre-seleccionada al entrar). Exclusiva:
+      // siempre hay exactamente una, así que setea esta y apaga el resto.
+      const st = t.closest("[data-lv-star]"); if (st) { const idx = +st.dataset.lvStar; b.ofertas.forEach((x, k) => { x.predeterminada = k === idx; }); marcarSucioBundles(); pintarPreviewBundle(); return pintarEditorBundle(); }
+      const dup = t.closest("[data-lv-dup]"); if (dup) { const i = +dup.dataset.lvDup; const copia = JSON.parse(JSON.stringify(b.ofertas[i])); copia.predeterminada = false; /* la default sigue siendo la original */ b.ofertas.splice(i + 1, 0, copia); s.nivelOpen = i + 1; marcarSucioBundles(); return pintarEditorBundle(); }
       const del = t.closest("[data-lv-del]"); if (del) { b.ofertas.splice(+del.dataset.lvDel, 1); if (!b.ofertas.length) b.ofertas.push({ cantidad: 1, descuento: 0, titulo: "Buy 1", ver: {}, activo: true }); s.nivelOpen = null; marcarSucioBundles(); return pintarEditorBundle(); }
       const tp = t.closest("[data-lv-tipo]"); if (tp) { const [i, k] = tp.dataset.lvTipo.split(":"); const o = b.ofertas[+i]; o.tipo_desc = k; if (k === "ninguno") o.descuento = 0; marcarSucioBundles(); return pintarEditorBundle(); }
       const ver = t.closest("[data-lv-ver]"); if (ver) { const [i, key] = ver.dataset.lvVer.split(":"); const o = b.ofertas[+i]; o.ver = o.ver || {}; o.ver[key] = o.ver[key] === false ? true : false; marcarSucioBundles(); return pintarEditorBundle(); }

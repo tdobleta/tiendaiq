@@ -2232,12 +2232,12 @@ summary:focus-visible, label:focus-visible {
   padding: 2px 8px; border-radius: 999px; white-space: nowrap;
 }
 
-/* Nivel destacado: filo dorado a la izquierda */
-.be-lv.is-pop { border-color: color-mix(in srgb, var(--bdl-oro) 42%, #d2d5d8); box-shadow: 0 1px 2px rgba(0,0,0,.06), inset 3px 0 0 var(--bdl-oro); }
+/* Nivel predeterminado (la oferta que ven pre-seleccionada): filo dorado a la izq */
+.be-lv.is-def { border-color: color-mix(in srgb, var(--bdl-oro) 42%, #d2d5d8); box-shadow: 0 1px 2px rgba(0,0,0,.06), inset 3px 0 0 var(--bdl-oro); }
 
-/* Nivel abierto: filo teal sutil (y si además está destacado, gana el dorado) */
+/* Nivel abierto: filo teal sutil (y si además es el predeterminado, gana el dorado) */
 .be-layout .be-lv.is-open { border-color: color-mix(in srgb, var(--bdl-teal) 38%, #cfcfd6); box-shadow: 0 1px 3px rgba(13,148,136,.10); }
-.be-layout .be-lv.is-open.is-pop { border-color: color-mix(in srgb, var(--bdl-oro) 42%, #d2d5d8); box-shadow: 0 1px 3px rgba(0,0,0,.06), inset 3px 0 0 var(--bdl-oro); }
+.be-layout .be-lv.is-open.is-def { border-color: color-mix(in srgb, var(--bdl-oro) 42%, #d2d5d8); box-shadow: 0 1px 3px rgba(0,0,0,.06), inset 3px 0 0 var(--bdl-oro); }
 
 /* Toggle "encendido": teal vivo en vez de negro plano (más alive) */
 .be-left .be-toggle.is-on { background: var(--bdl-teal); }
