@@ -216,6 +216,18 @@ async function crearDescuentos(sesion, bundle, log = () => {}) {
   return creados;
 }
 
+// combinesWith del descuento: lo controla el merchant en "Configuración avanzada
+// → Combinación de descuentos". Defaults estilo Pumper (Pedido/Envío ON, Producto
+// OFF) vía `!== false`, así los bundles viejos sin `combina` toman ese default.
+function combinaDe(bundle) {
+  const c = (bundle && bundle.combina) || {};
+  return {
+    orderDiscounts: c.pedido !== false,
+    productDiscounts: !!c.producto,
+    shippingDiscounts: c.envio !== false
+  };
+}
+
 async function crearPeldanos(sesion, bundle, items, creados, log) {
   for (const oferta of bundle.ofertas || []) {
     if (oferta.activo === false) continue; // nivel apagado: no crea descuento
@@ -233,9 +245,8 @@ async function crearPeldanos(sesion, bundle, items, creados, log) {
       minimumRequirement: {
         quantity: { greaterThanOrEqualToQuantity: String(cant) }
       },
-      // El bundle no combina con otros descuentos de producto/pedido (evita
-      // apilar el 10% y el 15%); el envío sí puede combinar.
-      combinesWith: { orderDiscounts: false, productDiscounts: false, shippingDiscounts: true }
+      // Combinación con otros descuentos: la elige el merchant (ver combinaDe).
+      combinesWith: combinaDe(bundle)
     };
 
     const r = await gql(M_CREAR, { d }, sesion);
@@ -267,7 +278,7 @@ async function crearDescuentoBxgy(sesion, bundle, log = () => {}) {
       value: { discountOnQuantity: { quantity: String(regalo), effect: { percentage: desc / 100 } } },
       items
     },
-    combinesWith: { orderDiscounts: false, productDiscounts: false, shippingDiscounts: true }
+    combinesWith: combinaDe(bundle)
   };
 
   const r = await gql(M_CREAR_BXGY, { d }, sesion);

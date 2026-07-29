@@ -2244,3 +2244,44 @@ summary:focus-visible, label:focus-visible {
 
 /* Chevron: hover teal */
 .be-lv__chev:hover { color: var(--bdl-teal); }
+
+/* ============================================================
+   BUNDLES — panel "Configuración avanzada" (estilo Pumper).
+   Reusa .be-tgl-row / .be-toggle (teal) / .be-help / .bdl-subsec.
+   Todo scopeado bajo .be-adv / .be-subacc para no filtrar a otras filas.
+   ============================================================ */
+.be-adv { display: flex; flex-direction: column; gap: 4px; }
+.be-adv .bdl-subsec { margin: 16px 0 2px; }
+.be-adv > .bdl-subsec:first-child { margin-top: 0; }
+
+/* Grupo de filas con divisores finos entre toggles (como Pumper). */
+.be-adv__group { display: flex; flex-direction: column; }
+.be-adv__group .be-tgl-row { padding: 11px 0; }
+.be-adv__group .be-tgl-row + .be-tgl-row,
+.be-adv__group .be-adv__reveal + .be-tgl-row { border-top: 1px solid #e3e3e3; }
+
+/* Campo que se revela al prender el toggle de arriba: indentado, filo teal. */
+.be-adv__reveal {
+  overflow: hidden; max-height: 0; opacity: 0;
+  padding-left: 12px; margin-left: 2px;
+  border-left: 2px solid var(--bdl-teal);
+  transition: max-height .22s ease, opacity .16s ease, margin .22s ease;
+}
+.be-adv__reveal.is-shown { max-height: 200px; opacity: 1; margin: 4px 0 10px 2px; }
+.be-adv__reveal .campo--editor { margin: 0; }
+
+/* Sub-acordeón anidado (Combinación de descuentos): marco liviano, no card doble. */
+.be-subacc { margin-top: 12px; border: 1px solid #e3e3e3; border-radius: 10px; background: #fafafb; }
+.be-subacc__head {
+  width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 12px 14px; background: none; border: none; cursor: pointer;
+  font-family: inherit; font-size: 13px; font-weight: 600; color: #202223; transition: color .12s;
+}
+.be-subacc__head:hover { color: var(--bdl-teal); }
+.be-subacc.is-open .be-subacc__head { border-bottom: 1px solid #e3e3e3; }
+.be-subacc__head .be-chev { width: 16px; height: 16px; }
+.be-subacc__head .be-chev svg { width: 16px; height: 16px; display: block; }
+.be-subacc__body { padding: 4px 14px 12px; }
+.be-subacc__note { font-size: 12.5px; line-height: 1.5; color: #6d7175; margin: 8px 0 4px; }
+.be-subacc__note a { color: var(--bdl-teal); text-decoration: underline; }
+.be-subacc .be-adv__group .be-tgl-row { padding: 10px 0; }

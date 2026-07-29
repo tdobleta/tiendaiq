@@ -47,16 +47,18 @@
 
   var D = bundle.diseno || {};
   var BOT = D.boton || {};
+  var AV = D.avanzado || {}; // toggles de "Configuración avanzada"
 
   // --- dinero ---
   // product.price viene en centavos (entero). Formateamos con el money_format
-  // de la tienda; si es raro, caemos a un formato simple.
+  // de la tienda; si es raro, caemos a un formato simple. Si avanzado.sin_decimales
+  // está ON, mostramos enteros (útil para CLP/JPY o para un look más limpio).
   var formato = (PROD.moneda || "${{amount}}");
   function fmt(cents) {
     var n = Math.round(cents) / 100;
-    var conComa = n.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    var conPunto = n.toFixed(2);
     var enteros = Math.round(n).toLocaleString("es-AR");
+    var conComa = AV.sin_decimales ? enteros : n.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    var conPunto = AV.sin_decimales ? String(Math.round(n)) : n.toFixed(2);
     return formato
       .replace(/\{\{\s*amount\s*\}\}/g, conComa)
       .replace(/\{\{\s*amount_with_comma_separator\s*\}\}/g, conComa)
@@ -240,7 +242,7 @@
               // UNA sola línea secundaria: agotado > subtítulo del merchant > ahorro
               // automático. Antes se apilaban subtítulo + ahorro (redundante con el pill).
               (agot
-                ? '<span class="tiq-bdl__sub">Agotado</span>'
+                ? '<span class="tiq-bdl__sub">' + esc(AV.oos_on && AV.oos_texto ? AV.oos_texto : "Agotado") + "</span>"
                 : o.subtitulo
                   ? '<span class="tiq-bdl__sub">' + esc(o.subtitulo) + "</span>"
                   : (D.mostrar_ahorro && ahorro > 0 ? '<span class="tiq-bdl__ahorro">Ahorrás ' + fmt(ahorro) + "</span>" : "")) +
@@ -248,7 +250,7 @@
             '<span class="tiq-bdl__precio">' +
               '<span class="tiq-bdl__precio-now">' + fmt(total) + "</span>" +
               (desc > 0 ? '<span class="tiq-bdl__precio-old">' + fmt(bruto) + "</span>" : "") +
-              (cant > 1 ? '<span class="tiq-bdl__unit">' + fmt(puUnit) + " c/u</span>" : "") +
+              (AV.precio_por_unidad && cant > 1 ? '<span class="tiq-bdl__unit">' + fmt(puUnit) + " c/u</span>" : "") +
             "</span>" +
             addonsHTML(o) +
           "</label>"
@@ -265,7 +267,8 @@
             (D.subtitulo ? '<div class="tiq-bdl__h2">' + esc(D.subtitulo) + "</div>" : "") +
           "</div>"
         : "") +
-      '<div class="tiq-bdl__cards"' + (esBxgy ? "" : ' role="radiogroup" aria-label="Elegí tu paquete"') + ">" + tarjetas + "</div>";
+      '<div class="tiq-bdl__cards"' + (esBxgy ? "" : ' role="radiogroup" aria-label="Elegí tu paquete"') + ">" + tarjetas + "</div>" +
+      (AV.pie_on && AV.pie_texto ? '<div class="tiq-bdl__foot">' + esc(AV.pie_texto) + "</div>" : "");
 
     if (!esBxgy) {
       var tarjs = [].slice.call(raiz.querySelectorAll(".tiq-bdl__card"));
@@ -361,7 +364,8 @@
         : (ancla.closest && (ancla.closest(".product-form__buttons") || ancla.closest('form[action*="/cart/add"]'))) || ancla;
 
     if (cont.parentNode) {
-      cont.parentNode.insertBefore(raiz, cont);
+      // Por defecto va ARRIBA del botón; con avanzado.debajo_boton, justo abajo.
+      cont.parentNode.insertBefore(raiz, AV.debajo_boton ? cont.nextSibling : cont);
     } else {
       ancla.insertBefore(raiz, ancla.firstChild);
     }

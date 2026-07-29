@@ -2959,8 +2959,12 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   // ============================================================
 
   const PRECIO_DEMO = 24990; // centavos, solo para el preview del admin
-  const fmtBdl = (c) =>
-    "$ " + (Math.round(c) / 100).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  // Respeta avanzado.sin_decimales del bundle en edición (paridad con el widget).
+  const fmtBdl = (c) => {
+    const sinDec = !!(bundleActual()?.diseno?.avanzado?.sin_decimales);
+    const n = Math.round(c) / 100;
+    return "$ " + n.toLocaleString("es-AR", sinDec ? { maximumFractionDigits: 0 } : { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
 
   // Vuelca un producto elegido en un ítem de regalo: nombre, imagen, precio y,
   // si el producto tiene variantes reales (Color, Talle…), la lista para que el
@@ -3575,6 +3579,13 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     if (s.nivelOpen === undefined) s.nivelOpen = null;
     // Semillas de campos nuevos (sin tocar el default del server).
     if (!b.opciones) b.opciones = { variantes: false, volumen: true };
+    // Configuración avanzada (toggles del panel Pumper). Todos OFF por defecto;
+    // los textos (pie/agotado) arrancan vacíos. fijar no crea rutas → sembrar.
+    if (!b.diseno) b.diseno = {};
+    if (!b.diseno.avanzado) b.diseno.avanzado = {};
+    // Combinación de descuentos (se consume en bundles.js/combinaDe al crear el
+    // descuento). Default Pumper: Pedido/Envío ON, Producto OFF.
+    if (!b.combina) b.combina = { producto: false, pedido: true, envio: true };
     // Bundles muy viejos podían no tener `diseno`: sin esto, escribir
     // "diseno.geometry.radius" desde el slider tira TypeError (fijar no crea rutas).
     if (!b.diseno) b.diseno = {};
@@ -3850,6 +3861,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   // la MISMA columna (estilo Pumper), reusando los controles de panelDiseno.
   function bdlSeccionesExtra(b, s) {
     s.secOpen = s.secOpen || {};
+    s.subOpen = s.subOpen || {}; // sub-acordeones anidados (ej. "combinar")
     const d = b.diseno || {};
     // Swatch = mini-preview real de la paleta (no texto): 3 barras apiladas, la
     // primera con el borde/acento del preset (como una tarjeta seleccionada).
@@ -3911,7 +3923,9 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
             : `<div class="perso-aviso perso-aviso--ok" id="bdl-aviso-contraste"></div>`;
         })()}`;
       })()}`;
-    const avanzada = `
+    // Textos + Tipografía: viven en "Color y estilo" (antes estaban en "avanzada",
+    // pero son presentación, no comportamiento).
+    const textosYTipo = `
       <div class="bdl-subsec">Textos</div>
       ${campoBdl("diseno.mostrar_encabezado", "Mostrar encabezado", "bool")}
       ${campoBdl("diseno.titulo", "Título del paquete")}
@@ -3921,23 +3935,48 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       <div class="bdl-grid2">
         ${selectBdl("diseno.type.titleWeight", "Peso del título", [[400, "Normal"], [500, "Medio"], [600, "Semibold"], [700, "Bold"], [800, "Extra bold"]], "numero")}
         ${selectBdl("diseno.type.priceWeight", "Peso del precio", [[400, "Normal"], [500, "Medio"], [600, "Semibold"], [700, "Bold"], [800, "Extra bold"]], "numero")}
-      </div>
-      <div class="bdl-subsec">Opciones</div>
-      ${campoBdl("diseno.mostrar_ahorro", "Mostrar “Ahorrás $X”", "bool")}
-      ${beToggleRow("Permitir a los clientes elegir diferentes variantes para cada artículo", `data-toggle-b="opciones.variantes"`, !!leer(b, "opciones.variantes"))}
-      ${beToggleRow("Descuento por volumen (extender el descuento máximo a todas las cantidades)", `data-toggle-b="opciones.volumen"`, leer(b, "opciones.volumen") !== false)}`;
-    const visuales = `
-      ${campoBdl("diseno.boton.texto", "Texto del botón (usá {total} para el precio)")}
-      <div class="bdl-grid2">
-        ${campoBdl("diseno.boton.color_fondo", "Fondo del botón", "color")}
-        ${campoBdl("diseno.boton.color_texto", "Texto del botón", "color")}
-        ${campoBdl("diseno.boton.radio", "Redondeo (px)", "numero", 'min="0" max="30"')}
-        ${campoBdl("diseno.boton.tamano", "Tamaño de texto (px)", "numero", 'min="10" max="28"')}
+      </div>`;
+
+    // Panel "Configuración avanzada" — paridad Pumper. Fase 1: solo toggles REALES
+    // (nada trucho). Los que necesitan mapa de variantes/cliente llegan en Fase 2.
+    const avz = leer(b, "diseno.avanzado") || {};
+    const combOpen = !!(s.subOpen && s.subOpen.combinar);
+    const tgl = (label, ruta, on, help) => beToggleRow(label, `data-toggle-b="${ruta}"`, on, help);
+    const reveal = (on, ruta, ph) => `<div class="be-adv__reveal ${on ? "is-shown" : ""}">${campoBdl(ruta, ph)}</div>`;
+    const avanzada = `
+      <div class="be-adv">
+        <div class="bdl-subsec">Pricing</div>
+        <div class="be-adv__group">
+          ${tgl("Mostrar precio por unidad", "diseno.avanzado.precio_por_unidad", !!avz.precio_por_unidad, "Muestra el precio por unidad (ej. $17,96 c/u) debajo del precio de cada nivel.")}
+          ${tgl("Mostrar precio sin valor decimal", "diseno.avanzado.sin_decimales", !!avz.sin_decimales, "Redondea a números enteros (ej. $18 en vez de $17,96). Ideal para monedas sin centavos.")}
+          ${tgl("Mostrar “Ahorrás $X”", "diseno.mostrar_ahorro", leer(b, "diseno.mostrar_ahorro") !== false, "Muestra cuánto ahorra el cliente en cada nivel con descuento.")}
+        </div>
+        <div class="bdl-subsec">Otros</div>
+        <div class="be-adv__group">
+          ${tgl("Mostrar widget debajo del botón agregar al carrito", "diseno.avanzado.debajo_boton", !!avz.debajo_boton, "Ubica el widget justo debajo del botón de compra en vez de arriba.")}
+          ${tgl("Agregar texto de pie de página", "diseno.avanzado.pie_on", !!avz.pie_on, "Muestra un texto libre al pie del widget (ej. “Envío gratis en 24–48 h”).")}
+          ${reveal(!!avz.pie_on, "diseno.avanzado.pie_texto", "Texto de pie de página")}
+          ${tgl("Usar texto personalizado para Fuera de Stock", "diseno.avanzado.oos_on", !!avz.oos_on, "Cambia el texto “Agotado” de los niveles marcados sin stock.")}
+          ${reveal(!!avz.oos_on, "diseno.avanzado.oos_texto", "Texto para niveles agotados")}
+        </div>
+        <div class="be-subacc ${combOpen ? "is-open" : ""}">
+          <button type="button" class="be-subacc__head" data-subsec="combinar">
+            <span>Habilitar Combinación de Descuentos <span class="be-help" title="Con qué otros descuentos de Shopify puede combinarse este bundle. Se aplica al guardar.">?</span></span>
+            <span class="be-chev ${combOpen ? "is-open" : ""}">${BE_CHEV}</span>
+          </button>
+          ${combOpen ? `<div class="be-subacc__body">
+            <p class="be-subacc__note">Define con qué descuentos de Shopify se combina este bundle. Los cambios se aplican al guardar.</p>
+            <div class="be-adv__group">
+              ${tgl("Descuentos de Producto", "combina.producto", !!leer(b, "combina.producto"), "Permite apilar con otros descuentos de producto.")}
+              ${tgl("Descuentos de Pedido", "combina.pedido", leer(b, "combina.pedido") !== false, "Permite apilar con descuentos de pedido (ej. cupones de carrito).")}
+              ${tgl("Descuentos de Envío", "combina.envio", leer(b, "combina.envio") !== false, "Permite apilar con descuentos de envío.")}
+            </div>
+          </div>` : ""}
+        </div>
       </div>`;
     return `<div class="be-secs-extra">
-      ${bdlAcordeon("color", IC_PALETA, "Color y estilo", colorYEstilo, !!s.secOpen.color)}
+      ${bdlAcordeon("color", IC_PALETA, "Color y estilo", colorYEstilo + textosYTipo, !!s.secOpen.color)}
       ${bdlAcordeon("avanzada", IC_ENGRANAJE, "Configuración avanzada", avanzada, !!s.secOpen.avanzada)}
-      ${bdlAcordeon("visuales", IC_GRID, "Opciones visuales", visuales, !!s.secOpen.visuales)}
     </div>`;
   }
 
@@ -3993,6 +4032,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     root.addEventListener("click", (e) => {
       const t = e.target;
       const sec = t.closest("[data-sec]"); if (sec) { const k = sec.dataset.sec; if (k === "setup") s.setupOpen = !s.setupOpen; else { s.secOpen = s.secOpen || {}; s.secOpen[k] = !s.secOpen[k]; } return pintarEditorBundle(); }
+      const ssec = t.closest("[data-subsec]"); if (ssec) { s.subOpen = s.subOpen || {}; const k = ssec.dataset.subsec; s.subOpen[k] = !s.subOpen[k]; return pintarEditorBundle(); }
       const tplBtn = t.closest("[data-tpl]"); if (tplBtn) { b.diseno = b.diseno || {}; b.diseno.layout = b.diseno.layout || {}; b.diseno.layout.template = tplBtn.dataset.tpl; marcarSucioBundles(); commitHist(b); pintarPreviewBundle(); return pintarEditorBundle(); }
       const hb = t.closest("[data-hist]"); if (hb) { restaurarHist(b, +hb.dataset.hist); return; }
       const bfm = t.closest("[data-badgeforma]"); if (bfm) { b.diseno = b.diseno || {}; b.diseno.badge_forma = bfm.dataset.badgeforma; marcarSucioBundles(); commitHist(b); pintarPreviewBundle(); return pintarEditorBundle(); }
@@ -4388,7 +4428,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
             <span class="tiq-bdl__precio">
               <span class="tiq-bdl__precio-now">${fmtBdl(total)}</span>
               ${total < bruto ? `<span class="tiq-bdl__precio-old">${fmtBdl(bruto)}</span>` : ""}
-              ${cant > 1 ? `<span class="tiq-bdl__unit">${fmtBdl(puUnit)} c/u</span>` : ""}
+              ${d.avanzado?.precio_por_unidad && cant > 1 ? `<span class="tiq-bdl__unit">${fmtBdl(puUnit)} c/u</span>` : ""}
             </span>
             ${addonsPreviewBdl(o)}
           </label>`;
@@ -4402,6 +4442,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         ${d.subtitulo ? `<div class="tiq-bdl__h2">${esc(d.subtitulo)}</div>` : ""}
       </div>` : ""}
       <div class="tiq-bdl__cards">${cards}</div>
+      ${d.avanzado?.pie_on && d.avanzado?.pie_texto ? `<div class="tiq-bdl__foot">${esc(d.avanzado.pie_texto)}</div>` : ""}
       <div class="tiq-bdl__nota">El cliente agrega con el botón de tu página de producto ↓</div>
     </div>`;
   }
