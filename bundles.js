@@ -405,17 +405,18 @@ const M_ARCHIVOS = `mutation($themeId: ID!, $files: [OnlineStoreThemeFilesUpsert
 // colecciones del producto actual desde Liquid, para que el JS decida si este
 // producto tiene un bundle sin llamar al server. Solo corre en producto.
 function armarSnippet(config, sesion, urlApp) {
-  const publica = { activo: config.activo, lista: (config.lista || []).map((b) => {
-    const { discount_ids, ...resto } = b; // los ids de descuento no van al browser
-    return resto;
-  }) };
-  const json = JSON.stringify({ ...publica, tienda: sesion.tienda, app_url: urlApp })
-    .replace(/</g, "\\u003c");
+  // Antes horneábamos la config completa en el snippet (window.TIENDAIQ_BUNDLES).
+  // Problema: quedaba CONGELADA hasta re-publicar, así que guardar en la app no
+  // se reflejaba en la tienda (ni layout ni imagen). Ahora dejamos solo la URL
+  // (_SRC) y el widget trae la config EN VIVO de /publico/bundles —igual que el
+  // app embed—: guardás y se ve al toque, sin re-inyectar. El producto sí va
+  // horneado porque son datos de Liquid que no se pueden traer por fetch.
+  const src = `${urlApp}/publico/bundles?shop=${sesion.tienda}`;
 
   return `{%- comment -%} TiendaIQ Bundles — generado por la app, no editar a mano {%- endcomment -%}
 {%- if request.page_type == 'product' -%}
 <script>
-  window.TIENDAIQ_BUNDLES = ${json};
+  window.TIENDAIQ_BUNDLES_SRC = ${JSON.stringify(src)};
   window.TIENDAIQ_PRODUCTO = {
     id: {{ product.id | json }},
     variante: {{ product.selected_or_first_available_variant.id | json }},
