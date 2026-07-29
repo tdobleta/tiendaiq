@@ -80,6 +80,13 @@
   font-size: 10px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase;
   padding: 4px 10px; border-radius: 4px; line-height: 1.3; white-space: nowrap;
 }
+/* Plantillas de forma de la insignia (la global la elige el merchant). */
+.tiq-bdl__badge--soft { border-radius: 5px; }
+.tiq-bdl__badge--pill { border-radius: 999px; padding: 4px 12px; }
+.tiq-bdl__badge--rect { border-radius: 0; }
+.tiq-bdl__badge--ribbon { border-radius: 0; padding-left: 15px; clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, 9px 50%); }
+.tiq-bdl__badge--tag { border-radius: 0 4px 4px 0; padding-left: 16px; clip-path: polygon(9px 0, 100% 0, 100% 100%, 9px 100%, 0 50%); }
+.tiq-bdl__badge--tag::before { content: ""; position: absolute; left: 4px; top: 50%; width: 4px; height: 4px; border-radius: 50%; background: var(--tiq-badge-txt, #fff); transform: translateY(-50%); }
 
 /* --- add-ons dentro de la tarjeta (regalo / envío / imagen) --- */
 .tiq-bdl__addons { flex-basis: 100%; margin-top: 10px; padding-top: 10px; border-top: 1px solid color-mix(in srgb, var(--tiq-ac) 22%, #fff); display: flex; flex-direction: column; gap: 8px; }

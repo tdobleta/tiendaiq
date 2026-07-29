@@ -2015,6 +2015,15 @@ summary:focus-visible, label:focus-visible {
 .perso-col { display: flex; flex-direction: column; gap: 12px; }
 .perso-aviso { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 12px; color: #8a5a00; background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 8px 10px; }
 .perso-aviso--ok { display: none; }
+/* Selector de plantilla de insignia */
+.bdl-badgeformas { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 8px; }
+.bdl-bform { border: 1px solid var(--borde); border-radius: 10px; background: #fff; padding: 12px 10px 8px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 9px; min-width: 76px; transition: border-color .12s, box-shadow .12s; }
+.bdl-bform:hover { border-color: #b8bcc0; }
+.bdl-bform.is-sel { border-color: var(--negro); box-shadow: 0 0 0 1px var(--negro); }
+.bdl-bform:focus-visible { outline: 2px solid var(--negro); outline-offset: 1px; }
+.bdl-bform__prev { display: grid; place-items: center; height: 22px; }
+.bdl-bform .tiq-bdl__badge { position: static; top: auto; right: auto; background: #a90c4e; color: #fff; }
+.bdl-bform__n { font-size: 11px; color: var(--suave); }
 .bdl-pvtoggle { display: inline-flex; margin: 2px 0 12px; border: 1px solid #c9cccf; border-radius: 8px; overflow: hidden; }
 .bdl-pvbtn { font-size: 12px; padding: 5px 14px; border: 0; background: #fff; cursor: pointer; color: #6d7175; }
 .bdl-pvbtn + .bdl-pvbtn { border-left: 1px solid #c9cccf; }

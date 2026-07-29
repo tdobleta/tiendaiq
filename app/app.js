@@ -3019,6 +3019,9 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     naranja: { borde: "#ea580c", badge: "#ea580c", etq: "#ea580c", texto: "#111111", bot: "#ea580c" }
   };
   const NOMBRE_PRESET = { negro: "Negro", rosa: "Rosa", azul: "Azul", verde: "Verde", violeta: "Violeta", naranja: "Naranja" };
+  // Plantillas de insignia (forma). El texto lo pone el merchant; la forma es global.
+  const FORMAS_BADGE = [["soft", "Suave"], ["pill", "Píldora"], ["rect", "Recto"], ["ribbon", "Cinta"], ["tag", "Etiqueta"]];
+  const formaBadgeBdl = (d) => (FORMAS_BADGE.some(([k]) => k === (d || {}).badge_forma) ? d.badge_forma : "soft");
 
   // Contraste WCAG: evita que el merchant guarde una insignia ilegible.
   function luminanciaHex(hex) {
@@ -3876,6 +3879,10 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       ${sliderBdl("diseno.geometry.breathing", IC_AIRE, "Espacio de aire", 4, 24)}
       <div class="bdl-subsec">Paletas de colores</div>
       <div class="bdl-presets">${presets}</div>
+      <div class="bdl-subsec">Forma de la insignia</div>
+      <div class="bdl-badgeformas">
+        ${FORMAS_BADGE.map(([k, nombre]) => `<button type="button" class="bdl-bform ${(leer(b, "diseno.badge_forma") || "soft") === k ? "is-sel" : ""}" data-badgeforma="${k}" aria-label="Insignia ${nombre}"><span class="bdl-bform__prev"><span class="tiq-bdl__badge tiq-bdl__badge--${k}">Top</span></span><span class="bdl-bform__n">${nombre}</span></button>`).join("")}
+      </div>
       <div class="bdl-subsec">Personalizar</div>
       ${(() => {
         const dc = (t, def) => esc(leer(b, "diseno." + t) || def);
@@ -3988,6 +3995,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       const sec = t.closest("[data-sec]"); if (sec) { const k = sec.dataset.sec; if (k === "setup") s.setupOpen = !s.setupOpen; else { s.secOpen = s.secOpen || {}; s.secOpen[k] = !s.secOpen[k]; } return pintarEditorBundle(); }
       const tplBtn = t.closest("[data-tpl]"); if (tplBtn) { b.diseno = b.diseno || {}; b.diseno.layout = b.diseno.layout || {}; b.diseno.layout.template = tplBtn.dataset.tpl; marcarSucioBundles(); commitHist(b); pintarPreviewBundle(); return pintarEditorBundle(); }
       const hb = t.closest("[data-hist]"); if (hb) { restaurarHist(b, +hb.dataset.hist); return; }
+      const bfm = t.closest("[data-badgeforma]"); if (bfm) { b.diseno = b.diseno || {}; b.diseno.badge_forma = bfm.dataset.badgeforma; marcarSucioBundles(); commitHist(b); pintarPreviewBundle(); return pintarEditorBundle(); }
       const pr = t.closest("[data-preset]"); if (pr) { const p = PRESETS_BDL[pr.dataset.preset]; b.diseno = b.diseno || {}; b.diseno.boton = b.diseno.boton || {}; b.diseno.preset = pr.dataset.preset; b.diseno.palette = { active: pr.dataset.preset, source: "preset" }; b.diseno.color_borde = p.borde; b.diseno.color_badge = p.badge; b.diseno.color_badge_texto = "#ffffff"; b.diseno.color_etiqueta = p.etq; b.diseno.color_texto = p.texto; b.diseno.boton.color_fondo = p.bot; marcarSucioBundles(); commitHist(b); pintarPreviewBundle(); return pintarEditorBundle(); }
       const pv = t.closest("[data-pv]"); if (pv) { estado.bundles.previewMobile = pv.dataset.pv === "mobile"; const marco = document.querySelector(".bdl-preview__marco"); if (marco) marco.classList.toggle("is-mobile", estado.bundles.previewMobile); document.querySelectorAll("[data-pv]").forEach((x) => x.classList.toggle("is-sel", x === pv)); return; }
       const fx = t.closest("[data-fix-contraste]"); if (fx) { const bg = leer(b, "diseno.color_badge") || "#111111"; const mejor = contrasteWCAG(bg, "#ffffff") >= contrasteWCAG(bg, "#111111") ? "#ffffff" : "#111111"; b.diseno = b.diseno || {}; b.diseno.color_badge_texto = mejor; marcarSucioBundles(); commitHist(b); pintarPreviewBundle(); return pintarEditorBundle(); }
@@ -4335,7 +4343,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       const titulo = `Comprá ${compra}, llevás ${regalo}${gratis ? " gratis" : " al " + desc + "% off"}`;
       const etq = gratis ? `${compra + regalo}x${compra}` : `${desc}% OFF`;
       cards = `<label class="tiq-bdl__card is-sel is-pop">
-        <span class="tiq-bdl__badge">${gratis ? "Regalo" : "Oferta"}</span>
+        <span class="tiq-bdl__badge tiq-bdl__badge--${formaBadgeBdl(d)}">${gratis ? "Regalo" : "Oferta"}</span>
         <span class="tiq-bdl__radio"></span>
         <span class="tiq-bdl__main">
           <span class="tiq-bdl__titulo">${esc(titulo)} <span class="tiq-bdl__etq">${esc(etq)}</span></span>
@@ -4362,7 +4370,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
           const sub = verF(o, "subtitulo") ? o.subtitulo : "";
           const badge = verF(o, "badge") ? o.badge : "";
           return `<label class="tiq-bdl__card ${i === predIdx ? "is-sel" : ""} ${o.popular ? "is-pop" : ""} ${o.agotado ? "is-agotado" : ""}">
-            ${badge ? `<span class="tiq-bdl__badge">${esc(badge)}</span>` : ""}
+            ${badge ? `<span class="tiq-bdl__badge tiq-bdl__badge--${formaBadgeBdl(d)}">${esc(badge)}</span>` : ""}
             <span class="tiq-bdl__radio"></span>
             <span class="tiq-bdl__main">
               <span class="tiq-bdl__titulo">${esc(o.titulo || cant + " unidades")}${etq ? ` <span class="tiq-bdl__etq">${esc(etq)}</span>` : ""}</span>

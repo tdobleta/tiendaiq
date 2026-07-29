@@ -138,7 +138,7 @@
     return {
       html:
         '<label class="tiq-bdl__card is-sel is-pop">' +
-          '<span class="tiq-bdl__badge">' + (gratis ? "Regalo" : "Oferta") + "</span>" +
+          '<span class="tiq-bdl__badge tiq-bdl__badge--' + FORMA_BADGE(bundle.diseno) + '">' + (gratis ? "Regalo" : "Oferta") + "</span>" +
           '<span class="tiq-bdl__radio" aria-hidden="true"></span>' +
           '<span class="tiq-bdl__main">' +
             '<span class="tiq-bdl__titulo">' + esc(titulo) + ' <span class="tiq-bdl__etq">' + esc(etq) + "</span></span>" +
@@ -170,6 +170,12 @@
     return '<div class="tiq-bdl__gift">' + ic +
       '<span class="tiq-bdl__gift-main"><span class="tiq-bdl__gift-name">' + cant + "x " + esc(it.nombre || "Regalo") + "</span>" + selc + "</span>" +
       '<span class="tiq-bdl__gift-right">' + pill + old + "</span></div>";
+  }
+  // Forma/plantilla de la insignia (whitelist: evita inyección de clases).
+  function FORMA_BADGE(d) {
+    var f = { soft: 1, pill: 1, rect: 1, ribbon: 1, tag: 1 };
+    var v = (d || {}).badge_forma;
+    return f[v] ? v : "soft";
   }
   function addonsHTML(o) {
     var ad = o.addons || {};
@@ -217,7 +223,7 @@
           '<label class="tiq-bdl__card' + (sel ? " is-sel" : "") + (o.popular ? " is-pop" : "") + (agot ? " is-agotado" : "") + '"' +
             ' data-i="' + i + '" role="radio" aria-checked="' + (sel ? "true" : "false") + '"' +
             (agot ? ' aria-disabled="true"' : ' tabindex="' + (sel ? "0" : "-1") + '"') + ">" +
-            (o.badge ? '<span class="tiq-bdl__badge">' + esc(o.badge) + "</span>" : "") +
+            (o.badge ? '<span class="tiq-bdl__badge tiq-bdl__badge--' + FORMA_BADGE(bundle.diseno) + '">' + esc(o.badge) + "</span>" : "") +
             '<span class="tiq-bdl__radio" aria-hidden="true"></span>' +
             '<span class="tiq-bdl__main">' +
               '<span class="tiq-bdl__titulo">' + esc(o.titulo || (cant + " unidades")) +
