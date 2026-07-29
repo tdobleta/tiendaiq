@@ -3682,12 +3682,12 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       <div class="be-lv__head">
         <span class="be-lv__drag">⠿</span>
         <button class="be-toggle ${activo ? "is-on" : ""}" data-lv-toggle="${i}" title="Prender/apagar nivel"><span></span></button>
-        <span class="be-lv__name"><span class="be-lv__n">Nivel ${i + 1}:</span> <b>${esc(o.titulo || "Buy " + (Number(o.cantidad) || 1))}</b></span>
-        <button class="be-lv__icn" data-lv-dup="${i}" title="Duplicar">${BE_DUP}</button>
-        <button class="be-lv__star ${o.popular ? "is-star" : ""}" data-lv-star="${i}" title="Destacar">${BE_STAR}</button>
+        <span class="be-lv__name"><span class="be-lv__n">Nivel ${i + 1}:</span> <b>${esc(o.titulo || "Buy " + (Number(o.cantidad) || 1))}</b>${o.popular ? '<span class="be-lv__chip">★ Destacado</span>' : ""}</span>
+        <button class="be-lv__icn" data-lv-dup="${i}" title="Duplicar nivel" aria-label="Duplicar nivel ${i + 1}">${BE_DUP}</button>
+        <button class="be-lv__star ${o.popular ? "is-star" : ""}" data-lv-star="${i}" title="Destacar como “más elegido”" aria-label="Destacar nivel ${i + 1}" aria-pressed="${o.popular ? "true" : "false"}">${BE_STAR}</button>
         <button class="be-lv__chev ${open ? "is-open" : ""}" data-lv-open="${i}" title="Abrir/cerrar">${BE_CHEV}</button>
       </div>`;
-    if (!open) return `<div class="be-lv">${head}</div>`;
+    if (!open) return `<div class="be-lv${o.popular ? " is-pop" : ""}">${head}</div>`;
 
     const TIPOS = [["porcentaje", "% Descuento"], ["fijo", "Fijo"], ["especifico", "Precio específico"], ["bogo", "BOGO"], ["ninguno", "Ninguno"]];
     const tabs = TIPOS.map(([k, t]) => `<button class="be-dt ${tipo === k ? "is-sel" : ""}" data-lv-tipo="${i}:${k}">${t}</button>`).join("");
@@ -3796,7 +3796,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         })()}
         <button class="be-del" data-lv-del="${i}">🗑 Eliminar nivel ${i + 1}</button>
       </div>`;
-    return `<div class="be-lv is-open">${head}${body}</div>`;
+    return `<div class="be-lv is-open${o.popular ? " is-pop" : ""}">${head}${body}</div>`;
   }
 
   // Íconos de las secciones extra (estilo Polaris: 20px, stroke fino).
