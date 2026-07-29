@@ -49,6 +49,9 @@
   var BOT = D.boton || {};
   var AV = D.avanzado || {}; // toggles de "Configuración avanzada"
 
+  // "Excluir clientes B2B": si el cliente es B2B y el toggle está ON, ni montamos.
+  if (AV.excluir_b2b && (window.TIENDAIQ_CLIENTE || {}).b2b) return;
+
   // --- dinero ---
   // product.price viene en centavos (entero). Formateamos con el money_format
   // de la tienda; si es raro, caemos a un formato simple. Si avanzado.sin_decimales
@@ -70,10 +73,29 @@
 
   // --- precio unitario: intenta leer la variante seleccionada del form,
   // cae al precio que mandó Liquid ---
+  // Info de la variante actual desde el mapa que inyecta Liquid (precio/compare/stock).
+  function varInfo() {
+    var id = varianteActual();
+    var m = window.TIENDAIQ_VARIANTES || {};
+    return (id != null && m[id]) ? m[id] : null;
+  }
+  // "Coincidir precio del widget" (ON por defecto): el precio sigue a la variante
+  // elegida. Sin mapa (temas custom) cae al precio de Liquid (variante inicial).
   function precioUnitario() {
-    var input = document.querySelector('form[action*="/cart/add"] [name="id"], form[action*="/cart/add"] select[name="id"]');
-    // Sin data de variante confiable en el DOM, usamos el precio de Liquid.
+    if (AV.precio_en_vivo !== false) {
+      var vi = varInfo();
+      if (vi && vi.precio != null) return Number(vi.precio) || 0;
+    }
     return Number(PROD.precio) || 0;
+  }
+  // Precio unitario de REFERENCIA (para el tachado): compare-at del producto si
+  // "Usar precio de comparación" está ON y es mayor que el precio; si no, el precio.
+  function precioRef(pu) {
+    if (AV.usar_compare_at !== false) {
+      var vi = varInfo();
+      if (vi && vi.compare && Number(vi.compare) > pu) return Number(vi.compare);
+    }
+    return pu;
   }
 
   // La variante puede venir del form de Dawn, de un input suelto, o de un
@@ -222,9 +244,13 @@
         var desc = Number(o.descuento) || 0;
         var bruto = pu * cant;
         var total = Math.round(bruto * (1 - desc / 100));
-        var ahorro = bruto - total;
-        var pct = bruto > 0 ? Math.round((ahorro / bruto) * 100) : 0;
-        var etq = o.etiqueta || (desc > 0 ? pct + "% OFF" : ""); // % calculado si el merchant no lo tipeó
+        // Precio de referencia (tachado): el compare-at del producto si el toggle
+        // está ON y es mayor que el precio; si no, el bruto (pu × cant).
+        var ref = precioRef(pu) * cant;
+        if (ref < bruto) ref = bruto;
+        var ahorro = ref - total;
+        var pct = ref > 0 ? Math.round((ahorro / ref) * 100) : 0;
+        var etq = o.etiqueta || (ahorro > 0 ? pct + "% OFF" : ""); // % calculado si el merchant no lo tipeó
         var puUnit = Math.round(total / cant);                   // precio por unidad (el número que convierte)
         var agot = !!o.agotado;
         var sel = i === seleccion && !agot;
@@ -249,7 +275,7 @@
             "</span>" +
             '<span class="tiq-bdl__precio">' +
               '<span class="tiq-bdl__precio-now">' + fmt(total) + "</span>" +
-              (desc > 0 ? '<span class="tiq-bdl__precio-old">' + fmt(bruto) + "</span>" : "") +
+              (ref > total ? '<span class="tiq-bdl__precio-old">' + fmt(ref) + "</span>" : "") +
               (AV.precio_por_unidad && cant > 1 ? '<span class="tiq-bdl__unit">' + fmt(puUnit) + " c/u</span>" : "") +
             "</span>" +
             addonsHTML(o) +
@@ -370,6 +396,16 @@
       ancla.insertBefore(raiz, ancla.firstChild);
     }
     pintar();
+
+    // Precio en vivo: si el tema cambia de variante, re-pintamos para reflejar el
+    // precio/compare-at nuevo. Escuchamos el form (id oculto u opciones).
+    if (AV.precio_en_vivo !== false) {
+      var form = document.querySelector('form[action*="/cart/add"]');
+      if (form) form.addEventListener("change", function (e) {
+        var n = (e.target && e.target.name) || "";
+        if (n === "id" || n.indexOf("options[") === 0) pintar();
+      });
+    }
     return true;
   }
 

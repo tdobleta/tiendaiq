@@ -3951,6 +3951,8 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         <div class="be-adv__group">
           ${tgl("Mostrar precio por unidad", "diseno.avanzado.precio_por_unidad", !!avz.precio_por_unidad, "Muestra el precio por unidad (ej. $17,96 c/u) debajo del precio de cada nivel.")}
           ${tgl("Mostrar precio sin valor decimal", "diseno.avanzado.sin_decimales", !!avz.sin_decimales, "Redondea a números enteros (ej. $18 en vez de $17,96). Ideal para monedas sin centavos.")}
+          ${tgl("Coincidir precio del widget", "diseno.avanzado.precio_en_vivo", leer(b, "diseno.avanzado.precio_en_vivo") !== false, "El precio del widget sigue a la variante que el cliente elige en la página (en vivo).")}
+          ${tgl("Usar precio de comparación del producto", "diseno.avanzado.usar_compare_at", leer(b, "diseno.avanzado.usar_compare_at") !== false, "Usa el precio de comparación (tachado) real del producto en oferta como precio anterior.")}
           ${tgl("Mostrar “Ahorrás $X”", "diseno.mostrar_ahorro", leer(b, "diseno.mostrar_ahorro") !== false, "Muestra cuánto ahorra el cliente en cada nivel con descuento.")}
         </div>
         <div class="bdl-subsec">Otros</div>
@@ -3960,6 +3962,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
           ${reveal(!!avz.pie_on, "diseno.avanzado.pie_texto", "Texto de pie de página")}
           ${tgl("Usar texto personalizado para Fuera de Stock", "diseno.avanzado.oos_on", !!avz.oos_on, "Cambia el texto “Agotado” de los niveles marcados sin stock.")}
           ${reveal(!!avz.oos_on, "diseno.avanzado.oos_texto", "Texto para niveles agotados")}
+          ${tgl("Excluir clientes B2B", "diseno.avanzado.excluir_b2b", !!avz.excluir_b2b, "No muestra el widget de bundle a clientes mayoristas (B2B) logueados.")}
         </div>
         <div class="be-subacc ${combOpen ? "is-open" : ""}">
           <button type="button" class="be-subacc__head" data-subsec="combinar">

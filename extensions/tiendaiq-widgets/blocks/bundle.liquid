@@ -18,6 +18,15 @@
       precio: {{ product.selected_or_first_available_variant.price | json }},
       moneda: {{ shop.money_format | json }}
     };
+    // Mapa de variantes: precio en vivo + compare-at + stock. Habilita los toggles
+    // "Coincidir precio del widget" y "Usar precio de comparación".
+    window.TIENDAIQ_VARIANTES = {
+      {%- for v in product.variants -%}
+        {{ v.id | json }}: { precio: {{ v.price | json }}, compare: {{ v.compare_at_price | json }}, stock: {{ v.available | json }} }{%- unless forloop.last -%},{%- endunless -%}
+      {%- endfor -%}
+    };
+    // Contexto de cliente (para "Excluir clientes B2B"). Sin login → false.
+    window.TIENDAIQ_CLIENTE = { b2b: {% if customer.b2b? %}true{% else %}false{% endif %} };
     window.TIENDAIQ_BUNDLES_SRC =
       "https://tiendaiq.com/publico/bundles?shop={{ shop.permanent_domain }}";
   </script>

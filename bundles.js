@@ -435,6 +435,12 @@ function armarSnippet(config, sesion, urlApp) {
     precio: {{ product.selected_or_first_available_variant.price | json }},
     moneda: {{ shop.money_format | json }}
   };
+  window.TIENDAIQ_VARIANTES = {
+    {%- for v in product.variants -%}
+      {{ v.id | json }}: { precio: {{ v.price | json }}, compare: {{ v.compare_at_price | json }}, stock: {{ v.available | json }} }{%- unless forloop.last -%},{%- endunless -%}
+    {%- endfor -%}
+  };
+  window.TIENDAIQ_CLIENTE = { b2b: {% if customer.b2b? %}true{% else %}false{% endif %} };
 </script>
 {{ 'tiendaiq-bundle.css' | asset_url | stylesheet_tag }}
 <script src="{{ 'tiendaiq-bundle.js' | asset_url }}" defer></script>
