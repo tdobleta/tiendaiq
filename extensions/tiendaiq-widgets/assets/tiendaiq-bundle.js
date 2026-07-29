@@ -120,6 +120,8 @@
   raiz.style.setProperty("--tiq-badge-txt", D.color_badge_texto || "#fff");
   raiz.style.setProperty("--tiq-etq", D.color_etiqueta || "#e11d48");
   raiz.style.setProperty("--tiq-txt", D.color_texto || "#111");
+  // Fondo de la tarjeta (no-seleccionada). Solo si el merchant lo eligió.
+  if (D.color_fondo) raiz.style.setProperty("--tiq-card-bg", D.color_fondo);
   // Geometría (Paso 2): radius unificado (fallback al legacy `radio`); breathing
   // → --tiq-gap (densidad entre tarjetas). Mismo contrato que disenoAVars() del admin.
   var G = D.geometry || {};

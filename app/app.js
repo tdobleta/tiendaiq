@@ -3845,6 +3845,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     if (!card) return;
     const el = (k) => card.querySelector(`[data-mid-el="${k}"]`);
     if (token === "color_borde") { card.style.borderColor = v; const d = el("dot"); if (d) d.style.borderColor = v; }
+    else if (token === "color_fondo") { card.style.background = v; }
     else if (token === "color_badge") { const b = el("badge"); if (b) b.style.background = v; }
     else if (token === "color_badge_texto") { const b = el("badge"); if (b) b.style.color = v; }
     else if (token === "color_etiqueta") { const e = el("etq"); if (e) { e.style.color = v; e.style.borderColor = v; } }
@@ -3904,10 +3905,11 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         return `<div class="perso">
           <div class="perso-col perso-col--l">
             ${sw("color_borde", "Borde", "#111111")}
+            ${sw("color_fondo", "Fondo", "#f6f6f7")}
             ${sw("color_badge", "Insignia", "#111111")}
             ${sw("color_etiqueta", "Etiqueta", "#e11d48")}
           </div>
-          <div class="perso-mid" data-mid-card style="border-color:${dc("color_borde", "#111")}">
+          <div class="perso-mid" data-mid-card style="border-color:${dc("color_borde", "#111")};background:${dc("color_fondo", "#ffffff")}">
             <span class="perso-mid__badge" data-mid-el="badge" style="background:${dc("color_badge", "#111")};color:${dc("color_badge_texto", "#fff")}">Más elegido</span>
             <span class="perso-mid__dot" data-mid-el="dot" style="border-color:${dc("color_borde", "#111")}"></span>
             <span class="perso-mid__title" data-mid-el="title" style="color:${dc("color_texto", "#111")}">Comprá 2</span>
@@ -4368,6 +4370,9 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       `--tiq-borde:${d.color_borde || "#111"};--tiq-badge:${d.color_badge || "#111"};--tiq-badge-txt:${d.color_badge_texto || "#fff"};` +
       `--tiq-etq:${d.color_etiqueta || "#e11d48"};--tiq-txt:${d.color_texto || "#111"};--tiq-radio:${radio}px;` +
       (gap != null ? `--tiq-gap:${gap}px;` : "") +
+      // Fondo de la tarjeta (no-seleccionada). Solo si el merchant lo eligió; si no,
+      // el widget usa su gris neutro por defecto (look intacto en bundles viejos).
+      (d.color_fondo ? `--tiq-card-bg:${d.color_fondo};` : "") +
       // Tipografía (Paso 6): fuente solo si no es "heredar"; pesos por rol.
       (ty.font && ty.font !== "heredar" ? `--tiq-font:${FONTS_BDL[ty.font] || "inherit"};` : "") +
       (ty.titleWeight ? `--tiq-title-w:${ty.titleWeight};` : "") +
