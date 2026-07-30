@@ -77,6 +77,23 @@
       ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])
     );
 
+  // ---------- íconos ----------
+  // Un solo lugar para los íconos: SVG feather-style (trazo, hereda color y
+  // tamaño del contenedor). Reemplaza a los glyphs de texto (✕ ✓ ⚠ → ★) que
+  // delataban el look "hecho con prompts". Uso: ico("basura"), ico("x"), etc.
+  const ICONOS = {
+    x: `<path d="M18 6L6 18M6 6l12 12"/>`,
+    basura: `<path d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2m2 0v14a1 1 0 01-1 1H7a1 1 0 01-1-1V6"/><path d="M10 11v6M14 11v6"/>`,
+    check: `<path d="M5 12.5l4.5 4.5L19 7"/>`,
+    checkCirculo: `<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/>`,
+    aviso: `<path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17.5v.5"/>`,
+    flecha: `<path d="M5 12h14M13 6l6 6-6 6"/>`,
+    estrella: `<path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.5 9.7l5.9-.9z"/>`,
+    lapiz: `<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/>`
+  };
+  const ico = (nombre, cls = "") =>
+    `<svg class="ico${cls ? " " + cls : ""}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONOS[nombre] || ""}</svg>`;
+
   // ---------- barra de pasos ----------
 
   function pintarPasos() {
@@ -134,7 +151,7 @@
       estado.inicioCod = cod;
       estado.inicioBundles = bundles;
     } catch (e) {
-      vista.innerHTML = `<div class="error">✖ No se pudo leer la tienda: ${esc(e.message)}</div>`;
+      vista.innerHTML = `<div class="error">${ico("x","ico--banner")} No se pudo leer la tienda: ${esc(e.message)}</div>`;
       return;
     }
     if (estado.pantalla !== "inicio") return; // navegó mientras cargaba
@@ -428,7 +445,7 @@
     try {
       estado.paginas = await api("/paginas");
     } catch (e) {
-      vista.innerHTML = `<div class="error">✖ No se pudieron leer las páginas: ${esc(e.message)}</div>`;
+      vista.innerHTML = `<div class="error">${ico("x","ico--banner")} No se pudieron leer las páginas: ${esc(e.message)}</div>`;
       return;
     }
     if (estado.pantalla !== "paginas") return;
@@ -450,7 +467,7 @@
             ? `<a class="pagina-fila__link" href="${esc(p.url_publica)}" target="_blank">Ver en la tienda</a>`
             : `<span class="pagina-fila__link pagina-fila__link--vacio"></span>`
         }
-        <button class="btn btn--fantasma btn--chico" data-editar="${esc(p.id)}">✎ Editar y publicar</button>
+        <button class="btn btn--fantasma btn--chico" data-editar="${esc(p.id)}">${ico("lapiz")} Editar y publicar</button>
       </div>`;
 
     vista.innerHTML = `
@@ -501,9 +518,9 @@
           if (!cont) return;
           cont.innerHTML = `
             <div class="banner-tema">
-              <span class="banner-tema__ico">⚠</span>
+              <span class="banner-tema__ico">${ico("aviso")}</span>
               <span class="banner-tema__txt">Tus páginas publicadas <strong>todavía no se ven en la tienda</strong>: falta activar la plantilla en tu tema (una sola vez).</span>
-              <a class="btn btn--chico" href="${esc(e.setupUrl)}" target="_blank" rel="noopener">Activar plantilla →</a>
+              <a class="btn btn--chico" href="${esc(e.setupUrl)}" target="_blank" rel="noopener">Activar plantilla</a>
             </div>`;
         })
         .catch(() => {});
@@ -526,7 +543,7 @@
     } catch (e) {
       ir("paginas");
       requestAnimationFrame(() =>
-        vista.insertAdjacentHTML("afterbegin", `<div class="error">✖ ${esc(e.message)}</div>`)
+        vista.insertAdjacentHTML("afterbegin", `<div class="error">${ico("x","ico--banner")} ${esc(e.message)}</div>`)
       );
     }
   }
@@ -576,7 +593,7 @@
     try {
       estado.cod = { config: await api("/cod"), tab: estado.cod?.tab || "vista", sucio: false, previewProd: estado.cod?.previewProd || null };
     } catch (e) {
-      vista.innerHTML = `<div class="error">✖ No se pudo leer la configuración: ${esc(e.message)}</div>`;
+      vista.innerHTML = `<div class="error">${ico("x","ico--banner")} No se pudo leer la configuración: ${esc(e.message)}</div>`;
       return;
     }
     if (estado.pantalla !== "cod") return;
@@ -733,7 +750,7 @@
             <div class="cod-tarifa-fila">
               <input type="text" placeholder="Nombre (ej: Envío estándar)" data-cfg="tarifas.${i}.nombre" value="${esc(t.nombre)}">
               <input type="number" min="0" step="0.01" placeholder="Precio" data-cfg="tarifas.${i}.precio" data-tipo="numero" value="${esc(t.precio)}">
-              <button class="btn btn--fantasma btn--chico" data-accion="tarifa-borrar" data-i="${i}" ${c.tarifas.length <= 1 ? "disabled" : ""}>✕</button>
+              <button class="btn btn--fantasma btn--chico" data-accion="tarifa-borrar" data-i="${i}" ${c.tarifas.length <= 1 ? "disabled" : ""} aria-label="Quitar tarifa">${ico("basura")}</button>
             </div>`
           )
           .join("")}
@@ -755,7 +772,7 @@
               <input type="checkbox" data-cfg="ofertas.tiers.${i}.popular" data-tipo="bool" ${t.popular ? "checked" : ""}>
             </label>
             <span class="cod-tier-calc">${cant} × $${(unit / 100).toFixed(2)} = <strong>$${((unit * cant) / 100).toFixed(2)}</strong></span>
-            <button class="btn btn--fantasma btn--chico" data-accion="tier-borrar" data-i="${i}" ${c.ofertas.tiers.length <= 1 ? "disabled" : ""}>✕</button>
+            <button class="btn btn--fantasma btn--chico" data-accion="tier-borrar" data-i="${i}" ${c.ofertas.tiers.length <= 1 ? "disabled" : ""} aria-label="Quitar nivel">${ico("basura")}</button>
           </div>`;
       };
       return `
@@ -793,16 +810,16 @@
             <span class="cod-switch__pista"></span>
             <span class="cod-switch__texto">${c.activo ? "Formulario activo" : "Formulario apagado"}</span>
           </label>
-          <button class="btn ${estado.cod.sucio ? "btn--acento" : "btn--fantasma"}" id="cod-guardar" ${estado.cod.sucio ? "" : "disabled"}>${estado.cod.sucio ? "Guardar cambios" : "✓ Guardado"}</button>
+          <button class="btn ${estado.cod.sucio ? "btn--acento" : "btn--fantasma"}" id="cod-guardar" ${estado.cod.sucio ? "" : "disabled"}>${estado.cod.sucio ? "Guardar cambios" : "Guardado"}</button>
         </div>
       </div>
 
       ${
         !c.activo
-          ? `<div class="cod-banner cod-banner--aviso">⚠ El formulario está <strong>apagado</strong>: prendé el interruptor de arriba. Además, para que aparezca en la tienda tenés que <strong>activar el widget</strong> en tu tema (una sola vez).
-               <button class="btn btn--fantasma btn--chico" id="cod-instalar">Activá el formulario →</button></div>`
-          : `<div class="cod-banner cod-banner--ok">✓ Formulario activo. Para que aparezca en la tienda, activá el widget en tu tema <strong>una sola vez</strong>.
-               <button class="btn btn--fantasma btn--chico" id="cod-instalar">Activá el formulario →</button></div>`
+          ? `<div class="cod-banner cod-banner--aviso">${ico("aviso")} El formulario está <strong>apagado</strong>: prendé el interruptor de arriba. Además, para que aparezca en la tienda tenés que <strong>activar el widget</strong> en tu tema (una sola vez).
+               <button class="btn btn--fantasma btn--chico" id="cod-instalar">Activá el formulario</button></div>`
+          : `<div class="cod-banner cod-banner--ok">${ico("checkCirculo")} Formulario activo. Para que aparezca en la tienda, activá el widget en tu tema <strong>una sola vez</strong>.
+               <button class="btn btn--fantasma btn--chico" id="cod-instalar">Activá el formulario</button></div>`
       }
 
       <div class="cod-tabs">
@@ -1211,7 +1228,7 @@
         campos = campoCod(`elementos.${i}.etiqueta`, "Etiqueta") + campoCod(`elementos.${i}.obligatorio`, "Obligatorio", "check");
       if (el.tipo === "imagen")
         campos = `<label class="btn btn--fantasma btn--chico" style="cursor:pointer">🖼 ${el.url ? "Cambiar imagen" : "Subir imagen"}<input type="file" accept="image/*" hidden data-imagen-el="${i}"></label>
-          ${el.url ? `<div class="ayuda" style="margin:6px 0 10px">Imagen cargada ✓</div>` : `<div class="ayuda" style="margin:6px 0 10px">Subí un archivo o pegá una URL.</div>`}
+          ${el.url ? `<div class="ayuda" style="margin:6px 0 10px">${ico("check")} Imagen cargada</div>` : `<div class="ayuda" style="margin:6px 0 10px">Subí un archivo o pegá una URL.</div>`}
           ${campoCod(`elementos.${i}.url`, "…o URL de la imagen / GIF")}
           ${campoCod(`elementos.${i}.tamano`, "Tamaño (% del ancho)", "numero", 'min="10" max="100"')}`;
       if (el.tipo === "pago_shopify")
@@ -1241,7 +1258,7 @@
       <div class="cod-props__acciones">
         <button class="btn btn--fantasma btn--chico" data-mover="-1" ${idx <= 0 ? "disabled" : ""}>↑ Subir</button>
         <button class="btn btn--fantasma btn--chico" data-mover="1" ${idx >= orden.length - 1 ? "disabled" : ""}>↓ Bajar</button>
-        ${esElemento ? `<button class="btn btn--fantasma btn--chico cod-props__borrar" data-borrar-el="1">🗑 Eliminar</button>` : ""}
+        ${esElemento ? `<button class="btn btn--fantasma btn--chico cod-props__borrar" data-borrar-el="1">${ico("basura")} Eliminar</button>` : ""}
       </div>
       ${campos}`;
   }
@@ -1264,7 +1281,7 @@
       montarModoCod();
     } catch (e) {
       $("cod-subiendo")?.remove();
-      panel?.insertAdjacentHTML("beforeend", `<div class="error">✖ ${esc(e.message)}</div>`);
+      panel?.insertAdjacentHTML("beforeend", `<div class="error">${ico("x","ico--banner")} ${esc(e.message)}</div>`);
     }
   }
 
@@ -1293,14 +1310,14 @@
     try {
       estado.cod.config = await api("/cod", { method: "PUT", body: { config: estado.cod.config } });
       estado.cod.sucio = false;
-      b.textContent = "✓ Guardado";
+      b.textContent = "Guardado";
       b.classList.remove("btn--acento");
       b.classList.add("btn--fantasma");
       return true;
     } catch (e) {
       b.disabled = false;
       b.textContent = "Guardar cambios";
-      vista.insertAdjacentHTML("afterbegin", `<div class="error">✖ No se pudo guardar: ${esc(e.message)}</div>`);
+      vista.insertAdjacentHTML("afterbegin", `<div class="error">${ico("x","ico--banner")} No se pudo guardar: ${esc(e.message)}</div>`);
       return false;
     }
   }
@@ -1319,8 +1336,8 @@
       pintarCod();
     } catch (e) {
       b.disabled = false;
-      b.textContent = "Activá el formulario →";
-      vista.insertAdjacentHTML("afterbegin", `<div class="error">✖ ${esc(e.message)}</div>`);
+      b.textContent = "Activá el formulario";
+      vista.insertAdjacentHTML("afterbegin", `<div class="error">${ico("x","ico--banner")} ${esc(e.message)}</div>`);
     }
   }
 
@@ -1384,13 +1401,13 @@
     const t = tipoMedia(url);
     if (!t) return "";
     if (t === "invalido")
-      return `<div class="clip-mal">✖ Ese link es una página web, no un archivo. Pegá el enlace <strong>directo</strong> (termina en .gif/.mp4), uno de Giphy/YouTube, o subí/arrastrá el archivo.</div>`;
+      return `<div class="clip-mal">${ico("x","ico--banner")} Ese link es una página web, no un archivo. Pegá el enlace <strong>directo</strong> (termina en .gif/.mp4), uno de Giphy/YouTube, o subí/arrastrá el archivo.</div>`;
     if (t === "img") {
       const g = url.match(/giphy\.com\/(?:gifs|clips|stickers)\/(?:[^/]*-)?([A-Za-z0-9]{6,})/i);
       const src = g ? `https://media.giphy.com/media/${g[1]}/giphy.gif` : url;
-      return `<div class="clip-ok"><img src="${esc(encodeURI(src))}" alt="" loading="lazy">Se ve bien ✓</div>`;
+      return `<div class="clip-ok"><img src="${esc(encodeURI(src))}" alt="" loading="lazy">${ico("check")} Se ve bien</div>`;
     }
-    return `<div class="clip-ok">${t === "yt" ? "Video de YouTube ✓" : "Video ✓"}</div>`;
+    return `<div class="clip-ok">${ico("check")} ${t === "yt" ? "Video de YouTube" : "Video"}</div>`;
   }
 
   // ---------- 1. elegir producto (lanzador tipo command-palette) ----------
@@ -1453,7 +1470,7 @@
         ${
           p.estado
             ? `<span class="chip chip--${p.estado}">${ESTADO_ETQ[p.estado] || p.estado}</span>`
-            : `<span class="fila__cta">Crear página →</span>`
+            : `<span class="fila__cta">Crear página ${ico("flecha")}</span>`
         }
       </button>`;
 
@@ -1535,7 +1552,7 @@
       pintarPreviewBundle();
       pintarEditorBundle();
     } catch (e) {
-      vista.insertAdjacentHTML("afterbegin", `<div class="error">✖ No se pudo subir la imagen: ${esc(e.message)}</div>`);
+      vista.insertAdjacentHTML("afterbegin", `<div class="error">${ico("x","ico--banner")} No se pudo subir la imagen: ${esc(e.message)}</div>`);
     }
   }
 
@@ -1571,7 +1588,7 @@
         ${
           p.estado
             ? `<span class="chip chip--${p.estado}">${ESTADO_ETQ[p.estado] || p.estado}</span>`
-            : `<span class="fila__cta">Elegir →</span>`
+            : `<span class="fila__cta">Elegir ${ico("flecha")}</span>`
         }
       </button>`;
 
@@ -1649,7 +1666,7 @@
           <button class="btn btn--acento btn--grande" id="generar">✨ Crear página de producto con IA</button>
           ${
             p.estado
-              ? `<button class="btn btn--fantasma btn--grande" id="abrir" style="margin-top:10px">✎ Editar la página existente</button>`
+              ? `<button class="btn btn--fantasma btn--grande" id="abrir" style="margin-top:10px">${ico("lapiz")} Editar la página existente</button>`
               : ""
           }
         </div>
@@ -1748,10 +1765,10 @@
         vista.insertAdjacentHTML(
           "afterbegin",
           e.actualizar
-            ? `<div class="error">✖ ${esc(estado.error)}
+            ? `<div class="error">${ico("x","ico--banner")} ${esc(estado.error)}
                  <button class="btn btn--acento" id="btn-plan" style="margin-left:12px">Pasar a Pro</button>
                </div>`
-            : `<div class="error">✖ ${esc(estado.error)}</div>`
+            : `<div class="error">${ico("x","ico--banner")} ${esc(estado.error)}</div>`
         );
         const b = $("btn-plan");
         if (b) b.onclick = irASuscripcion;
@@ -1780,7 +1797,7 @@
     } catch (e) {
       ir("informacion");
       requestAnimationFrame(() =>
-        vista.insertAdjacentHTML("afterbegin", `<div class="error">✖ ${esc(e.message)}</div>`)
+        vista.insertAdjacentHTML("afterbegin", `<div class="error">${ico("x","ico--banner")} ${esc(e.message)}</div>`)
       );
     }
   }
@@ -1884,7 +1901,7 @@
       `<div class="galeria-picker galeria-picker--chica">` +
       (nulo
         ? `<button type="button" class="galeria-picker__img galeria-picker__quitar ${actual ? "" : "elegida"}"
-             data-img-quitar="${ruta}">✕<span>Sin foto</span></button>`
+             data-img-quitar="${ruta}" aria-label="Quitar foto">${ico("x")}<span>Sin foto</span></button>`
         : "") +
       pool
         .map(
@@ -1934,7 +1951,7 @@
       tile.classList.remove("galeria-picker__subir--ocupado");
       tile.querySelector(".galeria-picker__subir-txt").textContent = "Subir";
       const cuerpo = document.getElementById("editor-modal-cuerpo");
-      cuerpo?.insertAdjacentHTML("afterbegin", `<div class="error">✖ No se pudo subir la imagen: ${esc(e.message)}</div>`);
+      cuerpo?.insertAdjacentHTML("afterbegin", `<div class="error">${ico("x","ico--banner")} No se pudo subir la imagen: ${esc(e.message)}</div>`);
     }
   }
 
@@ -2194,7 +2211,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
             <label class="btn btn--fantasma btn--chico sec-subir-video" style="cursor:pointer">⬆ Subir video de tu computadora
               <input type="file" accept="video/*" hidden data-video-el="${i}:${j}">
             </label>
-            ${it.url && /^https?:\/\/cdn\.shopify/.test(it.url) ? `<div class="ayuda" style="margin-top:6px">Video subido ✓</div>` : ""}
+            ${it.url && /^https?:\/\/cdn\.shopify/.test(it.url) ? `<div class="ayuda" style="margin-top:6px">${ico("check")} Video subido</div>` : ""}
             <details class="resena-edit__foto">
               <summary>🖼 Miniatura (opcional)${it.poster ? " · elegida" : ""}</summary>
               ${selectorImagenUno(`${base}.items.${j}.poster`, "", true)}
@@ -2223,7 +2240,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       `<div class="cod-separador"></div>` +
       items +
       `<div class="cod-separador"></div>
-       <button class="btn btn--fantasma sec-borrar" type="button" data-sec-borrar="${s.id}">🗑 Eliminar esta sección</button>`
+       <button class="btn btn--fantasma sec-borrar" type="button" data-sec-borrar="${s.id}">${ico("basura")} Eliminar esta sección</button>`
     );
   }
 
@@ -2232,7 +2249,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     <span class="sec-item__manijas">
       <button type="button" data-muro-mov="${i}:-1" ${i === 0 ? "disabled" : ""}>↑</button>
       <button type="button" data-muro-mov="${i}:1" ${i === total - 1 ? "disabled" : ""}>↓</button>
-      <button type="button" data-muro-del="${i}">✕</button>
+      <button type="button" data-muro-del="${i}" aria-label="Quitar">${ico("basura")}</button>
     </span>`;
 
   // ↑↓ y ✕ de cada item de una section
@@ -2240,7 +2257,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     <span class="sec-item__manijas">
       <button type="button" data-sec-mov="${i}:${j}:-1" ${j === 0 ? "disabled" : ""}>↑</button>
       <button type="button" data-sec-mov="${i}:${j}:1" ${j === total - 1 ? "disabled" : ""}>↓</button>
-      <button type="button" data-sec-item-del="${i}:${j}">✕</button>
+      <button type="button" data-sec-item-del="${i}:${j}" aria-label="Quitar">${ico("basura")}</button>
     </span>`;
 
   function accionSeccion(target) {
@@ -2421,7 +2438,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       if (!/^(video|image)\//.test(archivo.type)) {
         document.getElementById("editor-modal-cuerpo")?.insertAdjacentHTML(
           "afterbegin",
-          `<div class="error">✖ Solo se pueden soltar videos, imágenes o GIFs.</div>`
+          `<div class="error">${ico("x","ico--banner")} Solo se pueden soltar videos, imágenes o GIFs.</div>`
         );
         return;
       }
@@ -2477,7 +2494,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       label.style.pointerEvents = "";
       document.getElementById("editor-modal-cuerpo")?.insertAdjacentHTML(
         "afterbegin",
-        `<div class="error">✖ No se pudo subir el video: ${esc(e.message)}</div>`
+        `<div class="error">${ico("x","ico--banner")} No se pudo subir el video: ${esc(e.message)}</div>`
       );
     }
   }
@@ -2518,12 +2535,13 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       #tiq-edit-bar button:hover { background: #f6f6f7; }
       #tiq-edit-bar .tiq-del { color: #dc2626; }
       #tiq-edit-bar .tiq-del:hover { background: #fdeaea; }
+      #tiq-edit-bar .ico { width: 15px; height: 15px; flex-shrink: 0; }
       .tiq-zona-hover { outline: 2px dashed #4f46e5; outline-offset: 5px; border-radius: 4px; }`;
     doc.head.appendChild(st);
 
     const bar = doc.createElement("div");
     bar.id = "tiq-edit-bar";
-    bar.innerHTML = `<button class="tiq-editar" type="button">✎ Editar</button><button class="tiq-del" type="button" title="Eliminar sección" style="display:none">🗑</button>`;
+    bar.innerHTML = `<button class="tiq-editar" type="button">${ico("lapiz")} Editar</button><button class="tiq-del" type="button" title="Eliminar sección" aria-label="Eliminar sección" style="display:none">${ico("basura")}</button>`;
     doc.body.appendChild(bar);
     const btn = bar; // el contenedor hace de "botón" posicionable
     const btnEditar = bar.querySelector(".tiq-editar");
@@ -2640,7 +2658,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         marcarSucio();
         repintarPreview();
       } catch (e) {
-        vista.insertAdjacentHTML("afterbegin", `<div class="error">✖ No se pudo subir la imagen: ${esc(e.message)}</div>`);
+        vista.insertAdjacentHTML("afterbegin", `<div class="error">${ico("x","ico--banner")} No se pudo subir la imagen: ${esc(e.message)}</div>`);
       }
     };
     inp.click();
@@ -2834,7 +2852,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         b.disabled = false;
         b.textContent = "Guardar cambios";
       }
-      vista.insertAdjacentHTML("afterbegin", `<div class="error">✖ No se pudo guardar: ${esc(e.message)}</div>`);
+      vista.insertAdjacentHTML("afterbegin", `<div class="error">${ico("x","ico--banner")} No se pudo guardar: ${esc(e.message)}</div>`);
       return false;
     }
   }
@@ -2887,7 +2905,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
 
       ${
         publicada && pg.paginaViva === true
-          ? `<div class="verif-ok">✓ Confirmado: tu landing se está mostrando en la tienda.</div>`
+          ? `<div class="verif-ok">${ico("checkCirculo")} Confirmado: tu landing se está mostrando en la tienda.</div>`
           : ""
       }
 
@@ -2896,8 +2914,8 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
           ? `<div class="setup-pagina ${pg.paginaViva === false ? "setup-pagina--alerta" : ""}">
                <div class="setup-pagina__cab">${
                  pg.paginaViva === false
-                   ? "⚠ Tu landing todavía NO se ve en la tienda"
-                   : "🎨 Activá la plantilla en tu tema — una sola vez"
+                   ? ico("aviso") + " Tu landing todavía NO se ve en la tienda"
+                   : "Activá la plantilla en tu tema — una sola vez"
                }</div>
                <p class="setup-pagina__txt">${
                  pg.paginaViva === false
@@ -2910,7 +2928,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
                  <li>Dejá solo el bloque <strong>Apps → TiendaIQ Página</strong> y quitá las secciones nativas del producto.</li>
                  <li>Guardá. Listo — no lo hacés nunca más.</li>
                </ol>
-               <a class="btn btn--fantasma btn--chico" href="${esc(pg.setupPaginaUrl)}" target="_blank" rel="noopener">Abrir editor de temas →</a>
+               <a class="btn btn--fantasma btn--chico" href="${esc(pg.setupPaginaUrl)}" target="_blank" rel="noopener">Abrir editor de temas</a>
              </div>`
           : ""
       }
@@ -2918,7 +2936,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       ${
         pg.avisos?.length
           ? `<div class="avisos">
-               <strong>⚠ ${pg.avisos.length} aviso${pg.avisos.length > 1 ? "s" : ""} de la validación</strong>
+               <strong>${ico("aviso")} ${pg.avisos.length} aviso${pg.avisos.length > 1 ? "s" : ""} de la validación</strong>
                <ul>${pg.avisos.map((a) => `<li>${esc(a)}</li>`).join("")}</ul>
              </div>`
           : ""
@@ -2937,10 +2955,10 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       </div>
 
       <div class="aviso-republicar" id="hint-republicar" style="display:none">
-        ⚠ Los cambios se guardan acá, pero en la tienda no se ven hasta que vuelvas a publicar.
+        ${ico("aviso")} Los cambios se guardan acá, pero en la tienda no se ven hasta que vuelvas a publicar.
       </div>
 
-      <div class="editor-hint">✎ Pasá el mouse por cualquier bloque y tocá <strong>Editar</strong>. Arrastrá una <strong>sección</strong> del panel izquierdo a la página para sumarla.</div>
+      <div class="editor-hint">${ico("lapiz")} Pasá el mouse por cualquier bloque y tocá <strong>Editar</strong>. Arrastrá una <strong>sección</strong> del panel izquierdo a la página para sumarla.</div>
 
       <div class="constructor">
         <aside class="panel-sections" id="panel-sections">
@@ -2999,8 +3017,8 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       pantallaPreview();
     } catch (e) {
       b.disabled = false;
-      b.textContent = "▲ Publicar página";
-      vista.insertAdjacentHTML("afterbegin", `<div class="error">✖ ${esc(e.message)}</div>`);
+      b.textContent = "Publicar página";
+      vista.insertAdjacentHTML("afterbegin", `<div class="error">${ico("x","ico--banner")} ${esc(e.message)}</div>`);
     }
   }
 
@@ -3136,7 +3154,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     const c = contrasteWCAG(leer(b, "diseno.color_badge") || "#111111", leer(b, "diseno.color_badge_texto") || "#ffffff");
     if (c < 4.5) {
       el.className = "perso-aviso";
-      el.innerHTML = `⚠ El texto de la insignia se lee mal (contraste ${c.toFixed(1)}:1). <button type="button" class="bdl-fixc" data-fix-contraste>Arreglar</button>`;
+      el.innerHTML = `${ico("aviso")} El texto de la insignia se lee mal (contraste ${c.toFixed(1)}:1). <button type="button" class="bdl-fixc" data-fix-contraste>Arreglar</button>`;
     } else {
       el.className = "perso-aviso perso-aviso--ok";
       el.innerHTML = "";
@@ -3189,7 +3207,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       try {
         estado.bundles = { config: await api("/bundles"), vista: "lista", editIdx: null, tab: "ofertas", sucio: false, previewProd: null, metricas: null };
       } catch (e) {
-        vista.innerHTML = `<div class="error">✖ No se pudo leer los bundles: ${esc(e.message)}</div>`;
+        vista.innerHTML = `<div class="error">${ico("x","ico--banner")} No se pudo leer los bundles: ${esc(e.message)}</div>`;
         return;
       }
     }
@@ -3411,7 +3429,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
           <button class="btn btn--fantasma btn--chico" data-bulk="activar">Activar</button>
           <button class="btn btn--fantasma btn--chico" data-bulk="pausar">Pausar</button>
           <button class="btn btn--fantasma btn--chico bdl-bulk__del" data-bulk="eliminar">Eliminar</button>
-          <button class="bdl-bulk__x" data-bulk="limpiar" aria-label="Deseleccionar">✕</button>
+          <button class="bdl-bulk__x" data-bulk="limpiar" aria-label="Deseleccionar">${ico("x")}</button>
         </div>`
       : "";
 
@@ -3419,17 +3437,17 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     // Store). El merchant activa el "app embed" una sola vez en el editor de temas;
     // la config viaja en vivo. Por eso siempre mostramos el paso de activación.
     const widgetEstado = lista.length
-      ? `<div class="bdl-wstatus"><span class="bdl-wdot" aria-hidden="true"></span><span class="bdl-wtxt">Para que los bundles aparezcan en tu tienda, activá el widget en tu tema <strong>una sola vez</strong>.</span><button class="bdl-wlink" id="bdl-instalar">Activá el widget →</button></div>`
+      ? `<div class="bdl-wstatus"><span class="bdl-wdot" aria-hidden="true"></span><span class="bdl-wtxt">Para que los bundles aparezcan en tu tienda, activá el widget en tu tema <strong>una sola vez</strong>.</span><button class="bdl-wlink" id="bdl-instalar">Activá el widget</button></div>`
       : "";
 
     const pasoOnb = (hecho, texto, accion) =>
-      `<div class="bdl-paso ${hecho ? "is-ok" : ""}"><span class="bdl-paso__c">${hecho ? "✓" : ""}</span><span class="bdl-paso__t">${texto}</span><span class="bdl-paso__a">${hecho ? "Listo" : accion}</span></div>`;
+      `<div class="bdl-paso ${hecho ? "is-ok" : ""}"><span class="bdl-paso__c">${hecho ? ico("check") : ""}</span><span class="bdl-paso__t">${texto}</span><span class="bdl-paso__a">${hecho ? "Listo" : accion}</span></div>`;
     const nHechos = inst ? 1 : 0;
     const onboarding = `
       <div class="tarjeta bdl-onboard">
         <div class="bdl-onboard__cab"><strong>Primeros pasos</strong><span class="panel__sub">${nHechos} de 3 completado${nHechos === 1 ? "" : "s"}</span></div>
         <div class="bdl-onboard__bar"><i style="width:${Math.round((nHechos / 3) * 100)}%"></i></div>
-        ${pasoOnb(!!inst, "Activá el widget en tu tema", `<button class="btn btn--chico" id="bdl-instalar">Activá el widget →</button>`)}
+        ${pasoOnb(!!inst, "Activá el widget en tu tema", `<button class="btn btn--chico" id="bdl-instalar">Activá el widget</button>`)}
         ${pasoOnb(false, "Creá tu primer bundle", `<button class="btn btn--chico bdl-onb-crear">Crear</button>`)}
         ${pasoOnb(false, "Previsualizá en tu tienda", `<span class="panel__sub">tras crear</span>`)}
       </div>
@@ -3765,7 +3783,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       <div class="be-lv__head">
         <span class="be-lv__drag">⠿</span>
         <button class="be-toggle ${activo ? "is-on" : ""}" data-lv-toggle="${i}" title="Prender/apagar nivel"><span></span></button>
-        <span class="be-lv__name"><span class="be-lv__n">Nivel ${i + 1}:</span> <b>${esc(o.titulo || "Buy " + (Number(o.cantidad) || 1))}</b>${o.predeterminada ? '<span class="be-lv__chip">★ Por defecto</span>' : ""}</span>
+        <span class="be-lv__name"><span class="be-lv__n">Nivel ${i + 1}:</span> <b>${esc(o.titulo || "Buy " + (Number(o.cantidad) || 1))}</b>${o.predeterminada ? '<span class="be-lv__chip">' + ico("estrella") + ' Por defecto</span>' : ""}</span>
         <button class="be-lv__icn" data-lv-dup="${i}" data-tip="Duplicar este nivel" aria-label="Duplicar nivel ${i + 1}">${BE_DUP}</button>
         <button class="be-lv__star ${o.predeterminada ? "is-star" : ""}" data-lv-star="${i}" data-tip="Oferta predeterminada: es la que los clientes ven pre-seleccionada al entrar a la página." aria-label="Marcar como oferta predeterminada" aria-pressed="${o.predeterminada ? "true" : "false"}">${BE_STAR}</button>
         <button class="be-lv__chev ${open ? "is-open" : ""}" data-lv-open="${i}" title="Abrir/cerrar">${BE_CHEV}</button>
@@ -3795,7 +3813,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
           <div class="campo campo--editor"><label>Descuento fijo</label><input type="text" data-b="ofertas.${i}.monto_fijo" value="${esc(o.monto_fijo ?? "")}" placeholder="ARS 10"></div>${cant}</div>
         ${beToggleRow("Descuento fijo por unidad", `data-lv-bool="${i}:fijo_unidad"`, !!o.fijo_unidad)}${redondeo}`;
     } else if (tipo === "especifico") {
-      campos = `<div class="be-warn">⚠ Este tipo de descuento solo puede usarse con un producto seleccionado.</div>
+      campos = `<div class="be-warn">${ico("aviso")} Este tipo de descuento solo puede usarse con un producto seleccionado.</div>
         <div class="be-grid2">
           <div class="campo campo--editor"><label>Introducir precio objetivo (total)</label><input type="text" data-b="ofertas.${i}.precio_objetivo" value="${esc(o.precio_objetivo ?? "")}" placeholder="ARS 10"></div>${cant}</div>${redondeo}`;
     } else if (tipo === "bogo") {
@@ -3834,7 +3852,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
           const cfgImagen = ad.imagen?.on ? `<div class="be-addon-cfg">
               <div class="be-addon-cfg__t">🖼 Agregar imagen<button class="be-addon-cfg__x" data-addon-toggle="${i}:imagen">Eliminar</button></div>
               ${ad.imagen.url
-                ? `<div class="be-gift-sel"><span class="be-gift-sel__img"><img src="${esc(ad.imagen.url)}" alt=""></span><span class="be-gift-sel__n">Imagen cargada ✓</span><label class="be-gift-sel__ch" style="cursor:pointer">Cambiar<input type="file" accept="image/*" hidden data-addon-img="${i}"></label></div>`
+                ? `<div class="be-gift-sel"><span class="be-gift-sel__img"><img src="${esc(ad.imagen.url)}" alt=""></span><span class="be-gift-sel__n">${ico("check")} Imagen cargada</span><label class="be-gift-sel__ch" style="cursor:pointer">Cambiar<input type="file" accept="image/*" hidden data-addon-img="${i}"></label></div>`
                 : `<label class="be-img-btn">⬆ Seleccionar imagen de tu computadora<input type="file" accept="image/*" hidden data-addon-img="${i}"></label>`}</div>` : "";
           const g = ad.regalo || {};
           const gifts = g.items || [];
@@ -3877,7 +3895,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
             ${cfgImagen}${cfgRegalo}${cfgEnvio}
           </div>`;
         })()}
-        <button class="be-del" data-lv-del="${i}">🗑 Eliminar nivel ${i + 1}</button>
+        <button class="be-del" data-lv-del="${i}">${ico("basura")} Eliminar nivel ${i + 1}</button>
       </div>`;
     return `<div class="be-lv is-open${o.predeterminada ? " is-def" : ""}">${head}${body}</div>`;
   }
@@ -3961,7 +3979,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     const tpl = (d.layout && d.layout.template) || "vertical";
     const tplCard = (id, nombre, mods) => `<button type="button" class="bdl-tpl ${tpl === id ? "is-sel" : ""}" data-tpl="${id}" aria-label="Plantilla ${nombre}">
         <span class="bdl-tpl__mini bdl-tpl__mini--${mods}"><i></i><i></i><i></i></span>
-        <span class="bdl-tpl__name">${nombre}${tpl === id ? " ✓" : ""}</span></button>`;
+        <span class="bdl-tpl__name">${nombre}${tpl === id ? " " + ico("check") : ""}</span></button>`;
     // --- Editor "Estilo del texto" (lista por elemento, estilo Pumper). Fase 1:
     //     encabezado / título de nivel / precio. Cada fila: ejemplo en vivo →
     //     flecha → botón "Aa" que abre un popover (Fuente/Peso/Tamaño/Color). ---
@@ -4063,7 +4081,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         ${(() => {
           const c = contrasteWCAG(leer(b, "diseno.color_badge") || "#111111", leer(b, "diseno.color_badge_texto") || "#ffffff");
           return c < 4.5
-            ? `<div class="perso-aviso" id="bdl-aviso-contraste">⚠ El texto de la insignia se lee mal (contraste ${c.toFixed(1)}:1). <button type="button" class="bdl-fixc" data-fix-contraste>Arreglar</button></div>`
+            ? `<div class="perso-aviso" id="bdl-aviso-contraste">${ico("aviso")} El texto de la insignia se lee mal (contraste ${c.toFixed(1)}:1). <button type="button" class="bdl-fixc" data-fix-contraste>Arreglar</button></div>`
             : `<div class="perso-aviso perso-aviso--ok" id="bdl-aviso-contraste"></div>`;
         })()}`;
       })()}`;
@@ -4174,7 +4192,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     const optsMkt = PAISES_BDL.filter(([code]) => idsMkt.indexOf(code) === -1).map(([code, nombre]) => `<button type="button" class="be-mkt-opt" data-mercado-add="${code}">${esc(nombre)}</button>`).join("");
     const msgMkt = modoMkt === "todos"
       ? `<div class="be-aviso be-aviso--info"><span class="be-aviso__ico" aria-hidden="true">ℹ</span><p class="be-aviso__txt">Esta oferta será visible y aplicable en todos los mercados.</p></div>`
-      : `<div class="be-aviso be-aviso--ok"><span class="be-aviso__ico" aria-hidden="true">✓</span><p class="be-aviso__txt">${idsMkt.length ? `Esta oferta solo se mostrará en ${idsMkt.length} mercado${idsMkt.length > 1 ? "s" : ""} seleccionado${idsMkt.length > 1 ? "s" : ""}.` : "Elegí al menos un mercado (o dejala en todos)."}</p></div>`;
+      : `<div class="be-aviso be-aviso--ok"><span class="be-aviso__ico" aria-hidden="true">${ico("check")}</span><p class="be-aviso__txt">${idsMkt.length ? `Esta oferta solo se mostrará en ${idsMkt.length} mercado${idsMkt.length > 1 ? "s" : ""} seleccionado${idsMkt.length > 1 ? "s" : ""}.` : "Elegí al menos un mercado (o dejala en todos)."}</p></div>`;
     const segmentar = `
       <div class="be-sub ${mktOn ? "" : "is-off"}">
         <div class="be-sub-master">
@@ -4384,7 +4402,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         <div class="bdl-oferta" data-oi="${i}">
           <div class="bdl-oferta__cab">
             <strong>Oferta ${i + 1}</strong>
-            ${b.ofertas.length > 1 ? `<button class="bdl-oferta__del" data-oferta-del="${i}" title="Quitar">✕</button>` : ""}
+            ${b.ofertas.length > 1 ? `<button class="bdl-oferta__del" data-oferta-del="${i}" title="Quitar" aria-label="Quitar">${ico("basura")}</button>` : ""}
           </div>
           <div class="bdl-grid2">
             ${campoBdl(`ofertas.${i}.cantidad`, "Cantidad", "numero", 'min="1"')}
@@ -4838,7 +4856,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       saveBar.hide();
       pintarEditorBundle();
     } catch (e) {
-      vista.insertAdjacentHTML("afterbegin", `<div class="error">✖ No se pudo descartar: ${esc(e.message)}</div>`);
+      vista.insertAdjacentHTML("afterbegin", `<div class="error">${ico("x","ico--banner")} No se pudo descartar: ${esc(e.message)}</div>`);
     }
   }
 
@@ -4849,14 +4867,14 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     try {
       estado.bundles.config = await api("/bundles", { method: "PUT", body: { config: estado.bundles.config } });
       estado.bundles.sucio = false;
-      if (b) { b.textContent = "✓ Guardado"; b.classList.remove("btn--acento"); b.classList.add("btn--fantasma"); }
+      if (b) { b.textContent = "Guardado"; b.classList.remove("btn--acento"); b.classList.add("btn--fantasma"); }
       saveBar.guardando(false);
       saveBar.hide();
       return true;
     } catch (e) {
       if (b) { b.disabled = false; b.textContent = "Guardar cambios"; }
       saveBar.guardando(false);
-      vista.insertAdjacentHTML("afterbegin", `<div class="error">✖ No se pudo guardar: ${esc(e.message)}</div>`);
+      vista.insertAdjacentHTML("afterbegin", `<div class="error">${ico("x","ico--banner")} No se pudo guardar: ${esc(e.message)}</div>`);
       return false;
     }
   }
@@ -4872,8 +4890,8 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       if (estado.bundles.config.activarUrl) window.open(estado.bundles.config.activarUrl, "_blank", "noopener");
       pintarDashboardBundles();
     } catch (e) {
-      if (b) { b.disabled = false; b.textContent = "Activá el widget →"; }
-      vista.insertAdjacentHTML("afterbegin", `<div class="error">✖ ${esc(e.message)}</div>`);
+      if (b) { b.disabled = false; b.textContent = "Activá el widget"; }
+      vista.insertAdjacentHTML("afterbegin", `<div class="error">${ico("x","ico--banner")} ${esc(e.message)}</div>`);
     }
   }
 
@@ -4932,7 +4950,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       estado.productos = await api("/productos");
       ir("lista");
     } catch (e) {
-      vista.innerHTML = `<div class="error">✖ No se pudo leer la tienda: ${esc(e.message)}</div>`;
+      vista.innerHTML = `<div class="error">${ico("x","ico--banner")} No se pudo leer la tienda: ${esc(e.message)}</div>`;
     }
   }
 
