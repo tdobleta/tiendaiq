@@ -27,6 +27,13 @@
   // --- elegir el bundle que aplica a este producto ---
   function aplica(bundle) {
     if (bundle.activo === false) return false;
+    // Segmentar por mercado: si está en "específicos", solo se muestra a compradores
+    // de los países elegidos (país del comprador desde localization.country).
+    var m = bundle.mercados;
+    if (m && m.on && m.modo === "especificos" && (m.ids || []).length) {
+      var pais = (window.TIENDAIQ_MERCADO || {}).pais;
+      if (!pais || m.ids.indexOf(pais) === -1) return false;
+    }
     var a = bundle.activador || { tipo: "todos" };
     if (a.tipo === "todos") return true;
     var idNum = Number(PROD.id);

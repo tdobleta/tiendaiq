@@ -3597,6 +3597,9 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       detalles: "Facturación y descuento flexibles", mostrar_label_desc: true, ocultar_terceros: false, ver: {}
     };
     if (b.diseno.sub && !b.diseno.sub.ver) b.diseno.sub.ver = {};
+    // Segmentar por mercado: mostrar el bundle solo en ciertos países (mercados).
+    // Se gatea por el país del comprador (localization.country) en el widget.
+    if (!b.mercados) b.mercados = { on: false, modo: "todos", ids: [] };
     // Bundles muy viejos podían no tener `diseno`: sin esto, escribir
     // "diseno.geometry.radius" desde el slider tira TypeError (fijar no crea rutas).
     if (!b.diseno) b.diseno = {};
@@ -3834,6 +3837,15 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   const IC_ESQUINA = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12V8a4 4 0 0 1 4-4h4"/><path d="M20 12v4a4 4 0 0 1-4 4h-4"/></svg>`;
   const IC_AIRE = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M8 7 4 12l4 5M16 7l4 5-4 5"/></svg>`;
   const IC_CAJA = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5zM3 8v8l9 5 9-5V8M12 13v8M7.5 5.25l9 5"/></svg>`;
+  const IC_GLOBO = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><path d="M2.5 12h19M12 2.5c2.6 2.6 4 5.9 4 9.5s-1.4 6.9-4 9.5c-2.6-2.6-4-5.9-4-9.5s1.4-6.9 4-9.5z"/></svg>`;
+  // Países ofrecidos para "Segmentar por mercado" (código ISO → nombre). El widget
+  // gatea por localization.country.iso_code del comprador.
+  const PAISES_BDL = [
+    ["AR", "Argentina"], ["BO", "Bolivia"], ["BR", "Brasil"], ["CL", "Chile"], ["CO", "Colombia"], ["CR", "Costa Rica"], ["CU", "Cuba"], ["DO", "República Dominicana"], ["EC", "Ecuador"], ["SV", "El Salvador"], ["GT", "Guatemala"], ["HN", "Honduras"], ["MX", "México"], ["NI", "Nicaragua"], ["PA", "Panamá"], ["PY", "Paraguay"], ["PE", "Perú"], ["PR", "Puerto Rico"], ["UY", "Uruguay"], ["VE", "Venezuela"],
+    ["US", "Estados Unidos"], ["CA", "Canadá"], ["ES", "España"], ["PT", "Portugal"], ["FR", "Francia"], ["IT", "Italia"], ["DE", "Alemania"], ["GB", "Reino Unido"], ["IE", "Irlanda"], ["NL", "Países Bajos"], ["BE", "Bélgica"], ["CH", "Suiza"], ["AT", "Austria"], ["SE", "Suecia"], ["NO", "Noruega"], ["DK", "Dinamarca"], ["FI", "Finlandia"], ["PL", "Polonia"],
+    ["AU", "Australia"], ["NZ", "Nueva Zelanda"], ["JP", "Japón"], ["CN", "China"], ["IN", "India"], ["ZA", "Sudáfrica"], ["AE", "Emiratos Árabes Unidos"]
+  ];
+  const NOMBRE_PAIS = (code) => (PAISES_BDL.find((p) => p[0] === code) || [code, code])[1];
 
   // Slider de geometría (Redondeo / Aire) — control continuo con valor a la
   // derecha, estilo Pumper. Escribe una ruta numérica del modelo (data-b).
@@ -4101,10 +4113,41 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         </div>
       </div>`;
 
+    // Sección "Segmentar por mercado": muestra el bundle solo en ciertos países.
+    const mkt = leer(b, "mercados") || {};
+    const mktOn = !!mkt.on;
+    const modoMkt = mkt.modo || "todos";
+    const idsMkt = mkt.ids || [];
+    const chipsMkt = idsMkt.map((code) => `<span class="be-mkt-chip">${esc(NOMBRE_PAIS(code))} <button type="button" data-mercado-del="${code}" aria-label="Quitar ${esc(NOMBRE_PAIS(code))}">×</button></span>`).join("");
+    const optsMkt = PAISES_BDL.filter(([code]) => idsMkt.indexOf(code) === -1).map(([code, nombre]) => `<button type="button" class="be-mkt-opt" data-mercado-add="${code}">${esc(nombre)}</button>`).join("");
+    const msgMkt = modoMkt === "todos"
+      ? `<div class="be-aviso be-aviso--info"><span class="be-aviso__ico" aria-hidden="true">ℹ</span><p class="be-aviso__txt">Esta oferta será visible y aplicable en todos los mercados.</p></div>`
+      : `<div class="be-aviso be-aviso--ok"><span class="be-aviso__ico" aria-hidden="true">✓</span><p class="be-aviso__txt">${idsMkt.length ? `Esta oferta solo se mostrará en ${idsMkt.length} mercado${idsMkt.length > 1 ? "s" : ""} seleccionado${idsMkt.length > 1 ? "s" : ""}.` : "Elegí al menos un mercado (o dejala en todos)."}</p></div>`;
+    const segmentar = `
+      <div class="be-sub ${mktOn ? "" : "is-off"}">
+        <div class="be-sub-master">
+          <span class="be-sub-master__t">Activar segmentación</span>
+          <button type="button" class="be-toggle ${mktOn ? "is-on" : ""}" data-toggle-b="mercados.on" role="switch" aria-checked="${mktOn}"><span></span></button>
+        </div>
+        <div class="be-sub__cuerpo">
+          <label class="be-mkt-radio" data-mercado-modo="todos"><input type="radio" ${modoMkt === "todos" ? "checked" : ""} tabindex="-1"> Todos los mercados</label>
+          <label class="be-mkt-radio" data-mercado-modo="especificos"><input type="radio" ${modoMkt === "especificos" ? "checked" : ""} tabindex="-1"> Mercados específicos</label>
+          ${modoMkt === "especificos" ? `
+            <div class="be-mkt-picker">
+              <input type="text" class="be-mkt-search" data-mercado-search placeholder="Buscar mercados">
+              <div class="be-mkt-drop">${optsMkt || '<div class="be-mkt-empty">No hay más mercados</div>'}</div>
+            </div>
+            ${chipsMkt ? `<div class="be-mkt-chips">${chipsMkt}</div>` : ""}
+          ` : ""}
+          ${msgMkt}
+        </div>
+      </div>`;
+
     return `<div class="be-secs-extra">
       ${bdlAcordeon("color", IC_PALETA, "Color y estilo", colorYEstilo + estiloTexto + textosYTipo, !!s.secOpen.color)}
       ${bdlAcordeon("avanzada", IC_ENGRANAJE, "Configuración avanzada", avanzada, !!s.secOpen.avanzada)}
       ${bdlAcordeon("sub", IC_CAJA, "Suscripción", suscripcion, !!s.secOpen.sub)}
+      ${bdlAcordeon("mercados", IC_GLOBO, "Segmentar por mercado", segmentar, !!s.secOpen.mercados)}
     </div>`;
   }
 
@@ -4124,6 +4167,12 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     }
 
     root.addEventListener("input", (e) => {
+      // Buscador de mercados: filtra el dropdown en vivo, sin re-render (mantiene foco).
+      if (e.target.dataset.mercadoSearch !== undefined) {
+        const q = e.target.value.toLowerCase();
+        root.querySelectorAll(".be-mkt-opt").forEach((o) => { o.style.display = o.textContent.toLowerCase().indexOf(q) === -1 ? "none" : ""; });
+        return;
+      }
       const ruta = e.target.dataset.b;
       if (!ruta) return;
       let v = e.target.type === "checkbox" ? e.target.checked : e.target.value;
@@ -4222,6 +4271,10 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         }
         return;
       }
+      // Segmentar por mercado: modo (radio), agregar/quitar país.
+      const mm = t.closest("[data-mercado-modo]"); if (mm) { fijar(b, "mercados.modo", mm.dataset.mercadoModo); marcarSucioBundles(); return pintarEditorBundle(); }
+      const ma = t.closest("[data-mercado-add]"); if (ma) { const ids = leer(b, "mercados.ids") || []; if (ids.indexOf(ma.dataset.mercadoAdd) === -1) ids.push(ma.dataset.mercadoAdd); fijar(b, "mercados.ids", ids); marcarSucioBundles(); return pintarEditorBundle(); }
+      const md = t.closest("[data-mercado-del]"); if (md) { const ids = (leer(b, "mercados.ids") || []).filter((x) => x !== md.dataset.mercadoDel); fijar(b, "mercados.ids", ids); marcarSucioBundles(); return pintarEditorBundle(); }
       const sec = t.closest("[data-sec]"); if (sec) { const k = sec.dataset.sec; if (k === "setup") s.setupOpen = !s.setupOpen; else { s.secOpen = s.secOpen || {}; s.secOpen[k] = !s.secOpen[k]; } return pintarEditorBundle(); }
       const ssec = t.closest("[data-subsec]"); if (ssec) { s.subOpen = s.subOpen || {}; const k = ssec.dataset.subsec; s.subOpen[k] = !s.subOpen[k]; return pintarEditorBundle(); }
       const tplBtn = t.closest("[data-tpl]"); if (tplBtn) { b.diseno = b.diseno || {}; b.diseno.layout = b.diseno.layout || {}; b.diseno.layout.template = tplBtn.dataset.tpl; marcarSucioBundles(); commitHist(b); pintarPreviewBundle(); return pintarEditorBundle(); }

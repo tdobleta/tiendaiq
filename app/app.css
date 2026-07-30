@@ -2063,6 +2063,26 @@ summary:focus-visible, label:focus-visible {
 .be-sub-master__t { font-size: 13.5px; font-weight: 600; color: var(--negro); }
 .be-sub__cuerpo { transition: opacity .18s ease; }
 .be-sub.is-off .be-sub__cuerpo { opacity: .45; pointer-events: none; user-select: none; }
+
+/* Aviso verde (confirmación). */
+.be-aviso--ok { color: #0f7d4d; background: #ecfdf3; border: 1px solid #c6f0d8; }
+.be-aviso--ok .be-aviso__ico { color: #12a05c; font-weight: 700; }
+
+/* ---- Segmentar por mercado ---- */
+.be-mkt-radio { display: flex; align-items: center; gap: 9px; font-size: 13.5px; color: var(--negro); cursor: pointer; padding: 6px 0; }
+.be-mkt-radio input { width: 17px; height: 17px; accent-color: #005bd3; cursor: pointer; }
+.be-mkt-picker { position: relative; margin: 8px 0; }
+.be-mkt-search { width: 100%; height: 40px; border: 1px solid #c9cccf; border-radius: 8px; padding: 0 12px; font-size: 14px; background: #fff; color: var(--negro); }
+.be-mkt-search:focus-visible { outline: 2px solid #005bd3; outline-offset: -1px; border-color: #005bd3; }
+.be-mkt-drop { display: none; position: absolute; z-index: 40; left: 0; right: 0; top: calc(100% + 4px); max-height: 220px; overflow-y: auto; background: #fff; border: 1px solid #e1e3e5; border-radius: 10px; box-shadow: 0 8px 24px -6px rgba(0,0,0,.18); padding: 4px; }
+.be-mkt-picker:focus-within .be-mkt-drop { display: block; }
+.be-mkt-opt { display: block; width: 100%; text-align: left; border: none; background: none; padding: 9px 10px; border-radius: 7px; cursor: pointer; font-size: 13.5px; color: var(--negro); }
+.be-mkt-opt:hover { background: color-mix(in srgb, var(--bdl-teal, #0d9488) 10%, #fff); color: var(--bdl-teal, #0d9488); }
+.be-mkt-empty { padding: 10px; color: var(--suave); font-size: 13px; text-align: center; }
+.be-mkt-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.be-mkt-chip { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; color: var(--negro); background: #eef0f3; border-radius: 999px; padding: 4px 6px 4px 11px; }
+.be-mkt-chip button { border: none; background: none; cursor: pointer; color: #6d7175; font-size: 15px; line-height: 1; padding: 0 2px; border-radius: 50%; }
+.be-mkt-chip button:hover { color: var(--negro); background: rgba(0, 0, 0, .06); }
 .perso-mid { position: relative; border: 2px solid #111; border-radius: 10px; padding: 12px 8px; display: flex; flex-direction: column; align-items: center; gap: 6px; background: #fff; min-width: 0; }
 .perso-mid__badge { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; padding: 3px 8px; border-radius: 4px; white-space: nowrap; }
 .perso-mid__dot { width: 14px; height: 14px; border: 2px solid #111; border-radius: 50%; }

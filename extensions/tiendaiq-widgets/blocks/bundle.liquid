@@ -38,6 +38,8 @@
         ] }{%- unless forloop.last -%},{%- endunless -%}
       {%- endfor -%}
     ];
+    // País del comprador (para "Segmentar por mercado"). ISO code, ej. "AR".
+    window.TIENDAIQ_MERCADO = { pais: {{ localization.country.iso_code | json }} };
     window.TIENDAIQ_BUNDLES_SRC =
       "https://tiendaiq.com/publico/bundles?shop={{ shop.permanent_domain }}";
   </script>

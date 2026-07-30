@@ -450,6 +450,7 @@ function armarSnippet(config, sesion, urlApp) {
       ] }{%- unless forloop.last -%},{%- endunless -%}
     {%- endfor -%}
   ];
+  window.TIENDAIQ_MERCADO = { pais: {{ localization.country.iso_code | json }} };
 </script>
 {{ 'tiendaiq-bundle.css' | asset_url | stylesheet_tag }}
 <script src="{{ 'tiendaiq-bundle.js' | asset_url }}" defer></script>
