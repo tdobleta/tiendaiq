@@ -455,7 +455,7 @@
 
     vista.innerHTML = `
       <div class="inicio-cabecera">
-        <h1><button class="volver-flecha" id="volver-inicio">←</button> Páginas de producto</h1>
+        <h1><button class="volver-flecha" id="volver-inicio"></button> Páginas de producto</h1>
         <div class="inicio-cabecera__acciones">
           <button class="btn btn--marca" id="ir-crear">✦ Crear página de producto con IA</button>
         </div>
@@ -786,7 +786,7 @@
 
     vista.innerHTML = `
       <div class="inicio-cabecera">
-        <h1><button class="volver-flecha" id="volver-inicio">←</button> Formulario contra reembolso</h1>
+        <h1><button class="volver-flecha" id="volver-inicio"></button> Formulario contra reembolso</h1>
         <div class="inicio-cabecera__acciones">
           <label class="cod-switch" title="Prende o apaga el formulario en tu tienda. Se guarda solo.">
             <input type="checkbox" id="cod-activo" ${c.activo ? "checked" : ""}>
@@ -1407,7 +1407,7 @@
     // Tienda sin productos: estado honesto, no una grilla vacía.
     if (!estado.productos.length) {
       vista.innerHTML = `
-        <button class="volver" id="volver-inicio">← Inicio</button>
+        <button class="volver-flecha" id="volver-inicio"></button>
         <div class="cabecera"><h1>Crear página de producto con IA</h1></div>
         <div class="vacio-panel">
           <div class="vacio-panel__tit">Todavía no tenés productos en tu tienda</div>
@@ -1419,7 +1419,7 @@
 
     vista.innerHTML = `
       <div class="crear">
-        <button class="volver" id="volver-inicio">← Inicio</button>
+        <button class="volver-flecha" id="volver-inicio"></button>
         <div class="crear__hero">
           <span class="crear__eyebrow">${IC_CHISPA} Generador con IA</span>
           <h1>Creá tu página de producto</h1>
@@ -1609,7 +1609,7 @@
     const p = estado.producto;
 
     vista.innerHTML = `
-      <button class="volver" id="volver">← Volver a los productos</button>
+      <button class="volver-flecha" id="volver"></button>
       <div class="cabecera">
         <h1>Información del producto</h1>
         <p>Revisá esto antes de generar. Cambiarlo después cuesta una regeneración.</p>
@@ -2870,9 +2870,11 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     const publicada = pg.estado === "publicada";
 
     vista.innerHTML = `
-      <button class="volver" id="volver">← ${
+      <button class="volver-flecha" id="volver" title="${
         estado.volverA === "paginas" ? "Volver a mis páginas" : "Volver a los productos"
-      }</button>
+      }" aria-label="${
+        estado.volverA === "paginas" ? "Volver a mis páginas" : "Volver a los productos"
+      }"></button>
 
       ${
         publicada && pg.url_publica
@@ -3321,7 +3323,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     vista.innerHTML = `
       <div class="bt" style="--bt-ac:${ac}">
         <div class="bt-cab">
-          <button class="volver-flecha" id="bt-volver">←</button>
+          <button class="volver-flecha" id="bt-volver"></button>
           <div><h1>Elegí el tema de bundle ganador</h1><p>Personalización completa justo después</p></div>
           <div class="bt-sws">${BT_COLORES.map((c) => `<button class="bt-sw ${c === ac ? "is-sel" : ""}" data-color="${c}" style="--sw:${c}" aria-label="Color ${c}"></button>`).join("")}</div>
         </div>
@@ -3443,7 +3445,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
 
     vista.innerHTML = `
       <div class="inicio-cabecera">
-        <h1><button class="volver-flecha" id="volver-inicio">←</button> Bundles, upsells y regalos</h1>
+        <h1><button class="volver-flecha" id="volver-inicio"></button> Bundles, upsells y regalos</h1>
         <div class="inicio-cabecera__acciones"><button class="btn btn--marca" id="bdl-nuevo">＋ Crear bundle</button></div>
       </div>
       ${widgetEstado}
@@ -3677,7 +3679,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
 
     vista.innerHTML = `
       <div class="be-top">
-        <button class="volver-flecha" id="bdl-volver">←</button>
+        <button class="volver-flecha" id="bdl-volver"></button>
         <h1>Crear un descuento por cantidad</h1>
         <div class="be-top__act">
           <button class="btn btn--fantasma" id="bdl-borrador">Guardar como borrador</button>
