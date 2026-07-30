@@ -13,3 +13,6 @@ shopify-factory/
 skills/
 tienda-iq/
 oauth.js
+
+# Logs de la herramienta Playwright MCP (no versionar)
+.playwright-mcp/

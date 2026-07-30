@@ -3,40 +3,37 @@
 //
 //   node publicar.js
 //
-// Hace las tres cosas del plan, en orden:
-//   1. Instala la plantilla en el tema (css + js + liquid + avatar)
-//   2. Escribe el Producto Universal en el metafield tiendaiq.pagina
-//   3. Asigna al producto el templateSuffix "tiendaiq"
+// Compliant con el App Store: NO escribe en el tema. Hace dos cosas:
+//   1. Escribe el Producto Universal en el metafield tiendaiq.pagina
+//      (el avatar de la reseña se sube a Files de la tienda y queda su URL)
+//   2. Asigna al producto el templateSuffix "tiendaiq"
 //      (el campo que en el admin se ve como "Plantilla de tema")
 //
-// Idempotente: correrlo de nuevo pisa los assets y el metafield.
+// El render (tiendaiq.js/css) y la lectura del metafield ya no viven en un
+// template escrito al tema, sino en el APP BLOCK del theme app extension
+// (extensions/tiendaiq-widgets/blocks/pagina.liquid). El merchant crea una
+// vez el template de producto "tiendaiq" con ese bloque; nosotros solo
+// apuntamos el producto ahí con templateSuffix (escritura de PRODUCTO, no de
+// tema → permitida sin exención).
+//
+// Idempotente: correrlo de nuevo pisa el metafield y reasigna el suffix.
 // ============================================================
 
 const fs = require("fs");
 const path = require("path");
 const { gql, sesionDeEnv } = require("./shopify");
+const { subirImagenTienda } = require("./imagenes");
 
 const RUTA_JSON = path.join(__dirname, "ultima-pagina.json");
 const DIR_PLANTILLA = path.join(__dirname, "plantilla-producto");
 const DIR_AVATARES = path.join(DIR_PLANTILLA, "avatares");
 
 // ---------- avatar ----------
-// El JSON trae una ruta local (avatares/xx.png). En la tienda el archivo vive
-// como asset del tema, así que: se sube con nombre saneado y el JSON publicado
-// guarda solo ese nombre. Si el archivo local ya no existe (p. ej. se borró),
-// se re-elige uno al azar de la carpeta.
+// El JSON trae una ruta local (avatares/xx.png). Se sube a Files de la tienda
+// y el JSON publicado guarda la URL del CDN (render.js la usa directo porque
+// empieza con http). Si el archivo local no existe, se re-elige uno al azar.
 
-function sanear(nombre) {
-  const ext = path.extname(nombre).toLowerCase();
-  const base = path
-    .basename(nombre, ext)
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-  return `tiendaiq-avatar-${base}${ext}`;
-}
+const MIME = { ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp" };
 
 function resolverAvatar(rutaEnJson) {
   let archivo = rutaEnJson ? path.join(DIR_PLANTILLA, rutaEnJson) : null;
@@ -52,24 +49,15 @@ function resolverAvatar(rutaEnJson) {
     archivo = path.join(DIR_AVATARES, candidatos[Math.floor(Math.random() * candidatos.length)]);
   }
 
+  const ext = path.extname(archivo).toLowerCase();
   return {
-    nombreAsset: sanear(path.basename(archivo)),
+    nombre: path.basename(archivo),
+    mime: MIME[ext] || "image/jpeg",
     base64: fs.readFileSync(archivo).toString("base64")
   };
 }
 
 // ---------- mutaciones ----------
-
-const Q_TEMA = `{
-  themes(first: 1, roles: [MAIN]) { nodes { id name } }
-}`;
-
-const M_ARCHIVOS = `mutation($themeId: ID!, $files: [OnlineStoreThemeFilesUpsertFileInput!]!) {
-  themeFilesUpsert(themeId: $themeId, files: $files) {
-    upsertedThemeFiles { filename }
-    userErrors { field message }
-  }
-}`;
 
 const M_METAFIELD = `mutation($metafields: [MetafieldsSetInput!]!) {
   metafieldsSet(metafields: $metafields) {
@@ -90,62 +78,36 @@ const M_SUFIJO = `mutation($product: ProductUpdateInput!) {
 async function publicarPagina(data, sesion, log = () => {}) {
   const idProducto = data.fuente.shopify_product_id;
 
-  // --- tema principal ---
-  const tema = (await gql(Q_TEMA, {}, sesion)).themes.nodes[0];
-  if (!tema) throw new Error("La tienda no tiene tema principal.");
-  log(`  tema       · ${tema.name}`);
-
-  // --- copia para la tienda: el avatar pasa a ser nombre de asset ---
+  // --- copia para la tienda: el avatar pasa a ser URL del CDN de Files ---
   const dataTienda = JSON.parse(JSON.stringify(data));
-  const avatar = resolverAvatar(data.facetas.hero.resena_destacada.avatar);
-  dataTienda.facetas.hero.resena_destacada.avatar = avatar ? avatar.nombreAsset : null;
-
-  // --- 1. archivos del tema ---
-  const archivos = [
-    {
-      filename: "assets/tiendaiq.css",
-      body: { type: "TEXT", value: fs.readFileSync(path.join(DIR_PLANTILLA, "styles.css"), "utf8") }
-    },
-    {
-      filename: "assets/tiendaiq.js",
-      body: { type: "TEXT", value: fs.readFileSync(path.join(DIR_PLANTILLA, "render.js"), "utf8") }
-    },
-    {
-      filename: "templates/product.tiendaiq.liquid",
-      body: { type: "TEXT", value: fs.readFileSync(path.join(__dirname, "tema", "product.tiendaiq.liquid"), "utf8") }
-    }
-  ];
-
-  const r1 = await gql(M_ARCHIVOS, { themeId: tema.id, files: archivos }, sesion);
-  if (r1.themeFilesUpsert.userErrors.length) {
-    throw new Error("Archivos del tema: " + JSON.stringify(r1.themeFilesUpsert.userErrors));
-  }
-  log(`  tema       · ${r1.themeFilesUpsert.upsertedThemeFiles.length} archivos instalados`);
-
-  // El avatar va en su propia llamada: si pesa demasiado para la API, la
-  // página se publica igual (cae a la silueta) en vez de frenar todo.
-  if (avatar) {
-    try {
-      const rA = await gql(
-        M_ARCHIVOS,
-        {
-          themeId: tema.id,
-          files: [{ filename: `assets/${avatar.nombreAsset}`, body: { type: "BASE64", value: avatar.base64 } }]
-        },
-        sesion
-      );
-      if (rA.themeFilesUpsert.userErrors.length) throw new Error(JSON.stringify(rA.themeFilesUpsert.userErrors));
-      log(`  avatar     · ${avatar.nombreAsset}`);
-    } catch (e) {
-      dataTienda.facetas.hero.resena_destacada.avatar = null;
-      log(`  avatar     · ⚠ no se pudo subir (${e.message.slice(0, 80)}) — la página sale con silueta`);
-    }
+  const avatarActual = data.facetas.hero.resena_destacada.avatar;
+  if (/^https?:\/\//.test(avatarActual || "")) {
+    // Re-publicación: el avatar ya está en Files de una vez anterior. Se reusa
+    // en vez de re-subirlo (evita acumular archivos huérfanos en la tienda).
+    dataTienda.facetas.hero.resena_destacada.avatar = avatarActual;
+    log(`  avatar     · reusado (ya en Files)`);
   } else {
-    log(`  avatar     · carpeta vacía — silueta`);
+    const avatar = resolverAvatar(avatarActual);
+    if (avatar) {
+      try {
+        const { url } = await subirImagenTienda(sesion, avatar.nombre, avatar.mime, avatar.base64);
+        dataTienda.facetas.hero.resena_destacada.avatar = url;
+        // Persistimos la URL en el data original: la próxima publicación la reusa
+        // (idempotencia — el server guarda este registro tras publicar).
+        data.facetas.hero.resena_destacada.avatar = url;
+        log(`  avatar     · subido a Files`);
+      } catch (e) {
+        dataTienda.facetas.hero.resena_destacada.avatar = null;
+        log(`  avatar     · ⚠ no se pudo subir (${e.message.slice(0, 80)}) — la página sale con silueta`);
+      }
+    } else {
+      dataTienda.facetas.hero.resena_destacada.avatar = null;
+      log(`  avatar     · carpeta vacía — silueta`);
+    }
   }
 
-  // --- 2. metafield con el Producto Universal ---
-  const r2 = await gql(
+  // --- 1. metafield con el Producto Universal ---
+  const r1 = await gql(
     M_METAFIELD,
     {
       metafields: [
@@ -160,24 +122,24 @@ async function publicarPagina(data, sesion, log = () => {}) {
     },
     sesion
   );
-  if (r2.metafieldsSet.userErrors.length) {
-    throw new Error("Metafield: " + JSON.stringify(r2.metafieldsSet.userErrors));
+  if (r1.metafieldsSet.userErrors.length) {
+    throw new Error("Metafield: " + JSON.stringify(r1.metafieldsSet.userErrors));
   }
   log(`  metafield  · tiendaiq.pagina escrito`);
 
-  // --- 3. templateSuffix ---
-  const r3 = await gql(
+  // --- 2. templateSuffix ---
+  const r2 = await gql(
     M_SUFIJO,
     { product: { id: idProducto, templateSuffix: "tiendaiq" } },
     sesion
   );
-  if (r3.productUpdate.userErrors.length) {
-    throw new Error("templateSuffix: " + JSON.stringify(r3.productUpdate.userErrors));
+  if (r2.productUpdate.userErrors.length) {
+    throw new Error("templateSuffix: " + JSON.stringify(r2.productUpdate.userErrors));
   }
-  const p = r3.productUpdate.product;
+  const p = r2.productUpdate.product;
   log(`  plantilla  · templateSuffix = "${p.templateSuffix}"`);
 
-  return { url: p.onlineStoreUrl || `https://${sesion.tienda}/products/${p.handle}`, tema: tema.name };
+  return { url: p.onlineStoreUrl || `https://${sesion.tienda}/products/${p.handle}` };
 }
 
 module.exports = { publicarPagina };

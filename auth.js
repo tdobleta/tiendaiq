@@ -25,7 +25,10 @@ const { guardarEstadoDB, consumirEstadoDB } = require("./db");
 // que Shopify hace cumplir en el checkout.
 // write_online_store_navigation: el menú principal (Inicio/Comprar/Nosotros/
 // Contacto) es contenido de tienda, compartido por todos los themes.
-const ALCANCES = "read_products,write_products,read_themes,write_themes,write_orders,read_files,write_files,read_content,write_content,write_discounts,write_online_store_navigation";
+// Sin read_themes/write_themes: la app NO toca el tema (todo es theme app
+// extension). La verificación de que la landing quedó viva se hace fetcheando
+// el storefront público, no leyendo el tema por API.
+const ALCANCES = "read_products,write_products,write_orders,read_files,write_files,read_content,write_content,write_discounts,write_online_store_navigation";
 
 // Comparación en tiempo constante: comparar firmas con === filtra el secreto
 // de a un carácter por vez.

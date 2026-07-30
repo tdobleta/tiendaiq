@@ -461,6 +461,8 @@
         </div>
       </div>
 
+      <div id="banner-pagina"></div>
+
       <div class="tarjeta">
         <div class="tarjeta__titulo">Páginas de producto</div>
         <div class="panel__sub">Administrá tus páginas de producto generadas por IA</div>
@@ -487,6 +489,25 @@
     vista.querySelectorAll("[data-editar]").forEach((b) => {
       b.onclick = () => abrirDesdeTabla(b.dataset.editar);
     });
+
+    // Banner persistente: ¿las páginas publicadas se ven DE VERDAD en la tienda?
+    // Chequeo asíncrono (no demora la lista). Si falta activar la plantilla, la
+    // landing cae al producto nativo en silencio — este es el único aviso.
+    if (paginas.some((p) => p.estado === "publicada")) {
+      api("/pagina-estado")
+        .then((e) => {
+          if (estado.pantalla !== "paginas" || !e || e.configurado !== false) return;
+          const cont = $("banner-pagina");
+          if (!cont) return;
+          cont.innerHTML = `
+            <div class="banner-tema">
+              <span class="banner-tema__ico">⚠</span>
+              <span class="banner-tema__txt">Tus páginas publicadas <strong>todavía no se ven en la tienda</strong>: falta activar la plantilla en tu tema (una sola vez).</span>
+              <a class="btn btn--chico" href="${esc(e.setupUrl)}" target="_blank" rel="noopener">Activar plantilla →</a>
+            </div>`;
+        })
+        .catch(() => {});
+    }
   }
 
   async function abrirDesdeTabla(id) {
@@ -2858,6 +2879,36 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
           ? `<div class="exito">
                <div class="exito__titulo">✅ Publicada en tu tienda</div>
                <a href="${esc(pg.url_publica)}" target="_blank">${esc(pg.url_publica)}</a>
+             </div>`
+          : ""
+      }
+
+      ${
+        publicada && pg.paginaViva === true
+          ? `<div class="verif-ok">✓ Confirmado: tu landing se está mostrando en la tienda.</div>`
+          : ""
+      }
+
+      ${
+        publicada && pg.paginaViva !== true && pg.setupPaginaUrl
+          ? `<div class="setup-pagina ${pg.paginaViva === false ? "setup-pagina--alerta" : ""}">
+               <div class="setup-pagina__cab">${
+                 pg.paginaViva === false
+                   ? "⚠ Tu landing todavía NO se ve en la tienda"
+                   : "🎨 Activá la plantilla en tu tema — una sola vez"
+               }</div>
+               <p class="setup-pagina__txt">${
+                 pg.paginaViva === false
+                   ? "La página se publicó, pero tu tema todavía muestra el producto nativo. Falta crear <strong>una vez</strong> la plantilla con el bloque de TiendaIQ:"
+                   : "Para que la landing se vea, tu tema necesita una plantilla de producto con el bloque de TiendaIQ. Se hace una vez y todas tus páginas la usan:"
+               }</p>
+               <ol class="setup-pagina__pasos">
+                 <li>Tocá <strong>Abrir editor de temas</strong>.</li>
+                 <li>En el selector de plantilla (arriba), elegí <strong>Crear plantilla</strong> → basada en <em>product</em> → escribí exactamente <strong>tiendaiq</strong> (minúscula, sin espacios).</li>
+                 <li>Dejá solo el bloque <strong>Apps → TiendaIQ Página</strong> y quitá las secciones nativas del producto.</li>
+                 <li>Guardá. Listo — no lo hacés nunca más.</li>
+               </ol>
+               <a class="btn btn--fantasma btn--chico" href="${esc(pg.setupPaginaUrl)}" target="_blank" rel="noopener">Abrir editor de temas →</a>
              </div>`
           : ""
       }

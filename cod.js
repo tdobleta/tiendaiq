@@ -14,14 +14,8 @@
 //                se recalcula acá con la Admin API.
 // ============================================================
 
-const fs = require("fs");
-const path = require("path");
 const { gql } = require("./shopify");
 const { leerTienda, guardarTienda } = require("./tiendas");
-
-// Único hogar de los assets del storefront (compartido con el theme app
-// extension, que es quien los publica en el CDN de Shopify).
-const DIR_WIDGETS = path.join(__dirname, "extensions", "tiendaiq-widgets", "assets");
 
 // ---------- config ----------
 
@@ -123,116 +117,6 @@ async function guardarConfigCod(tienda, config) {
   if (!t.token) throw new Error(`La tienda ${tienda} no está instalada`);
   await guardarTienda(tienda, t.token, { ...t, cod: config });
   return config;
-}
-
-// ---------- instalación en el tema ----------
-
-const Q_TEMA = `{ themes(first: 1, roles: [MAIN]) { nodes { id name } } }`;
-
-const Q_ARCHIVO = `query($id: ID!, $nombres: [String!]!) {
-  theme(id: $id) {
-    files(filenames: $nombres, first: 1) {
-      nodes { filename body { ... on OnlineStoreThemeFileBodyText { content } } }
-    }
-  }
-}`;
-
-const M_ARCHIVOS = `mutation($themeId: ID!, $files: [OnlineStoreThemeFilesUpsertFileInput!]!) {
-  themeFilesUpsert(themeId: $themeId, files: $files) {
-    upsertedThemeFiles { filename }
-    userErrors { field message }
-  }
-}`;
-
-// El snippet deja la config en window y carga los assets. Solo corre en
-// páginas de producto: el propio JS chequea la URL, pero evitar cargarlo en
-// todo el sitio es gratis desde Liquid.
-function armarSnippet(config, sesion, urlApp) {
-  const publica = { ...config };
-  delete publica.instalado;
-  const json = JSON.stringify({
-    ...publica,
-    tienda: sesion.tienda,
-    app_url: urlApp
-  }).replace(/</g, "\\u003c");
-
-  return `{%- comment -%} TiendaIQ COD — generado por la app, no editar a mano {%- endcomment -%}
-{%- if request.page_type == 'product' -%}
-<script>window.TIENDAIQ_COD = ${json};</script>
-{{ 'tiendaiq-cod.css' | asset_url | stylesheet_tag }}
-<script src="{{ 'tiendaiq-cod.js' | asset_url }}" defer></script>
-{%- endif -%}`;
-}
-
-const RENDER_TAG = "{% render 'tiendaiq-cod' %}";
-
-// Sube assets + snippet y engancha el render en layout/theme.liquid.
-// Idempotente: correrlo de nuevo pisa los archivos y no duplica el render.
-async function instalarCod(sesion, config, urlApp, log = () => {}) {
-  const tema = (await gql(Q_TEMA, {}, sesion)).themes.nodes[0];
-  if (!tema) throw new Error("La tienda no tiene tema principal.");
-  log(`  tema     · ${tema.name}`);
-
-  const archivos = [
-    {
-      filename: "assets/tiendaiq-cod.css",
-      body: { type: "TEXT", value: fs.readFileSync(path.join(DIR_WIDGETS, "tiendaiq-cod.css"), "utf8") }
-    },
-    {
-      filename: "assets/tiendaiq-cod.js",
-      body: { type: "TEXT", value: fs.readFileSync(path.join(DIR_WIDGETS, "tiendaiq-cod.js"), "utf8") }
-    },
-    {
-      filename: "snippets/tiendaiq-cod.liquid",
-      body: { type: "TEXT", value: armarSnippet(config, sesion, urlApp) }
-    }
-  ];
-  const r1 = await gql(M_ARCHIVOS, { themeId: tema.id, files: archivos }, sesion);
-  if (r1.themeFilesUpsert.userErrors.length) {
-    throw new Error("Archivos COD: " + JSON.stringify(r1.themeFilesUpsert.userErrors));
-  }
-  log(`  archivos · ${r1.themeFilesUpsert.upsertedThemeFiles.length} instalados`);
-
-  // --- enganchar el snippet en el layout ---
-  const rTema = await gql(Q_ARCHIVO, { id: tema.id, nombres: ["layout/theme.liquid"] }, sesion);
-  const layout = rTema.theme?.files?.nodes?.[0]?.body?.content;
-  if (!layout) throw new Error("No se pudo leer layout/theme.liquid del tema.");
-
-  if (!layout.includes("tiendaiq-cod")) {
-    if (!/<\/body>/i.test(layout)) throw new Error("El theme.liquid no tiene </body>: no sé dónde inyectar.");
-    const parchado = layout.replace(/<\/body>/i, `  ${RENDER_TAG}\n</body>`);
-    const r2 = await gql(
-      M_ARCHIVOS,
-      { themeId: tema.id, files: [{ filename: "layout/theme.liquid", body: { type: "TEXT", value: parchado } }] },
-      sesion
-    );
-    if (r2.themeFilesUpsert.userErrors.length) {
-      throw new Error("theme.liquid: " + JSON.stringify(r2.themeFilesUpsert.userErrors));
-    }
-    log(`  layout   · render agregado antes de </body>`);
-  } else {
-    log(`  layout   · ya estaba enganchado`);
-  }
-
-  return { tema: tema.name };
-}
-
-// Al guardar la config con el COD ya instalado, alcanza con re-subir el
-// snippet (la config viaja adentro). No hace falta tocar el layout.
-async function actualizarSnippet(sesion, config, urlApp) {
-  const tema = (await gql(Q_TEMA, {}, sesion)).themes.nodes[0];
-  if (!tema) throw new Error("La tienda no tiene tema principal.");
-  const r = await gql(
-    M_ARCHIVOS,
-    {
-      themeId: tema.id,
-      files: [{ filename: "snippets/tiendaiq-cod.liquid", body: { type: "TEXT", value: armarSnippet(config, sesion, urlApp) } }]
-    },
-    sesion
-  );
-  if (r.themeFilesUpsert.userErrors.length) {
-    throw new Error("Snippet COD: " + JSON.stringify(r.themeFilesUpsert.userErrors));
-  }
 }
 
 // ---------- creación del pedido ----------
@@ -387,4 +271,4 @@ async function crearPedidoCod(sesion, pedido) {
   return { orden: r.orderCreate.order.name, id: r.orderCreate.order.id };
 }
 
-module.exports = { configDefault, leerConfigCod, guardarConfigCod, instalarCod, actualizarSnippet, crearPedidoCod };
+module.exports = { configDefault, leerConfigCod, guardarConfigCod, crearPedidoCod };

@@ -28,14 +28,12 @@ const { sesionDe, borrarTienda, listarTiendas } = require("./tiendas");
 const { guardarPaginaDB, leerPaginaDB, listarPaginasDB } = require("./db");
 const { iniciarInstalacion, terminarInstalacion, tiendaDelPase } = require("./auth");
 const { estadoPlan, exigirCupo, contarUso, crearSuscripcion } = require("./facturacion");
-const { leerConfigCod, guardarConfigCod, instalarCod, actualizarSnippet, crearPedidoCod } = require("./cod");
+const { leerConfigCod, guardarConfigCod, crearPedidoCod } = require("./cod");
 const {
   leerConfigBundles,
   guardarConfigBundles,
   sincronizarDescuentos,
-  borrarDescuentos,
-  instalarBundles,
-  actualizarSnippet: actualizarSnippetBundle
+  borrarDescuentos
 } = require("./bundles");
 
 // Render (y cualquier host) fija el puerto por env; local usa 4321.
@@ -49,9 +47,10 @@ const DIR_PLANTILLA = path.join(__dirname, "plantilla-producto");
 // cambios"). Se calcula del mtime más reciente; si algo falla, cae al arranque.
 const VERSION_ASSETS = (() => {
   try {
+    const dirWidgets = path.join(__dirname, "extensions", "tiendaiq-widgets", "assets");
     const archivos = [
       path.join(DIR_APP, "app.js"), path.join(DIR_APP, "app.css"),
-      path.join(DIR_PLANTILLA, "render.js"), path.join(DIR_PLANTILLA, "styles.css")
+      path.join(dirWidgets, "tiendaiq.js"), path.join(dirWidgets, "tiendaiq.css")
     ];
     return Math.floor(Math.max(...archivos.map((a) => fs.statSync(a).mtimeMs))).toString(36);
   } catch {
@@ -79,6 +78,46 @@ async function guardarPagina(tienda, registro) {
 }
 const leerPagina = (tienda, id) => leerPaginaDB(tienda, id);
 const listarPaginas = (tienda) => listarPaginasDB(tienda);
+
+// ---------- activación en el tema (deep links; la app NO escribe el tema) ----------
+
+const CLIENT_ID = env.SHOPIFY_CLIENT_ID || "";
+
+// Abre el editor de temas en el template de producto para que el merchant cree
+// una vez la plantilla "tiendaiq" y le agregue el app block.
+const linkEditorPagina = (tienda) =>
+  `https://${tienda}/admin/themes/current/editor?template=product`;
+
+// Preactiva un app embed (COD/Bundles) en el editor: además de abrir el panel
+// de "Incrustaciones de apps", deja el toggle del bloque listo para prender.
+const linkActivarEmbed = (tienda, handle) =>
+  `https://${tienda}/admin/themes/current/editor?context=apps&activateAppId=${CLIENT_ID}/${handle}`;
+
+// ¿La landing de producto se ve DE VERDAD en la tienda? En vez de leer el tema
+// (scope que Shopify no otorga), fetcheamos el HTML público del producto y
+// buscamos el marcador del app block. Devuelve:
+//   true  → la landing se está pintando (plantilla activa)
+//   false → cae al producto nativo (el merchant no creó/activó la plantilla)
+//   null  → no se pudo verificar (timeout, tienda con contraseña, sin URL)
+const cacheViva = new Map(); // url -> { t, v }
+async function verificarUrlViva(url) {
+  if (!url) return null;
+  const c = cacheViva.get(url);
+  if (c && Date.now() - c.t < 60 * 1000) return c.v;
+  let v = null;
+  try {
+    const señal = typeof AbortSignal !== "undefined" && AbortSignal.timeout ? AbortSignal.timeout(6000) : undefined;
+    const r = await fetch(url, { redirect: "follow", signal: señal });
+    if (r.ok) {
+      const html = await r.text();
+      v = html.includes("TIENDAIQ_DATA");
+    }
+  } catch {
+    v = null;
+  }
+  cacheViva.set(url, { t: Date.now(), v });
+  return v;
+}
 
 // ---------- helpers HTTP ----------
 
@@ -321,6 +360,22 @@ async function api(req, res, url) {
     );
   }
 
+  // GET /api/pagina-estado — ¿las páginas publicadas se ven en la tienda?
+  // Verifica la última publicada fetcheando su HTML público (sin tocar el tema).
+  // Alimenta el banner persistente que avisa si falta activar la plantilla.
+  if (req.method === "GET" && ruta === "/api/pagina-estado") {
+    const ps = await listarPaginas(sesion.tienda);
+    const pub = ps
+      .filter((p) => p.estado === "publicada" && p.url_publica)
+      .sort((a, b) => (b.actualizado || "").localeCompare(a.actualizado || ""))[0];
+    return json(res, 200, {
+      hayPublicadas: !!pub,
+      configurado: pub ? await verificarUrlViva(pub.url_publica) : null,
+      ejemploUrl: pub?.url_publica || null,
+      setupUrl: linkEditorPagina(sesion.tienda)
+    });
+  }
+
   // GET /api/paginas/:id
   const mGet = ruta.match(/^\/api\/paginas\/([^/]+)$/);
   if (req.method === "GET" && mGet) {
@@ -361,7 +416,7 @@ async function api(req, res, url) {
     const config = await leerConfigCod(sesion.tienda);
     config.instalado = { fecha: new Date().toISOString() };
     await guardarConfigCod(sesion.tienda, config);
-    config.activarUrl = `https://${sesion.tienda}/admin/themes/current/editor?context=apps`;
+    config.activarUrl = linkActivarEmbed(sesion.tienda, "cod");
     return json(res, 200, config);
   }
 
@@ -421,7 +476,7 @@ async function api(req, res, url) {
     const config = await leerConfigBundles(sesion.tienda);
     config.instalado = { fecha: new Date().toISOString() };
     await guardarConfigBundles(sesion.tienda, config);
-    config.activarUrl = `https://${sesion.tienda}/admin/themes/current/editor?context=apps`;
+    config.activarUrl = linkActivarEmbed(sesion.tienda, "bundle");
     return json(res, 200, config);
   }
 
@@ -535,6 +590,11 @@ async function api(req, res, url) {
     registro.estado = "publicada";
     registro.url_publica = url;
     await guardarPagina(sesion.tienda, registro);
+    // Verificamos si la landing se ve DE VERDAD (o si cae al producto nativo
+    // porque falta la plantilla) + deep link al editor. No se persiste: es para
+    // la pantalla de éxito. La app NO escribe el tema, solo lo mira desde afuera.
+    registro.paginaViva = await verificarUrlViva(url);
+    registro.setupPaginaUrl = linkEditorPagina(sesion.tienda);
     return json(res, 200, registro);
   }
 
@@ -693,12 +753,12 @@ const servidor = http.createServer(async (req, res) => {
 
     if (url.pathname.startsWith("/preview")) {
       const rel = url.pathname.replace(/^\/preview\/?/, "") || "index.html";
-      // El index del preview referencia render.js/styles.css con ?v=…: le
+      // El index del preview referencia tiendaiq.css/js con ?v=…: le
       // inyectamos la versión viva para que tras un deploy baje lo nuevo.
       if (rel === "index.html") {
         const html = fs
           .readFileSync(path.join(DIR_PLANTILLA, "index.html"), "utf8")
-          .replace(/(styles\.css|render\.js)\?v=[\w.]+/g, `$1?v=${VERSION_ASSETS}`);
+          .replace(/(tiendaiq\.css|tiendaiq\.js)\?v=[\w.]+/g, `$1?v=${VERSION_ASSETS}`);
         res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" });
         return res.end(html);
       }

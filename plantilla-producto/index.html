@@ -4,11 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Plantilla de página de producto</title>
-  <link rel="stylesheet" href="styles.css?v=7">
+  <!-- El render y los estilos viven en el theme app extension (hogar único).
+       El server los sirve en /widgets/; data.js queda local (datos de prueba). -->
+  <link rel="stylesheet" href="/widgets/tiendaiq.css?v=7">
 </head>
 <body>
   <div id="app"></div>
   <script src="data.js?v=7"></script>
-  <script src="render.js?v=7"></script>
+  <script src="/widgets/tiendaiq.js?v=7"></script>
 </body>
 </html>

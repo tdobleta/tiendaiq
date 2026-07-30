@@ -24,14 +24,8 @@
 // "bxgy" (compra X y obtené Y) y el peldaño de regalos, que van en v2.
 // ============================================================
 
-const fs = require("fs");
-const path = require("path");
 const { gql } = require("./shopify");
 const { leerTienda, guardarTienda } = require("./tiendas");
-
-// Único hogar de los assets del storefront (compartido con el theme app
-// extension, que es quien los publica en el CDN de Shopify).
-const DIR_WIDGETS = path.join(__dirname, "extensions", "tiendaiq-widgets", "assets");
 
 // ---------- config ----------
 
@@ -393,141 +387,6 @@ async function metricasBundles(sesion, dias = 30) {
   };
 }
 
-// ---------- instalación en el tema ----------
-
-const Q_TEMA = `{ themes(first: 1, roles: [MAIN]) { nodes { id name } } }`;
-
-const Q_ARCHIVO = `query($id: ID!, $nombres: [String!]!) {
-  theme(id: $id) {
-    files(filenames: $nombres, first: 1) {
-      nodes { filename body { ... on OnlineStoreThemeFileBodyText { content } } }
-    }
-  }
-}`;
-
-const M_ARCHIVOS = `mutation($themeId: ID!, $files: [OnlineStoreThemeFilesUpsertFileInput!]!) {
-  themeFilesUpsert(themeId: $themeId, files: $files) {
-    upsertedThemeFiles { filename }
-    userErrors { field message }
-  }
-}`;
-
-// El snippet deja la config del widget en window y —clave— pasa el id y las
-// colecciones del producto actual desde Liquid, para que el JS decida si este
-// producto tiene un bundle sin llamar al server. Solo corre en producto.
-function armarSnippet(config, sesion, urlApp) {
-  // Antes horneábamos la config completa en el snippet (window.TIENDAIQ_BUNDLES).
-  // Problema: quedaba CONGELADA hasta re-publicar, así que guardar en la app no
-  // se reflejaba en la tienda (ni layout ni imagen). Ahora dejamos solo la URL
-  // (_SRC) y el widget trae la config EN VIVO de /publico/bundles —igual que el
-  // app embed—: guardás y se ve al toque, sin re-inyectar. El producto sí va
-  // horneado porque son datos de Liquid que no se pueden traer por fetch.
-  const src = `${urlApp}/publico/bundles?shop=${sesion.tienda}`;
-
-  return `{%- comment -%} TiendaIQ Bundles — generado por la app, no editar a mano {%- endcomment -%}
-{%- if request.page_type == 'product' -%}
-<script>
-  window.TIENDAIQ_BUNDLES_SRC = ${JSON.stringify(src)};
-  window.TIENDAIQ_PRODUCTO = {
-    id: {{ product.id | json }},
-    variante: {{ product.selected_or_first_available_variant.id | json }},
-    colecciones: {{ product.collections | map: 'id' | json }},
-    precio: {{ product.selected_or_first_available_variant.price | json }},
-    moneda: {{ shop.money_format | json }}
-  };
-  window.TIENDAIQ_VARIANTES = {
-    {%- for v in product.variants -%}
-      {{ v.id | json }}: { precio: {{ v.price | json }}, compare: {{ v.compare_at_price | json }}, stock: {{ v.available | json }} }{%- unless forloop.last -%},{%- endunless -%}
-    {%- endfor -%}
-  };
-  window.TIENDAIQ_CLIENTE = { b2b: {% if customer.b2b? %}true{% else %}false{% endif %} };
-  window.TIENDAIQ_SELLING_PLANS = [
-    {%- for g in product.selling_plan_groups -%}
-      { id: {{ g.id | json }}, nombre: {{ g.name | json }}, plans: [
-        {%- for p in g.selling_plans -%}
-          { id: {{ p.id | json }}, name: {{ p.name | json }}, adj: {%- if p.price_adjustments.size > 0 -%}{{ p.price_adjustments.first.value | json }}{%- else -%}null{%- endif -%}, adjType: {%- if p.price_adjustments.size > 0 -%}{{ p.price_adjustments.first.value_type | json }}{%- else -%}null{%- endif -%} }{%- unless forloop.last -%},{%- endunless -%}
-        {%- endfor -%}
-      ] }{%- unless forloop.last -%},{%- endunless -%}
-    {%- endfor -%}
-  ];
-  window.TIENDAIQ_MERCADO = { pais: {{ localization.country.iso_code | json }} };
-</script>
-{{ 'tiendaiq-bundle.css' | asset_url | stylesheet_tag }}
-<script src="{{ 'tiendaiq-bundle.js' | asset_url }}" defer></script>
-{%- endif -%}`;
-}
-
-const RENDER_TAG = "{% render 'tiendaiq-bundle' %}";
-
-// Sube assets + snippet y engancha el render en layout/theme.liquid.
-// Idempotente: correrlo de nuevo pisa los archivos y no duplica el render.
-async function instalarBundles(sesion, config, urlApp, log = () => {}) {
-  const tema = (await gql(Q_TEMA, {}, sesion)).themes.nodes[0];
-  if (!tema) throw new Error("La tienda no tiene tema principal.");
-  log(`  tema     · ${tema.name}`);
-
-  const archivos = [
-    {
-      filename: "assets/tiendaiq-bundle.css",
-      body: { type: "TEXT", value: fs.readFileSync(path.join(DIR_WIDGETS, "tiendaiq-bundle.css"), "utf8") }
-    },
-    {
-      filename: "assets/tiendaiq-bundle.js",
-      body: { type: "TEXT", value: fs.readFileSync(path.join(DIR_WIDGETS, "tiendaiq-bundle.js"), "utf8") }
-    },
-    {
-      filename: "snippets/tiendaiq-bundle.liquid",
-      body: { type: "TEXT", value: armarSnippet(config, sesion, urlApp) }
-    }
-  ];
-  const r1 = await gql(M_ARCHIVOS, { themeId: tema.id, files: archivos }, sesion);
-  if (r1.themeFilesUpsert.userErrors.length) {
-    throw new Error("Archivos Bundle: " + JSON.stringify(r1.themeFilesUpsert.userErrors));
-  }
-  log(`  archivos · ${r1.themeFilesUpsert.upsertedThemeFiles.length} instalados`);
-
-  // --- enganchar el snippet en el layout ---
-  const rTema = await gql(Q_ARCHIVO, { id: tema.id, nombres: ["layout/theme.liquid"] }, sesion);
-  const layout = rTema.theme?.files?.nodes?.[0]?.body?.content;
-  if (!layout) throw new Error("No se pudo leer layout/theme.liquid del tema.");
-
-  if (!layout.includes("tiendaiq-bundle")) {
-    if (!/<\/body>/i.test(layout)) throw new Error("El theme.liquid no tiene </body>: no sé dónde inyectar.");
-    const parchado = layout.replace(/<\/body>/i, `  ${RENDER_TAG}\n</body>`);
-    const r2 = await gql(
-      M_ARCHIVOS,
-      { themeId: tema.id, files: [{ filename: "layout/theme.liquid", body: { type: "TEXT", value: parchado } }] },
-      sesion
-    );
-    if (r2.themeFilesUpsert.userErrors.length) {
-      throw new Error("theme.liquid: " + JSON.stringify(r2.themeFilesUpsert.userErrors));
-    }
-    log(`  layout   · render agregado antes de </body>`);
-  } else {
-    log(`  layout   · ya estaba enganchado`);
-  }
-
-  return { tema: tema.name };
-}
-
-// Al guardar la config con los bundles ya instalados, alcanza con re-subir el
-// snippet (la config viaja adentro). No hace falta tocar el layout.
-async function actualizarSnippet(sesion, config, urlApp) {
-  const tema = (await gql(Q_TEMA, {}, sesion)).themes.nodes[0];
-  if (!tema) throw new Error("La tienda no tiene tema principal.");
-  const r = await gql(
-    M_ARCHIVOS,
-    {
-      themeId: tema.id,
-      files: [{ filename: "snippets/tiendaiq-bundle.liquid", body: { type: "TEXT", value: armarSnippet(config, sesion, urlApp) } }]
-    },
-    sesion
-  );
-  if (r.themeFilesUpsert.userErrors.length) {
-    throw new Error("Snippet Bundle: " + JSON.stringify(r.themeFilesUpsert.userErrors));
-  }
-}
-
 module.exports = {
   bundleDefault,
   configDefault,
@@ -535,7 +394,5 @@ module.exports = {
   guardarConfigBundles,
   sincronizarDescuentos,
   borrarDescuentos,
-  metricasBundles,
-  instalarBundles,
-  actualizarSnippet
+  metricasBundles
 };

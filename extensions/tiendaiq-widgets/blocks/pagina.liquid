@@ -1,0 +1,52 @@
+{% comment %}
+  TiendaIQ — Página de producto (app block).
+
+  Reemplaza a la vieja plantilla templates/product.tiendaiq.liquid, que se
+  escribía DIRECTO en el tema (themeFilesUpsert) — método que el App Store
+  rechaza. Ahora vive en el theme app extension: cero escritura al tema.
+
+  No arma HTML: vuelca el Producto Universal (metafield tiendaiq.pagina) en
+  window.TIENDAIQ_* y deja que tiendaiq.js — el mismo render del preview —
+  pinte la página. Los assets salen del CDN de la extensión, no del tema.
+
+  Uso: el merchant crea UNA VEZ un template de producto "tiendaiq" en el editor
+  de temas y le agrega este bloque (deep link en el onboarding). La app asigna
+  templateSuffix="tiendaiq" por producto vía productUpdate (sin tocar el tema).
+{% endcomment %}
+{%- if product -%}
+  {{ 'tiendaiq.css' | asset_url | stylesheet_tag }}
+  <script>
+    window.TIENDAIQ_DATA = {{ product.metafields.tiendaiq.pagina.value | json }};
+    window.TIENDAIQ_VARIANT = {{ product.selected_or_first_available_variant.id | json }};
+    window.TIENDAIQ_PRODUCT_ID = {{ product.id | json }};
+    {% comment %} Base de assets de la extensión: solo se usa si algún avatar
+       quedó como nombre de archivo suelto (páginas viejas). Las páginas nuevas
+       guardan la URL completa del CDN (Files) en el metafield y render.js la
+       usa directo. {% endcomment %}
+    window.TIENDAIQ_ASSET_BASE = {{ 'tiendaiq.js' | asset_url | json }}.replace(/[^/]*$/, '');
+    {% comment %} Mapa media_id → url, con las fotos vivas del producto.
+       La clave replica el gid de la Admin API para que el pool matchee. {% endcomment %}
+    window.TIENDAIQ_URLS = {
+      {%- for media in product.media -%}
+        {%- if media.media_type == 'image' -%}
+          "gid://shopify/MediaImage/{{ media.id }}": {{ media.preview_image | image_url: width: 1400 | json }},
+        {%- endif -%}
+      {%- endfor -%}
+    };
+  </script>
+
+  <div id="app"></div>
+
+  <script src="{{ 'tiendaiq.js' | asset_url }}" defer></script>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "TiendaIQ Página",
+  "target": "section",
+  "enabled_on": {
+    "templates": ["product"]
+  },
+  "settings": []
+}
+{% endschema %}

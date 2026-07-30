@@ -21,7 +21,7 @@ name = "TiendaIQ: Páginas con IA"
 # `...9897` (un 8 en vez del 0) en Render y acá. El valor `91ac2b61…` que estuvo
 # antes era de una app vieja/equivocada. Verificado por diagnóstico: la tienda
 # manda aud=...9097 y firmaOk=true (el secreto siempre estuvo bien).
-handle = "tiendaiq-3"
+handle = "tiendaiq-app"
 
 # El dominio propio. Ver pruebas/coherencia.js: los dos app embeds tienen que
 # apuntar acá, y el chequeo falla si alguno se queda atrás.
@@ -69,13 +69,12 @@ api_version = "2026-07"
 # App Store mira lo declarado, así que se alinean.
 #
 #   read/write_products   páginas de producto con IA
-#   read/write_themes     inyección del formulario COD y del widget de bundles
 #   write_orders          crea el pedido real contra reembolso
 #   read/write_files      imágenes que sube el merchant (Files API)
 #   read/write_content    páginas About/Contact del módulo de contenido
 #   write_discounts       descuentos automáticos de los bundles
 #   write_online_store_navigation   menú principal en español
-scopes = "read_products,write_products,read_themes,write_themes,write_orders,read_files,write_files,read_content,write_content,write_discounts,write_online_store_navigation"
+scopes = "read_products,write_products,write_orders,read_files,write_files,read_content,write_content,write_discounts,write_online_store_navigation"
 
 # ⚠ EN true A PROPÓSITO, POR AHORA.
 #
