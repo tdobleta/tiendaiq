@@ -816,9 +816,9 @@
 
       ${
         !c.activo
-          ? `<div class="cod-banner cod-banner--aviso">${ico("aviso")} El formulario está <strong>apagado</strong>: prendé el interruptor de arriba. Además, para que aparezca en la tienda tenés que <strong>activar el widget</strong> en tu tema (una sola vez).
+          ? `<div class="cod-banner cod-banner--aviso"><span class="cod-banner__cuerpo">${ico("aviso")} El formulario está <strong>apagado</strong>: prendé el interruptor de arriba. Además, para que aparezca en la tienda tenés que <strong>activar el widget</strong> en tu tema (una sola vez).</span>
                <button class="btn btn--fantasma btn--chico" id="cod-instalar">Activá el formulario</button></div>`
-          : `<div class="cod-banner cod-banner--ok">${ico("checkCirculo")} Formulario activo. Para que aparezca en la tienda, activá el widget en tu tema <strong>una sola vez</strong>.
+          : `<div class="cod-banner cod-banner--ok"><span class="cod-banner__cuerpo">${ico("checkCirculo")} Formulario activo. Para que aparezca en la tienda, activá el widget en tu tema <strong>una sola vez</strong>.</span>
                <button class="btn btn--fantasma btn--chico" id="cod-instalar">Activá el formulario</button></div>`
       }
 

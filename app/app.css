@@ -1264,6 +1264,8 @@ ui-save-bar { display: none; }
   font-size: 13.5px;
   margin-bottom: 18px;
 }
+.cod-banner__cuerpo { flex: 1; }
+.cod-banner__cuerpo .ico { vertical-align: -3px; margin-right: 4px; }
 .cod-banner .btn { margin-left: auto; flex: 0 0 auto; }
 .cod-banner--ok { background: var(--ok-fondo); color: var(--ok); }
 .cod-banner--ok strong { color: inherit; }
