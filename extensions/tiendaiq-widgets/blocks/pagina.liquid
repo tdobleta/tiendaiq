@@ -13,7 +13,13 @@
   de temas y le agrega este bloque (deep link en el onboarding). La app asigna
   templateSuffix="tiendaiq" por producto vía productUpdate (sin tocar el tema).
 {% endcomment %}
-{%- if product -%}
+{%- comment -%}
+  Solo tomamos la página si el producto TIENE datos publicados (metafield). Sin
+  esto, un producto con el template "tiendaiq" pero sin página publicada quedaría
+  en blanco y no-comprable. Además el marcador TIENDAIQ_DATA solo sale con datos,
+  así verificarUrlViva (server) no da falso positivo.
+{%- endcomment -%}
+{%- if product and product.metafields.tiendaiq.pagina.value -%}
   {{ 'tiendaiq.css' | asset_url | stylesheet_tag }}
   <script>
     window.TIENDAIQ_DATA = {{ product.metafields.tiendaiq.pagina.value | json }};

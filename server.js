@@ -108,7 +108,10 @@ async function verificarUrlViva(url) {
   try {
     const señal = typeof AbortSignal !== "undefined" && AbortSignal.timeout ? AbortSignal.timeout(6000) : undefined;
     const r = await fetch(url, { redirect: "follow", signal: señal });
-    if (r.ok) {
+    // Tienda con contraseña: la storefront redirige a /password (200) sin el
+    // marcador. Eso NO es "no se ve" — es "no verificable" (null), no false.
+    const esPassword = /\/password(\/|\?|$)/.test(r.url || "");
+    if (r.ok && !esPassword) {
       const html = await r.text();
       v = html.includes("TIENDAIQ_DATA");
     }
@@ -612,7 +615,14 @@ function pasaRateLimit(clave) {
   if (marcas.length >= 10) return false;
   marcas.push(ahora);
   ventanaCod.set(clave, marcas);
-  if (ventanaCod.size > 5000) ventanaCod.clear(); // que no crezca infinito
+  // No crecer infinito: poda SOLO los vencidos (clear() total lo podría disparar
+  // un atacante rotando IPs para resetear el contador de todos).
+  if (ventanaCod.size > 5000) {
+    for (const [k, ts] of ventanaCod) {
+      const vivas = ts.filter((t) => ahora - t < 10 * 60 * 1000);
+      if (vivas.length) ventanaCod.set(k, vivas); else ventanaCod.delete(k);
+    }
+  }
   return true;
 }
 
@@ -644,8 +654,10 @@ async function pedidoCod(req, res) {
     console.log(`  🛵 pedido COD ${orden} · ${sesion.tienda}`);
     return responder(200, { ok: true, orden });
   } catch (e) {
+    // El detalle va al log; al cliente (endpoint público) solo un mensaje genérico
+    // — no filtramos internals (App Store 2.1: sin errores crudos visibles).
     console.error("✖ pedido COD:", e.message);
-    return responder(400, { ok: false, error: e.message });
+    return responder(400, { ok: false, error: "No pudimos registrar tu pedido. Probá de nuevo en un momento." });
   }
 }
 
