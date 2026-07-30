@@ -441,6 +441,15 @@ function armarSnippet(config, sesion, urlApp) {
     {%- endfor -%}
   };
   window.TIENDAIQ_CLIENTE = { b2b: {% if customer.b2b? %}true{% else %}false{% endif %} };
+  window.TIENDAIQ_SELLING_PLANS = [
+    {%- for g in product.selling_plan_groups -%}
+      { id: {{ g.id | json }}, nombre: {{ g.name | json }}, plans: [
+        {%- for p in g.selling_plans -%}
+          { id: {{ p.id | json }}, name: {{ p.name | json }}, adj: {%- if p.price_adjustments.size > 0 -%}{{ p.price_adjustments.first.value | json }}{%- else -%}null{%- endif -%}, adjType: {%- if p.price_adjustments.size > 0 -%}{{ p.price_adjustments.first.value_type | json }}{%- else -%}null{%- endif -%} }{%- unless forloop.last -%},{%- endunless -%}
+        {%- endfor -%}
+      ] }{%- unless forloop.last -%},{%- endunless -%}
+    {%- endfor -%}
+  ];
 </script>
 {{ 'tiendaiq-bundle.css' | asset_url | stylesheet_tag }}
 <script src="{{ 'tiendaiq-bundle.js' | asset_url }}" defer></script>

@@ -113,6 +113,27 @@
   var seleccion = 0;
   (bundle.ofertas || []).forEach(function (o, i) { if (o.predeterminada) seleccion = i; });
 
+  // --- Suscripción (F3/F4). Solo real si el producto tiene selling plans de una
+  // app de terceros; si no, no se ofrece la opción Subscribe. ---
+  var SUB = D.sub || {};
+  var SP = window.TIENDAIQ_SELLING_PLANS || [];
+  var haySub = !!SUB.on && SP.length > 0 && !esBxgy;
+  var modoSub = false; // false = compra única · true = suscripción
+  function planActual() {
+    for (var i = 0; i < SP.length; i++) { var pl = SP[i].plans || []; if (pl.length) return pl[0]; }
+    return null;
+  }
+  // Precio con el ajuste del selling plan (sale de la app de terceros, no lo
+  // calculamos nosotros). total en centavos.
+  function precioSub(total) {
+    var p = planActual(); if (!p || p.adj == null) return total;
+    var adj = Number(p.adj) || 0;
+    if (p.adjType === "percentage") return Math.round(total * (1 - adj / 100));
+    if (p.adjType === "fixed_amount") return Math.max(0, total - Math.round(adj * 100));
+    if (p.adjType === "price") return Math.round(adj * 100);
+    return total;
+  }
+
   var raiz = document.createElement("div");
   raiz.className = "tiq-bdl" + ((D.layout && D.layout.template === "horizontal") ? " tiq-bdl--horizontal" : "");
   raiz.style.setProperty("--tiq-borde", D.color_borde || "#111");
@@ -239,6 +260,32 @@
     return h ? '<div class="tiq-bdl__addons">' + h + "</div>" : "";
   }
 
+  // Opciones de compra (One-Time / Subscribe & Save). Solo si haySub. El precio de
+  // Subscribe sale del ajuste del selling plan. total = total del nivel elegido.
+  function buyoptsHTML(total) {
+    if (!haySub) return "";
+    var ver = SUB.ver || {};
+    var subT = precioSub(total);
+    var pctS = total > 0 ? Math.round((total - subT) / total * 100) : 0;
+    var pill = (SUB.mostrar_label_desc && pctS > 0) ? ' <span class="tiq-bdl__etq">-' + pctS + "%</span>" : "";
+    var head = (ver.encabezado !== false && SUB.encabezado) ? '<div class="tiq-bdl__buyhead">' + esc(SUB.encabezado) + "</div>" : "";
+    function opt(esSub, titulo, color, subt, verKey, precio, pillHTML) {
+      return '<label class="tiq-bdl__buyopt' + (modoSub === esSub ? " is-sel" : "") + '" data-sub="' + (esSub ? 1 : 0) + '" role="radio" aria-checked="' + (modoSub === esSub) + '" tabindex="0">' +
+        '<span class="tiq-bdl__radio" aria-hidden="true"></span>' +
+        '<span class="tiq-bdl__buyopt-main">' +
+          '<span class="tiq-bdl__buyopt-t"' + (color ? ' style="color:' + esc(color) + '"' : "") + ">" + esc(titulo) + (pillHTML || "") + "</span>" +
+          (ver[verKey] !== false && subt ? '<span class="tiq-bdl__buyopt-s">' + esc(subt) + "</span>" : "") +
+        "</span>" +
+        '<span class="tiq-bdl__precio"><span class="tiq-bdl__precio-now">' + fmt(precio) + "</span></span>" +
+      "</label>";
+    }
+    return '<div class="tiq-bdl__buyopts" role="radiogroup" aria-label="Opciones de compra">' + head +
+      opt(false, SUB.titulo_once || "One-Time Purchase", SUB.color_once, SUB.sub_once, "sub_once", total, "") +
+      opt(true, SUB.titulo_sub || "Subscribe & Save", SUB.color_sub, SUB.sub_sub, "sub_sub", subT, pill) +
+      (modoSub && ver.detalles !== false && SUB.detalles ? '<div class="tiq-bdl__subdetail">' + esc(SUB.detalles) + "</div>" : "") +
+    "</div>";
+  }
+
   function pintar() {
     var pu = precioUnitario();
     var tarjetas, totalSel;
@@ -313,6 +360,7 @@
           "</div>"
         : "") +
       '<div class="tiq-bdl__cards"' + (esBxgy ? "" : ' role="radiogroup" aria-label="Elegí tu paquete"') + ">" + tarjetas + "</div>" +
+      buyoptsHTML(totalSel) +
       (AV.pie_on && AV.pie_texto ? '<div class="tiq-bdl__foot">' + esc(AV.pie_texto) + "</div>" : "");
 
     if (!esBxgy) {
@@ -346,10 +394,43 @@
         });
       });
     }
+    // Opciones de compra (One-Time / Subscribe): alternan modoSub y re-pintan.
+    [].slice.call(raiz.querySelectorAll(".tiq-bdl__buyopt")).forEach(function (el) {
+      el.addEventListener("click", function () { modoSub = el.dataset.sub === "1"; pintar(); });
+    });
     // El widget NO agrega al carrito: la compra la hace el botón del tema. Solo
-    // sincroniza la cantidad elegida en el form del producto para que ese botón
-    // agregue la cantidad del nivel (y aplique el descuento automático).
+    // sincroniza la cantidad y —si eligió suscripción— el selling_plan en el form.
     sincronizarCantidad();
+    sincronizarSellingPlan();
+  }
+
+  // Pasa el selling_plan elegido al form del tema (compra única = vacío). Mismo
+  // mecanismo que sincronizarCantidad: setea/crea un input oculto que /cart/add lee.
+  function sincronizarSellingPlan() {
+    try {
+      var form = document.querySelector('form[action*="/cart/add"]');
+      if (!form) return;
+      var plan = planActual();
+      var val = (haySub && modoSub && plan) ? String(plan.id).split("/").pop() : "";
+      var inp = form.querySelector('input[name="selling_plan"]');
+      if (!inp && val) { inp = document.createElement("input"); inp.type = "hidden"; inp.name = "selling_plan"; form.appendChild(inp); }
+      if (inp && String(inp.value) !== val) {
+        inp.value = val;
+        inp.dispatchEvent(new Event("input", { bubbles: true }));
+        inp.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+    } catch (e) { if (window.console) console.warn("[TiendaIQ Bundles] selling_plan", e); }
+  }
+
+  // "Ocultar widget de suscripción de terceros": best-effort, oculta selectores
+  // conocidos de apps de suscripción para no duplicar. No universal (cada app usa
+  // sus clases); puede requerir ajuste por tema.
+  function ocultarTerceros() {
+    if (!SUB.ocultar_terceros) return;
+    try {
+      var sels = document.querySelectorAll('.subscription-selector, .selling-plan-selector, .product-form__selling-plan, [data-selling-plan-group], .rc_option, .appstle_subscription_wrapper');
+      [].slice.call(sels).forEach(function (el) { if (!raiz.contains(el)) el.style.display = "none"; });
+    } catch (e) {}
   }
 
   // Refleja cantidadElegida() en el input de cantidad del form de producto. Si el
@@ -415,6 +496,7 @@
       ancla.insertBefore(raiz, ancla.firstChild);
     }
     pintar();
+    ocultarTerceros();
 
     // Precio en vivo: si el tema cambia de variante, re-pintamos para reflejar el
     // precio/compare-at nuevo. Escuchamos el form (id oculto u opciones).
