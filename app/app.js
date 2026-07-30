@@ -2824,7 +2824,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       });
       sucio = false;
       if (b) {
-        b.textContent = "✓ Guardado";
+        b.textContent = "Guardado";
         b.classList.remove("btn--acento");
         b.classList.add("btn--fantasma");
       }
@@ -2927,10 +2927,10 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
           <div class="preview-barra__titulo">${esc(pg.data.facetas.hero.titulo)}</div>
           <div class="preview-barra__sub">${esc(pg.data.facetas.hero.subtitulo)}</div>
         </div>
-        <button class="btn btn--fantasma" id="guardar" disabled>✓ Guardado</button>
-        <button class="btn btn--fantasma" id="regenerar">↻ Regenerar</button>
+        <button class="btn btn--fantasma" id="guardar" disabled>Guardado</button>
+        <button class="btn btn--fantasma" id="regenerar">Regenerar</button>
         <button class="btn ${publicada ? "btn--fantasma" : "btn--acento"}" id="publicar">
-          ${publicada ? "↻ Volver a publicar" : "▲ Publicar página"}
+          ${publicada ? "Volver a publicar" : "Publicar página"}
         </button>
       </div>
 
