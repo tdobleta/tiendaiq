@@ -340,13 +340,8 @@ async function api(req, res, url) {
     if (!config) return json(res, 400, { error: "Falta config" });
     config.instalado = (await leerConfigCod(sesion.tienda)).instalado; // no se pisa desde el browser
     await guardarConfigCod(sesion.tienda, config);
-    if (config.instalado) {
-      await actualizarSnippet(sesion, config, URL_APP);
-      // Footgun conocido: guardar desde un server local re-sube el snippet
-      // apuntando al APP_URL local. En la tienda REAL tiene que ser el de
-      // producción — este log lo hace visible al instante.
-      if (env.DEV_MODE === "1") console.log(`  ⚠ snippet COD re-subido apuntando a ${URL_APP} (server local)`);
-    }
+    // Ya NO re-escribimos el snippet en el tema: la config viaja EN VIVO por
+    // /publico/cod (app embed). Compliance App Store: cero escritura directa al tema.
     return json(res, 200, config);
   }
 
@@ -359,12 +354,14 @@ async function api(req, res, url) {
     return json(res, 200, await subirImagenTienda(sesion, nombre, mime || "image/jpeg", base64));
   }
 
-  // POST /api/cod/instalar — inyecta (o re-inyecta) el formulario en el tema
+  // POST /api/cod/instalar — YA NO inyecta código en el tema (compliance: Shopify
+  // exige app embed). Marca "publicado" y devuelve el link para activar el app
+  // embed en el editor de temas. La config ya viaja en vivo por /publico/cod.
   if (req.method === "POST" && ruta === "/api/cod/instalar") {
     const config = await leerConfigCod(sesion.tienda);
-    const { tema } = await instalarCod(sesion, config, URL_APP);
-    config.instalado = { tema, fecha: new Date().toISOString() };
+    config.instalado = { fecha: new Date().toISOString() };
     await guardarConfigCod(sesion.tienda, config);
+    config.activarUrl = `https://${sesion.tienda}/admin/themes/current/editor?context=apps`;
     return json(res, 200, config);
   }
 
@@ -403,11 +400,8 @@ async function api(req, res, url) {
     config.activo = (config.lista || []).some((b) => b.activo !== false); // master derivado
     await sincronizarDescuentos(sesion, config); // muta discount_ids
     await guardarConfigBundles(sesion.tienda, config);
-
-    if (config.instalado) {
-      await actualizarSnippetBundle(sesion, config, URL_APP);
-      if (env.DEV_MODE === "1") console.log(`  ⚠ snippet Bundle re-subido apuntando a ${URL_APP} (server local)`);
-    }
+    // Ya NO re-escribimos el snippet en el tema: la config viaja EN VIVO por
+    // /publico/bundles (app embed). Compliance App Store: cero escritura al tema.
     return json(res, 200, config);
   }
 
@@ -420,12 +414,14 @@ async function api(req, res, url) {
     return json(res, 200, await metricasBundles(sesion, dias));
   }
 
-  // POST /api/bundles/instalar — inyecta (o re-inyecta) el widget en el tema
+  // POST /api/bundles/instalar — YA NO inyecta código en el tema (compliance: app
+  // embed). Marca "publicado" y devuelve el link para activar el app embed en el
+  // editor de temas. La config ya viaja en vivo por /publico/bundles.
   if (req.method === "POST" && ruta === "/api/bundles/instalar") {
     const config = await leerConfigBundles(sesion.tienda);
-    const { tema } = await instalarBundles(sesion, config, URL_APP);
-    config.instalado = { tema, fecha: new Date().toISOString() };
+    config.instalado = { fecha: new Date().toISOString() };
     await guardarConfigBundles(sesion.tienda, config);
+    config.activarUrl = `https://${sesion.tienda}/admin/themes/current/editor?context=apps`;
     return json(res, 200, config);
   }
 

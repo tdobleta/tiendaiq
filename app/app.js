@@ -777,14 +777,11 @@
       </div>
 
       ${
-        inst && !c.activo
-          ? `<div class="cod-banner cod-banner--aviso">⚠ Está inyectado en <strong>${esc(inst.tema)}</strong> pero el formulario está <strong>apagado</strong>: el botón no aparece en tu tienda. Prendé el interruptor de arriba.
-               <button class="btn btn--fantasma btn--chico" id="cod-instalar">↻ Volver a inyectar</button></div>`
-          : inst
-            ? `<div class="cod-banner cod-banner--ok">✓ Inyectado y activo en el tema <strong>${esc(inst.tema)}</strong> · ${esc(fechaCorta(inst.fecha))}
-                 <button class="btn btn--fantasma btn--chico" id="cod-instalar">↻ Volver a inyectar</button></div>`
-            : `<div class="cod-banner cod-banner--aviso">⚠ Todavía no está inyectado en tu tema: el botón no aparece en la tienda.
-                 <button class="btn btn--chico" id="cod-instalar">▲ Inyectar en el tema</button></div>`
+        !c.activo
+          ? `<div class="cod-banner cod-banner--aviso">⚠ El formulario está <strong>apagado</strong>: prendé el interruptor de arriba. Además, para que aparezca en la tienda tenés que <strong>activar el widget</strong> en tu tema (una sola vez).
+               <button class="btn btn--fantasma btn--chico" id="cod-instalar">Activá el formulario →</button></div>`
+          : `<div class="cod-banner cod-banner--ok">✓ Formulario activo. Para que aparezca en la tienda, activá el widget en tu tema <strong>una sola vez</strong>.
+               <button class="btn btn--fantasma btn--chico" id="cod-instalar">Activá el formulario →</button></div>`
       }
 
       <div class="cod-tabs">
@@ -1287,18 +1284,21 @@
     }
   }
 
+  // Ya no inyecta código en el tema (compliance App Store): abre el editor de
+  // temas en "App embeds" para que el merchant prenda el formulario (una vez).
   async function instalarCodTema() {
-    // Instalar con cambios sin guardar los perdería: primero el PUT.
+    // Cambios sin guardar se perderían: primero el PUT.
     if (estado.cod.sucio && !(await guardarCod())) return;
     const b = $("cod-instalar");
     b.disabled = true;
-    b.textContent = "Inyectando…";
+    b.textContent = "Abriendo…";
     try {
       estado.cod.config = await api("/cod/instalar", { method: "POST" });
+      if (estado.cod.config.activarUrl) window.open(estado.cod.config.activarUrl, "_blank", "noopener");
       pintarCod();
     } catch (e) {
       b.disabled = false;
-      b.textContent = "▲ Inyectar en el tema";
+      b.textContent = "Activá el formulario →";
       vista.insertAdjacentHTML("afterbegin", `<div class="error">✖ ${esc(e.message)}</div>`);
     }
   }
@@ -3362,13 +3362,12 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         </div>`
       : "";
 
-    // Estado del widget: sutil cuando está OK (no un banner verde permanente,
-    // que grita MVP), banner de aviso solo si NO está inyectado.
-    const widgetEstado = inst
-      ? `<div class="bdl-wstatus"><span class="bdl-wdot" aria-hidden="true"></span><span class="bdl-wtxt">Widget activo en <strong>${esc(inst.tema)}</strong></span><span class="bdl-wfecha">${esc(fechaCorta(inst.fecha))}</span><button class="bdl-wlink" id="bdl-instalar">Reinyectar</button></div>`
-      : lista.length
-        ? `<div class="cod-banner cod-banner--aviso">⚠ Los bundles no están inyectados en tu tema: no aparecen en la tienda. <button class="btn btn--chico" id="bdl-instalar">▲ Inyectar en el tema</button></div>`
-        : "";
+    // Estado del widget: la app YA NO inyecta código en el tema (compliance App
+    // Store). El merchant activa el "app embed" una sola vez en el editor de temas;
+    // la config viaja en vivo. Por eso siempre mostramos el paso de activación.
+    const widgetEstado = lista.length
+      ? `<div class="bdl-wstatus"><span class="bdl-wdot" aria-hidden="true"></span><span class="bdl-wtxt">Para que los bundles aparezcan en tu tienda, activá el widget en tu tema <strong>una sola vez</strong>.</span><button class="bdl-wlink" id="bdl-instalar">Activá el widget →</button></div>`
+      : "";
 
     const pasoOnb = (hecho, texto, accion) =>
       `<div class="bdl-paso ${hecho ? "is-ok" : ""}"><span class="bdl-paso__c">${hecho ? "✓" : ""}</span><span class="bdl-paso__t">${texto}</span><span class="bdl-paso__a">${hecho ? "Listo" : accion}</span></div>`;
@@ -3377,7 +3376,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       <div class="tarjeta bdl-onboard">
         <div class="bdl-onboard__cab"><strong>Primeros pasos</strong><span class="panel__sub">${nHechos} de 3 completado${nHechos === 1 ? "" : "s"}</span></div>
         <div class="bdl-onboard__bar"><i style="width:${Math.round((nHechos / 3) * 100)}%"></i></div>
-        ${pasoOnb(!!inst, "Activá el widget en tu tema", `<button class="btn btn--chico" id="bdl-instalar">Inyectar</button>`)}
+        ${pasoOnb(!!inst, "Activá el widget en tu tema", `<button class="btn btn--chico" id="bdl-instalar">Activá el widget →</button>`)}
         ${pasoOnb(false, "Creá tu primer bundle", `<button class="btn btn--chico bdl-onb-crear">Crear</button>`)}
         ${pasoOnb(false, "Previsualizá en tu tienda", `<span class="panel__sub">tras crear</span>`)}
       </div>
@@ -4809,15 +4808,18 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     }
   }
 
+  // Ya no inyecta código en el tema: marca "publicado" y abre el editor de temas
+  // en la sección "App embeds" para que el merchant prenda el widget (una vez).
   async function instalarBundlesTema() {
     if (estado.bundles.sucio && !(await guardarBundles())) return;
     const b = $("bdl-instalar");
-    if (b) { b.disabled = true; b.textContent = "Inyectando…"; }
+    if (b) { b.disabled = true; b.textContent = "Abriendo…"; }
     try {
       estado.bundles.config = await api("/bundles/instalar", { method: "POST" });
+      if (estado.bundles.config.activarUrl) window.open(estado.bundles.config.activarUrl, "_blank", "noopener");
       pintarDashboardBundles();
     } catch (e) {
-      if (b) { b.disabled = false; b.textContent = "▲ Inyectar en el tema"; }
+      if (b) { b.disabled = false; b.textContent = "Activá el widget →"; }
       vista.insertAdjacentHTML("afterbegin", `<div class="error">✖ ${esc(e.message)}</div>`);
     }
   }
