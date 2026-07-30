@@ -3588,6 +3588,15 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     // Combinación de descuentos (se consume en bundles.js/combinaDe al crear el
     // descuento). Default Pumper: Pedido/Envío ON, Producto OFF.
     if (!b.combina) b.combina = { producto: false, pedido: true, envio: true };
+    // Suscripción (F1: editor + preview). Real solo si el producto tiene selling
+    // plans de una app de terceros (F2+). Off por defecto.
+    if (!b.diseno.sub) b.diseno.sub = {
+      on: false, estilo: "clasico", encabezado: "Purchase Options",
+      titulo_once: "One-Time Purchase", color_once: "#111111", sub_once: "Pagás una vez",
+      titulo_sub: "Subscribe & Save", color_sub: "#111111", sub_sub: "Cancelás cuando quieras",
+      detalles: "Facturación y descuento flexibles", mostrar_label_desc: true, ocultar_terceros: false, ver: {}
+    };
+    if (b.diseno.sub && !b.diseno.sub.ver) b.diseno.sub.ver = {};
     // Bundles muy viejos podían no tener `diseno`: sin esto, escribir
     // "diseno.geometry.radius" desde el slider tira TypeError (fijar no crea rutas).
     if (!b.diseno) b.diseno = {};
@@ -3824,6 +3833,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   const IC_GRID = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>`;
   const IC_ESQUINA = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12V8a4 4 0 0 1 4-4h4"/><path d="M20 12v4a4 4 0 0 1-4 4h-4"/></svg>`;
   const IC_AIRE = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M8 7 4 12l4 5M16 7l4 5-4 5"/></svg>`;
+  const IC_CAJA = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5zM3 8v8l9 5 9-5V8M12 13v8M7.5 5.25l9 5"/></svg>`;
 
   // Slider de geometría (Redondeo / Aire) — control continuo con valor a la
   // derecha, estilo Pumper. Escribe una ruta numérica del modelo (data-b).
@@ -4047,9 +4057,54 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
           </div>` : ""}
         </div>
       </div>`;
+
+    // Sección "Suscripción" (F1: editor + preview). Real solo con selling plans de
+    // una app de terceros (F2+). Reusa be-field-row/be-eye (input+ojo) + swatch.
+    const subOn = !!leer(b, "diseno.sub.on");
+    const sVer = (k) => leer(b, "diseno.sub.ver." + k) !== false;
+    const campoOjoS = (ruta, label, verKey, ph) => {
+      const on = sVer(verKey);
+      return `<div class="be-field-row"><div class="campo campo--editor" style="flex:1">${label ? `<label>${esc(label)}</label>` : ""}
+        <input type="text" data-b="${ruta}" value="${esc(leer(b, ruta) ?? "")}" placeholder="${esc(ph)}" ${on ? "" : "disabled"}></div>
+        <button type="button" class="be-eye ${on ? "" : "is-off"}" data-toggle-b="diseno.sub.ver.${verKey}" title="Mostrar/ocultar en la tienda" aria-label="Mostrar u ocultar">${on ? BE_OJO : BE_OJO_OFF}</button></div>`;
+    };
+    const campoSwS = (ruta, label, colorRuta, ph, colorDef) => `<div class="be-field-row"><div class="campo campo--editor" style="flex:1"><label>${esc(label)}</label>
+        <input type="text" data-b="${ruta}" value="${esc(leer(b, ruta) ?? "")}" placeholder="${esc(ph)}"></div>
+        <input type="color" class="be-field-sw__col" data-b="${colorRuta}" value="${esc(leer(b, colorRuta) || colorDef)}" title="Color del texto" aria-label="Color de ${esc(label)}"></div>`;
+    const suscripcion = `
+      <div class="be-sub ${subOn ? "" : "is-off"}">
+        <div class="be-sub-master">
+          <span class="be-sub-master__t">Activar suscripción</span>
+          <button type="button" class="be-toggle ${subOn ? "is-on" : ""}" data-toggle-b="diseno.sub.on" role="switch" aria-checked="${subOn}"><span></span></button>
+        </div>
+        <div class="be-sub__cuerpo">
+          <div class="be-aviso be-aviso--info">
+            <span class="be-aviso__ico" aria-hidden="true">ℹ</span>
+            <p class="be-aviso__txt">La opción de suscripción solo aparece en tu tienda si el producto tiene una <b>app de suscripción de terceros</b> configurada (Recharge, Appstle, Shopify Subscriptions, etc.). Acá configurás cómo se ve.</p>
+          </div>
+          ${selectBdl("diseno.sub.estilo", "Estilo del widget", [["clasico", "Clásico"]])}
+          <div class="bdl-subsec">Encabezado de opciones de compra <span class="be-help" data-tip="El título que agrupa las opciones de compra en la tienda (ej. «¿Cómo querés comprar?»)." tabindex="0" aria-label="Encabezado de opciones de compra">?</span></div>
+          ${campoOjoS("diseno.sub.encabezado", "", "encabezado", "Purchase Options")}
+          <div class="bdl-grid2">
+            ${campoSwS("diseno.sub.titulo_once", "Título de compra única", "diseno.sub.color_once", "One-Time Purchase", "#111111")}
+            ${campoOjoS("diseno.sub.sub_once", "Subtítulo de compra única", "sub_once", "Pagás una vez")}
+          </div>
+          <div class="bdl-grid2">
+            ${campoSwS("diseno.sub.titulo_sub", "Título de la suscripción", "diseno.sub.color_sub", "Subscribe & Save", "#111111")}
+            ${campoOjoS("diseno.sub.sub_sub", "Subtítulo de la suscripción", "sub_sub", "Cancelás cuando quieras")}
+          </div>
+          ${campoOjoS("diseno.sub.detalles", "Detalles de la suscripción", "detalles", "Facturación y descuento flexibles")}
+          <div class="be-adv__group">
+            ${tgl("Mostrar etiqueta de descuento de la suscripción", "diseno.sub.mostrar_label_desc", !!leer(b, "diseno.sub.mostrar_label_desc"), "Muestra el % de ahorro junto a la opción de suscripción.")}
+            ${tgl("Ocultar el widget de suscripción de terceros", "diseno.sub.ocultar_terceros", !!leer(b, "diseno.sub.ocultar_terceros"), "Oculta el selector de suscripción que pinta el tema o la app de terceros, para no duplicar.")}
+          </div>
+        </div>
+      </div>`;
+
     return `<div class="be-secs-extra">
       ${bdlAcordeon("color", IC_PALETA, "Color y estilo", colorYEstilo + estiloTexto + textosYTipo, !!s.secOpen.color)}
       ${bdlAcordeon("avanzada", IC_ENGRANAJE, "Configuración avanzada", avanzada, !!s.secOpen.avanzada)}
+      ${bdlAcordeon("sub", IC_CAJA, "Suscripción", suscripcion, !!s.secOpen.sub)}
     </div>`;
   }
 
@@ -4456,6 +4511,26 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
 
   // Add-Ons de un nivel reflejados en el preview (regalo, envío, imagen).
   // Thumbnail de imagen del nivel (integrado a la tarjeta) — paridad con el widget.
+  // Opciones de compra (One-Time / Subscribe) — se muestran si sub.on. En el
+  // preview del admin es maqueta (siempre que on); en la tienda el widget las
+  // gatea además por selling plans reales (F3). ver.<k> !== false = visible.
+  function buyoptsHTML(d) {
+    const su = d.sub;
+    if (!su || !su.on) return "";
+    const ver = su.ver || {};
+    const head = ver.encabezado !== false && su.encabezado ? `<div class="tiq-bdl__buyhead">${esc(su.encabezado)}</div>` : "";
+    const opt = (sel, titulo, color, sub, verKey, pill) => `<label class="tiq-bdl__buyopt${sel ? " is-sel" : ""}">
+      <span class="tiq-bdl__radio"></span>
+      <span class="tiq-bdl__buyopt-main">
+        <span class="tiq-bdl__buyopt-t"${color ? ` style="color:${esc(color)}"` : ""}>${esc(titulo)}${pill ? ` <span class="tiq-bdl__etq">${esc(pill)}</span>` : ""}</span>
+        ${ver[verKey] !== false && sub ? `<span class="tiq-bdl__buyopt-s">${esc(sub)}</span>` : ""}
+      </span></label>`;
+    return `<div class="tiq-bdl__buyopts">${head}
+      ${opt(true, su.titulo_once || "One-Time Purchase", su.color_once, su.sub_once, "sub_once", "")}
+      ${opt(false, su.titulo_sub || "Subscribe & Save", su.color_sub, su.sub_sub, "sub_sub", su.mostrar_label_desc ? "-10%" : "")}
+    </div>`;
+  }
+
   function thumbBdlHTML(o) {
     const im = (o.addons || {}).imagen;
     return im?.on && im.url ? `<span class="tiq-bdl__thumb"><img src="${esc(im.url)}" alt="" loading="lazy"></span>` : "";
@@ -4607,6 +4682,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         ${d.subtitulo ? `<div class="tiq-bdl__h2">${esc(d.subtitulo)}</div>` : ""}
       </div>` : ""}
       <div class="tiq-bdl__cards">${cards}</div>
+      ${buyoptsHTML(d)}
       ${d.avanzado?.pie_on && d.avanzado?.pie_texto ? `<div class="tiq-bdl__foot">${esc(d.avanzado.pie_texto)}</div>` : ""}
       <div class="tiq-bdl__nota">El cliente agrega con el botón de tu página de producto ↓</div>
     </div>`;

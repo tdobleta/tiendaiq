@@ -115,6 +115,19 @@
 /* Texto de pie de página opcional (avanzado.pie_texto). */
 .tiq-bdl__foot { margin-top: 10px; text-align: center; font-size: 12.5px; line-height: 1.45; color: #8a8a8a; }
 
+/* Opciones de compra (One-Time / Subscribe & Save) — se muestran con sub.on.
+   Reusan el lenguaje visual de la tarjeta (borde/acento/radio del punto). */
+.tiq-bdl__buyopts { margin-top: 12px; display: flex; flex-direction: column; gap: var(--tiq-gap, 9px); }
+.tiq-bdl__buyhead { text-align: center; font-size: 13px; font-weight: 700; color: var(--tiq-txt, #1f1f1f); margin-bottom: 2px; }
+.tiq-bdl__buyopt { position: relative; display: flex; align-items: center; gap: 12px; padding: 13px 15px; border: var(--tiq-bd-w, 1.5px) solid var(--tiq-card-bd); border-radius: var(--tiq-radio); background: var(--tiq-card-bg); cursor: pointer; transition: border-color .15s ease, background .15s ease, box-shadow .15s ease; }
+.tiq-bdl__buyopt:hover { border-color: var(--tiq-radio-bd); }
+.tiq-bdl__buyopt.is-sel { border-color: var(--tiq-ac); background: #fff; box-shadow: 0 0 0 1.5px var(--tiq-ac); }
+.tiq-bdl__buyopt.is-sel .tiq-bdl__radio { border-color: var(--tiq-ac); }
+.tiq-bdl__buyopt.is-sel .tiq-bdl__radio::after { content: ""; position: absolute; inset: 4px; border-radius: 50%; background: var(--tiq-ac); }
+.tiq-bdl__buyopt-main { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.tiq-bdl__buyopt-t { font-weight: 700; font-size: 14.5px; color: var(--tiq-txt, #1f1f1f); line-height: 1.25; display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+.tiq-bdl__buyopt-s { font-size: 12.5px; color: #8f8f8f; line-height: 1.35; }
+
 /* --- Plantilla HORIZONTAL: tarjetas en columnas (mismo markup, distinto layout).
    Cada tarjeta apila su contenido centrado: badge, imagen, radio, título, precio. --- */
 .tiq-bdl--horizontal .tiq-bdl__cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; align-items: stretch; }
