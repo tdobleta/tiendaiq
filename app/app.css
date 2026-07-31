@@ -210,6 +210,17 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
 /* Placeholder de imagen: SVG muteado, reemplaza el emoji 🖼/🛍 de fallback. */
 .ico--ph { width: 20px; height: 20px; color: #b7b7bf; }
 .fila__ph .ico { width: 22px; height: 22px; color: #b7b7bf; }
+/* Chevron de acordeón, info, kebab, undo/redo, "agregar" — antes glyphs. */
+.be-chev { display: inline-flex; }
+.be-chev .ico { width: 16px; height: 16px; }
+.bdl-metrica__i { display: inline-flex; vertical-align: middle; }
+.bdl-metrica__i .ico { width: 14px; height: 14px; }
+.bdl-acc-btn { display: grid; place-items: center; }
+.bdl-acc-btn .ico { width: 18px; height: 18px; }
+.bdl-histbtn { display: inline-grid; place-items: center; }
+.bdl-histbtn .ico { width: 16px; height: 16px; }
+.be-add { display: flex; align-items: center; justify-content: center; gap: 8px; }
+.be-add .ico { width: 17px; height: 17px; }
 
 /* ---------- 1. lista de productos ---------- */
 
@@ -2186,7 +2197,8 @@ summary:focus-visible, label:focus-visible {
 .be-aapop select { height: 30px; border: 1px solid #c9cccf; border-radius: 7px; padding: 0 8px; font-size: 13px; background: #fff; color: #202223; }
 .be-aapop select:focus-visible { outline: 2px solid #005bd3; outline-offset: 1px; }
 .be-aapop__step { display: inline-flex; align-items: center; border: 1px solid #c9cccf; border-radius: 7px; overflow: hidden; }
-.be-aapop__step button { width: 26px; height: 30px; border: 0; background: #f6f6f7; color: #202223; font-size: 15px; cursor: pointer; line-height: 1; }
+.be-aapop__step button { width: 26px; height: 30px; border: 0; background: #f6f6f7; color: #202223; font-size: 15px; cursor: pointer; line-height: 1; display: grid; place-items: center; }
+.be-aapop__step button .ico { width: 15px; height: 15px; }
 .be-aapop__step button:hover { background: color-mix(in srgb, var(--bdl-teal) 12%, #f6f6f7); color: var(--bdl-teal); }
 .be-aapop__step output { min-width: 30px; text-align: center; font-size: 13px; font-variant-numeric: tabular-nums; }
 

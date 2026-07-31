@@ -114,7 +114,14 @@
     desplegable: `<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M8 10l4 4 4-4"/>`,
     radio: `<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.5" fill="currentColor" stroke="none"/>`,
     reloj: `<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>`,
-    cantidad: `<rect x="2" y="8" width="20" height="8" rx="2"/><path d="M6 12h2M16 12h2M17 11v2"/>`
+    cantidad: `<rect x="2" y="8" width="20" height="8" rx="2"/><path d="M6 12h2M16 12h2M17 11v2"/>`,
+    chevron: `<path d="M6 9l6 6 6-6"/>`,
+    mas: `<path d="M12 5v14M5 12h14"/>`,
+    menos: `<path d="M5 12h14"/>`,
+    info: `<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.6v.4"/>`,
+    kebab: `<circle cx="12" cy="5" r="1.4" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="12" cy="19" r="1.4" fill="currentColor" stroke="none"/>`,
+    deshacer: `<path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 010 10h-4"/>`,
+    rehacer: `<path d="M15 14l5-5-5-5"/><path d="M20 9H9a5 5 0 000 10h4"/>`
   };
   const ico = (nombre, cls = "") =>
     `<svg class="ico${cls ? " " + cls : ""}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONOS[nombre] || ""}</svg>`;
@@ -418,7 +425,7 @@
                      <div class="pub-fila">
                        <div class="pub-fila__foto">${p.imagen ? `<img src="${esc(p.imagen)}" alt="" loading="lazy">` : ico("imagen", "ico--ph")}</div>
                        <div class="pub-fila__titulo">${esc(p.titulo || "Sin título")}</div>
-                       ${p.url_publica ? `<a class="pub-fila__link" href="${esc(p.url_publica)}" target="_blank" rel="noopener">Ver en la tienda ↗</a>` : ""}
+                       ${p.url_publica ? `<a class="pub-fila__link" href="${esc(p.url_publica)}" target="_blank" rel="noopener">Ver en la tienda ${ico("externo")}</a>` : ""}
                      </div>`
                    )
                    .join("")}
@@ -3252,7 +3259,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
 
   function tarjetaMetrica(titulo, valor, ayuda) {
     return `<div class="bdl-metrica">
-      <div class="bdl-metrica__t">${esc(titulo)} <span class="bdl-metrica__i" title="${esc(ayuda || "")}">ⓘ</span></div>
+      <div class="bdl-metrica__t">${esc(titulo)} <span class="bdl-metrica__i" title="${esc(ayuda || "")}">${ico("info")}</span></div>
       <div class="bdl-metrica__v">${esc(valor)}</div>
     </div>`;
   }
@@ -3433,7 +3440,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         <div class="bdl-fila2__estado">
           <button class="be-toggle ${on ? "is-on" : ""}" data-toggle-activo="${i}" role="switch" aria-checked="${on}" title="${on ? "Activo — clic para pausar" : "Pausado — clic para activar"}"><span></span></button>
         </div>
-        <div class="bdl-fila2__acc"><button class="bdl-acc-btn" data-acc="${i}" aria-label="Más acciones">⋯</button></div>
+        <div class="bdl-fila2__acc"><button class="bdl-acc-btn" data-acc="${i}" aria-label="Más acciones">${ico("kebab")}</button></div>
       </div>`;
     };
 
@@ -3788,7 +3795,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         </div>
       </div>`;
     return `<section class="be-sec">
-      <button class="be-sec__head" data-sec="setup"><span>Select Product & Basic Setup</span><span class="be-chev ${s.setupOpen ? "is-open" : ""}">⌄</span></button>
+      <button class="be-sec__head" data-sec="setup"><span>Select Product & Basic Setup</span><span class="be-chev ${s.setupOpen ? "is-open" : ""}">${ico("chevron")}</span></button>
       ${cuerpo}
     </section>`;
   }
@@ -3799,7 +3806,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     return `<section class="be-sec be-sec--plain">
       <div class="be-sec__title">Editar ofertas de nivel</div>
       <div class="be-lvs">${cards}</div>
-      <button class="be-add" data-add-nivel>⊕ Agregar nivel</button>
+      <button class="be-add" data-add-nivel>${ico("mas")} Agregar nivel</button>
     </section>`;
   }
 
@@ -3947,10 +3954,10 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
 
   // Slider de geometría (Redondeo / Aire) — control continuo con valor a la
   // derecha, estilo Pumper. Escribe una ruta numérica del modelo (data-b).
-  function sliderBdl(ruta, ico, etiqueta, min, max) {
+  function sliderBdl(ruta, icono, etiqueta, min, max) {
     const v = leer(bundleActual(), ruta) ?? min;
     return `<div class="bdl-slider">
-      <span class="bdl-slider__ico">${ico}</span>
+      <span class="bdl-slider__ico">${icono}</span>
       <label class="bdl-slider__lab" for="sl-${ruta.replace(/\W/g, "-")}">${esc(etiqueta)}</label>
       <input type="range" id="sl-${ruta.replace(/\W/g, "-")}" min="${min}" max="${max}" step="1" data-b="${ruta}" data-tipo="numero" data-slider value="${esc(v)}">
       <output class="bdl-slider__val">${esc(v)} / ${max}</output>
@@ -3979,9 +3986,9 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   }
 
   // Un acordeón de la columna izquierda (mismo componente que "Select Product").
-  function bdlAcordeon(id, ico, titulo, cuerpo, abierto) {
+  function bdlAcordeon(id, icono, titulo, cuerpo, abierto) {
     return `<div class="be-sec">
-      <button class="be-sec__head" data-sec="${id}"><span class="be-sec__lead"><span class="be-sec__ico">${ico}</span><span>${esc(titulo)}</span></span><span class="be-chev ${abierto ? "is-open" : ""}">⌄</span></button>
+      <button class="be-sec__head" data-sec="${id}"><span class="be-sec__lead"><span class="be-sec__ico">${icono}</span><span>${esc(titulo)}</span></span><span class="be-chev ${abierto ? "is-open" : ""}">${ico("chevron")}</span></button>
       ${abierto ? `<div class="be-sec__body">${cuerpo}</div>` : ""}
     </div>`;
   }
@@ -4034,9 +4041,9 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         <div class="be-aapop__grid">
           <label>Peso<select data-b="diseno.type.el.${k}.weight" data-tipo="numero">${optsTx(el.weight || 700, PESOS_TX)}</select></label>
           <label>Tamaño<span class="be-aapop__step">
-            <button type="button" data-aastep="${k}:-1" aria-label="Reducir">−</button>
+            <button type="button" data-aastep="${k}:-1" aria-label="Reducir">${ico("menos")}</button>
             <output data-aaout="${k}">${el.size || SIZE_DEF_TX[k]}</output>
-            <button type="button" data-aastep="${k}:1" aria-label="Aumentar">+</button>
+            <button type="button" data-aastep="${k}:1" aria-label="Aumentar">${ico("mas")}</button>
             <input type="hidden" data-b="diseno.type.el.${k}.size" data-tipo="numero" data-aasize="${k}" value="${esc(el.size ?? "")}">
           </span></label>
         </div>
@@ -4073,8 +4080,8 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
 
     const colorYEstilo = `
       <div class="bdl-hist">
-        <button type="button" id="bdl-undo" class="bdl-histbtn" data-hist="-1" title="Deshacer" ${histDe(b).idx <= 0 ? "disabled" : ""}>↩</button>
-        <button type="button" id="bdl-redo" class="bdl-histbtn" data-hist="1" title="Rehacer" ${histDe(b).idx >= histDe(b).stack.length - 1 ? "disabled" : ""}>↪</button>
+        <button type="button" id="bdl-undo" class="bdl-histbtn" data-hist="-1" title="Deshacer" aria-label="Deshacer" ${histDe(b).idx <= 0 ? "disabled" : ""}>${ico("deshacer")}</button>
+        <button type="button" id="bdl-redo" class="bdl-histbtn" data-hist="1" title="Rehacer" aria-label="Rehacer" ${histDe(b).idx >= histDe(b).stack.length - 1 ? "disabled" : ""}>${ico("rehacer")}</button>
       </div>
       <div class="bdl-subsec">Diseño de plantilla</div>
       <div class="bdl-tpls">${tplCard("vertical", "Vertical", "v")}${tplCard("horizontal", "Horizontal", "h")}</div>
