@@ -295,13 +295,6 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
 }
 .producto__precio { font-size: 13px; font-weight: 600; color: var(--negro); margin-top: 4px; letter-spacing: -.2px; }
 
-.etiqueta {
-  display: inline-block; font-size: 10.5px; font-weight: 600;
-  padding: 2px 8px; border-radius: 999px; margin-top: 7px;
-  text-transform: uppercase; letter-spacing: .3px;
-}
-.etiqueta--borrador { background: var(--aviso-fondo); color: var(--aviso); }
-.etiqueta--publicada { background: var(--ok-fondo); color: #157f3d; }
 
 /* ---------- 2. información del producto ---------- */
 
@@ -471,9 +464,6 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
 .fila__precio { font-size: 13px; color: var(--suave); }
 .fila__cta { flex-shrink: 0; font-size: 12.5px; font-weight: 500; color: var(--negro); opacity: 0; transition: opacity .12s ease-out; }
 .fila.is-activa .fila__cta { opacity: 1; }
-.chip { flex-shrink: 0; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 5px; border: 1px solid var(--borde); color: var(--suave); background: var(--fondo); }
-.chip--publicada { color: var(--ok); border-color: #c4ecd2; background: var(--ok-fondo); }
-.chip--borrador { color: var(--suave); }
 
 .vacio-panel { max-width: 640px; margin: 8px auto 0; padding: 40px; text-align: center; border: 1px dashed var(--borde); border-radius: var(--radio); }
 .vacio-panel__tit { font-size: 15px; font-weight: 600; color: var(--negro); margin-bottom: 6px; }
@@ -915,13 +905,17 @@ ui-save-bar { display: none; }
 .paso-card--naranja,
 .paso-card--azul { --paso-bg: #f1f1f3; --paso-fg: #303030; }
 
-/* Badges: un solo lenguaje para todos los estados. Altura fija de 24px. */
+/* Badges de estado: UN solo componente para toda la app (antes había 3:
+   .etiqueta, .chip y .chip-estado). Altura fija de 24px, pill. */
 .chip-estado {
-  display: inline-flex; align-items: center; font-size: 12px; font-weight: 500;
-  height: 24px; padding: 0 10px; border-radius: 999px; line-height: 1;
+  display: inline-flex; align-items: center; flex-shrink: 0;
+  font-size: 12px; font-weight: 500;
+  height: 24px; padding: 0 10px; border-radius: 999px; line-height: 1; white-space: nowrap;
 }
-.chip-estado--ok { background: var(--ok-fondo); color: #157f3d; }
+.chip-estado--ok,
+.chip-estado--publicada { background: var(--ok-fondo); color: #157f3d; }
 .chip-estado--ia { background: var(--ia-fondo); color: var(--ia); }
+.chip-estado--borrador { background: #ececef; color: #5c5f62; }
 
 /* Tiles de métrica al estilo PagePilot: fila ícono+label, valor grande
    debajo alineado con el label; primer tile violeta, segundo verde. */
@@ -1110,7 +1104,7 @@ ui-save-bar { display: none; }
 .pagina-fila__foto img { width: 100%; height: 100%; object-fit: cover; }
 .pagina-fila__titulo { font-size: 13px; font-weight: 500; color: var(--negro); }
 .pagina-fila__fecha { font-size: 12px; color: var(--suave); margin-top: 1px; }
-.pagina-fila .etiqueta { margin-top: 0; justify-self: start; }
+.pagina-fila .chip-estado { justify-self: start; }
 .pagina-fila__link { font-size: 12.5px; color: var(--suave); text-decoration: none; }
 .pagina-fila__link:hover { color: var(--negro); text-decoration: underline; }
 .pagina-fila > .btn { justify-self: end; }
@@ -1624,7 +1618,7 @@ ui-save-bar { display: none; }
 
   /* tabla de páginas: la fila envuelve, el link pasa abajo */
   .pagina-fila { grid-template-columns: 44px 1fr; gap: 8px 10px; }
-  .pagina-fila > .etiqueta { justify-self: start; }
+  .pagina-fila > .chip-estado { justify-self: start; }
   .pagina-fila .btn { grid-column: 1 / -1; }
 
   /* información del producto: una columna */

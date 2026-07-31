@@ -461,7 +461,7 @@
           <div class="pagina-fila__titulo">${esc(p.titulo || "Sin título")}</div>
           <div class="pagina-fila__fecha">${esc(fechaCorta(p.actualizado))}</div>
         </div>
-        <span class="etiqueta etiqueta--${esc(p.estado)}">${esc(p.estado)}</span>
+        <span class="chip-estado chip-estado--${esc(p.estado)}">${ESTADO_ETQ[p.estado] || esc(p.estado)}</span>
         ${
           p.url_publica
             ? `<a class="pagina-fila__link" href="${esc(p.url_publica)}" target="_blank">Ver en la tienda</a>`
@@ -1469,7 +1469,7 @@
         </span>
         ${
           p.estado
-            ? `<span class="chip chip--${p.estado}">${ESTADO_ETQ[p.estado] || p.estado}</span>`
+            ? `<span class="chip-estado chip-estado--${p.estado}">${ESTADO_ETQ[p.estado] || p.estado}</span>`
             : `<span class="fila__cta">Crear página ${ico("flecha")}</span>`
         }
       </button>`;
@@ -1587,7 +1587,7 @@
         </span>
         ${
           p.estado
-            ? `<span class="chip chip--${p.estado}">${ESTADO_ETQ[p.estado] || p.estado}</span>`
+            ? `<span class="chip-estado chip-estado--${p.estado}">${ESTADO_ETQ[p.estado] || p.estado}</span>`
             : `<span class="fila__cta">Elegir ${ico("flecha")}</span>`
         }
       </button>`;
