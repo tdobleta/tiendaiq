@@ -388,9 +388,11 @@
     const visibles = MODO_APP
       ? items.map((i, j) => [i, j])
       : items.map((i, j) => [i, j]).filter(([i]) => i.url);
-    // En la tienda: si no hay clips reales, la sección no se muestra.
-    // En el editor: dejamos siempre un andamio para poder abrirla y agregar.
-    if (!visibles.length && !MODO_APP) return "";
+    // Sin clips reales, la sección NO se muestra — ni en la tienda ni en el
+    // editor. El "carrusel de videos/clientes" se rehará como sección propia
+    // (por ahora no lo sembramos en páginas nuevas). Si el merchant ya tenía
+    // clips, se siguen viendo.
+    if (!visibles.length) return "";
     const paraPintar = visibles.length ? visibles : [[{}, 0]];
     const cards = paraPintar
       .map(([i]) =>
@@ -746,11 +748,15 @@
     const grupos = {};
     for (const s of secciones) (grupos[s.ancla || "top"] ||= []).push(seccionHTML(s));
 
+    // Bloques que el merchant eliminó desde el editor (botón borrar al pasar el
+    // cursor). Se saltea su HTML, pero las sections ancladas ahí igual se pintan.
+    const ocultas = new Set(Array.isArray(data.ocultas) ? data.ocultas : []);
+
     const out = [];
     if (grupos.top) out.push(...grupos.top);
     const usados = new Set(["top"]);
     for (const [id, html] of fijos) {
-      out.push(marcar(id, html));
+      if (!ocultas.has(id)) out.push(marcar(id, html));
       if (grupos[id]) out.push(...grupos[id]);
       usados.add(id);
     }

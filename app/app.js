@@ -2551,6 +2551,11 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     { sel: ".muro", id: "clientes" }
   ];
 
+  // Bloques fijos que SÍ se pueden eliminar de la página (los opcionales). El
+  // hero (galería/bullets/encabezado/acordeones/reseña destacada) NO: es el
+  // corazón comprable. Estos ids coinciden con los del render (fijos[]).
+  const ZONAS_BORRABLES = new Set(["clientes", "faq", "iconos", "stats", "resenas"]);
+
   function montarEdicionEnIframe(marco) {
     let doc;
     try {
@@ -2617,7 +2622,9 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       const r = zonaEl.getBoundingClientRect();
       const scrollY = doc.defaultView.scrollY;
       btn.dataset.sec = hit.id;
-      btnDel.style.display = hit.id.startsWith("sec:") ? "flex" : "none"; // borrar solo sections
+      // Se puede borrar: las sections incrustadas (sec:) y los bloques fijos
+      // "opcionales" (no el hero, que es el corazón de la página).
+      btnDel.style.display = (hit.id.startsWith("sec:") || ZONAS_BORRABLES.has(hit.id)) ? "flex" : "none";
       btn.style.display = "flex";
       btn.style.top = `${scrollY + r.top + 12}px`;
       btn.style.left = `${Math.max(10, Math.min(r.right - 150, doc.documentElement.clientWidth - 160))}px`;
@@ -2626,11 +2633,21 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     btnEditar.addEventListener("click", () => abrirModalEdicion(btn.dataset.sec));
     btnDel.addEventListener("click", () => {
       const id = btn.dataset.sec;
-      if (!id.startsWith("sec:")) return;
       if (!confirm("¿Eliminar esta sección de la página?")) return;
-      const secs = estado.pagina.data.secciones;
-      const idx = secs.findIndex((s) => s.id === id.slice(4));
-      if (idx > -1) secs.splice(idx, 1);
+      if (id.startsWith("sec:")) {
+        // Section incrustada: se saca del array (se pierde su contenido).
+        const secs = estado.pagina.data.secciones;
+        const idx = secs.findIndex((s) => s.id === id.slice(4));
+        if (idx > -1) secs.splice(idx, 1);
+      } else if (ZONAS_BORRABLES.has(id)) {
+        // Bloque fijo: se oculta (no se destruye el contenido; el render lo
+        // saltea). Reversible cuando armemos el panel para volver a sumarlo.
+        const d = estado.pagina.data;
+        d.ocultas = Array.isArray(d.ocultas) ? d.ocultas : [];
+        if (!d.ocultas.includes(id)) d.ocultas.push(id);
+      } else {
+        return;
+      }
       limpiar();
       marcarSucio();
       repintarPreview();

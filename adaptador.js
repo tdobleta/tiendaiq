@@ -587,11 +587,13 @@ function ensamblar(fuente, salida, { idioma, angulo }) {
           }
         ]
       },
-      // Muro de clientes (UGC): gifs/videos que auto-reproducen. Vacío por
-      // defecto — el merchant los inyecta desde el editor. Va arriba del FAQ.
+      // Muro de clientes (UGC): gifs/videos que auto-reproducen. VACÍO por
+      // defecto — no se siembra andamio: la sección de videos se rehará como
+      // pieza propia (con foco). Sin clips, el render la oculta (editor y
+      // tienda). Va arriba del FAQ cuando el merchant la retome.
       clientes: {
         titulo: `Únete a más de ${f.hero.resenas_count || 200} clientes contentos`,
-        items: [{ url: "", poster: null }, { url: "", poster: null }, { url: "", poster: null }]
+        items: []
       },
       iconos: { ...f.iconos, items: fijo(f.iconos.items, CARDINALIDAD["iconos.items"]) },
       tabla: {
