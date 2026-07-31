@@ -29,6 +29,7 @@ const { guardarPaginaDB, leerPaginaDB, listarPaginasDB } = require("./db");
 const { iniciarInstalacion, terminarInstalacion, tiendaDelPase } = require("./auth");
 const { estadoPlan, exigirCupo, contarUso, crearSuscripcion } = require("./facturacion");
 const { leerConfigCod, guardarConfigCod, crearPedidoCod } = require("./cod");
+const { reportarError, metrica } = require("./monitoreo");
 const {
   leerConfigBundles,
   guardarConfigBundles,
@@ -590,9 +591,11 @@ async function api(req, res, url) {
     const registro = await leerPagina(sesion.tienda, mPub[1]);
     if (!registro) return json(res, 404, { error: "No existe esa página" });
     const { url } = await publicarPagina(registro.data, sesion);
+    const yaEstaba = registro.estado === "publicada";
     registro.estado = "publicada";
     registro.url_publica = url;
     await guardarPagina(sesion.tienda, registro);
+    metrica("pagina_publicada", { tienda: sesion.tienda, republicacion: yaEstaba });
     // Verificamos si la landing se ve DE VERDAD (o si cae al producto nativo
     // porque falta la plantilla) + deep link al editor. No se persiste: es para
     // la pantalla de éxito. La app NO escribe el tema, solo lo mira desde afuera.
@@ -791,7 +794,9 @@ const servidor = http.createServer(async (req, res) => {
       if (t) await borrarTienda(t);
       return json(res, 401, { error: e.message, reinstalar: true });
     }
-    if (e.status !== 401) console.error("✖", e.message);
+    // 401 = churn de auth esperado (token rotado/desinstalado): no es un bug.
+    // El resto sí se reporta (console + Sentry si hay DSN).
+    if (e.status !== 401) reportarError(e, { donde: url.pathname, metodo: req.method });
     json(res, e.status || 500, { error: e.message });
   }
 });
@@ -809,10 +814,10 @@ if (env.DEV_MODE === "1" && env.DATABASE_URL) {
 // Una promesa rechazada fuera de un try/catch tumba el proceso Node entero.
 // En Render eso es caída silenciosa: se loguea y se sigue viviendo.
 process.on("unhandledRejection", (e) => {
-  console.error("✖ promesa sin catch:", e?.stack || e);
+  reportarError(e, { tipo: "unhandledRejection" });
 });
 process.on("uncaughtException", (e) => {
-  console.error("✖ excepción sin catch:", e?.stack || e);
+  reportarError(e, { tipo: "uncaughtException" });
 });
 
 servidor.listen(PUERTO, async () => {

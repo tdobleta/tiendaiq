@@ -15,6 +15,7 @@
 const crypto = require("crypto");
 const { env } = require("./shopify");
 const { guardarTienda, normalizar, esDominioValido } = require("./tiendas");
+const { metrica } = require("./monitoreo");
 const { guardarEstadoDB, consumirEstadoDB } = require("./db");
 
 // write_orders: lo usa el formulario COD para crear pedidos contra reembolso.
@@ -119,6 +120,7 @@ async function terminarInstalacion(res, url) {
 
   await guardarTienda(tienda, datos.access_token, { alcances: datos.scope });
   console.log(`  ✚ instalada · ${tienda}`);
+  metrica("instalacion", { tienda });
 
   // Webhooks que necesitamos de entrada:
   //   APP_UNINSTALLED        → borrar el token al instante (no lazy en el 401).

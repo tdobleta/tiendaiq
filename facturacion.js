@@ -11,6 +11,7 @@
 
 const { gql, env } = require("./shopify");
 const { leerTienda, guardarTienda } = require("./tiendas");
+const { metrica } = require("./monitoreo");
 
 const PAGINAS_GRATIS = Number(env.PAGINAS_GRATIS || 3);
 const PLAN_NOMBRE = "TiendaIQ Pro";
@@ -139,6 +140,9 @@ async function crearSuscripcion(sesion, urlApp) {
   );
   const r = d.appSubscriptionCreate;
   if (r.userErrors?.length) throw new Error("Suscripción: " + JSON.stringify(r.userErrors));
+  // Intención de suscribirse (embudo). La confirmación de revenue —el merchant
+  // aprueba y vuelve por ?plan=confirmado— se trackea aparte (follow-up).
+  metrica("suscripcion_iniciada", { tienda: sesion.tienda, test: env.PLAN_TEST === "1" });
   return r.confirmationUrl;
 }
 
