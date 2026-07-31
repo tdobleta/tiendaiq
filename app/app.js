@@ -683,7 +683,7 @@
         <div class="cod-vista-barra">
           <div class="editor__nota" style="margin:0;flex:1">Hacé clic en cualquier pieza para seleccionarla: <strong>movela</strong> con ↑ ↓, configurala en el panel o eliminala. Los elementos nuevos se agregan al final.</div>
           <div class="cod-agregar">
-            <button class="btn btn--chico" id="cod-agregar-btn" type="button">＋ Agregar elemento</button>
+            <button class="btn btn--chico" id="cod-agregar-btn" type="button">${ico("mas")} Agregar elemento</button>
             <div class="cod-agregar__menu" id="cod-agregar-menu" hidden>
               <div class="cod-agregar__grupo">Texto</div>
               <button type="button" data-el="titulo">${ico("tipografia")} Título o texto destacado</button>
@@ -788,7 +788,7 @@
             </div>`
           )
           .join("")}
-        <button class="btn btn--fantasma btn--chico" data-accion="tarifa-agregar">＋ Añadir tarifa</button>
+        <button class="btn btn--fantasma btn--chico" data-accion="tarifa-agregar">${ico("mas")} Añadir tarifa</button>
         <div class="ayuda" style="margin-top:8px">Precio 0 se muestra como "${esc(c.textos.gratis)}".</div>`;
 
     if (estado.cod.tab === "ofertas") {
@@ -814,7 +814,7 @@
         <div class="editor__nota">El cliente ve cada oferta como una tarjeta con el precio final, el precio tachado y cuánto ahorra. El descuento se aplica en el pedido real. Mirá el resultado en <strong>Vista previa</strong>.</div>
         <div class="cod-tier-cab"><span>Cantidad</span><span>Desc. %</span><span>Etiqueta</span><span>Popular</span><span>Precio (demo)</span><span></span></div>
         ${c.ofertas.tiers.map(filaTier).join("")}
-        <button class="btn btn--fantasma btn--chico" data-accion="tier-agregar">＋ Añadir oferta</button>`;
+        <button class="btn btn--fantasma btn--chico" data-accion="tier-agregar">${ico("mas")} Añadir oferta</button>`;
     }
 
     // textos
@@ -1896,7 +1896,7 @@
   // y la deja elegida en el selector desde el que se subió.
   const tileSubir = (destino, ruta) => `
     <label class="galeria-picker__img galeria-picker__subir" title="Subir una imagen desde tu computadora">
-      <span class="galeria-picker__subir-mas">＋</span>
+      <span class="galeria-picker__subir-mas">${ico("mas")}</span>
       <span class="galeria-picker__subir-txt">Subir</span>
       <input type="file" accept="image/*" hidden data-subir="${destino}" data-ruta-subir="${ruta}">
     </label>`;
@@ -1921,7 +1921,7 @@
         .join("") +
       tileSubir("multi", ruta) +
       `</div>
-      <div class="ayuda">Hacé clic para agregar o sacar. El número es el orden; la 1 es la imagen principal. Con ＋ subís una foto nueva desde tu computadora.</div>`
+      <div class="ayuda">Hacé clic para agregar o sacar. El número es el orden; la 1 es la imagen principal. El botón de subir agrega una foto nueva desde tu computadora.</div>`
     );
   }
 
@@ -2117,7 +2117,7 @@
                   )
                   .join("")
               : `<div class="editor__nota">Todavía no agregaste clips.</div>`) +
-            `<button class="btn btn--fantasma" type="button" data-muro-add="1">＋ Agregar clip</button>`
+            `<button class="btn btn--fantasma" type="button" data-muro-add="1">${ico("mas")} Agregar clip</button>`
           );
         }
       },
@@ -2254,7 +2254,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
           </fieldset>`
         )
         .join("");
-      items += `<button class="btn btn--fantasma" type="button" data-sec-add="${i}:video">＋ Agregar video</button>`;
+      items += `<button class="btn btn--fantasma" type="button" data-sec-add="${i}:video">${ico("mas")} Agregar video</button>`;
     } else {
       items = (s.items || [])
         .map(
@@ -2267,7 +2267,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
           </fieldset>`
         )
         .join("");
-      items += `<button class="btn btn--fantasma" type="button" data-sec-add="${i}:imagen">＋ Agregar imagen</button>`;
+      items += `<button class="btn btn--fantasma" type="button" data-sec-add="${i}:imagen">${ico("mas")} Agregar imagen</button>`;
     }
 
     return (
@@ -3499,7 +3499,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     vista.innerHTML = `
       <div class="inicio-cabecera">
         <h1 class="titulo-nav"><button class="volver-flecha" id="volver-inicio"></button> Bundles, upsells y regalos</h1>
-        <div class="inicio-cabecera__acciones"><button class="btn btn--marca" id="bdl-nuevo">＋ Crear bundle</button></div>
+        <div class="inicio-cabecera__acciones"><button class="btn btn--marca" id="bdl-nuevo">${ico("mas")} Crear bundle</button></div>
       </div>
       ${widgetEstado}
       ${lista.length ? bloqueMetricas() + tabsHTML + bulkBar + cuerpoTabla : onboarding}
@@ -3916,12 +3916,12 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
               <div class="be-addon-cfg__t"><span>${ico("regalo")} Regalo gratis</span>${gifts.length ? `<a class="be-gift__more" data-gift-add="${i}">Agregar más regalo</a>` : ""}</div>
               ${gifts.length
                 ? `<div class="be-gift__tabs">${gifts.map((_, gi) => `<span class="be-gift__tab ${gi === sel ? "is-sel" : ""}" data-gift-tab="${i}:${gi}">Regalo ${gi + 1}<button data-gift-del="${i}:${gi}" title="Quitar">×</button></span>`).join("")}</div>${editorRegalo(gifts[sel], sel)}`
-                : `<button class="be-gift-btn" data-addon-gift="${i}">＋ Seleccionar producto de regalo</button>`}</div>` : "";
+                : `<button class="be-gift-btn" data-addon-gift="${i}">${ico("mas")} Seleccionar producto de regalo</button>`}</div>` : "";
           const cfgEnvio = ad.envio?.on ? `<div class="be-addon-cfg">
               <div class="be-addon-cfg__t">${ico("camion")} Envío gratis<button class="be-addon-cfg__x" data-addon-toggle="${i}:envio">Eliminar</button></div>
               <div class="campo campo--editor"><label>Texto</label><input type="text" data-b="ofertas.${i}.addons.envio.texto" value="${esc(ad.envio.texto || "FREE SHIPPING")}"></div></div>` : "";
           return `<div class="be-addons">
-            <div class="be-addons__t">＋ Add-Ons</div>
+            <div class="be-addons__t">${ico("mas")} Add-Ons</div>
             <div class="be-addons__row">
               ${btn("imagen", BE_IMG, "+ Imagen")}
               ${btn("regalo", BE_GIFT2, "+ Regalo gratis")}
@@ -4464,7 +4464,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       ${bloqueActivador(b)}
 
       <div class="bdl-ofertas">${ofertas}</div>
-      ${b.ofertas.length < 3 ? `<button class="btn btn--fantasma btn--chico" id="bdl-add-oferta">＋ Agregar oferta</button>` : `<div class="panel__sub">Máximo 3 ofertas.</div>`}`;
+      ${b.ofertas.length < 3 ? `<button class="btn btn--fantasma btn--chico" id="bdl-add-oferta">${ico("mas")} Agregar oferta</button>` : `<div class="panel__sub">Máximo 3 ofertas.</div>`}`;
   }
 
   // --- pestaña Ofertas para BXGY ---
