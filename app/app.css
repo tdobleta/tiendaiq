@@ -1733,6 +1733,8 @@ summary:focus-visible, label:focus-visible {
   text-align: left;
 }
 .cod-agregar__menu button:hover { background: var(--fondo); }
+.cod-agregar__menu button .ico { width: 17px; height: 17px; color: var(--suave); flex-shrink: 0; }
+.cod-agregar__menu button:hover .ico { color: var(--negro); }
 
 /* modo edición: preview + panel de propiedades */
 .cod-modo-layout {

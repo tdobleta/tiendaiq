@@ -99,7 +99,22 @@
     importar: `<path d="M12 3v12M8 11l4 4 4-4"/><path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/>`,
     engranaje: `<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.6 1.6 0 00-2.7 1.3v.1a2 2 0 01-4 0v-.2a1.6 1.6 0 00-2.7-1.2l-.1.1a2 2 0 11-2.8-2.8l.1-.1A1.6 1.6 0 004.6 12H4.5a2 2 0 010-4h.2a1.6 1.6 0 001.2-2.7l-.1-.1a2 2 0 112.8-2.8l.1.1a1.6 1.6 0 002.7-1.2V1.4a2 2 0 014 0v.2a1.6 1.6 0 002.7 1.2l.1-.1a2 2 0 112.8 2.8l-.1.1a1.6 1.6 0 00-.3 2.4 1.6 1.6 0 001.5 1h.1a2 2 0 010 4h-.2a1.6 1.6 0 00-1.4 1z"/>`,
     externo: `<path d="M15 3h6v6"/><path d="M10 14L21 3"/><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/>`,
-    cursor: `<path d="M4 3l16 7-6.5 2.2L11 20z"/>`
+    cursor: `<path d="M4 3l16 7-6.5 2.2L11 20z"/>`,
+    imagen: `<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>`,
+    casilla: `<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 12l3 3 5-6"/>`,
+    calendario: `<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/>`,
+    tarjeta: `<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>`,
+    chat: `<path d="M21 11.5a8 8 0 01-11.5 7.2L3 20l1.3-6.5A8 8 0 1121 11.5z"/>`,
+    enlace: `<path d="M10 13a5 5 0 007 0l2-2a5 5 0 00-7-7l-1 1"/><path d="M14 11a5 5 0 00-7 0l-2 2a5 5 0 007 7l1-1"/>`,
+    regalo: `<path d="M20 12v9H4v-9"/><path d="M2 7h20v5H2z"/><path d="M12 7v14"/><path d="M12 7S12 3 9 3a2.5 2.5 0 000 4zM12 7s0-4 3-4a2.5 2.5 0 010 4z"/>`,
+    camion: `<path d="M14 16V5a1 1 0 00-1-1H2a1 1 0 00-1 1v11h13z"/><path d="M14 8h5l3 3v5h-8"/><circle cx="6.5" cy="18.5" r="1.5"/><circle cx="17.5" cy="18.5" r="1.5"/>`,
+    tipografia: `<path d="M4 7V4h16v3M9 20h6M12 4v16"/>`,
+    parrafo: `<path d="M17 4H9a4 4 0 000 8h4M13 4v16M17 4v16"/>`,
+    campoTexto: `<rect x="3" y="7" width="18" height="10" rx="2"/><path d="M7 11v2"/>`,
+    desplegable: `<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M8 10l4 4 4-4"/>`,
+    radio: `<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.5" fill="currentColor" stroke="none"/>`,
+    reloj: `<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>`,
+    cantidad: `<rect x="2" y="8" width="20" height="8" rx="2"/><path d="M6 12h2M16 12h2M17 11v2"/>`
   };
   const ico = (nombre, cls = "") =>
     `<svg class="ico${cls ? " " + cls : ""}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONOS[nombre] || ""}</svg>`;
@@ -664,23 +679,23 @@
             <button class="btn btn--chico" id="cod-agregar-btn" type="button">＋ Agregar elemento</button>
             <div class="cod-agregar__menu" id="cod-agregar-menu" hidden>
               <div class="cod-agregar__grupo">Texto</div>
-              <button type="button" data-el="titulo"><strong>T</strong> Título o texto destacado</button>
-              <button type="button" data-el="texto">¶ Párrafo de texto</button>
+              <button type="button" data-el="titulo">${ico("tipografia")} Título o texto destacado</button>
+              <button type="button" data-el="texto">${ico("parrafo")} Párrafo de texto</button>
               <div class="cod-agregar__grupo">Imagen</div>
-              <button type="button" data-el="imagen">🖼 Imagen o GIF</button>
+              <button type="button" data-el="imagen">${ico("imagen")} Imagen o GIF</button>
               <div class="cod-agregar__grupo">Campos</div>
-              <button type="button" data-el="campo">▭ Campo de texto</button>
-              <button type="button" data-el="desplegable">▾ Campo desplegable</button>
-              <button type="button" data-el="seleccion">◉ Selección única</button>
-              <button type="button" data-el="casilla">☑ Casilla de selección</button>
-              <button type="button" data-el="fecha">📅 Selector de fecha</button>
+              <button type="button" data-el="campo">${ico("campoTexto")} Campo de texto</button>
+              <button type="button" data-el="desplegable">${ico("desplegable")} Campo desplegable</button>
+              <button type="button" data-el="seleccion">${ico("radio")} Selección única</button>
+              <button type="button" data-el="casilla">${ico("casilla")} Casilla de selección</button>
+              <button type="button" data-el="fecha">${ico("calendario")} Selector de fecha</button>
               <div class="cod-agregar__grupo">Botones</div>
-              <button type="button" data-el="pago_shopify">💳 Botón de pago de Shopify</button>
-              <button type="button" data-el="whatsapp">✆ Botón de WhatsApp</button>
-              <button type="button" data-el="enlace">🔗 Botón con enlace</button>
+              <button type="button" data-el="pago_shopify">${ico("tarjeta")} Botón de pago de Shopify</button>
+              <button type="button" data-el="whatsapp">${ico("chat")} Botón de WhatsApp</button>
+              <button type="button" data-el="enlace">${ico("enlace")} Botón con enlace</button>
               <div class="cod-agregar__grupo">Otros</div>
-              <button type="button" data-el="cantidad">± Selector de cantidad</button>
-              <button type="button" data-el="timer">⏰ Timer de urgencia</button>
+              <button type="button" data-el="cantidad">${ico("cantidad")} Selector de cantidad</button>
+              <button type="button" data-el="timer">${ico("reloj")} Timer de urgencia</button>
             </div>
           </div>
         </div>
