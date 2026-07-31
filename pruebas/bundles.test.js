@@ -174,8 +174,8 @@ describe("el porcentaje que se le pide a Shopify", () => {
   });
 });
 
-describe("no acumular descuentos entre sí", () => {
-  test("los bundles no combinan con otros descuentos de producto ni de pedido", async () => {
+describe("combinación de descuentos (defaults estilo Pumper)", () => {
+  test("por default el bundle NO se apila con otros de PRODUCTO, pero sí con pedido/envío", async () => {
     const { modulo, shopify } = montar("bundles.js", {
       tiendas: { [TIENDA]: { token: "t" } },
       respuestas: [creado(1), creado(2)]
@@ -184,8 +184,11 @@ describe("no acumular descuentos entre sí", () => {
     await modulo.sincronizarDescuentos(SESION, { lista: [bundle()] });
     const c = creaciones(shopify)[0].variables.d.combinesWith;
 
-    assert.equal(c.productDiscounts, false, "si combinan, el 10% y el 15% se apilan");
-    assert.equal(c.orderDiscounts, false);
+    // Default sin `combina`: producto OFF (si no, el 10% y el 15% de dos
+    // descuentos de producto se apilarían); pedido/envío ON (estilo Pumper,
+    // controlable por el merchant en Configuración avanzada → combinaDe()).
+    assert.equal(c.productDiscounts, false, "los de producto NO se apilan con el bundle");
+    assert.equal(c.orderDiscounts, true, "pedido ON por default (Pumper)");
     assert.equal(c.shippingDiscounts, true, "el envío gratis sí puede convivir");
   });
 });
