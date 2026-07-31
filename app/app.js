@@ -92,7 +92,14 @@
     lapiz: `<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/>`,
     chispa: `<path d="M12 3l1.9 5.6L19.5 10l-5.6 1.4L12 17l-1.9-5.6L4.5 10l5.6-1.4z"/>`,
     documento: `<path d="M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9z"/><path d="M14 3v6h6"/>`,
-    bolsa: `<path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 01-8 0"/>`
+    bolsa: `<path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 01-8 0"/>`,
+    flechaArriba: `<path d="M12 19V5M5 12l7-7 7 7"/>`,
+    flechaAbajo: `<path d="M12 5v14M5 12l7 7 7-7"/>`,
+    subir: `<path d="M12 15V3M8 7l4-4 4 4"/><path d="M4 15v4a2 2 0 002 2h12a2 2 0 002-2v-4"/>`,
+    importar: `<path d="M12 3v12M8 11l4 4 4-4"/><path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/>`,
+    engranaje: `<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.6 1.6 0 00-2.7 1.3v.1a2 2 0 01-4 0v-.2a1.6 1.6 0 00-2.7-1.2l-.1.1a2 2 0 11-2.8-2.8l.1-.1A1.6 1.6 0 004.6 12H4.5a2 2 0 010-4h.2a1.6 1.6 0 001.2-2.7l-.1-.1a2 2 0 112.8-2.8l.1.1a1.6 1.6 0 002.7-1.2V1.4a2 2 0 014 0v.2a1.6 1.6 0 002.7 1.2l.1-.1a2 2 0 112.8 2.8l-.1.1a1.6 1.6 0 00-.3 2.4 1.6 1.6 0 001.5 1h.1a2 2 0 010 4h-.2a1.6 1.6 0 00-1.4 1z"/>`,
+    externo: `<path d="M15 3h6v6"/><path d="M10 14L21 3"/><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/>`,
+    cursor: `<path d="M4 3l16 7-6.5 2.2L11 20z"/>`
   };
   const ico = (nombre, cls = "") =>
     `<svg class="ico${cls ? " " + cls : ""}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONOS[nombre] || ""}</svg>`;
@@ -407,7 +414,7 @@
 
       <div class="ayuda-strip">
         <span class="ayuda-strip__txt">¿Necesitás una mano? Escribinos a <a href="mailto:soporte@tiendaiq.com">soporte@tiendaiq.com</a></span>
-        <a class="ayuda-strip__link" href="/terminos" target="_blank" rel="noopener">Términos y privacidad ↗</a>
+        <a class="ayuda-strip__link" href="/terminos" target="_blank" rel="noopener">Términos y privacidad ${ico("externo")}</a>
       </div>`;
 
     const aLista = () => cargarLista();
@@ -1089,7 +1096,7 @@
       engranaje.type = "button";
       engranaje.className = "cod-engranaje";
       engranaje.title = "Configurar y mover en Modo edición";
-      engranaje.textContent = "⚙";
+      engranaje.innerHTML = ico("engranaje");
       engranaje.onclick = (e) => {
         e.preventDefault();
         modoSel = div.dataset.item;
@@ -1192,7 +1199,7 @@
     const c = estado.cod.config;
 
     if (!modoSel) {
-      panel.innerHTML = `<div class="cod-props__vacio">👆 Hacé clic en cualquier pieza del formulario para moverla o configurarla.</div>`;
+      panel.innerHTML = `<div class="cod-props__vacio">${ico("cursor")} Hacé clic en cualquier pieza del formulario para moverla o configurarla.</div>`;
       return;
     }
 
@@ -1261,8 +1268,8 @@
     panel.innerHTML = `
       <div class="cod-props__cab">${esc(titulo)}</div>
       <div class="cod-props__acciones">
-        <button class="btn btn--fantasma btn--chico" data-mover="-1" ${idx <= 0 ? "disabled" : ""}>↑ Subir</button>
-        <button class="btn btn--fantasma btn--chico" data-mover="1" ${idx >= orden.length - 1 ? "disabled" : ""}>↓ Bajar</button>
+        <button class="btn btn--fantasma btn--chico" data-mover="-1" ${idx <= 0 ? "disabled" : ""}>${ico("flechaArriba")} Subir</button>
+        <button class="btn btn--fantasma btn--chico" data-mover="1" ${idx >= orden.length - 1 ? "disabled" : ""}>${ico("flechaAbajo")} Bajar</button>
         ${esElemento ? `<button class="btn btn--fantasma btn--chico cod-props__borrar" data-borrar-el="1">${ico("basura")} Eliminar</button>` : ""}
       </div>
       ${campos}`;
@@ -2079,7 +2086,7 @@
               <fieldset class="resena-edit clip-drop">
                 <legend>Clip ${i + 1}${manijasMuro(i, items.length)}</legend>
                 ${campo(`facetas.clientes.items.${i}.url`, "Enlace del gif o video")}
-                <label class="btn btn--fantasma btn--chico sec-subir-video" style="cursor:pointer">⬆ Subir o arrastrar video/gif
+                <label class="btn btn--fantasma btn--chico sec-subir-video" style="cursor:pointer">${ico("subir")} Subir o arrastrar video/gif
                   <input type="file" accept="image/*,video/*" hidden data-video-el="muro:${i}">
                 </label>
                 <div class="clip-drop__hint">o arrastrá el archivo hasta acá</div>
@@ -2143,7 +2150,7 @@
             <label>Cargar reseñas reales en lote</label>
             <textarea id="lote" rows="6" placeholder="María G.
 Me llegó en 3 días y funciona tal cual el video."></textarea>
-            <button class="btn btn--fantasma" id="btn-lote" type="button">↧ Volcar al muro</button>
+            <button class="btn btn--fantasma" id="btn-lote" type="button">${ico("importar")} Volcar al muro</button>
             <div class="ayuda">Una reseña por bloque, separadas por una línea en blanco: la primera línea es el nombre y el resto el texto. Van reemplazando las tarjetas guía desde la primera.</div>
           </div>` +
           tarjetasMuro
@@ -2214,7 +2221,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
           <fieldset class="sec-item">
             <legend>Video ${j + 1}${manijasItem(i, j, s.items.length)}</legend>
             ${campo(`${base}.items.${j}.url`, "Enlace del video (YouTube, Vimeo o MP4)")}
-            <label class="btn btn--fantasma btn--chico sec-subir-video" style="cursor:pointer">⬆ Subir video de tu computadora
+            <label class="btn btn--fantasma btn--chico sec-subir-video" style="cursor:pointer">${ico("subir")} Subir video de tu computadora
               <input type="file" accept="video/*" hidden data-video-el="${i}:${j}">
             </label>
             ${it.url && /^https?:\/\/cdn\.shopify/.test(it.url) ? `<div class="ayuda" style="margin-top:6px">${ico("check")} Video subido</div>` : ""}
@@ -2253,16 +2260,16 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   // ↑↓ y ✕ de cada clip del muro de clientes
   const manijasMuro = (i, total) => `
     <span class="sec-item__manijas">
-      <button type="button" data-muro-mov="${i}:-1" ${i === 0 ? "disabled" : ""}>↑</button>
-      <button type="button" data-muro-mov="${i}:1" ${i === total - 1 ? "disabled" : ""}>↓</button>
+      <button type="button" data-muro-mov="${i}:-1" ${i === 0 ? "disabled" : ""} aria-label="Subir">${ico("flechaArriba")}</button>
+      <button type="button" data-muro-mov="${i}:1" ${i === total - 1 ? "disabled" : ""} aria-label="Bajar">${ico("flechaAbajo")}</button>
       <button type="button" data-muro-del="${i}" aria-label="Quitar">${ico("basura")}</button>
     </span>`;
 
   // ↑↓ y ✕ de cada item de una section
   const manijasItem = (i, j, total) => `
     <span class="sec-item__manijas">
-      <button type="button" data-sec-mov="${i}:${j}:-1" ${j === 0 ? "disabled" : ""}>↑</button>
-      <button type="button" data-sec-mov="${i}:${j}:1" ${j === total - 1 ? "disabled" : ""}>↓</button>
+      <button type="button" data-sec-mov="${i}:${j}:-1" ${j === 0 ? "disabled" : ""} aria-label="Subir">${ico("flechaArriba")}</button>
+      <button type="button" data-sec-mov="${i}:${j}:1" ${j === total - 1 ? "disabled" : ""} aria-label="Bajar">${ico("flechaAbajo")}</button>
       <button type="button" data-sec-item-del="${i}:${j}" aria-label="Quitar">${ico("basura")}</button>
     </span>`;
 
@@ -2903,7 +2910,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       ${
         publicada && pg.url_publica
           ? `<div class="exito">
-               <div class="exito__titulo">✅ Publicada en tu tienda</div>
+               <div class="exito__titulo">${ico("checkCirculo")} Publicada en tu tienda</div>
                <a href="${esc(pg.url_publica)}" target="_blank">${esc(pg.url_publica)}</a>
              </div>`
           : ""
@@ -3859,7 +3866,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
               <div class="be-addon-cfg__t">🖼 Agregar imagen<button class="be-addon-cfg__x" data-addon-toggle="${i}:imagen">Eliminar</button></div>
               ${ad.imagen.url
                 ? `<div class="be-gift-sel"><span class="be-gift-sel__img"><img src="${esc(ad.imagen.url)}" alt=""></span><span class="be-gift-sel__n">${ico("check")} Imagen cargada</span><label class="be-gift-sel__ch" style="cursor:pointer">Cambiar<input type="file" accept="image/*" hidden data-addon-img="${i}"></label></div>`
-                : `<label class="be-img-btn">⬆ Seleccionar imagen de tu computadora<input type="file" accept="image/*" hidden data-addon-img="${i}"></label>`}</div>` : "";
+                : `<label class="be-img-btn">${ico("subir")} Seleccionar imagen de tu computadora<input type="file" accept="image/*" hidden data-addon-img="${i}"></label>`}</div>` : "";
           const g = ad.regalo || {};
           const gifts = g.items || [];
           const sel = Math.min(g.sel || 0, Math.max(0, gifts.length - 1));

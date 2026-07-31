@@ -200,6 +200,13 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
 .be-warn .ico, .perso-aviso .ico { margin-top: .5px; }
 /* Ícono al inicio de un banner de una línea: leve empuje óptico + aire. */
 .ico--banner { margin-right: 2px; }
+/* Botones de ícono cuadrados (reordenar / engranaje): centrar el SVG. */
+.sec-item__manijas button { display: inline-grid; place-items: center; }
+.sec-item__manijas button .ico { width: 14px; height: 14px; }
+.cod-engranaje { display: grid; place-items: center; }
+.cod-engranaje .ico { width: 15px; height: 15px; }
+.exito__titulo .ico { width: 15px; height: 15px; vertical-align: -3px; margin-right: 3px; }
+.ayuda-strip__link .ico { width: 13px; height: 13px; vertical-align: -2px; }
 
 /* ---------- 1. lista de productos ---------- */
 
