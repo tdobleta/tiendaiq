@@ -416,7 +416,7 @@
                    .map(
                      (p) => `
                      <div class="pub-fila">
-                       <div class="pub-fila__foto">${p.imagen ? `<img src="${esc(p.imagen)}" alt="" loading="lazy">` : "🖼"}</div>
+                       <div class="pub-fila__foto">${p.imagen ? `<img src="${esc(p.imagen)}" alt="" loading="lazy">` : ico("imagen", "ico--ph")}</div>
                        <div class="pub-fila__titulo">${esc(p.titulo || "Sin título")}</div>
                        ${p.url_publica ? `<a class="pub-fila__link" href="${esc(p.url_publica)}" target="_blank" rel="noopener">Ver en la tienda ↗</a>` : ""}
                      </div>`
@@ -481,7 +481,7 @@
 
     const fila = (p) => `
       <div class="pagina-fila" data-id="${esc(p.id)}">
-        <div class="pagina-fila__foto">${p.imagen ? `<img src="${esc(p.imagen)}" alt="" loading="lazy">` : "🖼"}</div>
+        <div class="pagina-fila__foto">${p.imagen ? `<img src="${esc(p.imagen)}" alt="" loading="lazy">` : ico("imagen", "ico--ph")}</div>
         <div class="pagina-fila__info">
           <div class="pagina-fila__titulo">${esc(p.titulo || "Sin título")}</div>
           <div class="pagina-fila__fecha">${esc(fechaCorta(p.actualizado))}</div>
@@ -867,7 +867,7 @@
                  <div class="panel__sub">Así se ve en tu página de producto</div>
                  <div class="cod-preview__marco">
                    <div class="cod-preview__prod">
-                     <div class="cod-preview__foto">${productoDemoCod().imagen ? `<img src="${esc(productoDemoCod().imagen)}" alt="">` : "🛍"}</div>
+                     <div class="cod-preview__foto">${productoDemoCod().imagen ? `<img src="${esc(productoDemoCod().imagen)}" alt="">` : ico("bolsa", "ico--ph")}</div>
                      <div>
                        <div class="cod-preview__nombre">${esc(productoDemoCod().titulo)}</div>
                        <div class="cod-preview__precio">${fmtBdl(productoDemoCod().variantes[0].precio)}</div>
@@ -1254,7 +1254,7 @@
       if (el.tipo === "fecha")
         campos = campoCod(`elementos.${i}.etiqueta`, "Etiqueta") + campoCod(`elementos.${i}.obligatorio`, "Obligatorio", "check");
       if (el.tipo === "imagen")
-        campos = `<label class="btn btn--fantasma btn--chico" style="cursor:pointer">🖼 ${el.url ? "Cambiar imagen" : "Subir imagen"}<input type="file" accept="image/*" hidden data-imagen-el="${i}"></label>
+        campos = `<label class="btn btn--fantasma btn--chico" style="cursor:pointer">${ico("imagen")} ${el.url ? "Cambiar imagen" : "Subir imagen"}<input type="file" accept="image/*" hidden data-imagen-el="${i}"></label>
           ${el.url ? `<div class="ayuda" style="margin:6px 0 10px">${ico("check")} Imagen cargada</div>` : `<div class="ayuda" style="margin:6px 0 10px">Subí un archivo o pegá una URL.</div>`}
           ${campoCod(`elementos.${i}.url`, "…o URL de la imagen / GIF")}
           ${campoCod(`elementos.${i}.tamano`, "Tamaño (% del ancho)", "numero", 'min="10" max="100"')}`;
@@ -1490,7 +1490,7 @@
 
     const fila = (p) => `
       <button class="fila" role="option" data-id="${esc(p.id)}">
-        <span class="fila__thumb">${p.imagen ? `<img src="${esc(p.imagen)}" alt="" loading="lazy">` : `<span class="fila__ph">🛍</span>`}</span>
+        <span class="fila__thumb">${p.imagen ? `<img src="${esc(p.imagen)}" alt="" loading="lazy">` : `<span class="fila__ph">${ico("bolsa")}</span>`}</span>
         <span class="fila__txt">
           <span class="fila__tit">${esc(p.titulo)}</span>
           ${p.precio != null ? `<span class="fila__precio">${esc(precioLindo(p.precio, p.moneda))}</span>` : ""}
@@ -1608,7 +1608,7 @@
 
     const filaP = (p) => `
       <button class="fila" type="button" data-id="${esc(p.id)}">
-        <span class="fila__thumb">${p.imagen ? `<img src="${esc(p.imagen)}" alt="" loading="lazy">` : `<span class="fila__ph">🛍</span>`}</span>
+        <span class="fila__thumb">${p.imagen ? `<img src="${esc(p.imagen)}" alt="" loading="lazy">` : `<span class="fila__ph">${ico("bolsa")}</span>`}</span>
         <span class="fila__txt">
           <span class="fila__tit">${esc(p.titulo)}</span>
           ${p.precio != null ? `<span class="fila__precio">${esc(precioLindo(p.precio, p.moneda))}</span>` : ""}
@@ -1907,7 +1907,7 @@
           const pos = elegidas.indexOf(id);
           return `<button type="button" class="galeria-picker__img ${pos > -1 ? "elegida" : ""}"
             data-img-multi="${ruta}" data-id="${esc(id)}">
-            ${urls[id] ? `<img src="${esc(urls[id])}" alt="">` : "🖼"}
+            ${urls[id] ? `<img src="${esc(urls[id])}" alt="">` : ico("imagen", "ico--ph")}
             ${pos > -1 ? `<span class="galeria-picker__orden">${pos + 1}</span>` : ""}
           </button>`;
         })
@@ -1935,7 +1935,7 @@
         .map(
           (id) => `<button type="button" class="galeria-picker__img ${id === actual ? "elegida" : ""}"
             data-img-uno="${ruta}" data-id="${esc(id)}">
-            ${urls[id] ? `<img src="${esc(urls[id])}" alt="">` : "🖼"}
+            ${urls[id] ? `<img src="${esc(urls[id])}" alt="">` : ico("imagen", "ico--ph")}
           </button>`
         )
         .join("") +
@@ -2000,7 +2000,7 @@
           <textarea rows="2" placeholder="Texto de la reseña"
                     data-ruta="facetas.resenas.items.${i}.texto">${esc(r.texto ?? "")}</textarea>
           <details class="resena-edit__foto">
-            <summary>🖼 Foto del cliente${r.imagen ? " · elegida" : ""}</summary>
+            <summary>${ico("imagen")} Foto del cliente${r.imagen ? " · elegida" : ""}</summary>
             ${selectorImagenUno(`facetas.resenas.items.${i}.imagen`, "", true)}
           </details>
         </fieldset>`
@@ -2241,7 +2241,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
             </label>
             ${it.url && /^https?:\/\/cdn\.shopify/.test(it.url) ? `<div class="ayuda" style="margin-top:6px">${ico("check")} Video subido</div>` : ""}
             <details class="resena-edit__foto">
-              <summary>🖼 Miniatura (opcional)${it.poster ? " · elegida" : ""}</summary>
+              <summary>${ico("imagen")} Miniatura (opcional)${it.poster ? " · elegida" : ""}</summary>
               ${selectorImagenUno(`${base}.items.${j}.poster`, "", true)}
             </details>
           </fieldset>`
@@ -3878,7 +3878,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
           const ad = o.addons || {};
           const btn = (key, ic, label) => `<button type="button" class="be-addon ${ad[key]?.on ? "is-on" : ""}" data-addon-toggle="${i}:${key}">${ic}<span>${label}</span></button>`;
           const cfgImagen = ad.imagen?.on ? `<div class="be-addon-cfg">
-              <div class="be-addon-cfg__t">🖼 Agregar imagen<button class="be-addon-cfg__x" data-addon-toggle="${i}:imagen">Eliminar</button></div>
+              <div class="be-addon-cfg__t">${ico("imagen")} Agregar imagen<button class="be-addon-cfg__x" data-addon-toggle="${i}:imagen">Eliminar</button></div>
               ${ad.imagen.url
                 ? `<div class="be-gift-sel"><span class="be-gift-sel__img"><img src="${esc(ad.imagen.url)}" alt=""></span><span class="be-gift-sel__n">${ico("check")} Imagen cargada</span><label class="be-gift-sel__ch" style="cursor:pointer">Cambiar<input type="file" accept="image/*" hidden data-addon-img="${i}"></label></div>`
                 : `<label class="be-img-btn">${ico("subir")} Seleccionar imagen de tu computadora<input type="file" accept="image/*" hidden data-addon-img="${i}"></label>`}</div>` : "";
@@ -3887,7 +3887,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
           const sel = Math.min(g.sel || 0, Math.max(0, gifts.length - 1));
           const editorRegalo = (it, gi) => `
             <div class="be-gift__body">
-              <div class="be-gift__thumb">${it.imagen ? `<img src="${esc(it.imagen)}" alt="">` : "🎁"}<button class="be-gift__cambiar" data-gift-pick="${i}:${gi}">Cambiar regalo</button></div>
+              <div class="be-gift__thumb">${it.imagen ? `<img src="${esc(it.imagen)}" alt="">` : `<span class="be-gift__ph">${ico("regalo")}</span>`}<button class="be-gift__cambiar" data-gift-pick="${i}:${gi}">Cambiar regalo</button></div>
               <div class="be-gift__fields">
                 <div class="be-gift__row2">
                   <div class="campo campo--editor"><label>Nombre del regalo y colores</label>
@@ -3906,12 +3906,12 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
               </div>
             </div>`;
           const cfgRegalo = g.on ? `<div class="be-addon-cfg">
-              <div class="be-addon-cfg__t"><span>🎁 Regalo gratis</span>${gifts.length ? `<a class="be-gift__more" data-gift-add="${i}">Agregar más regalo</a>` : ""}</div>
+              <div class="be-addon-cfg__t"><span>${ico("regalo")} Regalo gratis</span>${gifts.length ? `<a class="be-gift__more" data-gift-add="${i}">Agregar más regalo</a>` : ""}</div>
               ${gifts.length
                 ? `<div class="be-gift__tabs">${gifts.map((_, gi) => `<span class="be-gift__tab ${gi === sel ? "is-sel" : ""}" data-gift-tab="${i}:${gi}">Regalo ${gi + 1}<button data-gift-del="${i}:${gi}" title="Quitar">×</button></span>`).join("")}</div>${editorRegalo(gifts[sel], sel)}`
                 : `<button class="be-gift-btn" data-addon-gift="${i}">＋ Seleccionar producto de regalo</button>`}</div>` : "";
           const cfgEnvio = ad.envio?.on ? `<div class="be-addon-cfg">
-              <div class="be-addon-cfg__t">🚚 Envío gratis<button class="be-addon-cfg__x" data-addon-toggle="${i}:envio">Eliminar</button></div>
+              <div class="be-addon-cfg__t">${ico("camion")} Envío gratis<button class="be-addon-cfg__x" data-addon-toggle="${i}:envio">Eliminar</button></div>
               <div class="campo campo--editor"><label>Texto</label><input type="text" data-b="ofertas.${i}.addons.envio.texto" value="${esc(ad.envio.texto || "FREE SHIPPING")}"></div></div>` : "";
           return `<div class="be-addons">
             <div class="be-addons__t">＋ Add-Ons</div>
@@ -4490,7 +4490,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       .map(
         (p) => `<label class="bdl-prod">
           <input type="checkbox" data-prod="${esc(p.id)}" ${sel.has(String(p.id)) ? "checked" : ""}>
-          <span class="bdl-prod__foto">${p.imagen ? `<img src="${esc(p.imagen)}" alt="" loading="lazy">` : "🖼"}</span>
+          <span class="bdl-prod__foto">${p.imagen ? `<img src="${esc(p.imagen)}" alt="" loading="lazy">` : ico("imagen", "ico--ph")}</span>
           <span class="bdl-prod__t">${esc(p.titulo)}</span>
         </label>`
       )
@@ -4614,7 +4614,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       `<option value="">Producto de ejemplo</option>` +
       prods.map((p) => `<option value="${esc(p.id)}" ${estado.bundles.previewProd === p.id ? "selected" : ""}>${esc(p.titulo)}</option>`).join("");
     const nombre = sel ? sel.titulo : "Producto de ejemplo";
-    const foto = sel && sel.imagen ? `<img src="${esc(sel.imagen)}" alt="">` : "🛍";
+    const foto = sel && sel.imagen ? `<img src="${esc(sel.imagen)}" alt="">` : ico("bolsa", "ico--ph");
     const mobile = !!estado.bundles.previewMobile;
     return `<aside class="tarjeta cod-preview">
       <div class="tarjeta__titulo">Vista previa</div>
