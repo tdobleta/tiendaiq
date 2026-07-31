@@ -32,8 +32,13 @@
     volverA: "lista", // desde dónde se abrió el editor: "lista" o "paginas"
     cod: null, // { config, tab, sucio } de la pantalla COD
     bundles: null, // { config, vista, editIdx, tab, sucio } de la pantalla Bundles
+    seccionesElegidas: [], // tipos mandados desde la galería a la columna "Secciones"
+    galeriaCat: "popular", // pestaña activa de la galería de secciones
+    galeriaQ: "", // búsqueda de la galería
     error: null
   };
+  // Chips de la columna sobreviven recargas del editor.
+  try { estado.seccionesElegidas = JSON.parse(localStorage.getItem("tiq_sec_chips") || "[]"); } catch {}
 
   // ---------- api ----------
 
@@ -2199,6 +2204,9 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   function refrescarModal() {
     const cuerpo = document.getElementById("editor-modal-cuerpo");
     if (cuerpo && modalDef) cuerpo.innerHTML = modalDef.html();
+    // Las subidas de imagen/video reutilizan estos helpers; si lo abierto es el
+    // panel lateral de una sección v2, refrescalo también.
+    refrescarPanelSeccion();
   }
 
   // ---- editor de una section incrustada ----
@@ -2391,6 +2399,13 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   }
 
   function abrirModalEdicion(id) {
+    // Las secciones v2 (schema-driven, ej. Video slider) usan el PANEL LATERAL
+    // estilo Section Store, no el modal. Las clásicas (videos/carrusel) siguen
+    // con el modal viejo.
+    if (id.startsWith("sec:")) {
+      const s = (estado.pagina.data.secciones || []).find((x) => x.id === id.slice(4));
+      if (s && catSeccion(s.tipo)?.schema) { cerrarModalEdicion(); return abrirPanelSeccion(s.id); }
+    }
     cerrarModalEdicion();
     const def = id.startsWith("sec:") ? defSeccion(id.slice(4)) : seccionesPagina()[id];
     if (!def) return;
@@ -2766,6 +2781,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   }
 
   function iniciarDragSection(ev, card, marco) {
+    if (ev.target.closest("[data-ins-sec]")) return; // el botón "+" inserta, no arrastra
     ev.preventDefault();
     const tipo = card.dataset.nueva;
     let doc;
@@ -2967,27 +2983,583 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     }
   }
 
-  // Catálogo de sections arrastrables. Cada una tiene su mini-ilustración.
-  const SECTIONS_DISPONIBLES = [
+  // ============================================================
+  // SISTEMA DE SECCIONES (v2, estilo Section Store) — schema-driven.
+  // Cada sección se define por un ESQUEMA (grupos → controles). El MISMO
+  // esquema alimenta el panel lateral de edición Y el mapeo a variables CSS
+  // del render (extensions/.../tiendaiq.js). Los defaults de acá DEBEN
+  // espejar DEF_VS en tiendaiq.js — son dos bundles distintos, se sincronizan
+  // a mano (mismo set de claves).
+  // ============================================================
+
+  // Defaults canónicos del Video slider (mirror de DEF_VS en tiendaiq.js).
+  const DEF_VS = {
+    // Slider
+    cols: 5, colsMobile: 1.5, rotate: 0,
+    // Slide
+    aspecto: "portrait", aspectoMobile: "portrait",
+    radio: 16, bordeSlide: 0, overlay: 0.2, sombra: false,
+    // Content
+    hPos: "center", hPosMobile: "center", vPos: "bottom", vPosMobile: "bottom",
+    // Title
+    fuenteCustom: false, tituloSize: 16, tituloSizeMobile: 16, lineHeight: 130,
+    // Stars
+    ocultarEstrellas: false, iconoEstrella: null,
+    estrellasSize: 16, estrellasSizeMobile: 16, estrellasMargen: 16, estrellasMargenMobile: 16,
+    // Controls (pausa / sonido)
+    usarPausa: true, usarSonido: true, ctrlSize: 40, ctrlSizeMobile: 40, ctrlBorde: 0,
+    // Arrows (flechas)
+    flechas: true, flechasMobile: false, flechaSize: 48, flechaIco: 8,
+    flechaRadio: 100, flechaBorde: 0, flechaHover: "color",
+    // Slide colors
+    colTitulo: "#ffffff", colEstrellas: "#ffffff", colBorde: "#121212",
+    colSombra: "#121212", colOverlay: "#121212",
+    // Controls colors
+    colCtrlIco: "#ffffff", colCtrlIcoHover: "#ffffff",
+    colCtrlBg: "#ffffff", colCtrlBgHover: "#ffffff",
+    colCtrlBorde: "#ffffff", colCtrlBordeHover: "#ffffff",
+    // Arrow colors
+    colFlechaIcono: "#121212", colFlechaIconoHover: "#ffffff",
+    colFlechaFondo: "#ffffff", colFlechaFondoHover: "#121212",
+    colFlechaBorde: "#121212", colFlechaBordeHover: "#121212",
+    // Section colors
+    fondoEstilo: "solid", fondo: "#ffffff", fondo2: "#f4f4f7", colBordeSec: "#121212",
+    // Section margin / padding
+    margenTop: 0, margenBottom: 0,
+    padTop: 36, padBottom: 36, padSides: 0, padSidesMobile: 0,
+    // Section settings
+    ancho: "page", bordeSec: 0, lazy: true, cssCustom: ""
+  };
+
+  // Opciones reutilizadas por los segmented controls.
+  const OP_HPOS = [["left", "Izq."], ["center", "Centro"], ["right", "Der."]];
+  const OP_VPOS = [["top", "Arriba"], ["bottom", "Abajo"]];
+  const OP_ASPECTO = [["portrait", "Vertical"], ["square", "Cuadrado"], ["landscape", "Horizontal"]];
+
+  // Esquema del Video slider: grupos (acordeones) → controles. Cada control:
+  //   { k: clave en settings, t: tipo, lab: etiqueta, ...opts }
+  //   t: slider {min,max,step,u} · segment {op} · select {op} · toggle · color · image
+  const SCHEMA_VS = [
+    { id: "slider", tit: "Slider", ctrls: [
+      { k: "cols", t: "slider", lab: "Slides por vista", min: 1, max: 6, step: 1 },
+      { k: "colsMobile", t: "slider", lab: "Slides por vista — móvil", min: 1, max: 4, step: 0.5 },
+      { k: "rotate", t: "slider", lab: "Rotar", min: -15, max: 15, step: 1, u: "°" }
+    ]},
+    { id: "slide", tit: "Slide", ctrls: [
+      { k: "aspecto", t: "segment", lab: "Proporción", op: OP_ASPECTO },
+      { k: "aspectoMobile", t: "segment", lab: "Proporción — móvil", op: OP_ASPECTO },
+      { k: "radio", t: "slider", lab: "Redondez", min: 0, max: 40, step: 1, u: "px" },
+      { k: "bordeSlide", t: "slider", lab: "Grosor del borde", min: 0, max: 10, step: 1, u: "px" },
+      { k: "overlay", t: "slider", lab: "Sombreado (overlay)", min: 0, max: 1, step: 0.05 },
+      { k: "sombra", t: "toggle", lab: "Usar sombra" }
+    ]},
+    { id: "content", tit: "Contenido", ctrls: [
+      { k: "hPos", t: "segment", lab: "Posición horizontal", op: OP_HPOS },
+      { k: "hPosMobile", t: "segment", lab: "Posición horizontal — móvil", op: OP_HPOS },
+      { k: "vPos", t: "segment", lab: "Posición vertical", op: OP_VPOS },
+      { k: "vPosMobile", t: "segment", lab: "Posición vertical — móvil", op: OP_VPOS }
+    ]},
+    { id: "title", tit: "Título", ctrls: [
+      { k: "fuenteCustom", t: "toggle", lab: "Usar fuente propia" },
+      { k: "tituloSize", t: "slider", lab: "Tamaño de fuente", min: 10, max: 40, step: 1, u: "px" },
+      { k: "tituloSizeMobile", t: "slider", lab: "Tamaño de fuente — móvil", min: 10, max: 40, step: 1, u: "px" },
+      { k: "lineHeight", t: "slider", lab: "Altura de línea", min: 90, max: 200, step: 5, u: "%" }
+    ]},
+    { id: "stars", tit: "Estrellas", ctrls: [
+      { k: "ocultarEstrellas", t: "toggle", lab: "Ocultar estrellas" },
+      { k: "iconoEstrella", t: "image", lab: "Ícono (reemplaza la estrella)" },
+      { k: "estrellasSize", t: "slider", lab: "Tamaño", min: 8, max: 32, step: 1, u: "px" },
+      { k: "estrellasSizeMobile", t: "slider", lab: "Tamaño — móvil", min: 8, max: 32, step: 1, u: "px" },
+      { k: "estrellasMargen", t: "slider", lab: "Margen superior", min: 0, max: 40, step: 1, u: "px" },
+      { k: "estrellasMargenMobile", t: "slider", lab: "Margen superior — móvil", min: 0, max: 40, step: 1, u: "px" }
+    ]},
+    { id: "controls", tit: "Controles", ctrls: [
+      { k: "usarPausa", t: "toggle", lab: "Botón de pausa/play" },
+      { k: "usarSonido", t: "toggle", lab: "Botón de sonido on/off" },
+      { k: "ctrlSize", t: "slider", lab: "Tamaño", min: 24, max: 72, step: 1, u: "px" },
+      { k: "ctrlSizeMobile", t: "slider", lab: "Tamaño — móvil", min: 24, max: 72, step: 1, u: "px" },
+      { k: "ctrlBorde", t: "slider", lab: "Grosor del borde", min: 0, max: 8, step: 1, u: "px" }
+    ]},
+    { id: "arrows", tit: "Flechas", ctrls: [
+      { k: "flechas", t: "toggle", lab: "Mostrar en escritorio" },
+      { k: "flechasMobile", t: "toggle", lab: "Mostrar en móvil" },
+      { k: "flechaSize", t: "slider", lab: "Tamaño", min: 28, max: 72, step: 1, u: "px" },
+      { k: "flechaIco", t: "slider", lab: "Tamaño del ícono", min: 4, max: 20, step: 1, u: "px" },
+      { k: "flechaRadio", t: "slider", lab: "Redondez", min: 0, max: 100, step: 1, u: "px" },
+      { k: "flechaBorde", t: "slider", lab: "Grosor del borde", min: 0, max: 8, step: 1, u: "px" },
+      { k: "flechaHover", t: "select", lab: "Efecto al pasar", op: [["color", "Cambiar color"], ["none", "Ninguno"]] }
+    ]},
+    { id: "colSlide", tit: "Colores del slide", ctrls: [
+      { k: "colTitulo", t: "color", lab: "Título" },
+      { k: "colEstrellas", t: "color", lab: "Estrellas" },
+      { k: "colBorde", t: "color", lab: "Borde" },
+      { k: "colSombra", t: "color", lab: "Sombra" },
+      { k: "colOverlay", t: "color", lab: "Overlay" }
+    ]},
+    { id: "colCtrl", tit: "Colores de los controles", ctrls: [
+      { k: "colCtrlIco", t: "color", lab: "Ícono" },
+      { k: "colCtrlIcoHover", t: "color", lab: "Ícono (hover)" },
+      { k: "colCtrlBg", t: "color", lab: "Fondo" },
+      { k: "colCtrlBgHover", t: "color", lab: "Fondo (hover)" },
+      { k: "colCtrlBorde", t: "color", lab: "Borde" },
+      { k: "colCtrlBordeHover", t: "color", lab: "Borde (hover)" }
+    ]},
+    { id: "colArrow", tit: "Colores de las flechas", ctrls: [
+      { k: "colFlechaIcono", t: "color", lab: "Ícono" },
+      { k: "colFlechaIconoHover", t: "color", lab: "Ícono (hover)" },
+      { k: "colFlechaFondo", t: "color", lab: "Fondo" },
+      { k: "colFlechaFondoHover", t: "color", lab: "Fondo (hover)" },
+      { k: "colFlechaBorde", t: "color", lab: "Borde" },
+      { k: "colFlechaBordeHover", t: "color", lab: "Borde (hover)" }
+    ]},
+    { id: "colSec", tit: "Colores de la sección", ctrls: [
+      { k: "fondoEstilo", t: "segment", lab: "Estilo de fondo", op: [["solid", "Sólido"], ["gradient", "Degradado"]] },
+      { k: "fondo", t: "color", lab: "Fondo" },
+      { k: "fondo2", t: "color", lab: "Fondo 2 (degradado)", dep: ["fondoEstilo", "gradient"] },
+      { k: "colBordeSec", t: "color", lab: "Borde" }
+    ]},
+    { id: "margin", tit: "Margen de la sección (afuera)", ctrls: [
+      { k: "margenTop", t: "slider", lab: "Arriba", min: 0, max: 120, step: 1, u: "px" },
+      { k: "margenBottom", t: "slider", lab: "Abajo", min: 0, max: 120, step: 1, u: "px" }
+    ]},
+    { id: "padding", tit: "Padding de la sección (adentro)", ctrls: [
+      { k: "padTop", t: "slider", lab: "Arriba", min: 0, max: 120, step: 1, u: "px" },
+      { k: "padBottom", t: "slider", lab: "Abajo", min: 0, max: 120, step: 1, u: "px" },
+      { k: "padSides", t: "slider", lab: "Lados", min: 0, max: 10, step: 0.5, u: "rem" },
+      { k: "padSidesMobile", t: "slider", lab: "Lados — móvil", min: 0, max: 10, step: 0.5, u: "rem" }
+    ]},
+    { id: "settings", tit: "Ajustes de la sección", ctrls: [
+      { k: "ancho", t: "segment", lab: "Ancho", op: [["page", "Página"], ["full", "Completo"], ["custom", "Custom"]] },
+      { k: "bordeSec", t: "slider", lab: "Grosor del borde", min: 0, max: 8, step: 1, u: "px" },
+      { k: "lazy", t: "toggle", lab: "Carga diferida (lazy)" }
+    ]}
+  ];
+
+  // Thumbnail mock del Video slider (3 cards verticales, la central destacada),
+  // reutilizado en la galería, el chip de la columna y el mini de la card.
+  const THUMB_VS = `<span class="tiq-thumb tiq-thumb--vs">
+      <span class="tiq-thumb__card"></span>
+      <span class="tiq-thumb__card tiq-thumb__card--hi"></span>
+      <span class="tiq-thumb__card"></span>
+    </span>`;
+
+  // Catálogo de secciones disponibles (lo que muestra la galería estilo Section
+  // Store). Cada una: tipo, nombre, categorías, thumbnail y (si es v2) esquema.
+  const CATALOGO_SECCIONES = [
     {
       tipo: "videoslider",
       nombre: "Video slider",
       desc: "Carrusel de videos verticales con reseña (título + estrellas)",
-      mini: `<div class="section-card__mini section-card__mini--videos"><span></span><span></span><span></span></div>`
+      cats: ["popular", "video", "testimonial"],
+      thumb: THUMB_VS,
+      schema: SCHEMA_VS,
+      defaults: DEF_VS
     },
     {
       tipo: "videos",
       nombre: "Videos de producto",
       desc: "Carrusel de videos (YouTube, Vimeo o MP4)",
-      mini: `<div class="section-card__mini section-card__mini--videos"><span></span><span></span><span></span></div>`
+      cats: ["video"],
+      thumb: `<span class="tiq-thumb tiq-thumb--videos"><span></span><span></span><span></span></span>`
     },
     {
       tipo: "carrusel",
       nombre: "Carrusel de imágenes",
       desc: "Galería deslizable de fotos",
-      mini: `<div class="section-card__mini section-card__mini--imgs"><span></span><span></span><span></span><span></span></div>`
+      cats: ["images"],
+      thumb: `<span class="tiq-thumb tiq-thumb--imgs"><span></span><span></span><span></span><span></span></span>`
     }
   ];
+
+  // Categorías de la galería (íconos estilo Section Store).
+  const CATS_SECCIONES = [
+    ["popular", "Populares"],
+    ["video", "Video"],
+    ["testimonial", "Testimonios"],
+    ["images", "Imágenes"],
+    ["todas", "Todas"]
+  ];
+
+  const catSeccion = (tipo) => CATALOGO_SECCIONES.find((c) => c.tipo === tipo);
+  // settings efectivos de una sección videoslider = defaults ← settings guardados.
+  const settingsVS = (s) => ({ ...DEF_VS, ...(s.settings || {}) });
+
+  function guardarChips() {
+    try { localStorage.setItem("tiq_sec_chips", JSON.stringify(estado.seccionesElegidas)); } catch {}
+  }
+
+  // Chips de la columna "Secciones": las que el merchant mandó desde la galería.
+  // Cada chip es arrastrable a la página (reusa el drag: data-nueva=tipo) y
+  // también se inserta con un clic en "+".
+  function chipsSeccionesHTML() {
+    const elegidas = estado.seccionesElegidas || [];
+    if (!elegidas.length) {
+      return `<div class="sec-chips__vacio">${ico("cursor")}<p>Todavía no sumaste secciones. Tocá <strong>Ver todas las secciones disponibles</strong> y elegí las que quieras.</p></div>`;
+    }
+    return elegidas
+      .map((tipo) => {
+        const c = catSeccion(tipo);
+        if (!c) return "";
+        return `<div class="section-card" data-nueva="${c.tipo}" title="Arrastrar a la página o tocar + para insertar">
+          <span class="section-card__mini">${c.thumb}</span>
+          <div class="section-card__txt">
+            <div class="section-card__nombre">${esc(c.nombre)}</div>
+            <div class="section-card__desc">${esc(c.desc)}</div>
+          </div>
+          <button class="section-card__ins" type="button" data-ins-sec="${c.tipo}" title="Insertar en la página" aria-label="Insertar">${ico("mas")}</button>
+          <span class="section-card__grip">${ico("grip")}</span>
+        </div>`;
+      })
+      .join("");
+  }
+
+  function refrescarChips(marco) {
+    const cont = $("sec-chips");
+    if (cont) cont.innerHTML = chipsSeccionesHTML();
+    if (marco) montarDragSections(marco);
+  }
+
+  // ---- Galería de secciones (modal estilo Section Store) ----
+  const IC_BUSCAR = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>`;
+  const IC_CAT = {
+    popular: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l2.5 5.3 5.8.6-4.4 3.9 1.3 5.7L12 21.3 6.8 24.4l1.3-5.7L3.7 8.9l5.8-.6z"/></svg>`,
+    video: `<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="9"/><path d="M10 8.5v7l6-3.5z" fill="#fff"/></svg>`,
+    testimonial: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8 8 0 01-11.5 7.2L3 20l1.3-6.5A8 8 0 1121 11.5z"/></svg>`,
+    images: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.6"/><path d="M21 15l-5-5L5 21"/></svg>`,
+    todas: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>`
+  };
+
+  function seccionesFiltradas() {
+    const cat = estado.galeriaCat;
+    const q = (estado.galeriaQ || "").trim().toLowerCase();
+    return CATALOGO_SECCIONES.filter((c) => {
+      const okCat = cat === "todas" || c.cats.includes(cat);
+      const okQ = !q || c.nombre.toLowerCase().includes(q) || c.desc.toLowerCase().includes(q);
+      return okCat && okQ;
+    });
+  }
+
+  function galeriaGridHTML() {
+    const items = seccionesFiltradas();
+    if (!items.length) return `<div class="galsec__vacio">No hay secciones que coincidan con la búsqueda.</div>`;
+    return items
+      .map((c) => {
+        const puesta = (estado.seccionesElegidas || []).includes(c.tipo);
+        return `<article class="galsec-card">
+          <div class="galsec-card__prev">${c.thumb}</div>
+          <div class="galsec-card__pie">
+            <div class="galsec-card__info">
+              <div class="galsec-card__nombre">${esc(c.nombre)}</div>
+              <div class="galsec-card__badge">Incluida</div>
+            </div>
+            <button class="btn ${puesta ? "btn--fantasma" : "btn--acento"} btn--chico galsec-card__add" type="button" data-gal-add="${c.tipo}"${puesta ? " disabled" : ""}>${puesta ? ico("check") + " Agregada" : ico("mas") + " Agregar"}</button>
+          </div>
+        </article>`;
+      })
+      .join("");
+  }
+
+  function abrirGaleriaSecciones(marco) {
+    cerrarGaleriaSecciones();
+    const m = document.createElement("div");
+    m.className = "galsec";
+    m.id = "galsec";
+    m.innerHTML = `
+      <div class="galsec__caja">
+        <div class="galsec__cab">
+          <div class="galsec__marca">${ico("chispa")} Secciones</div>
+          <div class="galsec__buscar">${IC_BUSCAR}<input type="text" id="galsec-q" placeholder="Buscar secciones" value="${esc(estado.galeriaQ || "")}"></div>
+          <button class="galsec__x" type="button" aria-label="Cerrar">×</button>
+        </div>
+        <div class="galsec__tabs" id="galsec-tabs">
+          ${CATS_SECCIONES.map(([id, lab]) => `<button class="galsec__tab ${estado.galeriaCat === id ? "is-sel" : ""}" type="button" data-gal-cat="${id}"><span class="galsec__tab-ic">${IC_CAT[id] || ""}</span><span>${lab}</span></button>`).join("")}
+        </div>
+        <div class="galsec__grid" id="galsec-grid">${galeriaGridHTML()}</div>
+      </div>`;
+    document.body.appendChild(m);
+
+    const cerrarSiFuera = (e) => { if (e.target === m || e.target.closest(".galsec__x")) cerrarGaleriaSecciones(); };
+    m.addEventListener("click", (e) => {
+      cerrarSiFuera(e);
+      const tab = e.target.closest("[data-gal-cat]");
+      if (tab) {
+        estado.galeriaCat = tab.dataset.galCat;
+        m.querySelectorAll(".galsec__tab").forEach((t) => t.classList.toggle("is-sel", t === tab));
+        $("galsec-grid").innerHTML = galeriaGridHTML();
+        return;
+      }
+      const add = e.target.closest("[data-gal-add]");
+      if (add) {
+        const tipo = add.dataset.galAdd;
+        if (!(estado.seccionesElegidas || []).includes(tipo)) {
+          estado.seccionesElegidas.push(tipo);
+          guardarChips();
+          refrescarChips(marco);
+        }
+        $("galsec-grid").innerHTML = galeriaGridHTML();
+        toast("Sección agregada a la columna");
+      }
+    });
+    const q = $("galsec-q");
+    if (q) q.addEventListener("input", () => {
+      estado.galeriaQ = q.value;
+      $("galsec-grid").innerHTML = galeriaGridHTML();
+    });
+    document.addEventListener("keydown", galeriaEsc);
+  }
+
+  function galeriaEsc(e) { if (e.key === "Escape") cerrarGaleriaSecciones(); }
+  function cerrarGaleriaSecciones() {
+    document.getElementById("galsec")?.remove();
+    document.removeEventListener("keydown", galeriaEsc);
+  }
+
+  // ============================================================
+  // PANEL LATERAL DE EDICIÓN (estilo Section Store) — schema-driven.
+  // Se abre a la derecha cuando se edita una sección v2 (Video slider). Renderiza
+  // el contenido (bloques de video) + los grupos del esquema como acordeones con
+  // controles ricos (slider con unidad, segmented, color+hex, toggle, select,
+  // imagen). Cada cambio escribe en s.settings y repinta en vivo.
+  // ============================================================
+  let panelSecId = null;      // id de la sección abierta en el panel
+  const panelOpen = { slider: true }; // acordeones abiertos (primer grupo abierto)
+
+  const secActual = () => (estado.pagina.data.secciones || []).find((s) => s.id === panelSecId);
+  const idxSec = (id) => (estado.pagina.data.secciones || []).findIndex((s) => s.id === id);
+  const vsGet = (s, k) => { const v = (s.settings || {})[k]; return v === undefined ? DEF_VS[k] : v; };
+
+  // --- Controles del panel (widgets) ---
+  const KID = (k) => "vk-" + k;
+
+  function ctrlSlider(s, c) {
+    const v = vsGet(s, c.k);
+    return `<div class="sp-row sp-row--slider">
+      <label class="sp-lab" for="${KID(c.k)}">${esc(c.lab)}</label>
+      <div class="sp-slider">
+        <input type="range" id="${KID(c.k)}" min="${c.min}" max="${c.max}" step="${c.step}" value="${esc(v)}" data-vk="${c.k}" data-vt="numero">
+        <span class="sp-num"><output data-vout="${c.k}">${esc(v)}</output><i>${c.u || ""}</i></span>
+      </div>
+    </div>`;
+  }
+  function ctrlSegment(s, c) {
+    const v = String(vsGet(s, c.k));
+    return `<div class="sp-row sp-row--seg">
+      <label class="sp-lab">${esc(c.lab)}</label>
+      <div class="sp-seg" role="group">
+        ${c.op.map(([val, lab]) => `<button type="button" class="sp-seg__b ${String(val) === v ? "is-sel" : ""}" data-vseg="${c.k}" data-vval="${esc(val)}">${esc(lab)}</button>`).join("")}
+      </div>
+    </div>`;
+  }
+  function ctrlSelect(s, c) {
+    const v = String(vsGet(s, c.k));
+    return `<div class="sp-row sp-row--sel">
+      <label class="sp-lab" for="${KID(c.k)}">${esc(c.lab)}</label>
+      <select id="${KID(c.k)}" class="sp-select" data-vk="${c.k}">
+        ${c.op.map(([val, lab]) => `<option value="${esc(val)}"${String(val) === v ? " selected" : ""}>${esc(lab)}</option>`).join("")}
+      </select>
+    </div>`;
+  }
+  function ctrlToggle(s, c) {
+    const on = !!vsGet(s, c.k);
+    return `<div class="sp-row sp-row--tog">
+      <label class="sp-lab">${esc(c.lab)}</label>
+      <button type="button" class="sp-tog ${on ? "is-on" : ""}" data-vtog="${c.k}" role="switch" aria-checked="${on}"><span class="sp-tog__k"></span></button>
+    </div>`;
+  }
+  function ctrlColor(s, c) {
+    const v = String(vsGet(s, c.k) || "#000000");
+    return `<div class="sp-row sp-row--color">
+      <label class="sp-lab">${esc(c.lab)}</label>
+      <div class="sp-color">
+        <label class="sp-color__sw" style="background:${esc(v)}"><input type="color" value="${esc(v)}" data-vk="${c.k}"></label>
+        <input type="text" class="sp-color__hex" value="${esc(v)}" data-vk="${c.k}" data-vhex spellcheck="false" maxlength="9">
+      </div>
+    </div>`;
+  }
+  function ctrlImage(s, c) {
+    const ruta = `secciones.${idxSec(s.id)}.settings.${c.k}`;
+    return `<div class="sp-row sp-row--img">
+      <label class="sp-lab">${esc(c.lab)}</label>
+      ${selectorImagenUno(ruta, "", true)}
+    </div>`;
+  }
+  function ctrlPanel(s, c) {
+    if (c.dep) { const [dk, dv] = c.dep; if (String(vsGet(s, dk)) !== String(dv)) return ""; }
+    if (c.t === "slider") return ctrlSlider(s, c);
+    if (c.t === "segment") return ctrlSegment(s, c);
+    if (c.t === "select") return ctrlSelect(s, c);
+    if (c.t === "toggle") return ctrlToggle(s, c);
+    if (c.t === "color") return ctrlColor(s, c);
+    if (c.t === "image") return ctrlImage(s, c);
+    return "";
+  }
+
+  function secAcordeon(id, tit, cuerpo) {
+    const ab = !!panelOpen[id];
+    return `<div class="sp-acc ${ab ? "is-open" : ""}">
+      <button type="button" class="sp-acc__head" data-vacc="${id}"><span>${esc(tit)}</span><span class="sp-acc__chev">${ico("chevron")}</span></button>
+      ${ab ? `<div class="sp-acc__body">${cuerpo}</div>` : ""}
+    </div>`;
+  }
+
+  // Bloques de video (contenido) — mismo lenguaje que el modal clásico, con url,
+  // subida, título, estrellas y miniatura; agregar/reordenar/eliminar.
+  function bloquesVSHTML(s) {
+    const i = idxSec(s.id);
+    const base = `secciones.${i}`;
+    const items = (s.items || [])
+      .map((it, j) => `
+        <div class="sp-blk">
+          <div class="sp-blk__cab"><span class="sp-blk__tit">${ico("video")} Video ${j + 1}</span><span class="sp-blk__man">${manijasItem(i, j, s.items.length)}</span></div>
+          ${campo(`${base}.items.${j}.url`, "Enlace (YouTube, Vimeo o MP4)")}
+          <label class="btn btn--fantasma btn--chico sp-blk__subir" style="cursor:pointer">${ico("subir")} Subir video
+            <input type="file" accept="video/*" hidden data-video-el="${i}:${j}">
+          </label>
+          ${it.url && /^https?:\/\/cdn\.shopify/.test(it.url) ? `<div class="ayuda" style="margin-top:6px">${ico("check")} Video subido</div>` : ""}
+          ${campo(`${base}.items.${j}.titulo`, "Nombre / título (ej. Jess B.)", 0, true)}
+          <div class="campo campo--editor"><label>Estrellas</label>${selectorEstrellas(`${base}.items.${j}.estrellas`, it.estrellas ?? 5)}</div>
+          <details class="resena-edit__foto"><summary>${ico("imagen")} Miniatura (opcional)${it.poster ? " · elegida" : ""}</summary>${selectorImagenUno(`${base}.items.${j}.poster`, "", true)}</details>
+        </div>`)
+      .join("");
+    return items + `<button class="btn btn--fantasma sp-blk__add" type="button" data-sec-add="${i}:videoslider">${ico("mas")} Agregar video</button>`;
+  }
+
+  function panelSeccionHTML(s) {
+    const i = idxSec(s.id);
+    const cabecera = `
+      ${campo(`secciones.${i}.titulo`, "Título de la sección", 0, true)}
+      <div class="campo campo--editor"><label>Ubicación en la página</label>
+        <select data-ruta="secciones.${i}.ancla">
+          ${ANCLAS_UBICACION.map(([v, t]) => `<option value="${v}"${(s.ancla || "top") === v ? "selected" : ""}>${t}</option>`).join("")}
+        </select></div>`;
+    const grupos = SCHEMA_VS.map((g) => secAcordeon(g.id, g.tit, g.ctrls.map((c) => ctrlPanel(s, c)).join(""))).join("");
+    const cssCustom = `<div class="sp-acc ${panelOpen.css ? "is-open" : ""}">
+        <button type="button" class="sp-acc__head" data-vacc="css"><span>CSS personalizado</span><span class="sp-acc__chev">${ico("chevron")}</span></button>
+        ${panelOpen.css ? `<div class="sp-acc__body"><textarea class="sp-css" data-vk="cssCustom" spellcheck="false" placeholder="[data-seccion] .tiq-vs__slide { … }">${esc(vsGet(s, "cssCustom") || "")}</textarea></div>` : ""}
+      </div>`;
+    return `
+      <div class="sp-sub">Contenido</div>
+      <div class="sp-content">${cabecera}${bloquesVSHTML(s)}</div>
+      <div class="sp-sub">Ajustes</div>
+      ${grupos}
+      ${cssCustom}
+      <button type="button" class="sp-del" data-panel-del="${s.id}">${ico("basura")} Eliminar sección</button>`;
+  }
+
+  function refrescarPanelSeccion() {
+    const s = secActual();
+    const body = document.getElementById("sp-body");
+    if (s && body) body.innerHTML = panelSeccionHTML(s);
+  }
+
+  function setVS(s, k, val) {
+    s.settings = s.settings || {};
+    s.settings[k] = val;
+    marcarSucio();
+    clearTimeout(timerPreview);
+    timerPreview = setTimeout(repintarPreview, 120);
+  }
+
+  function abrirPanelSeccion(secId) {
+    cerrarPanelSeccion();
+    panelSecId = secId;
+    const s = secActual();
+    if (!s) { panelSecId = null; return; }
+    document.body.classList.add("sec-panel-abierto");
+    const p = document.createElement("aside");
+    p.className = "sec-panel";
+    p.id = "sec-panel";
+    p.innerHTML = `
+      <div class="sec-panel__cab">
+        <span class="sec-panel__tit">${ico("video")} ${esc(catSeccion(s.tipo)?.nombre || "Sección")}</span>
+        <button class="sec-panel__x" type="button" aria-label="Cerrar">×</button>
+      </div>
+      <div class="sec-panel__body" id="sp-body">${panelSeccionHTML(s)}</div>`;
+    document.body.appendChild(p);
+
+    p.addEventListener("input", (e) => {
+      const t = e.target;
+      if (t.dataset.vk !== undefined) {
+        const s2 = secActual(); if (!s2) return;
+        const k = t.dataset.vk;
+        if (t.dataset.vt === "numero") {
+          setVS(s2, k, Number(t.value));
+          const out = p.querySelector(`[data-vout="${k}"]`); if (out) out.textContent = t.value;
+        } else if (t.type === "color") {
+          setVS(s2, k, t.value);
+          const sw = t.closest(".sp-color__sw"); if (sw) sw.style.background = t.value;
+          const hex = t.closest(".sp-color")?.querySelector("[data-vhex]"); if (hex) hex.value = t.value;
+        } else if (t.dataset.vhex !== undefined) {
+          const val = t.value.trim();
+          if (/^#([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(val)) {
+            setVS(s2, k, val);
+            const sw = t.closest(".sp-color")?.querySelector(".sp-color__sw");
+            if (sw) { sw.style.background = val; sw.querySelector("input").value = val.slice(0, 7); }
+          }
+        } else {
+          setVS(s2, k, t.value);
+        }
+        return;
+      }
+      // Campos de bloque (url/título/estrellas/ancla): rutas absolutas del data.
+      if (t.dataset.ruta) actualizarDato(t);
+    });
+
+    p.addEventListener("click", (e) => {
+      const t = e.target;
+      if (t === p.querySelector(".sec-panel__x") || t.closest(".sec-panel__x")) return cerrarPanelSeccion();
+      const acc = t.closest("[data-vacc]");
+      if (acc) { const id = acc.dataset.vacc; panelOpen[id] = !panelOpen[id]; refrescarPanelSeccion(); return; }
+      const seg = t.closest("[data-vseg]");
+      if (seg) {
+        const s2 = secActual(); if (!s2) return;
+        const k = seg.dataset.vseg;
+        setVS(s2, k, seg.dataset.vval);
+        seg.parentElement.querySelectorAll(".sp-seg__b").forEach((b) => b.classList.toggle("is-sel", b === seg));
+        if (k === "fondoEstilo") refrescarPanelSeccion(); // muestra/oculta "Fondo 2"
+        return;
+      }
+      const tog = t.closest("[data-vtog]");
+      if (tog) {
+        const s2 = secActual(); if (!s2) return;
+        const k = tog.dataset.vtog;
+        const nv = !vsGet(s2, k);
+        setVS(s2, k, nv);
+        tog.classList.toggle("is-on", nv); tog.setAttribute("aria-checked", nv);
+        return;
+      }
+      const del = t.closest("[data-panel-del]");
+      if (del) {
+        if (!confirm("¿Eliminar esta sección de la página?")) return;
+        const secs = estado.pagina.data.secciones;
+        const idx = secs.findIndex((x) => x.id === del.dataset.panelDel);
+        if (idx > -1) secs.splice(idx, 1);
+        cerrarPanelSeccion();
+        marcarSucio();
+        repintarPreview();
+        return;
+      }
+      // Acciones de bloque (agregar/quitar/mover video) + selector de imagen.
+      const acc2 = accionSeccion(t);
+      if (acc2 && acc2 !== "cerrado") { marcarSucio(); repintarPreview(); refrescarPanelSeccion(); return; }
+      const uno = t.closest("[data-img-uno]");
+      if (uno) { fijar(estado.pagina.data, uno.dataset.imgUno, uno.dataset.id); marcarSucio(); repintarPreview(); refrescarPanelSeccion(); return; }
+      const quitar = t.closest("[data-img-quitar]");
+      if (quitar) { fijar(estado.pagina.data, quitar.dataset.imgQuitar, null); marcarSucio(); repintarPreview(); refrescarPanelSeccion(); return; }
+    });
+
+    p.addEventListener("change", (e) => {
+      const t = e.target;
+      if (t.dataset.subir && t.files?.length) subirImagenNueva(t.files[0], t.dataset.subir, t.dataset.rutaSubir, t);
+      if (t.dataset.videoEl && t.files?.length) subirVideoNuevo(t.files[0], t.dataset.videoEl, t);
+    });
+  }
+
+  function cerrarPanelSeccion() {
+    document.getElementById("sec-panel")?.remove();
+    document.body.classList.remove("sec-panel-abierto");
+    panelSecId = null;
+  }
 
   function pantallaPreview() {
     const pg = estado.pagina;
@@ -3066,18 +3638,8 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       <div class="constructor">
         <aside class="panel-sections" id="panel-sections">
           <div class="panel-sections__titulo">Secciones</div>
-          <div class="panel-sections__ayuda">Arrastralas a la página</div>
-          ${SECTIONS_DISPONIBLES.map(
-            (s) => `
-            <div class="section-card" data-nueva="${s.tipo}" title="Arrastrar a la página">
-              ${s.mini}
-              <div class="section-card__txt">
-                <div class="section-card__nombre">${s.nombre}</div>
-                <div class="section-card__desc">${s.desc}</div>
-              </div>
-              <span class="section-card__grip">${ico("grip")}</span>
-            </div>`
-          ).join("")}
+          <button class="panel-sections__ver" id="ver-secciones" type="button">${ico("mas")} Ver todas las secciones disponibles</button>
+          <div class="panel-sections__chips" id="sec-chips">${chipsSeccionesHTML()}</div>
         </aside>
 
         <div class="marco marco--full">
@@ -3094,6 +3656,13 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       montarEdicionEnIframe(marco);
       montarDragSections(marco);
     };
+
+    $("ver-secciones").onclick = () => abrirGaleriaSecciones(marco);
+    // Insertar una sección desde su chip con el botón "+" (sin arrastrar).
+    $("sec-chips").addEventListener("click", (e) => {
+      const ins = e.target.closest("[data-ins-sec]");
+      if (ins) { e.stopPropagation(); soltarSection(ins.dataset.insSec, "top"); }
+    });
 
     $("volver").onclick = () => {
       if (sucio && !confirm("Hay cambios sin guardar. ¿Salir igual?")) return;

@@ -647,20 +647,50 @@
   // estrellas por slide y controles de pausa/sonido. TODO se maneja por
   // settings (schema-driven): el objeto s.settings pisa estos defaults y se
   // vuelca a variables CSS, así el mismo render honra cualquier configuración.
+  // Mirror EXACTO de DEF_VS en app/app.js (mismo set de claves). Es la única
+  // fuente de verdad de los settings del Video slider: s.settings las pisa.
   const DEF_VS = {
-    cols: 3, colsMobile: 1.2, aspecto: "portrait",
-    radio: 16, overlay: 0.2, sombra: false,
-    tituloSize: 16, estrellasSize: 16, ocultarEstrellas: false,
-    controles: true, flechas: true, flechasMobile: false,
-    colTitulo: "#ffffff", colEstrellas: "#ffffff",
-    colBorde: "#121212", colFlechaIcono: "#121212", colFlechaFondo: "#ffffff",
-    fondo: "#ffffff", padTop: 36, padBottom: 36, ancho: "page"
+    cols: 5, colsMobile: 1.5, rotate: 0,
+    aspecto: "portrait", aspectoMobile: "portrait",
+    radio: 16, bordeSlide: 0, overlay: 0.2, sombra: false,
+    hPos: "center", hPosMobile: "center", vPos: "bottom", vPosMobile: "bottom",
+    fuenteCustom: false, tituloSize: 16, tituloSizeMobile: 16, lineHeight: 130,
+    ocultarEstrellas: false, iconoEstrella: null,
+    estrellasSize: 16, estrellasSizeMobile: 16, estrellasMargen: 16, estrellasMargenMobile: 16,
+    usarPausa: true, usarSonido: true, ctrlSize: 40, ctrlSizeMobile: 40, ctrlBorde: 0,
+    flechas: true, flechasMobile: false, flechaSize: 48, flechaIco: 8,
+    flechaRadio: 100, flechaBorde: 0, flechaHover: "color",
+    colTitulo: "#ffffff", colEstrellas: "#ffffff", colBorde: "#121212",
+    colSombra: "#121212", colOverlay: "#121212",
+    colCtrlIco: "#ffffff", colCtrlIcoHover: "#ffffff",
+    colCtrlBg: "#ffffff", colCtrlBgHover: "#ffffff",
+    colCtrlBorde: "#ffffff", colCtrlBordeHover: "#ffffff",
+    colFlechaIcono: "#121212", colFlechaIconoHover: "#ffffff",
+    colFlechaFondo: "#ffffff", colFlechaFondoHover: "#121212",
+    colFlechaBorde: "#121212", colFlechaBordeHover: "#121212",
+    fondoEstilo: "solid", fondo: "#ffffff", fondo2: "#f4f4f7", colBordeSec: "#121212",
+    margenTop: 0, margenBottom: 0,
+    padTop: 36, padBottom: 36, padSides: 0, padSidesMobile: 0,
+    ancho: "page", bordeSec: 0, lazy: true, cssCustom: ""
   };
   const VS_ASPECTO = { portrait: "3 / 4", square: "1 / 1", landscape: "16 / 9" };
+  // Mapas de posición del contenido → valores CSS.
+  const VS_AI = { left: "flex-start", center: "center", right: "flex-end" };
+  const VS_TA = { left: "left", center: "center", right: "right" };
+  const VS_JI = { top: "flex-start", bottom: "flex-end" };
 
   // Estrella SVG (tamaño/color por CSS var), en vez del glyph ★.
   const VS_ESTRELLA = `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.5 9.7l5.9-.9z"/></svg>`;
   const estrellasVS = (n = 5) => `<span class="tiq-vs__estrellas" aria-label="${n} de 5">${VS_ESTRELLA.repeat(Math.max(0, Math.min(5, Math.round(n))))}</span>`;
+  // Estrellas honrando cfg: ícono custom (imagen) si se definió, si no la SVG.
+  const estrellasCfg = (cfg, n = 5) => {
+    const c = Math.max(0, Math.min(5, Math.round(n)));
+    if (cfg.iconoEstrella) {
+      const url = /^https?:/.test(cfg.iconoEstrella) ? cfg.iconoEstrella : urlImagen(cfg.iconoEstrella);
+      if (url) return `<span class="tiq-vs__estrellas tiq-vs__estrellas--img" aria-label="${c} de 5">${`<img src="${esc(url)}" alt="">`.repeat(c)}</span>`;
+    }
+    return `<span class="tiq-vs__estrellas" aria-label="${c} de 5">${VS_ESTRELLA.repeat(c)}</span>`;
+  };
   const VS_PAUSA = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 5h3v14H7zM14 5h3v14h-3z"/></svg>`;
   const VS_PLAY = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>`;
   const VS_SONIDO = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 9v6h4l5 5V4L8 9z"/><path d="M16 8a5 5 0 010 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
@@ -686,16 +716,14 @@
       </div>`;
     }
     const editar = MODO_APP ? ` data-vslot="${esc(s.id)}:${j}" title="Clic para editar este video"` : "";
-    const ctrl = cfg.controles
-      ? `<div class="tiq-vs__ctrl">
-           <button class="tiq-vs__cbtn tiq-vs__cbtn--pausa" type="button" aria-label="Pausar" onclick="tiqVSpausa(this)">${VS_PAUSA}</button>
-           <button class="tiq-vs__cbtn tiq-vs__cbtn--sonido" type="button" aria-label="Activar sonido" onclick="tiqVSsonido(this)">${VS_MUDO}</button>
-         </div>`
-      : "";
+    const botones = [];
+    if (cfg.usarPausa) botones.push(`<button class="tiq-vs__cbtn tiq-vs__cbtn--pausa" type="button" aria-label="Pausar" onclick="tiqVSpausa(this)">${VS_PAUSA}</button>`);
+    if (cfg.usarSonido) botones.push(`<button class="tiq-vs__cbtn tiq-vs__cbtn--sonido" type="button" aria-label="Activar sonido" onclick="tiqVSsonido(this)">${VS_MUDO}</button>`);
+    const ctrl = botones.length ? `<div class="tiq-vs__ctrl">${botones.join("")}</div>` : "";
     const pie = (item.titulo || !cfg.ocultarEstrellas)
       ? `<div class="tiq-vs__pie">
            ${item.titulo ? `<span class="tiq-vs__titulo">${esc(item.titulo)}</span>` : ""}
-           ${cfg.ocultarEstrellas ? "" : estrellasVS(item.estrellas ?? 5)}
+           ${cfg.ocultarEstrellas ? "" : estrellasCfg(cfg, item.estrellas ?? 5)}
          </div>`
       : "";
     return `<div class="tiq-vs__slide"${editar}>
@@ -713,24 +741,61 @@
     const items = s.items || [];
     const visibles = MODO_APP ? items.map((i, j) => [i, j]) : items.map((i, j) => [i, j]).filter(([i]) => i.url);
     if (!visibles.length) return "";
+    const fondo = cfg.fondoEstilo === "gradient"
+      ? `linear-gradient(180deg, ${cfg.fondo}, ${cfg.fondo2})`
+      : cfg.fondo;
     const vars = [
-      `--vs-cols:${cfg.cols}`, `--vs-cols-m:${cfg.colsMobile}`,
-      `--vs-aspect:${VS_ASPECTO[cfg.aspecto] || "3 / 4"}`,
-      `--vs-radio:${cfg.radio}px`, `--vs-overlay:${cfg.overlay}`,
-      `--vs-tit:${cfg.tituloSize}px`, `--vs-estrella:${cfg.estrellasSize}px`,
+      // Slider
+      `--vs-cols:${cfg.cols}`, `--vs-cols-m:${cfg.colsMobile}`, `--vs-rotate:${cfg.rotate}deg`,
+      // Slide
+      `--vs-aspect:${VS_ASPECTO[cfg.aspecto] || "3 / 4"}`, `--vs-aspect-m:${VS_ASPECTO[cfg.aspectoMobile] || "3 / 4"}`,
+      `--vs-radio:${cfg.radio}px`, `--vs-borde-slide:${cfg.bordeSlide}px`,
+      `--vs-overlay:${cfg.overlay}`,
+      // Content position
+      `--vs-ai:${VS_AI[cfg.hPos] || "center"}`, `--vs-ta:${VS_TA[cfg.hPos] || "center"}`, `--vs-ji:${VS_JI[cfg.vPos] || "flex-end"}`,
+      `--vs-ai-m:${VS_AI[cfg.hPosMobile] || "center"}`, `--vs-ta-m:${VS_TA[cfg.hPosMobile] || "center"}`, `--vs-ji-m:${VS_JI[cfg.vPosMobile] || "flex-end"}`,
+      // Title
+      `--vs-tit:${cfg.tituloSize}px`, `--vs-tit-m:${cfg.tituloSizeMobile}px`, `--vs-lh:${cfg.lineHeight}%`,
+      // Stars
+      `--vs-estrella:${cfg.estrellasSize}px`, `--vs-estrella-m:${cfg.estrellasSizeMobile}px`,
+      `--vs-estrella-mt:${cfg.estrellasMargen}px`, `--vs-estrella-mt-m:${cfg.estrellasMargenMobile}px`,
+      // Controls
+      `--vs-ctrl:${cfg.ctrlSize}px`, `--vs-ctrl-m:${cfg.ctrlSizeMobile}px`, `--vs-ctrl-borde:${cfg.ctrlBorde}px`,
+      // Arrows
+      `--vs-fle:${cfg.flechaSize}px`, `--vs-fle-ico-sz:${cfg.flechaIco}px`,
+      `--vs-fle-radio:${cfg.flechaRadio}px`, `--vs-fle-borde:${cfg.flechaBorde}px`,
+      // Slide colors
       `--vs-col-tit:${cfg.colTitulo}`, `--vs-col-estrella:${cfg.colEstrellas}`,
-      `--vs-col-borde:${cfg.colBorde}`,
-      `--vs-fle-ico:${cfg.colFlechaIcono}`, `--vs-fle-bg:${cfg.colFlechaFondo}`,
-      `--vs-fondo:${cfg.fondo}`, `--vs-pt:${cfg.padTop}px`, `--vs-pb:${cfg.padBottom}px`
+      `--vs-col-borde:${cfg.colBorde}`, `--vs-col-sombra:${cfg.colSombra}`, `--vs-col-overlay:${cfg.colOverlay}`,
+      // Controls colors
+      `--vs-col-ctrl-ico:${cfg.colCtrlIco}`, `--vs-col-ctrl-ico-h:${cfg.colCtrlIcoHover}`,
+      `--vs-col-ctrl-bg:${cfg.colCtrlBg}`, `--vs-col-ctrl-bg-h:${cfg.colCtrlBgHover}`,
+      `--vs-col-ctrl-borde:${cfg.colCtrlBorde}`, `--vs-col-ctrl-borde-h:${cfg.colCtrlBordeHover}`,
+      // Arrow colors
+      `--vs-fle-ico:${cfg.colFlechaIcono}`, `--vs-fle-ico-h:${cfg.colFlechaIconoHover}`,
+      `--vs-fle-bg:${cfg.colFlechaFondo}`, `--vs-fle-bg-h:${cfg.colFlechaFondoHover}`,
+      `--vs-fle-bd:${cfg.colFlechaBorde}`, `--vs-fle-bd-h:${cfg.colFlechaBordeHover}`,
+      // Section
+      `--vs-fondo:${fondo}`, `--vs-col-borde-sec:${cfg.colBordeSec}`, `--vs-borde-sec:${cfg.bordeSec}px`,
+      `--vs-mt:${cfg.margenTop}px`, `--vs-mb:${cfg.margenBottom}px`,
+      `--vs-pt:${cfg.padTop}px`, `--vs-pb:${cfg.padBottom}px`,
+      `--vs-ps:${cfg.padSides}rem`, `--vs-ps-m:${cfg.padSidesMobile}rem`
     ].join(";");
     const clases = ["tiq-sec", "tiq-vs"];
     if (cfg.sombra) clases.push("tiq-vs--sombra");
     if (cfg.ancho === "full") clases.push("tiq-vs--full");
+    if (cfg.rotate) clases.push("tiq-vs--rot");
+    if (cfg.flechaHover !== "none") clases.push("tiq-vs--flehover");
     if (!cfg.flechasMobile) clases.push("tiq-vs--sinflechasm");
+    if (!cfg.flechas) clases.push("tiq-vs--sinflechasd");
     const slides = visibles.map(([i, j]) => slideVS(s, i, j, cfg)).join("");
-    const flechas = cfg.flechas;
+    const flechas = cfg.flechas || cfg.flechasMobile; // se renderizan; el CSS las oculta por breakpoint
+    // CSS personalizado del merchant, scopeado a esta sección.
+    const css = (cfg.cssCustom || "").trim();
+    const estilo = css ? `<style>${css.replace(/</g, "")}</style>` : "";
     return `
     <section class="${clases.join(" ")}" data-seccion="${esc(s.id)}" style="${vars}">
+      ${estilo}
       <div class="contenedor tiq-vs__cont">
         ${s.titulo ? `<h2 class="tiq-sec__titulo">${esc(s.titulo)}</h2>` : ""}
         <div class="tiq-vs__car">
