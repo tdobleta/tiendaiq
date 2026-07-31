@@ -438,6 +438,21 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
   padding: 12px 16px; margin-bottom: 16px; color: #b91c1c; font-size: 13px;
 }
 
+/* ---- Banners: caja compartida ----
+   Todos los banners de estado hablan el mismo idioma de caja (radio, margen,
+   padding, tipografía, borde de 1px). Cada clase abajo aporta SOLO su tono
+   (fondo + color de borde + color de texto) y su estructura (flex, listas).
+   Así se ven como una sola familia sin reescribir cada punto de render. */
+.error, .avisos, .exito, .verif-ok, .banner-tema, .aviso-republicar,
+.editor-hint, .setup-pagina, .cod-banner {
+  border-radius: var(--radio);
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  font-size: 12.5px;
+  border-width: 1px;
+  border-style: solid;
+}
+
 .vacio { text-align: center; padding: 28px 20px; color: var(--suave); font-size: 13px; }
 
 /* ---------- 1. elegir producto: CONSOLA única (command-palette) ----------
@@ -1288,9 +1303,9 @@ ui-save-bar { display: none; }
 .cod-banner__cuerpo { flex: 1; }
 .cod-banner__cuerpo .ico { vertical-align: -3px; margin-right: 4px; }
 .cod-banner .btn { margin-left: auto; flex: 0 0 auto; }
-.cod-banner--ok { background: var(--ok-fondo); color: var(--ok); }
+.cod-banner--ok { background: var(--ok-fondo); color: var(--ok); border-color: #c4ecd2; }
 .cod-banner--ok strong { color: inherit; }
-.cod-banner--aviso { background: var(--aviso-fondo); color: var(--aviso); }
+.cod-banner--aviso { background: var(--aviso-fondo); color: var(--aviso); border-color: #f3dfb9; }
 
 .cod-tabs {
   display: flex;
