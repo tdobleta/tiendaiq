@@ -2220,7 +2220,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     if (i < 0) return null;
     const s = secs[i];
     return {
-      titulo: s.tipo === "videos" ? "Videos de producto" : "Carrusel de imágenes",
+      titulo: s.tipo === "videos" ? "Videos de producto" : s.tipo === "videoslider" ? "Video slider" : "Carrusel de imágenes",
       html: () => htmlSeccion(secs[i], i)
     };
   }
@@ -2236,11 +2236,32 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
           ).join("")}
         </select>
       </div>`;
-    const tituloCampo = s.tipo === "videos" ? campo(`${base}.titulo`, "Título de la sección") : "";
+    const tituloCampo = (s.tipo === "videos" || s.tipo === "videoslider") ? campo(`${base}.titulo`, "Título de la sección") : "";
     const cabecera = tituloCampo + ubicacion;
 
     let items = "";
-    if (s.tipo === "videos") {
+    if (s.tipo === "videoslider") {
+      items = (s.items || [])
+        .map(
+          (it, j) => `
+          <fieldset class="sec-item">
+            <legend>Video ${j + 1}${manijasItem(i, j, s.items.length)}</legend>
+            ${campo(`${base}.items.${j}.url`, "Enlace del video (YouTube, Vimeo o MP4)")}
+            <label class="btn btn--fantasma btn--chico sec-subir-video" style="cursor:pointer">${ico("subir")} Subir video de tu computadora
+              <input type="file" accept="video/*" hidden data-video-el="${i}:${j}">
+            </label>
+            ${it.url && /^https?:\/\/cdn\.shopify/.test(it.url) ? `<div class="ayuda" style="margin-top:6px">${ico("check")} Video subido</div>` : ""}
+            ${campo(`${base}.items.${j}.titulo`, "Nombre / título (ej. Jess B.)", 0, true)}
+            <div class="campo campo--editor"><label>Estrellas</label>${selectorEstrellas(`${base}.items.${j}.estrellas`, it.estrellas ?? 5)}</div>
+            <details class="resena-edit__foto">
+              <summary>${ico("imagen")} Miniatura del video (opcional)${it.poster ? " · elegida" : ""}</summary>
+              ${selectorImagenUno(`${base}.items.${j}.poster`, "", true)}
+            </details>
+          </fieldset>`
+        )
+        .join("");
+      items += `<button class="btn btn--fantasma" type="button" data-sec-add="${i}:videoslider">${ico("mas")} Agregar video</button>`;
+    } else if (s.tipo === "videos") {
       items = (s.items || [])
         .map(
           (it, j) => `
@@ -2326,7 +2347,11 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     const add = target.closest("[data-sec-add]");
     if (add) {
       const [i, tipo] = add.dataset.secAdd.split(":");
-      secs[+i].items.push(tipo === "video" ? { url: "", poster: null } : { media_id: null, caption: "", link: "" });
+      secs[+i].items.push(
+        tipo === "video" ? { url: "", poster: null }
+        : tipo === "videoslider" ? { url: "", poster: null, titulo: "", estrellas: 5 }
+        : { media_id: null, caption: "", link: "" }
+      );
       return true;
     }
     const del = target.closest("[data-sec-item-del]");
@@ -2814,10 +2839,15 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   function soltarSection(tipo, ancla) {
     // Nace con la plantilla de espacios ya puesta (como el andamio de reseñas):
     // se ven los slots y se llenan haciendo clic sobre cada uno.
+    const id = "s" + Date.now();
     const nueva =
       tipo === "videos"
-        ? { id: "s" + Date.now(), tipo: "videos", ancla, items: [{ url: "", poster: null }, { url: "", poster: null }, { url: "", poster: null }] }
-        : { id: "s" + Date.now(), tipo: "carrusel", ancla, items: [{ media_id: null, caption: "", link: "" }, { media_id: null, caption: "", link: "" }, { media_id: null, caption: "", link: "" }, { media_id: null, caption: "", link: "" }] };
+        ? { id, tipo: "videos", ancla, items: [{ url: "", poster: null }, { url: "", poster: null }, { url: "", poster: null }] }
+        : tipo === "videoslider"
+        ? { id, tipo: "videoslider", ancla,
+            items: [{ url: "", poster: null, titulo: "", estrellas: 5 }, { url: "", poster: null, titulo: "", estrellas: 5 }, { url: "", poster: null, titulo: "", estrellas: 5 }],
+            settings: {} }
+        : { id, tipo: "carrusel", ancla, items: [{ media_id: null, caption: "", link: "" }, { media_id: null, caption: "", link: "" }, { media_id: null, caption: "", link: "" }, { media_id: null, caption: "", link: "" }] };
     estado.pagina.data.secciones.push(nueva);
     marcarSucio();
     repintarPreview();
@@ -2939,6 +2969,12 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
 
   // Catálogo de sections arrastrables. Cada una tiene su mini-ilustración.
   const SECTIONS_DISPONIBLES = [
+    {
+      tipo: "videoslider",
+      nombre: "Video slider",
+      desc: "Carrusel de videos verticales con reseña (título + estrellas)",
+      mini: `<div class="section-card__mini section-card__mini--videos"><span></span><span></span><span></span></div>`
+    },
     {
       tipo: "videos",
       nombre: "Videos de producto",

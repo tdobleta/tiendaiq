@@ -738,3 +738,57 @@ body.publicada #app .resena-destacada__editar { display: none; }
   #app .tiq-imagen { width: 82vw; max-width: 340px; }
   #app .tiq-carrusel__flecha { display: none; }
 }
+
+/* ---- Video slider (estilo Section Store) — todo por variables --vs-* ---- */
+#app .tiq-vs { background: var(--vs-fondo, #fff); padding-top: var(--vs-pt, 36px); padding-bottom: var(--vs-pb, 36px); }
+#app .tiq-vs--full .tiq-vs__cont { max-width: none; }
+#app .tiq-vs__car { position: relative; }
+#app .tiq-vs__track {
+  display: flex; gap: 16px; overflow-x: auto;
+  scroll-snap-type: x mandatory; scrollbar-width: none;
+  -webkit-overflow-scrolling: touch; padding: 6px 2px;
+}
+#app .tiq-vs__track::-webkit-scrollbar { display: none; }
+#app .tiq-vs__slide {
+  flex: 0 0 calc((100% - (var(--vs-cols, 3) - 1) * 16px) / var(--vs-cols, 3));
+  scroll-snap-align: center;
+  aspect-ratio: var(--vs-aspect, 3 / 4);
+  border-radius: var(--vs-radio, 16px);
+  overflow: hidden; position: relative; background: #000;
+}
+#app .tiq-vs--sombra .tiq-vs__slide { box-shadow: 0 10px 30px rgba(0,0,0,.18); }
+#app .tiq-vs__media { position: absolute; inset: 0; }
+#app .tiq-vs__vid, #app .tiq-vs__yt img, #app .tiq-vs__player { width: 100%; height: 100%; object-fit: cover; display: block; }
+#app .tiq-vs__overlay { position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(to top, rgba(0,0,0,var(--vs-overlay, .2)) 0%, rgba(0,0,0,0) 55%); }
+#app .tiq-vs__pie { position: absolute; left: 0; right: 0; bottom: 12px; z-index: 2; text-align: center; padding: 0 10px; }
+#app .tiq-vs__titulo { display: block; color: var(--vs-col-tit, #fff); font-size: var(--vs-tit, 16px); font-weight: 700; text-shadow: 0 1px 6px rgba(0,0,0,.45); margin-bottom: 4px; }
+#app .tiq-vs__estrellas { display: inline-flex; gap: 1px; color: var(--vs-col-estrella, #fff); }
+#app .tiq-vs__estrellas svg { width: var(--vs-estrella, 16px); height: var(--vs-estrella, 16px); filter: drop-shadow(0 1px 3px rgba(0,0,0,.45)); }
+#app .tiq-vs__ctrl { position: absolute; top: 10px; right: 10px; z-index: 3; display: flex; gap: 6px; }
+#app .tiq-vs__cbtn { width: 34px; height: 34px; border-radius: 50%; border: 0; background: rgba(0,0,0,.42); color: #fff; display: grid; place-items: center; cursor: pointer; }
+#app .tiq-vs__cbtn svg { width: 17px; height: 17px; }
+#app .tiq-vs__cbtn:hover { background: rgba(0,0,0,.62); }
+#app .tiq-vs__cbtn--sonido.is-activo { background: var(--violeta, #6d5ef5); }
+#app .tiq-vs__yt { position: absolute; inset: 0; cursor: pointer; }
+#app .tiq-vs__ytplay { position: absolute; inset: 0; margin: auto; width: 54px; height: 54px; border-radius: 50%; border: 0; background: rgba(255,255,255,.92); color: #111; display: grid; place-items: center; cursor: pointer; box-shadow: 0 4px 16px rgba(0,0,0,.3); }
+#app .tiq-vs__ytplay svg { width: 22px; height: 22px; margin-left: 3px; }
+#app .tiq-vs__flecha {
+  position: absolute; top: 50%; transform: translateY(-50%); z-index: 5;
+  width: 44px; height: 44px; border-radius: 50%;
+  border: 1px solid var(--vs-col-borde, #121212); background: var(--vs-fle-bg, #fff); color: var(--vs-fle-ico, #121212);
+  box-shadow: 0 4px 16px rgba(0,0,0,.16); display: grid; place-items: center; cursor: pointer;
+}
+#app .tiq-vs__flecha svg { width: 20px; height: 20px; }
+#app .tiq-vs__flecha--izq { left: -10px; }
+#app .tiq-vs__flecha--der { right: -10px; }
+#app .tiq-vs__flecha:hover { filter: brightness(.96); }
+#app .tiq-vs__slide--vacio { background: var(--fondo-suave); border: 1.5px dashed #cfcfd4; display: flex; align-items: center; justify-content: center; }
+#app .tiq-vs__add { display: flex; flex-direction: column; align-items: center; gap: 8px; color: var(--texto-suave); font-size: 12.5px; font-weight: 500; }
+#app .tiq-vs__add svg { width: 30px; height: 30px; color: var(--violeta); }
+
+@media (max-width: 749px) {
+  #app .tiq-vs__track { gap: 12px; }
+  #app .tiq-vs__slide { flex-basis: calc((100% - (var(--vs-cols-m, 1.2) - 1) * 12px) / var(--vs-cols-m, 1.2)); }
+  #app .tiq-vs--sinflechasm .tiq-vs__flecha { display: none; }
+}

@@ -642,9 +642,110 @@
     </section>`;
   }
 
+  // ---------- Video slider (estilo Section Store) ----------
+  // Carrusel de videos verticales que auto-reproducen (muted), con título +
+  // estrellas por slide y controles de pausa/sonido. TODO se maneja por
+  // settings (schema-driven): el objeto s.settings pisa estos defaults y se
+  // vuelca a variables CSS, así el mismo render honra cualquier configuración.
+  const DEF_VS = {
+    cols: 3, colsMobile: 1.2, aspecto: "portrait",
+    radio: 16, overlay: 0.2, sombra: false,
+    tituloSize: 16, estrellasSize: 16, ocultarEstrellas: false,
+    controles: true, flechas: true, flechasMobile: false,
+    colTitulo: "#ffffff", colEstrellas: "#ffffff",
+    colBorde: "#121212", colFlechaIcono: "#121212", colFlechaFondo: "#ffffff",
+    fondo: "#ffffff", padTop: 36, padBottom: 36, ancho: "page"
+  };
+  const VS_ASPECTO = { portrait: "3 / 4", square: "1 / 1", landscape: "16 / 9" };
+
+  // Estrella SVG (tamaño/color por CSS var), en vez del glyph ★.
+  const VS_ESTRELLA = `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.5 9.7l5.9-.9z"/></svg>`;
+  const estrellasVS = (n = 5) => `<span class="tiq-vs__estrellas" aria-label="${n} de 5">${VS_ESTRELLA.repeat(Math.max(0, Math.min(5, Math.round(n))))}</span>`;
+  const VS_PAUSA = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 5h3v14H7zM14 5h3v14h-3z"/></svg>`;
+  const VS_PLAY = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>`;
+  const VS_SONIDO = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 9v6h4l5 5V4L8 9z"/><path d="M16 8a5 5 0 010 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
+  const VS_MUDO = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 9v6h4l5 5V4L8 9z"/><path d="M22 9l-6 6M16 9l6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
+
+  // El media de un slide: archivo directo (mp4/webm/cdn) → <video> autoplay
+  // muteado; YouTube/Vimeo → poster + play (autoplay embebido es poco fiable).
+  function mediaVS(item) {
+    const url = item.url || "";
+    const esArchivo = /\.(mp4|webm|mov|m4v)(\?|#|$)/i.test(url) || /cdn\.shopify/.test(url);
+    if (esArchivo) {
+      const poster = item.poster ? (/^https?:/.test(item.poster) ? item.poster : urlImagen(item.poster)) : "";
+      return `<video class="tiq-vs__vid" src="${esc(encodeURI(url))}" ${poster ? `poster="${esc(poster)}"` : ""} muted loop playsinline preload="metadata"></video>`;
+    }
+    // YouTube/Vimeo: poster + play (al tocar embebe el reproductor).
+    return `<div class="tiq-vs__yt" data-embed="${esc(videoEmbed(url))}">${posterVideo(item)}<button class="tiq-vs__ytplay" type="button" aria-label="Reproducir" onclick="tiqVSplay(this)">${VS_PLAY}</button></div>`;
+  }
+
+  function slideVS(s, item, j, cfg) {
+    if (!item.url && MODO_APP) {
+      return `<div class="tiq-vs__slide tiq-vs__slide--vacio" data-vslot="${esc(s.id)}:${j}" title="Clic para agregar un video">
+        <div class="tiq-vs__add">${ICONO_VIDEO}<span>Agregar video</span></div>
+      </div>`;
+    }
+    const editar = MODO_APP ? ` data-vslot="${esc(s.id)}:${j}" title="Clic para editar este video"` : "";
+    const ctrl = cfg.controles
+      ? `<div class="tiq-vs__ctrl">
+           <button class="tiq-vs__cbtn tiq-vs__cbtn--pausa" type="button" aria-label="Pausar" onclick="tiqVSpausa(this)">${VS_PAUSA}</button>
+           <button class="tiq-vs__cbtn tiq-vs__cbtn--sonido" type="button" aria-label="Activar sonido" onclick="tiqVSsonido(this)">${VS_MUDO}</button>
+         </div>`
+      : "";
+    const pie = (item.titulo || !cfg.ocultarEstrellas)
+      ? `<div class="tiq-vs__pie">
+           ${item.titulo ? `<span class="tiq-vs__titulo">${esc(item.titulo)}</span>` : ""}
+           ${cfg.ocultarEstrellas ? "" : estrellasVS(item.estrellas ?? 5)}
+         </div>`
+      : "";
+    return `<div class="tiq-vs__slide"${editar}>
+      <div class="tiq-vs__media">
+        ${mediaVS(item)}
+        <span class="tiq-vs__overlay"></span>
+        ${ctrl}
+        ${pie}
+      </div>
+    </div>`;
+  }
+
+  function seccionVideoSlider(s) {
+    const cfg = { ...DEF_VS, ...(s.settings || {}) };
+    const items = s.items || [];
+    const visibles = MODO_APP ? items.map((i, j) => [i, j]) : items.map((i, j) => [i, j]).filter(([i]) => i.url);
+    if (!visibles.length) return "";
+    const vars = [
+      `--vs-cols:${cfg.cols}`, `--vs-cols-m:${cfg.colsMobile}`,
+      `--vs-aspect:${VS_ASPECTO[cfg.aspecto] || "3 / 4"}`,
+      `--vs-radio:${cfg.radio}px`, `--vs-overlay:${cfg.overlay}`,
+      `--vs-tit:${cfg.tituloSize}px`, `--vs-estrella:${cfg.estrellasSize}px`,
+      `--vs-col-tit:${cfg.colTitulo}`, `--vs-col-estrella:${cfg.colEstrellas}`,
+      `--vs-col-borde:${cfg.colBorde}`,
+      `--vs-fle-ico:${cfg.colFlechaIcono}`, `--vs-fle-bg:${cfg.colFlechaFondo}`,
+      `--vs-fondo:${cfg.fondo}`, `--vs-pt:${cfg.padTop}px`, `--vs-pb:${cfg.padBottom}px`
+    ].join(";");
+    const clases = ["tiq-sec", "tiq-vs"];
+    if (cfg.sombra) clases.push("tiq-vs--sombra");
+    if (cfg.ancho === "full") clases.push("tiq-vs--full");
+    if (!cfg.flechasMobile) clases.push("tiq-vs--sinflechasm");
+    const slides = visibles.map(([i, j]) => slideVS(s, i, j, cfg)).join("");
+    const flechas = cfg.flechas;
+    return `
+    <section class="${clases.join(" ")}" data-seccion="${esc(s.id)}" style="${vars}">
+      <div class="contenedor tiq-vs__cont">
+        ${s.titulo ? `<h2 class="tiq-sec__titulo">${esc(s.titulo)}</h2>` : ""}
+        <div class="tiq-vs__car">
+          ${flechas ? `<button class="tiq-vs__flecha tiq-vs__flecha--izq" type="button" onclick="tiqVSnav(this,-1)" aria-label="Anterior">${FLECHA_IZQ}</button>` : ""}
+          <div class="tiq-vs__track">${slides}</div>
+          ${flechas ? `<button class="tiq-vs__flecha tiq-vs__flecha--der" type="button" onclick="tiqVSnav(this,1)" aria-label="Siguiente">${FLECHA_DER}</button>` : ""}
+        </div>
+      </div>
+    </section>`;
+  }
+
   function seccionHTML(s) {
     if (s.tipo === "videos") return seccionVideos(s);
     if (s.tipo === "carrusel") return seccionCarrusel(s);
+    if (s.tipo === "videoslider") return seccionVideoSlider(s);
     return "";
   }
 
@@ -724,6 +825,58 @@
       cont.innerHTML = cont.dataset.embed;
     }
   };
+
+  // ---- Video slider (interactividad) ----
+  // Flechas: desplazan el track de a una card (scroll-snap se encarga del resto).
+  window.tiqVSnav = function (boton, dir) {
+    const track = boton.closest(".tiq-vs__car")?.querySelector(".tiq-vs__track");
+    if (!track) return;
+    const card = track.querySelector(".tiq-vs__slide");
+    const gap = parseFloat(getComputedStyle(track).columnGap || getComputedStyle(track).gap || "16") || 16;
+    const paso = card ? card.getBoundingClientRect().width + gap : track.clientWidth * 0.8;
+    track.scrollBy({ left: dir * paso, behavior: "smooth" });
+  };
+  // Pausa/reanuda el <video> de ESE slide.
+  window.tiqVSpausa = function (boton) {
+    const v = boton.closest(".tiq-vs__media")?.querySelector("video.tiq-vs__vid");
+    if (!v) return;
+    if (v.paused) { const p = v.play(); if (p) p.catch(() => {}); boton.setAttribute("aria-label", "Pausar"); boton.classList.remove("is-pausado"); }
+    else { v.pause(); boton.setAttribute("aria-label", "Reproducir"); boton.classList.add("is-pausado"); }
+  };
+  // Silencia/activa el sonido de ESE slide (los demás quedan muteados).
+  window.tiqVSsonido = function (boton) {
+    const v = boton.closest(".tiq-vs__media")?.querySelector("video.tiq-vs__vid");
+    if (!v) return;
+    v.muted = !v.muted;
+    boton.classList.toggle("is-activo", !v.muted);
+    boton.setAttribute("aria-label", v.muted ? "Activar sonido" : "Silenciar");
+  };
+  // YouTube/Vimeo: al tocar el play, embebe el reproductor.
+  window.tiqVSplay = function (boton) {
+    const cont = boton.closest(".tiq-vs__yt");
+    if (cont?.dataset.embed) cont.outerHTML = cont.dataset.embed;
+  };
+  // Autoplay muteado al entrar en vista (mismo patrón que el muro).
+  function autoplayVS() {
+    const vids = document.querySelectorAll("video.tiq-vs__vid");
+    if (!vids.length) return;
+    if (!("IntersectionObserver" in window)) {
+      vids.forEach((v) => { v.muted = true; const p = v.play(); if (p) p.catch(() => {}); });
+      return;
+    }
+    const io = new IntersectionObserver(
+      (entradas) => {
+        for (const e of entradas) {
+          const v = e.target;
+          if (v.dataset.pausadoManual) continue;
+          if (e.isIntersecting) { const p = v.play(); if (p) p.catch(() => {}); }
+          else v.pause();
+        }
+      },
+      { threshold: 0.35 }
+    );
+    vids.forEach((v) => io.observe(v));
+  }
 
   // ---------- ensamblado ----------
 
@@ -880,6 +1033,7 @@
     app.innerHTML = render(datos);
     iniciarVcar(); // centra los carruseles de video
     autoplayMuro(); // los videos del muro se reproducen solos al entrar en vista
+    autoplayVS(); // los slides del video slider también auto-reproducen en vista
     // Solo en la tienda: el preview no tiene storefront al que preguntarle.
     if (EN_TIENDA) cargarRecomendados(datos?.fuente?.moneda);
   }
