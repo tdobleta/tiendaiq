@@ -28,6 +28,10 @@
     <a href="/bundles">Bundles y descuentos</a>
   </ui-nav-menu>
 
+  <!-- Título nativo del header del admin (App Bridge lo dibuja arriba de todo).
+       app.js le setea el title por pantalla. Fuera del admin no muestra nada. -->
+  <ui-title-bar id="tiq-title-bar"></ui-title-bar>
+
   <!-- Save Bar contextual de Shopify (App Bridge la dibuja en el chrome del
        admin cuando hay cambios sin guardar). La controla app.js. -->
   <ui-save-bar id="tiq-save-bar">

@@ -1282,6 +1282,13 @@ ui-save-bar { display: none; }
 }
 .embebida .barra__marca { display: none; }
 
+/* Adentro del admin, el header nativo (ui-title-bar) ya muestra el título de
+   la pantalla: el <h1> in-page de las pantallas de nav sobra (y su botón
+   "volver" también, porque se navega por el menú lateral). Se oculta solo el
+   título; las acciones del header quedan alineadas a la derecha. */
+.embebida .titulo-nav { display: none; }
+.embebida .inicio-cabecera:has(.titulo-nav) { justify-content: flex-end; }
+
 /* El preview adentro de un iframe adentro de otro iframe queda muy chato:
    se le da más aire porque el alto del admin ya viene recortado. */
 .embebida .marco { height: 78vh; }

@@ -504,7 +504,7 @@
 
     vista.innerHTML = `
       <div class="inicio-cabecera">
-        <h1><button class="volver-flecha" id="volver-inicio"></button> Páginas de producto</h1>
+        <h1 class="titulo-nav"><button class="volver-flecha" id="volver-inicio"></button> Páginas de producto</h1>
         <div class="inicio-cabecera__acciones">
           <button class="btn btn--marca" id="ir-crear">${ico("chispa")} Crear página de producto con IA</button>
         </div>
@@ -837,7 +837,7 @@
 
     vista.innerHTML = `
       <div class="inicio-cabecera">
-        <h1><button class="volver-flecha" id="volver-inicio"></button> Formulario contra reembolso</h1>
+        <h1 class="titulo-nav"><button class="volver-flecha" id="volver-inicio"></button> Formulario contra reembolso</h1>
         <div class="inicio-cabecera__acciones">
           <label class="cod-switch" title="Prende o apaga el formulario en tu tienda. Se guarda solo.">
             <input type="checkbox" id="cod-activo" ${c.activo ? "checked" : ""}>
@@ -3498,7 +3498,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
 
     vista.innerHTML = `
       <div class="inicio-cabecera">
-        <h1><button class="volver-flecha" id="volver-inicio"></button> Bundles, upsells y regalos</h1>
+        <h1 class="titulo-nav"><button class="volver-flecha" id="volver-inicio"></button> Bundles, upsells y regalos</h1>
         <div class="inicio-cabecera__acciones"><button class="btn btn--marca" id="bdl-nuevo">＋ Crear bundle</button></div>
       </div>
       ${widgetEstado}
@@ -4951,6 +4951,25 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     preview: pantallaPreview
   };
 
+  // Título nativo del admin (App Bridge ui-title-bar). Fuera del admin embebido
+  // es inofensivo: el elemento no muestra nada. El título in-page sigue estando
+  // (y en las pantallas de nav se oculta por CSS cuando .embebida, para no
+  // duplicarlo con el header nativo).
+  const TITULO_PANTALLA = {
+    inicio: "Inicio",
+    paginas: "Páginas de producto",
+    cod: "Formulario contra reembolso",
+    bundles: "Bundles, upsells y regalos",
+    lista: "Elegí un producto",
+    informacion: "Información del producto",
+    generando: "Creando tu página",
+    preview: "Editor de página"
+  };
+  const _tituloBar = document.getElementById("tiq-title-bar");
+  function setTituloBar(pantalla) {
+    if (_tituloBar) _tituloBar.setAttribute("title", TITULO_PANTALLA[pantalla] || "TiendaIQ");
+  }
+
   // La URL del iframe refleja la pantalla. Sin esto, el menú del admin no
   // puede navegar: si la app queda siempre en "/", tocar "TiendaIQ" desde
   // el flujo es "navegar a donde ya estás" y Shopify no hace nada.
@@ -4971,6 +4990,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     if (pantalla === "bundles" && estado.bundles) { estado.bundles.vista = "lista"; estado.bundles.editIdx = null; }
     estado.pantalla = pantalla;
     sincronizarURL(pantalla);
+    setTituloBar(pantalla);
     pintarPasos();
     PANTALLAS[pantalla]();
     window.scrollTo(0, 0);
