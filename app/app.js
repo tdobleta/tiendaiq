@@ -2985,15 +2985,6 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
           : ""
       }
 
-      ${
-        pg.avisos?.length
-          ? `<div class="avisos">
-               <strong>${ico("aviso")} ${pg.avisos.length} aviso${pg.avisos.length > 1 ? "s" : ""} de la validación</strong>
-               <ul>${pg.avisos.map((a) => `<li>${esc(a)}</li>`).join("")}</ul>
-             </div>`
-          : ""
-      }
-
       <div class="preview-barra">
         <div class="preview-barra__info">
           <div class="preview-barra__titulo">${esc(pg.data.facetas.hero.titulo)}</div>
