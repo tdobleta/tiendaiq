@@ -35,7 +35,6 @@ const {
   sincronizarDescuentos,
   borrarDescuentos
 } = require("./bundles");
-const { catalogoPublico, instalarSeccion, seccionInstalada } = require("./secciones");
 
 // Render (y cualquier host) fija el puerto por env; local usa 4321.
 const PUERTO = Number(env.PORT || process.env.PORT || 4321);
@@ -482,30 +481,6 @@ async function api(req, res, url) {
     await guardarConfigBundles(sesion.tienda, config);
     config.activarUrl = linkActivarEmbed(sesion.tienda, "bundle");
     return json(res, 200, config);
-  }
-
-  // GET /api/secciones — catálogo de secciones (para la galería estilo Section
-  // Store) + si la pidas con ?tipo=, si esa sección ya está escrita en el tema.
-  if (req.method === "GET" && ruta === "/api/secciones") {
-    const tipo = url.searchParams.get("tipo");
-    if (tipo) {
-      let instalada = null;
-      try { instalada = await seccionInstalada(sesion, tipo); } catch { instalada = null; }
-      return json(res, 200, { instalada });
-    }
-    return json(res, 200, { catalogo: catalogoPublico() });
-  }
-
-  // POST /api/secciones/instalar — escribe la section Liquid + assets en el tema
-  // principal (write_themes). Después el merchant la agrega desde el editor de
-  // temas ("Agregar sección"), que es donde Shopify dibuja el panel nativo.
-  if (req.method === "POST" && ruta === "/api/secciones/instalar") {
-    const { tipo } = await leerCuerpo(req);
-    if (!tipo) return json(res, 400, { error: "Falta tipo" });
-    const r = await instalarSeccion(sesion, tipo);
-    // Deep link al editor de temas con la sección preseleccionada para agregar.
-    const editorUrl = `https://${sesion.tienda}/admin/themes/current/editor?template=product&addSectionId=${encodeURIComponent(tipo)}`;
-    return json(res, 200, { ok: true, tema: r.tema, tipo, editorUrl });
   }
 
   // POST /api/nicho/contenido — monta el contenido del nicho (About/Contact)
