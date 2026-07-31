@@ -3436,6 +3436,15 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
 
   // Toast reutilizable: feedback de acciones, con "Deshacer" opcional.
   function toast(msg, opts = {}) {
+    // App Bridge nativo cuando estamos embebidos (look "Built for Shopify").
+    // Los toasts con "Deshacer" siguen usando el nuestro (el toast de App
+    // Bridge no lleva acción de undo); fuera del admin, también el nuestro.
+    if (!opts.undo && window.shopify?.toast?.show) {
+      try {
+        window.shopify.toast.show(msg, { duration: 3000, isError: !!opts.error });
+        return () => {};
+      } catch {}
+    }
     let cont = document.getElementById("tiq-toasts");
     if (!cont) { cont = document.createElement("div"); cont.id = "tiq-toasts"; document.body.appendChild(cont); }
     const t = document.createElement("div");
