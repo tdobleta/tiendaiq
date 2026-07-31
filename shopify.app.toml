@@ -74,7 +74,9 @@ api_version = "2026-07"
 #   read/write_content    páginas About/Contact del módulo de contenido
 #   write_discounts       descuentos automáticos de los bundles
 #   write_online_store_navigation   menú principal en español
-scopes = "read_products,write_products,write_orders,read_files,write_files,read_content,write_content,write_discounts,write_online_store_navigation"
+#   read/write_themes     escribe las SECCIONES (Liquid) en el tema del merchant
+#                         (estilo Section Store) — requiere exención App Store
+scopes = "read_products,write_products,write_orders,read_files,write_files,read_content,write_content,write_discounts,write_online_store_navigation,read_themes,write_themes"
 
 # ⚠ EN true A PROPÓSITO, POR AHORA.
 #

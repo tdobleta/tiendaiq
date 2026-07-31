@@ -1,0 +1,274 @@
+{%- comment -%}
+  TiendaIQ · Video slider — section nativa (estilo Section Store).
+  Schema-driven: los settings de abajo dibujan el panel del editor de temas y
+  alimentan las variables --vs-* del render. Los videos son BLOQUES repetibles.
+  La app escribe este archivo en el tema; no editar a mano.
+{%- endcomment -%}
+
+{{ 'tiendaiq-vs.css' | asset_url | stylesheet_tag }}
+{{ 'tiendaiq-vs.js' | asset_url | script_tag }}
+
+{%- liquid
+  assign s = section.settings
+
+  assign ai = 'center'
+  if s.h_pos == 'left'
+    assign ai = 'flex-start'
+  elsif s.h_pos == 'right'
+    assign ai = 'flex-end'
+  endif
+  assign ta = s.h_pos
+  if ta == blank
+    assign ta = 'center'
+  endif
+  assign ji = 'flex-end'
+  if s.v_pos == 'top'
+    assign ji = 'flex-start'
+  endif
+
+  assign ai_m = 'center'
+  if s.h_pos_mobile == 'left'
+    assign ai_m = 'flex-start'
+  elsif s.h_pos_mobile == 'right'
+    assign ai_m = 'flex-end'
+  endif
+  assign ta_m = s.h_pos_mobile
+  if ta_m == blank
+    assign ta_m = 'center'
+  endif
+  assign ji_m = 'flex-end'
+  if s.v_pos_mobile == 'top'
+    assign ji_m = 'flex-start'
+  endif
+
+  assign overlay = s.overlay_pct | divided_by: 100.0
+
+  if s.bg_style == 'gradient'
+    assign fondo = 'linear-gradient(180deg, ' | append: s.c_bg | append: ', ' | append: s.c_bg2 | append: ')'
+  else
+    assign fondo = s.c_bg
+  endif
+-%}
+
+{%- capture estilo -%}
+--vs-cols:{{ s.cols }};--vs-cols-m:{{ s.cols_mobile }};--vs-rotate:{{ s.rotate }}deg;
+--vs-aspect:{{ s.aspect }};--vs-aspect-m:{{ s.aspect_mobile }};
+--vs-radio:{{ s.radius }}px;--vs-borde-slide:{{ s.border_slide }}px;--vs-overlay:{{ overlay }};
+--vs-ai:{{ ai }};--vs-ta:{{ ta }};--vs-ji:{{ ji }};--vs-ai-m:{{ ai_m }};--vs-ta-m:{{ ta_m }};--vs-ji-m:{{ ji_m }};
+--vs-tit:{{ s.title_size }}px;--vs-tit-m:{{ s.title_size_mobile }}px;--vs-lh:{{ s.line_height }}%;
+--vs-estrella:{{ s.star_size }}px;--vs-estrella-m:{{ s.star_size_mobile }}px;--vs-estrella-mt:{{ s.star_margin }}px;--vs-estrella-mt-m:{{ s.star_margin_mobile }}px;
+--vs-ctrl:{{ s.ctrl_size }}px;--vs-ctrl-m:{{ s.ctrl_size_mobile }}px;--vs-ctrl-borde:{{ s.ctrl_border }}px;
+--vs-fle:{{ s.arrow_size }}px;--vs-fle-ico-sz:{{ s.arrow_ico }}px;--vs-fle-radio:{{ s.arrow_radius }}px;--vs-fle-borde:{{ s.arrow_border }}px;
+--vs-col-tit:{{ s.c_title }};--vs-col-estrella:{{ s.c_stars }};--vs-col-borde:{{ s.c_border }};--vs-col-sombra:{{ s.c_shadow }};--vs-col-overlay:{{ s.c_overlay }};
+--vs-col-ctrl-ico:{{ s.c_ctrl_ico }};--vs-col-ctrl-ico-h:{{ s.c_ctrl_ico_h }};--vs-col-ctrl-bg:{{ s.c_ctrl_bg }};--vs-col-ctrl-bg-h:{{ s.c_ctrl_bg_h }};--vs-col-ctrl-borde:{{ s.c_ctrl_border }};--vs-col-ctrl-borde-h:{{ s.c_ctrl_border_h }};
+--vs-fle-ico:{{ s.c_arrow_ico }};--vs-fle-ico-h:{{ s.c_arrow_ico_h }};--vs-fle-bg:{{ s.c_arrow_bg }};--vs-fle-bg-h:{{ s.c_arrow_bg_h }};--vs-fle-bd:{{ s.c_arrow_border }};--vs-fle-bd-h:{{ s.c_arrow_border_h }};
+--vs-fondo:{{ fondo }};--vs-col-borde-sec:{{ s.c_border_sec }};--vs-borde-sec:{{ s.border_sec }}px;
+--vs-mt:{{ s.margin_top }}px;--vs-mb:{{ s.margin_bottom }}px;--vs-pt:{{ s.pad_top }}px;--vs-pb:{{ s.pad_bottom }}px;--vs-ps:{{ s.pad_sides }}rem;--vs-ps-m:{{ s.pad_sides_mobile }}rem;
+{%- endcapture -%}
+
+{%- assign clases = 'tiq-vs' -%}
+{%- if s.use_shadow -%}{%- assign clases = clases | append: ' tiq-vs--sombra' -%}{%- endif -%}
+{%- if s.width == 'full' -%}{%- assign clases = clases | append: ' tiq-vs--full' -%}{%- endif -%}
+{%- if s.rotate != 0 -%}{%- assign clases = clases | append: ' tiq-vs--rot' -%}{%- endif -%}
+{%- if s.arrow_hover == 'color' -%}{%- assign clases = clases | append: ' tiq-vs--flehover' -%}{%- endif -%}
+{%- unless s.arrows -%}{%- assign clases = clases | append: ' tiq-vs--sinflechasd' -%}{%- endunless -%}
+{%- unless s.arrows_mobile -%}{%- assign clases = clases | append: ' tiq-vs--sinflechasm' -%}{%- endunless -%}
+
+<div class="{{ clases }}" style="{{ estilo | strip_newlines }}">
+  <div class="tiq-vs__cont">
+    {%- if s.heading != blank -%}<h2 class="tiq-vs__titulo-sec">{{ s.heading }}</h2>{%- endif -%}
+    <div class="tiq-vs__car">
+      {%- if s.arrows or s.arrows_mobile -%}
+        <button class="tiq-vs__flecha tiq-vs__flecha--izq" type="button" aria-label="Anterior"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></button>
+      {%- endif -%}
+      <div class="tiq-vs__track">
+        {%- for block in section.blocks -%}
+          <div class="tiq-vs__slide" {{ block.shopify_attributes }}>
+            <div class="tiq-vs__media">
+              {%- if block.settings.video != blank -%}
+                {{ block.settings.video | video_tag: image_size: '640x', loop: true, controls: false, muted: true, playsinline: true, class: 'tiq-vs__vid' }}
+              {%- elsif block.settings.video_url != blank -%}
+                {%- assign vu = block.settings.video_url -%}
+                {%- if vu.type == 'youtube' -%}
+                  {%- assign embed = 'https://www.youtube.com/embed/' | append: vu.id | append: '?autoplay=1&mute=1&playsinline=1&rel=0' -%}
+                {%- else -%}
+                  {%- assign embed = 'https://player.vimeo.com/video/' | append: vu.id | append: '?autoplay=1&muted=1' -%}
+                {%- endif -%}
+                <div class="tiq-vs__yt" data-embed="{{ embed }}">
+                  <div class="tiq-vs__vacio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="5" width="15" height="14" rx="2"/><path d="M17 9l5-3v12l-5-3"/></svg></div>
+                  <button class="tiq-vs__ytplay" type="button" aria-label="Reproducir"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button>
+                </div>
+              {%- else -%}
+                <div class="tiq-vs__vacio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="15" height="14" rx="2"/><path d="M17 9l5-3v12l-5-3"/></svg><span>Elegí un video</span></div>
+              {%- endif -%}
+              <span class="tiq-vs__overlay"></span>
+              {%- if s.use_pause or s.use_sound -%}
+                <div class="tiq-vs__ctrl">
+                  {%- if s.use_pause -%}<button class="tiq-vs__cbtn tiq-vs__cbtn--pausa" type="button" aria-label="Pausar"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 5h3v14H7zM14 5h3v14h-3z"/></svg></button>{%- endif -%}
+                  {%- if s.use_sound -%}<button class="tiq-vs__cbtn tiq-vs__cbtn--sonido" type="button" aria-label="Sonido"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 9v6h4l5 5V4L8 9z"/><path d="M22 9l-6 6M16 9l6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>{%- endif -%}
+                </div>
+              {%- endif -%}
+              {%- if block.settings.title != blank or s.hide_stars == false -%}
+                <div class="tiq-vs__pie">
+                  {%- if block.settings.title != blank -%}<span class="tiq-vs__titulo">{{ block.settings.title }}</span>{%- endif -%}
+                  {%- unless s.hide_stars -%}
+                    <span class="tiq-vs__estrellas" aria-label="{{ block.settings.stars }} de 5">
+                      {%- assign n = block.settings.stars | at_most: 5 | at_least: 0 -%}
+                      {%- for i in (1..n) -%}
+                        {%- if s.star_icon != blank -%}<img src="{{ s.star_icon | image_url: width: 48 }}" alt="" loading="lazy">
+                        {%- else -%}<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.5 9.7l5.9-.9z"/></svg>{%- endif -%}
+                      {%- endfor -%}
+                    </span>
+                  {%- endunless -%}
+                </div>
+              {%- endif -%}
+            </div>
+          </div>
+        {%- else -%}
+          <div class="tiq-vs__slide"><div class="tiq-vs__media"><div class="tiq-vs__vacio"><span>Agregá bloques de video</span></div></div></div>
+        {%- endfor -%}
+      </div>
+      {%- if s.arrows or s.arrows_mobile -%}
+        <button class="tiq-vs__flecha tiq-vs__flecha--der" type="button" aria-label="Siguiente"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>
+      {%- endif -%}
+    </div>
+  </div>
+</div>
+
+{% schema %}
+{
+  "name": "TiendaIQ Video slider",
+  "tag": "section",
+  "class": "tiq-vs-section",
+  "settings": [
+    { "type": "text", "id": "heading", "label": "Título de la sección", "default": "" },
+
+    { "type": "header", "content": "Slider" },
+    { "type": "range", "id": "cols", "label": "Slides por vista", "min": 1, "max": 6, "step": 1, "default": 5 },
+    { "type": "range", "id": "cols_mobile", "label": "Slides por vista — móvil", "min": 1, "max": 4, "step": 0.5, "default": 1.5 },
+    { "type": "range", "id": "rotate", "label": "Rotar", "min": -15, "max": 15, "step": 1, "unit": "°", "default": 0 },
+
+    { "type": "header", "content": "Slide" },
+    { "type": "select", "id": "aspect", "label": "Proporción", "default": "3 / 4",
+      "options": [ { "value": "3 / 4", "label": "Vertical" }, { "value": "1 / 1", "label": "Cuadrado" }, { "value": "16 / 9", "label": "Horizontal" } ] },
+    { "type": "select", "id": "aspect_mobile", "label": "Proporción — móvil", "default": "3 / 4",
+      "options": [ { "value": "3 / 4", "label": "Vertical" }, { "value": "1 / 1", "label": "Cuadrado" }, { "value": "16 / 9", "label": "Horizontal" } ] },
+    { "type": "range", "id": "radius", "label": "Redondez", "min": 0, "max": 40, "step": 1, "unit": "px", "default": 16 },
+    { "type": "range", "id": "border_slide", "label": "Grosor del borde", "min": 0, "max": 10, "step": 1, "unit": "px", "default": 0 },
+    { "type": "range", "id": "overlay_pct", "label": "Sombreado (overlay)", "min": 0, "max": 100, "step": 5, "unit": "%", "default": 20 },
+    { "type": "checkbox", "id": "use_shadow", "label": "Usar sombra", "default": false },
+
+    { "type": "header", "content": "Contenido" },
+    { "type": "select", "id": "h_pos", "label": "Posición horizontal", "default": "center",
+      "options": [ { "value": "left", "label": "Izquierda" }, { "value": "center", "label": "Centro" }, { "value": "right", "label": "Derecha" } ] },
+    { "type": "select", "id": "h_pos_mobile", "label": "Posición horizontal — móvil", "default": "center",
+      "options": [ { "value": "left", "label": "Izquierda" }, { "value": "center", "label": "Centro" }, { "value": "right", "label": "Derecha" } ] },
+    { "type": "select", "id": "v_pos", "label": "Posición vertical", "default": "bottom",
+      "options": [ { "value": "top", "label": "Arriba" }, { "value": "bottom", "label": "Abajo" } ] },
+    { "type": "select", "id": "v_pos_mobile", "label": "Posición vertical — móvil", "default": "bottom",
+      "options": [ { "value": "top", "label": "Arriba" }, { "value": "bottom", "label": "Abajo" } ] },
+
+    { "type": "header", "content": "Título" },
+    { "type": "range", "id": "title_size", "label": "Tamaño de fuente", "min": 10, "max": 40, "step": 1, "unit": "px", "default": 16 },
+    { "type": "range", "id": "title_size_mobile", "label": "Tamaño de fuente — móvil", "min": 10, "max": 40, "step": 1, "unit": "px", "default": 16 },
+    { "type": "range", "id": "line_height", "label": "Altura de línea", "min": 90, "max": 200, "step": 5, "unit": "%", "default": 130 },
+
+    { "type": "header", "content": "Estrellas" },
+    { "type": "checkbox", "id": "hide_stars", "label": "Ocultar estrellas", "default": false },
+    { "type": "image_picker", "id": "star_icon", "label": "Ícono (reemplaza la estrella)" },
+    { "type": "range", "id": "star_size", "label": "Tamaño", "min": 8, "max": 32, "step": 1, "unit": "px", "default": 16 },
+    { "type": "range", "id": "star_size_mobile", "label": "Tamaño — móvil", "min": 8, "max": 32, "step": 1, "unit": "px", "default": 16 },
+    { "type": "range", "id": "star_margin", "label": "Margen superior", "min": 0, "max": 40, "step": 1, "unit": "px", "default": 6 },
+    { "type": "range", "id": "star_margin_mobile", "label": "Margen superior — móvil", "min": 0, "max": 40, "step": 1, "unit": "px", "default": 6 },
+
+    { "type": "header", "content": "Controles" },
+    { "type": "checkbox", "id": "use_pause", "label": "Botón de pausa/play", "default": true },
+    { "type": "checkbox", "id": "use_sound", "label": "Botón de sonido on/off", "default": true },
+    { "type": "range", "id": "ctrl_size", "label": "Tamaño", "min": 24, "max": 72, "step": 1, "unit": "px", "default": 40 },
+    { "type": "range", "id": "ctrl_size_mobile", "label": "Tamaño — móvil", "min": 24, "max": 72, "step": 1, "unit": "px", "default": 40 },
+    { "type": "range", "id": "ctrl_border", "label": "Grosor del borde", "min": 0, "max": 8, "step": 1, "unit": "px", "default": 0 },
+
+    { "type": "header", "content": "Flechas" },
+    { "type": "checkbox", "id": "arrows", "label": "Mostrar en escritorio", "default": true },
+    { "type": "checkbox", "id": "arrows_mobile", "label": "Mostrar en móvil", "default": false },
+    { "type": "range", "id": "arrow_size", "label": "Tamaño", "min": 28, "max": 72, "step": 1, "unit": "px", "default": 48 },
+    { "type": "range", "id": "arrow_ico", "label": "Tamaño del ícono", "min": 4, "max": 20, "step": 1, "unit": "px", "default": 8 },
+    { "type": "range", "id": "arrow_radius", "label": "Redondez", "min": 0, "max": 100, "step": 1, "unit": "px", "default": 100 },
+    { "type": "range", "id": "arrow_border", "label": "Grosor del borde", "min": 0, "max": 8, "step": 1, "unit": "px", "default": 0 },
+    { "type": "select", "id": "arrow_hover", "label": "Efecto al pasar", "default": "color",
+      "options": [ { "value": "color", "label": "Cambiar color" }, { "value": "none", "label": "Ninguno" } ] },
+
+    { "type": "header", "content": "Colores del slide" },
+    { "type": "color", "id": "c_title", "label": "Título", "default": "#ffffff" },
+    { "type": "color", "id": "c_stars", "label": "Estrellas", "default": "#ffffff" },
+    { "type": "color", "id": "c_border", "label": "Borde", "default": "#121212" },
+    { "type": "color", "id": "c_shadow", "label": "Sombra", "default": "#121212" },
+    { "type": "color", "id": "c_overlay", "label": "Overlay", "default": "#121212" },
+
+    { "type": "header", "content": "Colores de los controles" },
+    { "type": "color", "id": "c_ctrl_ico", "label": "Ícono", "default": "#ffffff" },
+    { "type": "color", "id": "c_ctrl_ico_h", "label": "Ícono (hover)", "default": "#ffffff" },
+    { "type": "color", "id": "c_ctrl_bg", "label": "Fondo", "default": "#ffffff" },
+    { "type": "color", "id": "c_ctrl_bg_h", "label": "Fondo (hover)", "default": "#ffffff" },
+    { "type": "color", "id": "c_ctrl_border", "label": "Borde", "default": "#ffffff" },
+    { "type": "color", "id": "c_ctrl_border_h", "label": "Borde (hover)", "default": "#ffffff" },
+
+    { "type": "header", "content": "Colores de las flechas" },
+    { "type": "color", "id": "c_arrow_ico", "label": "Ícono", "default": "#121212" },
+    { "type": "color", "id": "c_arrow_ico_h", "label": "Ícono (hover)", "default": "#ffffff" },
+    { "type": "color", "id": "c_arrow_bg", "label": "Fondo", "default": "#ffffff" },
+    { "type": "color", "id": "c_arrow_bg_h", "label": "Fondo (hover)", "default": "#121212" },
+    { "type": "color", "id": "c_arrow_border", "label": "Borde", "default": "#121212" },
+    { "type": "color", "id": "c_arrow_border_h", "label": "Borde (hover)", "default": "#121212" },
+
+    { "type": "header", "content": "Colores de la sección" },
+    { "type": "select", "id": "bg_style", "label": "Estilo de fondo", "default": "solid",
+      "options": [ { "value": "solid", "label": "Sólido" }, { "value": "gradient", "label": "Degradado" } ] },
+    { "type": "color", "id": "c_bg", "label": "Fondo", "default": "#ffffff" },
+    { "type": "color", "id": "c_bg2", "label": "Fondo 2 (degradado)", "default": "#f4f4f7" },
+    { "type": "color", "id": "c_border_sec", "label": "Borde", "default": "#121212" },
+
+    { "type": "header", "content": "Margen de la sección (afuera)" },
+    { "type": "range", "id": "margin_top", "label": "Arriba", "min": 0, "max": 120, "step": 1, "unit": "px", "default": 0 },
+    { "type": "range", "id": "margin_bottom", "label": "Abajo", "min": 0, "max": 120, "step": 1, "unit": "px", "default": 0 },
+
+    { "type": "header", "content": "Padding de la sección (adentro)" },
+    { "type": "range", "id": "pad_top", "label": "Arriba", "min": 0, "max": 120, "step": 1, "unit": "px", "default": 36 },
+    { "type": "range", "id": "pad_bottom", "label": "Abajo", "min": 0, "max": 120, "step": 1, "unit": "px", "default": 36 },
+    { "type": "range", "id": "pad_sides", "label": "Lados", "min": 0, "max": 10, "step": 0.5, "unit": "rem", "default": 1.5 },
+    { "type": "range", "id": "pad_sides_mobile", "label": "Lados — móvil", "min": 0, "max": 10, "step": 0.5, "unit": "rem", "default": 1 },
+
+    { "type": "header", "content": "Ajustes de la sección" },
+    { "type": "select", "id": "width", "label": "Ancho", "default": "page",
+      "options": [ { "value": "page", "label": "Página" }, { "value": "full", "label": "Completo" } ] },
+    { "type": "range", "id": "border_sec", "label": "Grosor del borde", "min": 0, "max": 8, "step": 1, "unit": "px", "default": 0 }
+  ],
+  "blocks": [
+    {
+      "type": "video",
+      "name": "Video",
+      "settings": [
+        { "type": "video", "id": "video", "label": "Video de Shopify" },
+        { "type": "video_url", "id": "video_url", "label": "Video por URL", "accept": ["youtube", "vimeo"], "default": "https://www.youtube.com/watch?v=_9VUPq3SxOc",
+          "info": "Se usa cuando no elegís un video de Shopify. No soporta autoplay/controles." },
+        { "type": "text", "id": "title", "label": "Nombre / título", "default": "Title" },
+        { "type": "range", "id": "stars", "label": "Estrellas", "min": 0, "max": 5, "step": 1, "default": 5,
+          "info": "Si usás un ícono de estrella custom, las valoraciones deben ser números enteros." }
+      ]
+    }
+  ],
+  "max_blocks": 20,
+  "presets": [
+    {
+      "name": "TiendaIQ Video slider",
+      "blocks": [
+        { "type": "video", "settings": { "title": "Jess B." } },
+        { "type": "video", "settings": { "title": "Jimmy H." } },
+        { "type": "video", "settings": { "title": "John D." } },
+        { "type": "video", "settings": { "title": "Gabby M." } },
+        { "type": "video", "settings": { "title": "Ann J." } }
+      ]
+    }
+  ]
+}
+{% endschema %}
