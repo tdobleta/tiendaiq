@@ -89,7 +89,10 @@
     aviso: `<path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17.5v.5"/>`,
     flecha: `<path d="M5 12h14M13 6l6 6-6 6"/>`,
     estrella: `<path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.5 9.7l5.9-.9z"/>`,
-    lapiz: `<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/>`
+    lapiz: `<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/>`,
+    chispa: `<path d="M12 3l1.9 5.6L19.5 10l-5.6 1.4L12 17l-1.9-5.6L4.5 10l5.6-1.4z"/>`,
+    documento: `<path d="M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9z"/><path d="M14 3v6h6"/>`,
+    bolsa: `<path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 01-8 0"/>`
   };
   const ico = (nombre, cls = "") =>
     `<svg class="ico${cls ? " " + cls : ""}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONOS[nombre] || ""}</svg>`;
@@ -474,7 +477,7 @@
       <div class="inicio-cabecera">
         <h1><button class="volver-flecha" id="volver-inicio"></button> Páginas de producto</h1>
         <div class="inicio-cabecera__acciones">
-          <button class="btn btn--marca" id="ir-crear">✦ Crear página de producto con IA</button>
+          <button class="btn btn--marca" id="ir-crear">${ico("chispa")} Crear página de producto con IA</button>
         </div>
       </div>
 
@@ -491,9 +494,11 @@
                  </div>
                  ${paginas.map(fila).join("")}
                </div>`
-            : `<div class="vacio">
-                 Todavía no generaste ninguna página.<br><br>
-                 <button class="btn" id="vacio-crear">✦ Crear página de producto con IA</button>
+            : `<div class="vacio-panel">
+                 <div class="vacio-panel__ico">${ico("documento")}</div>
+                 <div class="vacio-panel__tit">Todavía no generaste ninguna página</div>
+                 <p>Elegí un producto de tu tienda y armamos su página de venta con IA en segundos.</p>
+                 <button class="btn" id="vacio-crear">${ico("chispa")} Crear página con IA</button>
                </div>`
         }
       </div>`;
@@ -1427,6 +1432,7 @@
         <button class="volver-flecha" id="volver-inicio"></button>
         <div class="cabecera"><h1>Crear página de producto con IA</h1></div>
         <div class="vacio-panel">
+          <div class="vacio-panel__ico">${ico("bolsa")}</div>
           <div class="vacio-panel__tit">Todavía no tenés productos en tu tienda</div>
           <p>Agregá al menos un producto en Shopify y volvé para armar su página con IA.</p>
         </div>`;
@@ -1663,7 +1669,7 @@
             <div class="nota" id="nota-medios"></div>
           </div>
 
-          <button class="btn btn--acento btn--grande" id="generar">✨ Crear página de producto con IA</button>
+          <button class="btn btn--acento btn--grande" id="generar">${ico("chispa")} Crear página de producto con IA</button>
           ${
             p.estado
               ? `<button class="btn btn--fantasma btn--grande" id="abrir" style="margin-top:10px">${ico("lapiz")} Editar la página existente</button>`
