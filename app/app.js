@@ -121,7 +121,8 @@
     info: `<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.6v.4"/>`,
     kebab: `<circle cx="12" cy="5" r="1.4" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="12" cy="19" r="1.4" fill="currentColor" stroke="none"/>`,
     deshacer: `<path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 010 10h-4"/>`,
-    rehacer: `<path d="M15 14l5-5-5-5"/><path d="M20 9H9a5 5 0 000 10h4"/>`
+    rehacer: `<path d="M15 14l5-5-5-5"/><path d="M20 9H9a5 5 0 000 10h4"/>`,
+    grip: `<circle cx="9" cy="6" r="1.4" fill="currentColor" stroke="none"/><circle cx="15" cy="6" r="1.4" fill="currentColor" stroke="none"/><circle cx="9" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="9" cy="18" r="1.4" fill="currentColor" stroke="none"/><circle cx="15" cy="18" r="1.4" fill="currentColor" stroke="none"/>`
   };
   const ico = (nombre, cls = "") =>
     `<svg class="ico${cls ? " " + cls : ""}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONOS[nombre] || ""}</svg>`;
@@ -130,9 +131,11 @@
 
   function pintarPasos() {
     const cont = $("pasos");
-    // El stepper es SOLO del flujo de creación. En el resto (inicio, tabla,
-    // COD, bundles) no va: son paneles, no un asistente por pasos.
-    if (!["lista", "informacion", "generando", "preview"].includes(estado.pantalla)) {
+    // El stepper es SOLO del flujo de CREACIÓN. En el resto (inicio, tabla,
+    // COD, bundles) no va. Y una vez PUBLICADA, el asistente terminó: la
+    // pantalla pasa a modo editor, sin stepper (patrón page-builder).
+    const previewPublicada = estado.pantalla === "preview" && estado.pagina?.estado === "publicada";
+    if (previewPublicada || !["lista", "informacion", "generando", "preview"].includes(estado.pantalla)) {
       cont.innerHTML = "";
       return;
     }
@@ -1844,6 +1847,7 @@
   // el dato y el iframe se repinta. Guardar = PUT /api/paginas/:id.
 
   let sucio = false; // hay cambios sin guardar
+  let cambiosSinPublicar = false; // se editó una página YA publicada (no está viva hasta re-publicar)
   let timerPreview = null;
 
   const leer = (obj, ruta) => ruta.split(".").reduce((o, k) => (o == null ? o : o[k]), obj);
@@ -2854,8 +2858,27 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       b.classList.add("btn--acento");
       b.classList.remove("btn--fantasma");
     }
-    const h = $("hint-republicar");
-    if (h && estado.pagina.estado === "publicada") h.style.display = "";
+    // Editar una página YA publicada = deja de estar al día con la tienda.
+    // El estado se comunica por el pill, no por un banner-sermón.
+    if (estado.pagina?.estado === "publicada") {
+      cambiosSinPublicar = true;
+      actualizarPill();
+    }
+  }
+
+  // Refleja el estado actual en el pill de la barra (Borrador / Publicada /
+  // Cambios sin publicar) sin re-renderizar toda la pantalla.
+  function actualizarPill() {
+    const chip = $("barra-estado")?.querySelector(".chip-estado");
+    if (!chip) return;
+    const publicada = estado.pagina?.estado === "publicada";
+    const est = !publicada
+      ? { c: "borrador", t: "Borrador" }
+      : cambiosSinPublicar
+        ? { c: "pend", t: "Cambios sin publicar" }
+        : { c: "publicada", t: "Publicada" };
+    chip.className = "chip-estado chip-estado--" + est.c;
+    chip.textContent = est.t;
   }
 
   function cargarLote() {
@@ -2893,11 +2916,16 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         body: { data: estado.pagina.data }
       });
       sucio = false;
+      // El botón vuelve a su acción ("Guardar cambios"), deshabilitado porque
+      // ya no hay nada pendiente. El feedback de guardado va por toast, no por
+      // un botón que muestra un adjetivo.
       if (b) {
-        b.textContent = "Guardado";
+        b.disabled = true;
+        b.textContent = "Guardar cambios";
         b.classList.remove("btn--acento");
         b.classList.add("btn--fantasma");
       }
+      toast("Cambios guardados");
       return true;
     } catch (e) {
       if (b) {
@@ -2938,31 +2966,39 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       );
     }
     const publicada = pg.estado === "publicada";
+    pintarPasos(); // tras publicar se entra acá sin ir(): refresca el stepper (lo oculta).
+    // Estado que refleja el pill de la barra (una sola señal persistente).
+    const est = !publicada
+      ? { c: "borrador", t: "Borrador" }
+      : cambiosSinPublicar
+        ? { c: "pend", t: "Cambios sin publicar" }
+        : { c: "publicada", t: "Publicada" };
+    const volverTxt = estado.volverA === "paginas" ? "Volver a mis páginas" : "Volver a los productos";
+    const mostrarSetup = publicada && pg.paginaViva !== true && pg.setupPaginaUrl;
+    const mostrarCoach = !localStorage.getItem("tiq_coach_editor");
 
     vista.innerHTML = `
-      <button class="volver-flecha" id="volver" title="${
-        estado.volverA === "paginas" ? "Volver a mis páginas" : "Volver a los productos"
-      }" aria-label="${
-        estado.volverA === "paginas" ? "Volver a mis páginas" : "Volver a los productos"
-      }"></button>
+      <div class="preview-barra" id="barra-accion">
+        <button class="volver-flecha" id="volver" title="${volverTxt}" aria-label="${volverTxt}"></button>
+        <div class="preview-barra__info">
+          <div class="preview-barra__titulo">${esc(pg.data.facetas.hero.titulo)}</div>
+          <div class="preview-barra__sub">${esc(pg.data.facetas.hero.subtitulo)}</div>
+        </div>
+        <div class="preview-barra__estado" id="barra-estado">
+          <span class="chip-estado chip-estado--${est.c}">${est.t}</span>
+          ${publicada && pg.url_publica
+            ? `<a class="preview-barra__ver" href="${esc(pg.url_publica)}" target="_blank" rel="noopener">Ver en la tienda ${ico("externo")}</a>`
+            : ""}
+        </div>
+        <div class="preview-barra__acciones">
+          <button class="btn btn--fantasma" id="guardar" disabled>Guardar cambios</button>
+          <button class="btn btn--fantasma" id="regenerar">Regenerar</button>
+          <button class="btn ${publicada ? "btn--fantasma" : "btn--acento"}" id="publicar">${publicada ? "Volver a publicar" : "Publicar página"}</button>
+        </div>
+      </div>
 
       ${
-        publicada && pg.url_publica
-          ? `<div class="exito">
-               <div class="exito__titulo">${ico("checkCirculo")} Publicada en tu tienda</div>
-               <a href="${esc(pg.url_publica)}" target="_blank">${esc(pg.url_publica)}</a>
-             </div>`
-          : ""
-      }
-
-      ${
-        publicada && pg.paginaViva === true
-          ? `<div class="verif-ok">${ico("checkCirculo")} Confirmado: tu landing se está mostrando en la tienda.</div>`
-          : ""
-      }
-
-      ${
-        publicada && pg.paginaViva !== true && pg.setupPaginaUrl
+        mostrarSetup
           ? `<div class="setup-pagina ${pg.paginaViva === false ? "setup-pagina--alerta" : ""}">
                <div class="setup-pagina__cab">${
                  pg.paginaViva === false
@@ -2985,23 +3021,11 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
           : ""
       }
 
-      <div class="preview-barra">
-        <div class="preview-barra__info">
-          <div class="preview-barra__titulo">${esc(pg.data.facetas.hero.titulo)}</div>
-          <div class="preview-barra__sub">${esc(pg.data.facetas.hero.subtitulo)}</div>
-        </div>
-        <button class="btn btn--fantasma" id="guardar" disabled>Guardado</button>
-        <button class="btn btn--fantasma" id="regenerar">Regenerar</button>
-        <button class="btn ${publicada ? "btn--fantasma" : "btn--acento"}" id="publicar">
-          ${publicada ? "Volver a publicar" : "Publicar página"}
-        </button>
-      </div>
-
-      <div class="aviso-republicar" id="hint-republicar" style="display:none">
-        ${ico("aviso")} Los cambios se guardan acá, pero en la tienda no se ven hasta que vuelvas a publicar.
-      </div>
-
-      <div class="editor-hint">${ico("lapiz")} Pasá el mouse por cualquier bloque y tocá <strong>Editar</strong>. Arrastrá una <strong>sección</strong> del panel izquierdo a la página para sumarla.</div>
+      ${
+        mostrarCoach
+          ? `<div class="editor-hint" id="coach-editor">${ico("lapiz")} Pasá el mouse por cualquier bloque y tocá <strong>Editar</strong>. Arrastrá una <strong>sección</strong> del panel izquierdo a la página para sumarla.<button class="editor-hint__x" id="coach-x" type="button" aria-label="Entendido">${ico("x")}</button></div>`
+          : ""
+      }
 
       <div class="constructor">
         <aside class="panel-sections" id="panel-sections">
@@ -3015,7 +3039,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
                 <div class="section-card__nombre">${s.nombre}</div>
                 <div class="section-card__desc">${s.desc}</div>
               </div>
-              <span class="section-card__grip">⠿</span>
+              <span class="section-card__grip">${ico("grip")}</span>
             </div>`
           ).join("")}
         </aside>
@@ -3046,6 +3070,12 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     };
     $("guardar").onclick = guardarCambios;
     $("publicar").onclick = publicar;
+    // Coach-mark del editor: se muestra una sola vez (flag en localStorage).
+    const coachX = $("coach-x");
+    if (coachX) coachX.onclick = () => {
+      try { localStorage.setItem("tiq_coach_editor", "1"); } catch {}
+      $("coach-editor")?.remove();
+    };
   }
 
   async function publicar() {
@@ -3057,7 +3087,12 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     b.textContent = "Publicando…";
     try {
       estado.pagina = await api(`/paginas/${estado.pagina.id}/publicar`, { method: "POST" });
+      cambiosSinPublicar = false; // recién publicada: lo que se ve es lo que hay
       pantallaPreview();
+      // Éxito = señal efímera, no banner permanente. El estado vive en el pill.
+      toast(estado.pagina.paginaViva === false
+        ? "Publicada. Falta activar la plantilla en tu tema (ver abajo)."
+        : "¡Publicada! Ya está en tu tienda.");
     } catch (e) {
       b.disabled = false;
       b.textContent = "Publicar página";

@@ -372,14 +372,29 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
 
 /* ---------- 3. preview ---------- */
 
+/* Barra de acción del editor: STICKY y única. Ancla la sesión de edición
+   (patrón page-builder). Aloja volver + título + pill de estado + acciones. */
 .preview-barra {
+  position: sticky; top: 0; z-index: 20;
   background: #fff; border: 1px solid var(--borde); border-radius: var(--radio);
-  padding: 12px 16px; margin-bottom: 14px;
+  padding: 10px 14px; margin-bottom: 14px;
   display: flex; align-items: center; gap: 14px;
+  box-shadow: var(--sombra-s);
 }
+.preview-barra .volver-flecha { margin-right: 0; flex-shrink: 0; }
 .preview-barra__info { flex: 1; min-width: 0; }
-.preview-barra__titulo { font-size: 14px; font-weight: 600; color: var(--negro); }
-.preview-barra__sub { font-size: 12.5px; color: var(--suave); }
+.preview-barra__titulo { font-size: 14px; font-weight: 600; color: var(--negro); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.preview-barra__sub { font-size: 12.5px; color: var(--suave); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.preview-barra__estado { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.preview-barra__ver { font-size: 12.5px; color: var(--suave); text-decoration: none; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.preview-barra__ver:hover { color: var(--negro); }
+.preview-barra__ver .ico { width: 13px; height: 13px; }
+.preview-barra__acciones { display: flex; gap: 8px; flex-shrink: 0; }
+/* Coach-mark del editor (una vez): banner índigo con botón de cerrar. */
+.editor-hint { position: relative; padding-right: 42px; }
+.editor-hint__x { position: absolute; top: 50%; right: 10px; transform: translateY(-50%); width: 26px; height: 26px; border: 0; background: none; border-radius: 6px; color: var(--suave); cursor: pointer; display: grid; place-items: center; }
+.editor-hint__x:hover { background: rgba(0,0,0,.06); color: var(--negro); }
+.editor-hint__x .ico { width: 15px; height: 15px; }
 
 .marco {
   border: 1px solid var(--borde); border-radius: var(--radio);
@@ -958,6 +973,7 @@ ui-save-bar { display: none; }
 .chip-estado--publicada { background: var(--ok-fondo); color: #157f3d; }
 .chip-estado--ia { background: var(--ia-fondo); color: var(--ia); }
 .chip-estado--borrador { background: #ececef; color: #5c5f62; }
+.chip-estado--pend { background: var(--aviso-fondo); color: var(--aviso); }
 
 /* Tiles de métrica al estilo PagePilot: fila ícono+label, valor grande
    debajo alineado con el label; primer tile violeta, segundo verde. */
@@ -1675,9 +1691,11 @@ ui-save-bar { display: none; }
   .dos-columnas { grid-template-columns: 1fr; }
 
   /* preview: la barra apila y los botones ocupan el ancho */
-  .preview-barra { flex-wrap: wrap; gap: 8px; }
-  .preview-barra__info { flex: 1 1 100%; }
-  .preview-barra .btn { flex: 1 1 auto; }
+  .preview-barra { flex-wrap: wrap; gap: 8px 10px; }
+  .preview-barra__info { flex: 1 1 60%; }
+  .preview-barra__estado { flex: 0 0 auto; }
+  .preview-barra__acciones { flex: 1 1 100%; }
+  .preview-barra__acciones .btn { flex: 1 1 auto; }
   .marco--full iframe { height: 68vh; }
 
   /* modal de edición: hoja completa */
@@ -1871,7 +1889,8 @@ summary:focus-visible, label:focus-visible {
 .section-card__txt { flex: 1; min-width: 0; }
 .section-card__nombre { font-size: 13px; font-weight: 600; color: var(--negro); }
 .section-card__desc { font-size: 11.5px; color: var(--suave); line-height: 1.35; margin-top: 1px; }
-.section-card__grip { color: #c2c2cc; font-size: 15px; }
+.section-card__grip { color: #c2c2cc; display: inline-flex; }
+.section-card__grip .ico { width: 16px; height: 16px; }
 
 .section-card__mini {
   flex: 0 0 auto; width: 44px; height: 44px; border-radius: 8px;
