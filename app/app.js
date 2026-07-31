@@ -2194,7 +2194,11 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   let modalSec = null; // sección abierta
 
   function cerrarModalEdicion() {
-    document.getElementById("editor-modal")?.remove();
+    const m = document.getElementById("editor-modal");
+    if (m?._onKey) document.removeEventListener("keydown", m._onKey);
+    m?.remove();
+    // Devolver el foco a donde estaba antes de abrir (a11y).
+    if (m?._focoPrevio && document.contains(m._focoPrevio)) { try { m._focoPrevio.focus(); } catch {} }
     modalSec = null;
     modalDef = null;
   }
@@ -2416,9 +2420,9 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     m.className = "editor-modal";
     m.id = "editor-modal";
     m.innerHTML = `
-      <div class="editor-modal__caja">
+      <div class="editor-modal__caja" role="dialog" aria-modal="true" aria-labelledby="editor-modal-titulo">
         <div class="editor-modal__cab">
-          <span>${def.titulo}</span>
+          <span id="editor-modal-titulo">${def.titulo}</span>
           <button class="editor-modal__x" type="button" aria-label="Cerrar">${ico("x")}</button>
         </div>
         <div class="editor-modal__cuerpo" id="editor-modal-cuerpo">${def.html()}</div>
@@ -2427,6 +2431,13 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         </div>
       </div>`;
     document.body.appendChild(m);
+
+    // A11y: Esc cierra, foco al primer control, y se devuelve el foco al cerrar.
+    m._focoPrevio = document.activeElement;
+    m._onKey = (e) => { if (e.key === "Escape") cerrarModalEdicion(); };
+    document.addEventListener("keydown", m._onKey);
+    const primero = m.querySelector(".editor-modal__cuerpo input, .editor-modal__cuerpo select, .editor-modal__cuerpo textarea, .editor-modal__cuerpo button");
+    (primero || m.querySelector(".editor-modal__x"))?.focus();
 
     m.addEventListener("input", (e) => {
       if (e.target.dataset.ruta) actualizarDato(e.target);
@@ -3265,9 +3276,9 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     m.className = "galsec";
     m.id = "galsec";
     m.innerHTML = `
-      <div class="galsec__caja">
+      <div class="galsec__caja" role="dialog" aria-modal="true" aria-labelledby="galsec-titulo">
         <div class="galsec__cab">
-          <div class="galsec__marca">${ico("chispa")} Secciones</div>
+          <div class="galsec__marca" id="galsec-titulo">${ico("chispa")} Secciones</div>
           <div class="galsec__buscar">${IC_BUSCAR}<input type="text" id="galsec-q" placeholder="Buscar secciones" value="${esc(estado.galeriaQ || "")}"></div>
           <button class="galsec__x" type="button" aria-label="Cerrar">${ico("x")}</button>
         </div>
@@ -3469,13 +3480,18 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     const p = document.createElement("aside");
     p.className = "sec-panel";
     p.id = "sec-panel";
+    p.setAttribute("role", "dialog");
+    p.setAttribute("aria-labelledby", "sec-panel-tit");
     p.innerHTML = `
       <div class="sec-panel__cab">
-        <span class="sec-panel__tit">${ico("video")} ${esc(catSeccion(s.tipo)?.nombre || "Sección")}</span>
+        <span class="sec-panel__tit" id="sec-panel-tit">${ico("video")} ${esc(catSeccion(s.tipo)?.nombre || "Sección")}</span>
         <button class="sec-panel__x" type="button" aria-label="Cerrar">${ico("x")}</button>
       </div>
       <div class="sec-panel__body" id="sp-body">${panelSeccionHTML(s)}</div>`;
     document.body.appendChild(p);
+    // A11y: Esc cierra el panel.
+    p._onKey = (e) => { if (e.key === "Escape") cerrarPanelSeccion(); };
+    document.addEventListener("keydown", p._onKey);
 
     p.addEventListener("input", (e) => {
       const t = e.target;
@@ -3556,7 +3572,9 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   }
 
   function cerrarPanelSeccion() {
-    document.getElementById("sec-panel")?.remove();
+    const p = document.getElementById("sec-panel");
+    if (p?._onKey) document.removeEventListener("keydown", p._onKey);
+    p?.remove();
     document.body.classList.remove("sec-panel-abierto");
     panelSecId = null;
   }
@@ -4332,7 +4350,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   // el bind usa para prender/apagar (data-toggle-b en el bundle, data-lv-bool en la oferta).
   const beToggleRow = (label, attr, on, help) =>
     `<div class="be-tgl-row"><span>${label}${help ? ` <span class="be-help" data-tip="${esc(help)}" tabindex="0" aria-label="${esc(help)}">?</span>` : ""}</span>
-      <button type="button" class="be-toggle ${on ? "is-on" : ""}" ${attr}><span></span></button></div>`;
+      <button type="button" class="be-toggle ${on ? "is-on" : ""}" role="switch" aria-checked="${!!on}" aria-label="${esc(String(label).replace(/<[^>]*>/g, ""))}" ${attr}><span></span></button></div>`;
 
   // ---------- EDITOR estilo Pumper (Tema 1: Descuento por Cantidad) ----------
   function pintarEditorBundle() {
