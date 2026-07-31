@@ -210,6 +210,10 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
 /* Placeholder de imagen: SVG muteado, reemplaza el emoji 🖼/🛍 de fallback. */
 .ico--ph { width: 20px; height: 20px; color: #b7b7bf; }
 .fila__ph .ico { width: 22px; height: 22px; color: #b7b7bf; }
+/* Botones cerrar/quitar (antes glyph ×) → SVG centrado y a medida. */
+.picker__x, .editor-modal__x, .galsec__x, .sec-panel__x { display: grid; place-items: center; }
+.picker__x .ico, .editor-modal__x .ico, .galsec__x .ico, .sec-panel__x .ico { width: 18px; height: 18px; }
+.be-mkt-chip .ico, .be-gift__tab .ico { width: 13px; height: 13px; vertical-align: -1px; }
 /* Chevron de acordeón, info, kebab, undo/redo, "agregar" — antes glyphs. */
 .be-chev { display: inline-flex; }
 .be-chev .ico { width: 16px; height: 16px; }

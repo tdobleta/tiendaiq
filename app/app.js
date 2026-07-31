@@ -1610,7 +1610,7 @@
       <div class="picker" role="dialog" aria-modal="true" aria-label="Todos los productos">
         <div class="picker__cab">
           <h2>Todos los productos</h2>
-          <button class="picker__x" type="button" aria-label="Cerrar">×</button>
+          <button class="picker__x" type="button" aria-label="Cerrar">${ico("x")}</button>
         </div>
         <div class="picker__buscar">
           <span class="picker__lupa">${IC_LUPA}</span>
@@ -2419,7 +2419,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       <div class="editor-modal__caja">
         <div class="editor-modal__cab">
           <span>${def.titulo}</span>
-          <button class="editor-modal__x" type="button" aria-label="Cerrar">×</button>
+          <button class="editor-modal__x" type="button" aria-label="Cerrar">${ico("x")}</button>
         </div>
         <div class="editor-modal__cuerpo" id="editor-modal-cuerpo">${def.html()}</div>
         <div class="editor-modal__pie">
@@ -3269,7 +3269,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         <div class="galsec__cab">
           <div class="galsec__marca">${ico("chispa")} Secciones</div>
           <div class="galsec__buscar">${IC_BUSCAR}<input type="text" id="galsec-q" placeholder="Buscar secciones" value="${esc(estado.galeriaQ || "")}"></div>
-          <button class="galsec__x" type="button" aria-label="Cerrar">×</button>
+          <button class="galsec__x" type="button" aria-label="Cerrar">${ico("x")}</button>
         </div>
         <div class="galsec__tabs" id="galsec-tabs">
           ${CATS_SECCIONES.map(([id, lab]) => `<button class="galsec__tab ${estado.galeriaCat === id ? "is-sel" : ""}" type="button" data-gal-cat="${id}"><span class="galsec__tab-ic">${IC_CAT[id] || ""}</span><span>${lab}</span></button>`).join("")}
@@ -3472,7 +3472,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     p.innerHTML = `
       <div class="sec-panel__cab">
         <span class="sec-panel__tit">${ico("video")} ${esc(catSeccion(s.tipo)?.nombre || "Sección")}</span>
-        <button class="sec-panel__x" type="button" aria-label="Cerrar">×</button>
+        <button class="sec-panel__x" type="button" aria-label="Cerrar">${ico("x")}</button>
       </div>
       <div class="sec-panel__body" id="sp-body">${panelSeccionHTML(s)}</div>`;
     document.body.appendChild(p);
@@ -4572,7 +4572,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
           const cfgRegalo = g.on ? `<div class="be-addon-cfg">
               <div class="be-addon-cfg__t"><span>${ico("regalo")} Regalo gratis</span>${gifts.length ? `<a class="be-gift__more" data-gift-add="${i}">Agregar más regalo</a>` : ""}</div>
               ${gifts.length
-                ? `<div class="be-gift__tabs">${gifts.map((_, gi) => `<span class="be-gift__tab ${gi === sel ? "is-sel" : ""}" data-gift-tab="${i}:${gi}">Regalo ${gi + 1}<button data-gift-del="${i}:${gi}" title="Quitar">×</button></span>`).join("")}</div>${editorRegalo(gifts[sel], sel)}`
+                ? `<div class="be-gift__tabs">${gifts.map((_, gi) => `<span class="be-gift__tab ${gi === sel ? "is-sel" : ""}" data-gift-tab="${i}:${gi}">Regalo ${gi + 1}<button data-gift-del="${i}:${gi}" title="Quitar">${ico("x")}</button></span>`).join("")}</div>${editorRegalo(gifts[sel], sel)}`
                 : `<button class="be-gift-btn" data-addon-gift="${i}">${ico("mas")} Seleccionar producto de regalo</button>`}</div>` : "";
           const cfgEnvio = ad.envio?.on ? `<div class="be-addon-cfg">
               <div class="be-addon-cfg__t">${ico("camion")} Envío gratis<button class="be-addon-cfg__x" data-addon-toggle="${i}:envio">Eliminar</button></div>
@@ -4880,7 +4880,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     const mktOn = !!mkt.on;
     const modoMkt = mkt.modo || "todos";
     const idsMkt = mkt.ids || [];
-    const chipsMkt = idsMkt.map((code) => `<span class="be-mkt-chip">${esc(NOMBRE_PAIS(code))} <button type="button" data-mercado-del="${code}" aria-label="Quitar ${esc(NOMBRE_PAIS(code))}">×</button></span>`).join("");
+    const chipsMkt = idsMkt.map((code) => `<span class="be-mkt-chip">${esc(NOMBRE_PAIS(code))} <button type="button" data-mercado-del="${code}" aria-label="Quitar ${esc(NOMBRE_PAIS(code))}">${ico("x")}</button></span>`).join("");
     const optsMkt = PAISES_BDL.filter(([code]) => idsMkt.indexOf(code) === -1).map(([code, nombre]) => `<button type="button" class="be-mkt-opt" data-mercado-add="${code}">${esc(nombre)}</button>`).join("");
     const msgMkt = modoMkt === "todos"
       ? `<div class="be-aviso be-aviso--info"><span class="be-aviso__ico" aria-hidden="true">ℹ</span><p class="be-aviso__txt">Esta oferta será visible y aplicable en todos los mercados.</p></div>`
