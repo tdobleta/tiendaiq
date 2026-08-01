@@ -1,0 +1,75 @@
+/* TiendaIQ · Video slider (section nativa, estilo Section Store).
+   Todo se maneja por variables --vs-* que la section setea inline según los
+   settings del editor de temas. NO editar a mano — lo escribe la app. */
+.tiq-vs { box-sizing: border-box; background: var(--vs-fondo, #fff);
+  margin-top: var(--vs-mt, 0); margin-bottom: var(--vs-mb, 0);
+  padding-top: var(--vs-pt, 36px); padding-bottom: var(--vs-pb, 36px);
+  border: var(--vs-borde-sec, 0) solid var(--vs-col-borde-sec, #121212); }
+.tiq-vs *, .tiq-vs *::before, .tiq-vs *::after { box-sizing: border-box; }
+.tiq-vs__cont { max-width: 1200px; margin: 0 auto;
+  padding-left: var(--vs-ps, 1.5rem); padding-right: var(--vs-ps, 1.5rem); }
+.tiq-vs--full .tiq-vs__cont { max-width: none; }
+.tiq-vs__titulo-sec { text-align: center; font-size: 1.6rem; font-weight: 700; margin: 0 0 20px; color: inherit; }
+.tiq-vs__car { position: relative; }
+.tiq-vs__track { display: flex; gap: 16px; overflow-x: auto;
+  scroll-snap-type: x mandatory; scrollbar-width: none;
+  -webkit-overflow-scrolling: touch; padding: 6px 2px; }
+.tiq-vs__track::-webkit-scrollbar { display: none; }
+.tiq-vs__slide {
+  flex: 0 0 calc((100% - (var(--vs-cols, 5) - 1) * 16px) / var(--vs-cols, 5));
+  scroll-snap-align: center; aspect-ratio: var(--vs-aspect, 3 / 4);
+  border-radius: var(--vs-radio, 16px);
+  border: var(--vs-borde-slide, 0) solid var(--vs-col-borde, #121212);
+  overflow: hidden; position: relative; background: #000; }
+.tiq-vs--rot .tiq-vs__slide { transform: rotate(var(--vs-rotate, 0deg)); }
+.tiq-vs--sombra .tiq-vs__slide { box-shadow: 0 10px 30px color-mix(in srgb, var(--vs-col-sombra, #121212) 60%, transparent); }
+.tiq-vs__media { position: absolute; inset: 0; }
+.tiq-vs__vid, .tiq-vs__yt img, .tiq-vs__player, .tiq-vs__media video, .tiq-vs__media iframe {
+  width: 100%; height: 100%; object-fit: cover; display: block; border: 0; }
+.tiq-vs__overlay { position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(to top, color-mix(in srgb, var(--vs-col-overlay, #000) calc(var(--vs-overlay, .2) * 100%), transparent) 0%, transparent 55%); }
+.tiq-vs__pie { position: absolute; inset: 12px; z-index: 2; padding: 0 4px;
+  display: flex; flex-direction: column;
+  justify-content: var(--vs-ji, flex-end); align-items: var(--vs-ai, center);
+  text-align: var(--vs-ta, center); pointer-events: none; }
+.tiq-vs__titulo { display: block; color: var(--vs-col-tit, #fff);
+  font-size: var(--vs-tit, 16px); line-height: var(--vs-lh, 130%); font-weight: 700;
+  text-shadow: 0 1px 6px rgba(0,0,0,.45); margin: 0 0 4px; }
+.tiq-vs__estrellas { display: inline-flex; gap: 1px; color: var(--vs-col-estrella, #fff); margin-top: var(--vs-estrella-mt, 4px); }
+.tiq-vs__estrellas svg, .tiq-vs__estrellas img { width: var(--vs-estrella, 16px); height: var(--vs-estrella, 16px); filter: drop-shadow(0 1px 3px rgba(0,0,0,.45)); }
+.tiq-vs__ctrl { position: absolute; top: 10px; right: 10px; z-index: 3; display: flex; gap: 6px; }
+.tiq-vs__cbtn { width: var(--vs-ctrl, 40px); height: var(--vs-ctrl, 40px); border-radius: 50%;
+  border: var(--vs-ctrl-borde, 0) solid var(--vs-col-ctrl-borde, #fff);
+  background: color-mix(in srgb, var(--vs-col-ctrl-bg, #fff) 42%, transparent);
+  color: var(--vs-col-ctrl-ico, #fff); display: grid; place-items: center; cursor: pointer; padding: 0; }
+.tiq-vs__cbtn svg { width: 46%; height: 46%; }
+.tiq-vs__cbtn:hover { background: color-mix(in srgb, var(--vs-col-ctrl-bg-h, #fff) 62%, transparent);
+  color: var(--vs-col-ctrl-ico-h, #fff); border-color: var(--vs-col-ctrl-borde-h, #fff); }
+.tiq-vs__yt { position: absolute; inset: 0; cursor: pointer; }
+.tiq-vs__ytplay { position: absolute; inset: 0; margin: auto; width: 54px; height: 54px; border-radius: 50%; border: 0; background: rgba(255,255,255,.92); color: #111; display: grid; place-items: center; cursor: pointer; box-shadow: 0 4px 16px rgba(0,0,0,.3); }
+.tiq-vs__ytplay svg { width: 22px; height: 22px; margin-left: 3px; }
+.tiq-vs__flecha { position: absolute; top: 50%; transform: translateY(-50%); z-index: 5;
+  width: var(--vs-fle, 48px); height: var(--vs-fle, 48px); border-radius: var(--vs-fle-radio, 100px);
+  border: var(--vs-fle-borde, 0) solid var(--vs-fle-bd, #121212); background: var(--vs-fle-bg, #fff); color: var(--vs-fle-ico, #121212);
+  box-shadow: 0 4px 16px rgba(0,0,0,.16); display: grid; place-items: center; cursor: pointer;
+  transition: background .14s ease, color .14s ease, border-color .14s ease; }
+.tiq-vs__flecha svg { width: calc(var(--vs-fle-ico-sz, 8px) + 12px); height: calc(var(--vs-fle-ico-sz, 8px) + 12px); }
+.tiq-vs__flecha--izq { left: -10px; }
+.tiq-vs__flecha--der { right: -10px; }
+.tiq-vs--flehover .tiq-vs__flecha:hover { background: var(--vs-fle-bg-h, #121212); color: var(--vs-fle-ico-h, #fff); border-color: var(--vs-fle-bd-h, #121212); }
+.tiq-vs--sinflechasd .tiq-vs__flecha { display: none; }
+.tiq-vs__vacio { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; background: #f4f4f6; color: #8a8a90; font: 500 12.5px system-ui, sans-serif; }
+.tiq-vs__vacio svg { width: 30px; height: 30px; }
+
+@media (max-width: 749px) {
+  .tiq-vs__cont { padding-left: var(--vs-ps-m, 1rem); padding-right: var(--vs-ps-m, 1rem); }
+  .tiq-vs__track { gap: 12px; }
+  .tiq-vs__slide { flex-basis: calc((100% - (var(--vs-cols-m, 1.5) - 1) * 12px) / var(--vs-cols-m, 1.5)); aspect-ratio: var(--vs-aspect-m, 3 / 4); }
+  .tiq-vs__pie { justify-content: var(--vs-ji-m, flex-end); align-items: var(--vs-ai-m, center); text-align: var(--vs-ta-m, center); }
+  .tiq-vs__titulo { font-size: var(--vs-tit-m, 16px); }
+  .tiq-vs__estrellas svg, .tiq-vs__estrellas img { width: var(--vs-estrella-m, 16px); height: var(--vs-estrella-m, 16px); }
+  .tiq-vs__estrellas { margin-top: var(--vs-estrella-mt-m, 4px); }
+  .tiq-vs__cbtn { width: var(--vs-ctrl-m, 40px); height: var(--vs-ctrl-m, 40px); }
+  .tiq-vs__flecha { display: grid; }
+  .tiq-vs--sinflechasm .tiq-vs__flecha { display: none; }
+}

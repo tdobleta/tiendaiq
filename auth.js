@@ -29,7 +29,10 @@ const { guardarEstadoDB, consumirEstadoDB } = require("./db");
 // Sin read_themes/write_themes: la app NO toca el tema (todo es theme app
 // extension). La verificación de que la landing quedó viva se hace fetcheando
 // el storefront público, no leyendo el tema por API.
-const ALCANCES = "read_products,write_products,write_orders,read_files,write_files,read_content,write_content,write_discounts,write_online_store_navigation";
+// read_themes/write_themes: las SECCIONES nativas (estilo Section Store) se
+// escriben como archivos Liquid en el tema (secciones.js → themeFilesUpsert).
+// ⚠ Requiere la exención de escritura de temas de Shopify para publicar.
+const ALCANCES = "read_products,write_products,write_orders,read_files,write_files,read_content,write_content,write_discounts,write_online_store_navigation,read_themes,write_themes";
 
 // Comparación en tiempo constante: comparar firmas con === filtra el secreto
 // de a un carácter por vez.

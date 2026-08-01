@@ -390,6 +390,14 @@
             </div>
           </div>
           <div class="herramienta">
+            <div class="herramienta__nombre">Secciones premium</div>
+            <p>Secciones de tienda listas (video slider y más). Se agregan y editan desde el editor de temas de Shopify, con selección de video nativa.</p>
+            <button class="btn btn--chico" id="herr-secciones">Ver secciones</button>
+            <div class="herramienta__preview">
+              <span class="tiq-thumb tiq-thumb--vs" style="gap:6px"><span class="tiq-thumb__card"></span><span class="tiq-thumb__card tiq-thumb__card--hi"></span><span class="tiq-thumb__card"></span></span>
+            </div>
+          </div>
+          <div class="herramienta">
             <div class="herramienta__nombre">Bundles y descuentos</div>
             <p>Descuentos por volumen y "comprá X y obtené Y". El precio lo hace cumplir Shopify.</p>
             <button class="btn btn--chico" id="herr-bundles">Crear bundles</button>
@@ -470,6 +478,7 @@
       const b = $(id);
       if (b) b.onclick = () => ir("bundles");
     });
+    { const b = $("herr-secciones"); if (b) b.onclick = () => ir("secciones"); }
   }
 
   // ---------- 0b. mis páginas (tabla de páginas generadas) ----------
@@ -5638,6 +5647,72 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     pintarDashboardBundles();
   }
 
+  // ---------- Secciones premium (galería de secciones NATIVAS del tema) ----------
+  // Escriben una section Liquid en el tema del merchant; se editan en el editor
+  // de temas de Shopify (panel + bloques + picker de video nativos). Nombres
+  // prefijados SN_ para no chocar con el video slider de metafield del editor.
+  const SN_THUMB = `<span class="tiq-thumb tiq-thumb--vs"><span class="tiq-thumb__card"></span><span class="tiq-thumb__card tiq-thumb__card--hi"></span><span class="tiq-thumb__card"></span></span>`;
+  const SN_CATALOGO = [
+    { tipo: "tiendaiq-video-slider", nombre: "Video slider", desc: "Carrusel de videos verticales con reseña (título + estrellas)", cats: ["popular", "video", "testimonial"], thumb: SN_THUMB }
+  ];
+  const SN_CATS = [["popular", "Populares"], ["video", "Video"], ["testimonial", "Testimonios"], ["todas", "Todas"]];
+  const SN_ICBUSCAR = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>`;
+
+  function snFiltradas() {
+    const cat = estado.snCat || "popular";
+    const q = (estado.snQ || "").trim().toLowerCase();
+    return SN_CATALOGO.filter((c) => (cat === "todas" || c.cats.includes(cat)) && (!q || c.nombre.toLowerCase().includes(q) || c.desc.toLowerCase().includes(q)));
+  }
+  function snGridHTML() {
+    const items = snFiltradas();
+    if (!items.length) return `<div class="galsec__vacio">No hay secciones que coincidan.</div>`;
+    const inst = estado.snInstaladas || {};
+    return items.map((c) => {
+      const est = inst[c.tipo];
+      let accion;
+      if (est && est.editorUrl) accion = `<div class="galsec-card__ok">${ico("check")} Instalada</div><a class="btn btn--fantasma btn--chico" href="${esc(est.editorUrl)}" target="_blank" rel="noopener">Abrir editor de temas ${ico("externo")}</a>`;
+      else if (est === "cargando") accion = `<button class="btn btn--acento btn--chico" disabled>Instalando…</button>`;
+      else accion = `<button class="btn btn--acento btn--chico" data-inst-sec="${c.tipo}">${ico("subir")} Instalar en mi tema</button>`;
+      return `<article class="galsec-card"><div class="galsec-card__prev">${c.thumb}</div><div class="galsec-card__pie galsec-card__pie--col"><div class="galsec-card__info"><div class="galsec-card__nombre">${esc(c.nombre)}</div><div class="galsec-card__desc2">${esc(c.desc)}</div></div><div class="galsec-card__acc">${accion}</div></div></article>`;
+    }).join("");
+  }
+  function snPintar() { const g = $("secpage-grid"); if (g) g.innerHTML = snGridHTML(); }
+  async function snInstalar(tipo) {
+    estado.snInstaladas = estado.snInstaladas || {};
+    estado.snInstaladas[tipo] = "cargando"; snPintar();
+    try {
+      const r = await api("/secciones/instalar", { method: "POST", body: { tipo } });
+      estado.snInstaladas[tipo] = { editorUrl: r.editorUrl };
+      toast("Sección instalada en tu tema. Abrí el editor de temas para agregarla.");
+    } catch (e) { estado.snInstaladas[tipo] = undefined; toast("No se pudo instalar: " + e.message); }
+    snPintar();
+  }
+  async function pantallaSecciones() {
+    estado.snCat = estado.snCat || "popular";
+    estado.snInstaladas = estado.snInstaladas || {};
+    vista.innerHTML = `
+      <div class="secpage">
+        <div class="secpage__cab">
+          <div><h1 class="secpage__tit">Secciones premium</h1>
+          <p class="secpage__sub">Secciones de tienda listas. Se instalan en tu tema y se editan desde el editor de temas de Shopify — con todos sus ajustes y el selector de video nativos.</p></div>
+          <div class="galsec__buscar secpage__buscar">${SN_ICBUSCAR}<input type="text" id="secpage-q" placeholder="Buscar secciones" value="${esc(estado.snQ || "")}"></div>
+        </div>
+        <div class="galsec__tabs secpage__tabs" id="secpage-tabs">
+          ${SN_CATS.map(([id, lab]) => `<button class="galsec__tab ${estado.snCat === id ? "is-sel" : ""}" type="button" data-cat="${id}"><span>${lab}</span></button>`).join("")}
+        </div>
+        <div class="galsec__grid secpage__grid" id="secpage-grid">${snGridHTML()}</div>
+      </div>`;
+    const cont = vista.querySelector(".secpage");
+    cont.addEventListener("click", (e) => {
+      const tab = e.target.closest("[data-cat]");
+      if (tab) { estado.snCat = tab.dataset.cat; cont.querySelectorAll(".galsec__tab").forEach((t) => t.classList.toggle("is-sel", t === tab)); snPintar(); return; }
+      const inst = e.target.closest("[data-inst-sec]");
+      if (inst) { snInstalar(inst.dataset.instSec); return; }
+    });
+    const q = $("secpage-q");
+    if (q) q.addEventListener("input", () => { estado.snQ = q.value; snPintar(); });
+  }
+
   // ---------- ruteo ----------
 
   const PANTALLAS = {
@@ -5645,6 +5720,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     paginas: pantallaPaginas,
     cod: pantallaCod,
     bundles: pantallaBundles,
+    secciones: pantallaSecciones,
     lista: pantallaLista,
     informacion: pantallaInformacion,
     generando: pantallaGenerando,
@@ -5660,6 +5736,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     paginas: "Páginas de producto",
     cod: "Formulario contra reembolso",
     bundles: "Bundles, upsells y regalos",
+    secciones: "Secciones premium",
     lista: "Elegí un producto",
     informacion: "Información del producto",
     generando: "Creando tu página",
@@ -5678,6 +5755,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       pantalla === "paginas" ? "/paginas"
       : pantalla === "cod" ? "/cod"
       : pantalla === "bundles" ? "/bundles"
+      : pantalla === "secciones" ? "/secciones"
       : pantalla === "inicio" ? "/" : "/crear";
     if (location.pathname !== ruta) {
       history.pushState({ pantalla }, "", ruta + location.search);
@@ -5722,6 +5800,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     if (ruta === "/paginas") ir("paginas");
     else if (ruta === "/cod") ir("cod");
     else if (ruta === "/bundles") ir("bundles");
+    else if (ruta === "/secciones") ir("secciones");
     else if (ruta === "/crear") cargarLista();
     else ir("inicio");
   }
