@@ -943,11 +943,152 @@
     vids.forEach((v) => io.observe(v));
   }
 
+  // ---------- estilo "premium" (modelo alternativo de página) ----------
+  // Mismo contrato de datos que el clásico; cambia el ARMADO y suma componentes:
+  // barra de oferta con countdown, comparación (nosotros vs otros) y reseñas en
+  // carrusel infinito. Se elige en el flujo de creación (global.estilo).
+
+  // Barra de oferta con cuenta regresiva. El reloj arranca en `minutos` y se
+  // guarda por producto en localStorage: no se reinicia en cada recarga (patrón
+  // de las tiendas serias). Al llegar a cero, reinicia (oferta "siempre viva").
+  function ofertaTimer(g) {
+    const o = (g && g.oferta) || {};
+    const texto = o.texto || "La oferta termina en";
+    const mins = Number(o.minutos) || 30;
+    return `
+    <section class="tiq-timer" data-bloque="timer">
+      <div class="contenedor tiq-timer__in">
+        <span class="tiq-timer__txt">${esc(texto)}</span>
+        <div class="tiq-timer__reloj" data-timer data-mins="${mins}">
+          <span class="tiq-timer__u"><b data-h>00</b><i>hs</i></span><em>:</em>
+          <span class="tiq-timer__u"><b data-m>00</b><i>min</i></span><em>:</em>
+          <span class="tiq-timer__u"><b data-s>00</b><i>seg</i></span>
+        </div>
+      </div>
+    </section>`;
+  }
+
+  const COMPARA_DEF = [
+    "Calidad premium comprobada",
+    "Envío rápido y seguro",
+    "Garantía de 30 días",
+    "Soporte que responde",
+    "Materiales de primera"
+  ];
+  const CHK_OK = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg>`;
+  const CHK_NO = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M6 18L18 6"/></svg>`;
+
+  function comparacion(f, g) {
+    const c = (f && f.comparacion) || {};
+    const filas = Array.isArray(c.filas) && c.filas.length ? c.filas : COMPARA_DEF;
+    const nombre = c.marca || "Nuestro producto";
+    const otros = c.otros || "Otras marcas";
+    const titular = c.titular || "¿Por qué elegirnos?";
+    const editar = MODO_APP ? ` data-editar="comparacion" title="Clic para editar"` : "";
+    const fila = (t) => `
+      <div class="tiq-cmp__row">
+        <div class="tiq-cmp__feat">${esc(t)}</div>
+        <div class="tiq-cmp__cell tiq-cmp__cell--ok">${CHK_OK}</div>
+        <div class="tiq-cmp__cell tiq-cmp__cell--no">${CHK_NO}</div>
+      </div>`;
+    return `
+    <section class="tiq-cmp"${editar}>
+      <div class="contenedor">
+        <h2 class="tiq-cmp__tit">${esc(titular)}</h2>
+        <div class="tiq-cmp__tabla">
+          <div class="tiq-cmp__head">
+            <div class="tiq-cmp__feat"></div>
+            <div class="tiq-cmp__cell tiq-cmp__brand">${esc(nombre)}</div>
+            <div class="tiq-cmp__cell tiq-cmp__otros">${esc(otros)}</div>
+          </div>
+          ${filas.map(fila).join("")}
+        </div>
+      </div>
+    </section>`;
+  }
+
+  // Reseñas en carrusel de scroll INFINITO (marquee). Se duplica la fila para
+  // que el loop no tenga costura. Pausa al pasar el mouse.
+  function resenasMarquee(f) {
+    const reales = (f.items || []).filter((r) => r.autor || r.texto);
+    const list = reales.length ? reales : [
+      { autor: "@sofia.m", estrellas: 5, texto: "La calidad me sorprendió, la volvería a comprar sin dudar." },
+      { autor: "@martin_ok", estrellas: 5, texto: "Llegó rapidísimo y es tal cual las fotos. Recomendadísimo." },
+      { autor: "@caro.diaz", estrellas: 5, texto: "Uso diario, no me decepcionó. El soporte respondió al toque." },
+      { autor: "@lucas.p", estrellas: 4, texto: "Muy bueno por el precio. Mejor de lo que esperaba." },
+      { autor: "@vale.ríos", estrellas: 5, texto: "Ya la recomendé a toda mi familia. Encantada." }
+    ];
+    const card = (r) => `
+      <figure class="tiq-mq__card">
+        ${r.imagen ? `<div class="tiq-mq__img">${img(r.imagen)}</div>` : ""}
+        <div class="tiq-mq__stars">${estrellas(r.estrellas ?? 5)}</div>
+        <p class="tiq-mq__txt">${esc(r.texto)}</p>
+        <figcaption class="tiq-mq__autor">${esc(r.autor || "Cliente verificado")}</figcaption>
+      </figure>`;
+    const fila = list.map(card).join("");
+    const editar = MODO_APP ? `<button class="resenas__editar tiq-mq__editar">✎ Editar reseñas en lote</button>` : "";
+    return `
+    <section class="resenas tiq-mq" data-bloque="resenas" data-fijo="1">
+      <div class="tiq-mq__cab">
+        <div class="estrellas">★★★★★</div>
+        <h2>${esc(f.titular || "Amado por miles de clientes")}</h2>
+        ${f.subtitulo ? `<p>${esc(f.subtitulo)}</p>` : ""}
+      </div>
+      ${editar}
+      <div class="tiq-mq__viewport">
+        <div class="tiq-mq__track">${fila}${fila}</div>
+      </div>
+    </section>`;
+  }
+
+  function renderPremium(data) {
+    const f = data.facetas;
+    const g = data.global;
+    const partes = [
+      hero(f, data.fuente, g),
+      ofertaTimer(g),
+      comparacion(f, g),
+      iconos(f.iconos),
+      resenasMarquee(f.resenas),
+      recomendados(f.recomendados)
+    ];
+    // Las sections del merchant se agregan al final (el premium tiene orden fijo).
+    const secs = Array.isArray(data.secciones) ? data.secciones.map(seccionHTML) : [];
+    return partes.concat(secs).join("\n");
+  }
+
+  // Cuenta regresiva: end guardado por producto en localStorage (persistente).
+  function iniciarTimers() {
+    document.querySelectorAll("[data-timer]").forEach((el) => {
+      const mins = Number(el.dataset.mins) || 30;
+      const pid = window.TIENDAIQ_PRODUCT_ID || location.pathname;
+      const key = "tiq_oferta_" + pid;
+      let fin = Number(localStorage.getItem(key));
+      const ahora = Date.now();
+      if (!fin || fin < ahora) { fin = ahora + mins * 60000; try { localStorage.setItem(key, fin); } catch {} }
+      const h = el.querySelector("[data-h]"), m = el.querySelector("[data-m]"), s = el.querySelector("[data-s]");
+      const pad = (n) => String(n).padStart(2, "0");
+      const tick = () => {
+        let d = Math.max(0, fin - Date.now());
+        if (d <= 0) { fin = Date.now() + mins * 60000; try { localStorage.setItem(key, fin); } catch {} d = fin - Date.now(); }
+        const tot = Math.floor(d / 1000);
+        h.textContent = pad(Math.floor(tot / 3600));
+        m.textContent = pad(Math.floor((tot % 3600) / 60));
+        s.textContent = pad(tot % 60);
+      };
+      tick();
+      clearInterval(el._t); el._t = setInterval(tick, 1000);
+    });
+  }
+
   // ---------- ensamblado ----------
 
   function render(data) {
     const f = data.facetas;
     const g = data.global;
+    // Modelo de página elegido en la creación. "clasico" = comportamiento de
+    // siempre; "premium" = armado alternativo (timer + comparación + marquee).
+    if (g && g.estilo === "premium") return renderPremium(data);
     // Bloques fijos, cada uno con su id: las sections del merchant se
     // intercalan según su `ancla` (= id del bloque tras el cual va).
     const fijos = [
@@ -1099,6 +1240,7 @@
     iniciarVcar(); // centra los carruseles de video
     autoplayMuro(); // los videos del muro se reproducen solos al entrar en vista
     autoplayVS(); // los slides del video slider también auto-reproducen en vista
+    iniciarTimers(); // countdown de la barra de oferta (estilo premium)
     // Solo en la tienda: el preview no tiene storefront al que preguntarle.
     if (EN_TIENDA) cargarRecomendados(datos?.fuente?.moneda);
   }

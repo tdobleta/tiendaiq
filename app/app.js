@@ -1695,6 +1695,23 @@
           </div>
 
           <div class="tarjeta">
+            <div class="tarjeta__titulo">Modelo de página</div>
+            <div class="panel__sub" style="margin-bottom:12px">Elegí el estilo de la landing. Después no se cambia sin regenerar.</div>
+            <div class="modelos" id="modelos">
+              <button type="button" class="modelo-card ${(estado.modeloPagina || "clasico") === "clasico" ? "is-sel" : ""}" data-modelo="clasico">
+                <span class="modelo-card__mini modelo-card__mini--clasico"><i></i><i></i><i></i></span>
+                <span class="modelo-card__nom">Clásico ${ico("check")}</span>
+                <span class="modelo-card__desc">Hero, beneficios, reseñas en grilla y FAQ.</span>
+              </button>
+              <button type="button" class="modelo-card ${estado.modeloPagina === "premium" ? "is-sel" : ""}" data-modelo="premium">
+                <span class="modelo-card__mini modelo-card__mini--premium"><i></i><i></i><i></i></span>
+                <span class="modelo-card__nom">Premium <span class="modelo-card__badge">Nuevo</span> ${ico("check")}</span>
+                <span class="modelo-card__desc">Timer de oferta, comparación y reseñas en carrusel infinito.</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="tarjeta">
             <div class="tarjeta__titulo">Color de la página</div>
             <div class="panel__sub" style="margin-bottom:12px">Elegí el color del botón, los círculos de % y los detalles. Después lo podés cambiar en el editor.</div>
             <div id="tema-previo">${swatchesTema(estado.temaElegido === "auto" ? null : estado.temaElegido)}</div>
@@ -1724,6 +1741,14 @@
 
     $("volver").onclick = () => ir("lista");
     $("generar").onclick = generar;
+    // Selector de modelo de página (Clásico / Premium).
+    const mods = $("modelos");
+    if (mods) mods.onclick = (e) => {
+      const b = e.target.closest("[data-modelo]");
+      if (!b) return;
+      estado.modeloPagina = b.dataset.modelo;
+      mods.querySelectorAll(".modelo-card").forEach((c) => c.classList.toggle("is-sel", c === b));
+    };
     // Swatches de color (opción previa): guarda la elección para el generado.
     const tp = $("tema-previo");
     if (tp) tp.onclick = (e) => {
@@ -1785,7 +1810,7 @@
     try {
       estado.pagina = await api("/paginas", {
         method: "POST",
-        body: { producto_id: estado.producto.id, idioma, angulo }
+        body: { producto_id: estado.producto.id, idioma, angulo, estilo: estado.modeloPagina || "clasico" }
       });
       // Color elegido antes de generar: se inyecta en la página y se persiste
       // con el PUT que ya existe (sin tocar backend). Sin elección → color del rubro.

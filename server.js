@@ -506,13 +506,13 @@ async function api(req, res, url) {
 
   // POST /api/paginas — el botón "Crear página con IA"
   if (req.method === "POST" && ruta === "/api/paginas") {
-    const { producto_id, idioma = "es", angulo = "" } = await leerCuerpo(req);
+    const { producto_id, idioma = "es", angulo = "", estilo = "clasico" } = await leerCuerpo(req);
     if (!producto_id) return json(res, 400, { error: "Falta producto_id" });
 
     await exigirCupo(sesion); // 402 si agotó las gratis y no es pro
 
     const t0 = Date.now();
-    const { data, urls, avisos, uso } = await crearPagina(producto_id, sesion, { idioma, angulo });
+    const { data, urls, avisos, uso } = await crearPagina(producto_id, sesion, { idioma, angulo, estilo });
 
     const registro = await guardarPagina(sesion.tienda, {
       id: idDePagina(producto_id),

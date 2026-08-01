@@ -642,10 +642,12 @@ async function listarProductos(sesion) {
 // El endpoint POST /paginas entero: extracción → adaptador → IA → ensamblado.
 // La sesión dice de qué tienda leer; la IA la pagamos nosotros, así que la
 // key de Anthropic es global y no viaja en la sesión.
-async function crearPagina(idProducto, sesion, { idioma = "es", angulo = "" } = {}) {
+async function crearPagina(idProducto, sesion, { idioma = "es", angulo = "", estilo = "clasico" } = {}) {
   const { fuente, medios } = await extraer(idProducto, sesion);
   const { salida, uso } = await generar(fuente, medios, { idioma, angulo });
   const data = ensamblar(fuente, salida, { idioma, angulo });
+  // Modelo de página elegido en la creación (el render branchea por acá).
+  data.global.estilo = ["clasico", "premium"].includes(estilo) ? estilo : "clasico";
   const urls = Object.fromEntries(medios.map((m) => [m.media_id, m.url]));
   return { data, urls, avisos: validar(data, salida), uso };
 }

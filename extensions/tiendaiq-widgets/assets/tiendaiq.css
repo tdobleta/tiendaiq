@@ -830,3 +830,57 @@ body.publicada #app .resena-destacada__editar { display: none; }
   #app .tiq-vs__flecha { display: grid; } /* móvil: por defecto visibles… */
   #app .tiq-vs--sinflechasm .tiq-vs__flecha { display: none; } /* …salvo que se apaguen */
 }
+
+/* ============================================================
+   ESTILO "PREMIUM" — barra de oferta (countdown), comparación y
+   reseñas en carrusel infinito. Todo #app-scoped, usa --acento.
+   ============================================================ */
+
+/* Barra de oferta con cuenta regresiva */
+#app .tiq-timer { background: var(--acento); color: #fff; }
+#app .tiq-timer__in { display: flex; align-items: center; justify-content: center; gap: 16px; padding: 12px 16px; flex-wrap: wrap; }
+#app .tiq-timer__txt { font-weight: 700; font-size: 15px; letter-spacing: .2px; }
+#app .tiq-timer__reloj { display: flex; align-items: center; gap: 6px; }
+#app .tiq-timer__u { display: flex; flex-direction: column; align-items: center; background: rgba(255,255,255,.18); border-radius: 8px; padding: 5px 9px; min-width: 46px; }
+#app .tiq-timer__u b { font-size: 18px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1; }
+#app .tiq-timer__u i { font-size: 9px; text-transform: uppercase; opacity: .85; margin-top: 3px; font-style: normal; letter-spacing: .5px; }
+#app .tiq-timer__reloj em { font-weight: 800; font-style: normal; opacity: .65; }
+
+/* Comparación (nosotros vs otros) */
+#app .tiq-cmp { padding: 56px 0; }
+#app .tiq-cmp__tit { text-align: center; font-size: 28px; font-weight: 800; margin: 0 0 28px; }
+#app .tiq-cmp__tabla { max-width: 660px; margin: 0 auto; border: 1px solid #ececf0; border-radius: 18px; overflow: hidden; box-shadow: 0 12px 34px rgba(0,0,0,.06); background: #fff; }
+#app .tiq-cmp__head, #app .tiq-cmp__row { display: grid; grid-template-columns: 1fr 128px 128px; align-items: stretch; }
+#app .tiq-cmp__head { background: #fafafb; font-weight: 700; }
+#app .tiq-cmp__row { border-top: 1px solid #f1f1f4; }
+#app .tiq-cmp__feat { padding: 16px 20px; font-size: 14.5px; font-weight: 600; display: flex; align-items: center; }
+#app .tiq-cmp__cell { display: flex; align-items: center; justify-content: center; padding: 14px; font-size: 13px; }
+#app .tiq-cmp__brand { color: var(--acento-texto); font-weight: 800; background: var(--acento-suave); }
+#app .tiq-cmp__otros { color: #9aa0a6; font-weight: 600; }
+#app .tiq-cmp__row .tiq-cmp__cell--ok { background: var(--acento-suave); }
+#app .tiq-cmp__cell--ok svg { width: 22px; height: 22px; color: var(--acento); }
+#app .tiq-cmp__cell--no svg { width: 19px; height: 19px; color: #cfd3d9; }
+
+/* Reseñas en carrusel infinito (marquee) */
+#app .tiq-mq { padding: 50px 0; background: #faf9fb; overflow: hidden; }
+#app .tiq-mq__cab { text-align: center; margin-bottom: 26px; padding: 0 16px; }
+#app .tiq-mq__cab .estrellas { font-size: 18px; }
+#app .tiq-mq__cab h2 { font-size: 26px; font-weight: 800; margin: 6px 0 0; }
+#app .tiq-mq__cab p { color: #6b7075; margin: 6px 0 0; }
+#app .tiq-mq__viewport { position: relative; -webkit-mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent); mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent); }
+#app .tiq-mq__track { display: flex; gap: 18px; width: max-content; animation: tiqmq 48s linear infinite; }
+#app .tiq-mq__viewport:hover .tiq-mq__track { animation-play-state: paused; }
+#app .tiq-mq__card { flex: 0 0 320px; background: #fff; border: 1px solid #ececf0; border-radius: 16px; padding: 22px; box-shadow: 0 6px 22px rgba(0,0,0,.05); margin: 6px 0; display: flex; flex-direction: column; gap: 10px; }
+#app .tiq-mq__img { width: 100%; height: 180px; border-radius: 12px; overflow: hidden; }
+#app .tiq-mq__img img { width: 100%; height: 100%; object-fit: cover; }
+#app .tiq-mq__stars { font-size: 15px; }
+#app .tiq-mq__txt { font-size: 14.5px; line-height: 1.5; color: #333; margin: 0; flex: 1; }
+#app .tiq-mq__autor { font-weight: 700; font-size: 13.5px; color: #111; }
+#app .tiq-mq__editar { margin: 0 auto 14px; display: block; }
+@keyframes tiqmq { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+@media (max-width: 640px) {
+  #app .tiq-cmp__head, #app .tiq-cmp__row { grid-template-columns: 1fr 84px 84px; }
+  #app .tiq-mq__card { flex-basis: 260px; }
+  #app .tiq-timer__in { gap: 10px; }
+}
