@@ -236,7 +236,9 @@
             <div class="hero__miniaturas">${miniaturas}</div>
           </div>
           <div>
-            <div class="hero__urgencia">${esc(h.urgencia ?? "Ya es viral | Pocas unidades")}</div>
+            ${global && global.estilo === "premium"
+              ? heroTimer(global)
+              : `<div class="hero__urgencia">${esc(h.urgencia ?? "Ya es viral | Pocas unidades")}</div>`}
             <div class="hero__resenas">${estrellas(5)} <span>Calificación ${esc(puntaje1(h.puntaje ?? 4.9))}/5.0 (${esc(miles(h.resenas_count))})</span></div>
             <h1 class="hero__titulo">${esc(h.titulo)}</h1>
             <div class="hero__precios">
@@ -948,24 +950,21 @@
   // barra de oferta con countdown, comparación (nosotros vs otros) y reseñas en
   // carrusel infinito. Se elige en el flujo de creación (global.estilo).
 
-  // Barra de oferta con cuenta regresiva. El reloj arranca en `minutos` y se
-  // guarda por producto en localStorage: no se reinicia en cada recarga (patrón
-  // de las tiendas serias). Al llegar a cero, reinicia (oferta "siempre viva").
-  function ofertaTimer(g) {
+  // Timer de oferta que REEMPLAZA la barra de urgencia del hero (no es sección
+  // aparte). Color FIJO (no depende del nicho), cuenta regresiva persistente por
+  // producto (localStorage): no se reinicia por recarga; al llegar a 0 reinicia.
+  const IC_RELOJ = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 2"/></svg>`;
+  function heroTimer(g) {
     const o = (g && g.oferta) || {};
-    const texto = o.texto || "La oferta termina en";
+    const texto = o.texto || "¡Apurate! La oferta termina en";
     const mins = Number(o.minutos) || 30;
     return `
-    <section class="tiq-timer" data-bloque="timer">
-      <div class="contenedor tiq-timer__in">
-        <span class="tiq-timer__txt">${esc(texto)}</span>
-        <div class="tiq-timer__reloj" data-timer data-mins="${mins}">
-          <span class="tiq-timer__u"><b data-h>00</b><i>hs</i></span><em>:</em>
-          <span class="tiq-timer__u"><b data-m>00</b><i>min</i></span><em>:</em>
-          <span class="tiq-timer__u"><b data-s>00</b><i>seg</i></span>
-        </div>
-      </div>
-    </section>`;
+    <div class="hero__timer" data-timer data-mins="${mins}">
+      <span class="hero__timer__lead">${IC_RELOJ}<span>${esc(texto)}</span></span>
+      <span class="hero__timer__boxes">
+        <b data-h>00</b><i>:</i><b data-m>00</b><i>:</i><b data-s>00</b>
+      </span>
+    </div>`;
   }
 
   const COMPARA_DEF = [
@@ -1046,7 +1045,6 @@
     const g = data.global;
     const partes = [
       hero(f, data.fuente, g),
-      ofertaTimer(g),
       comparacion(f, g),
       iconos(f.iconos),
       resenasMarquee(f.resenas),
