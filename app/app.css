@@ -2794,3 +2794,6 @@ body.sec-panel-abierto .constructor { padding-right: 356px; }
 .sn-add .btn { width: 100%; justify-content: center; }
 .sn-add__again { background: none; border: none; color: var(--suave); font: inherit; font-size: 12px; text-decoration: underline; cursor: pointer; padding: 2px; }
 .sn-add__again:hover { color: var(--negro); }
+.sn-reauth { font-size: 12.5px; color: var(--suave); line-height: 1.45; display: flex; flex-direction: column; gap: 8px; background: #fff8f0; border: 1px solid #f0d9b8; border-radius: 8px; padding: 10px 12px; }
+.sn-reauth .ico { width: 15px; height: 15px; color: #b45309; }
+.sn-reauth b { color: var(--negro); }

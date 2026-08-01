@@ -5672,14 +5672,15 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         accion = `<button class="btn btn--acento btn--chico" disabled>Añadiendo…</button>`;
       } else if (!temas) {
         accion = `<button class="btn btn--acento btn--chico" disabled>Cargando temas…</button>`;
+      } else if (!temas.length) {
+        // Sin temas = la consulta fue denegada: falta re-autorizar (read_themes).
+        accion = `<div class="sn-reauth">${ico("aviso")} No pudimos leer tus temas. Re-autorizá la tienda (permiso de <b>temas</b>) y recargá.<button class="sn-add__again" type="button" data-sn-reload>Reintentar</button></div>`;
       } else {
         // Selector de tema estilo Section Store: el merchant elige a cuál inyectar.
-        const opts = temas.length
-          ? temas.map((t) => `<option value="${esc(t.id)}">${esc(t.name)}${t.live ? " · Live" : ""}</option>`).join("")
-          : `<option value="">No se encontraron temas</option>`;
+        const opts = temas.map((t) => `<option value="${esc(t.id)}">${esc(t.name)}${t.live ? " · Live" : ""}</option>`).join("");
         accion = `<div class="sn-add">
           <select class="sn-add__sel" data-theme-sel="${c.tipo}">${opts}</select>
-          <button class="btn btn--acento btn--chico" data-inst-sec="${c.tipo}"${temas.length ? "" : " disabled"}>${ico("subir")} Añadir al Theme</button>
+          <button class="btn btn--acento btn--chico" data-inst-sec="${c.tipo}">${ico("subir")} Añadir al Theme</button>
         </div>`;
       }
       return `<article class="galsec-card"><div class="galsec-card__prev">${c.thumb}</div><div class="galsec-card__pie galsec-card__pie--col"><div class="galsec-card__info"><div class="galsec-card__nombre">${esc(c.nombre)}</div><div class="galsec-card__desc2">${esc(c.desc)}</div></div><div class="galsec-card__acc">${accion}</div></div></article>`;
@@ -5728,6 +5729,11 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       }
       const again = e.target.closest("[data-inst-again]");
       if (again) { estado.snInstaladas[again.dataset.instAgain] = undefined; snPintar(); return; }
+      if (e.target.closest("[data-sn-reload]")) {
+        estado.snTemas = null; snPintar();
+        api("/secciones/temas").then((r) => { estado.snTemas = r.temas || []; snPintar(); }).catch(() => { estado.snTemas = []; snPintar(); });
+        return;
+      }
     });
     const q = $("secpage-q");
     if (q) q.addEventListener("input", () => { estado.snQ = q.value; snPintar(); });
