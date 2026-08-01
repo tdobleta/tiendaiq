@@ -364,10 +364,12 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
 /* ---------- generando ---------- */
 
 .generando { text-align: center; padding: 90px 20px; }
+/* El "spinner" es el propio logo girando 360° sobre su eje (loop continuo). */
 .giro {
-  width: 34px; height: 34px; margin: 0 auto 18px;
-  border: 3px solid var(--borde); border-top-color: var(--acento);
-  border-radius: 50%; animation: girar .8s linear infinite;
+  width: 46px; height: 46px; margin: 0 auto 18px;
+  background: url("/marca/impulso.svg") center / contain no-repeat;
+  animation: girar 1s linear infinite;
+  transform-origin: 50% 50%;
 }
 @keyframes girar { to { transform: rotate(360deg); } }
 .generando h2 { font-size: 16px; color: var(--negro); font-weight: 600; }

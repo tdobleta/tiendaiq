@@ -1,10 +1,46 @@
-<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="TiendaIQ">
-  <mask id="impulso-arrow">
-    <rect x="8.5" y="8.5" width="31" height="31" rx="8.5" transform="rotate(45 24 24)" fill="#fff"/>
-    <g fill="none" stroke="#000" stroke-width="6.2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M16.4 31.6 31.6 16.4"/>
-      <path d="M20.4 16.4 H31.6 V27.6"/>
-    </g>
-  </mask>
-  <rect width="48" height="48" fill="#7C5CFF" mask="url(#impulso-arrow)"/>
+<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="TiendaIQ">
+  <defs>
+    <linearGradient id="awn" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#8E74FF"/>
+      <stop offset="1" stop-color="#6C49F0"/>
+    </linearGradient>
+    <linearGradient id="arw" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#7C5CFF"/>
+      <stop offset="1" stop-color="#5A2EE6"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Toldo / vitrina -->
+  <g>
+    <!-- techo (cara superior, leve perspectiva) -->
+    <path d="M150 118 h212 a14 14 0 0 1 13 9 l24 62 H113 l24 -62 a14 14 0 0 1 13 -9 z" fill="url(#awn)"/>
+    <!-- rayas del toldo -->
+    <path d="M223 118 l-18 71 h44 l10 -71 z" fill="#ffffff" opacity="0.14"/>
+    <path d="M354 118 h8 a14 14 0 0 1 13 9 l24 62 h-40 z" fill="#000000" opacity="0.12"/>
+    <!-- faldón festoneado (4 ondas) -->
+    <path d="M113 189 H399 v20 a1 1 0 0 1 0 0 c-17 30 -55 30 -72 0 c-17 30 -55 30 -72 0 c-17 30 -55 30 -72 0 c-16 28 -52 30 -70 3 z" fill="#5B33E0"/>
+  </g>
+
+  <!-- Marco abierto de la tienda (dos ménsulas redondeadas) -->
+  <g fill="none" stroke="#5A2EE6" stroke-width="30" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M182 250 H168 a18 18 0 0 0 -18 18 V392 a18 18 0 0 0 18 18 H196"/>
+    <path d="M330 250 H344 a18 18 0 0 1 18 18 V392 a18 18 0 0 1 -18 18 H320"/>
+  </g>
+
+  <!-- Flecha ↗ -->
+  <g fill="url(#arw)">
+    <path d="M170 388
+             c48 6 92 -14 128 -58
+             l26 -32
+             l-40 -6
+             a15 15 0 0 1 4 -30
+             l78 12
+             a15 15 0 0 1 12 17
+             l-12 78
+             a15 15 0 0 1 -30 -4
+             l-6 -40
+             l-26 32
+             c-44 54 -100 78 -160 70
+             a17 17 0 0 1 26 -29 z"/>
+  </g>
 </svg>
