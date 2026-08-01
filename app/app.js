@@ -5662,29 +5662,47 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     const items = snFiltradas();
     if (!items.length) return `<div class="galsec__vacio">No hay secciones que coincidan.</div>`;
     const inst = estado.snInstaladas || {};
+    const temas = estado.snTemas;
     return items.map((c) => {
       const est = inst[c.tipo];
       let accion;
-      if (est && est.editorUrl) accion = `<div class="galsec-card__ok">${ico("check")} Instalada</div><a class="btn btn--fantasma btn--chico" href="${esc(est.editorUrl)}" target="_blank" rel="noopener">Abrir editor de temas ${ico("externo")}</a>`;
-      else if (est === "cargando") accion = `<button class="btn btn--acento btn--chico" disabled>Instalando…</button>`;
-      else accion = `<button class="btn btn--acento btn--chico" data-inst-sec="${c.tipo}">${ico("subir")} Instalar en mi tema</button>`;
+      if (est && est.editorUrl) {
+        accion = `<div class="galsec-card__ok">${ico("check")} Añadida al tema</div><a class="btn btn--fantasma btn--chico" href="${esc(est.editorUrl)}" target="_blank" rel="noopener">Abrir editor de temas ${ico("externo")}</a><button class="sn-add__again" type="button" data-inst-again="${c.tipo}">Añadir a otro tema</button>`;
+      } else if (est === "cargando") {
+        accion = `<button class="btn btn--acento btn--chico" disabled>Añadiendo…</button>`;
+      } else if (!temas) {
+        accion = `<button class="btn btn--acento btn--chico" disabled>Cargando temas…</button>`;
+      } else {
+        // Selector de tema estilo Section Store: el merchant elige a cuál inyectar.
+        const opts = temas.length
+          ? temas.map((t) => `<option value="${esc(t.id)}">${esc(t.name)}${t.live ? " · Live" : ""}</option>`).join("")
+          : `<option value="">No se encontraron temas</option>`;
+        accion = `<div class="sn-add">
+          <select class="sn-add__sel" data-theme-sel="${c.tipo}">${opts}</select>
+          <button class="btn btn--acento btn--chico" data-inst-sec="${c.tipo}"${temas.length ? "" : " disabled"}>${ico("subir")} Añadir al Theme</button>
+        </div>`;
+      }
       return `<article class="galsec-card"><div class="galsec-card__prev">${c.thumb}</div><div class="galsec-card__pie galsec-card__pie--col"><div class="galsec-card__info"><div class="galsec-card__nombre">${esc(c.nombre)}</div><div class="galsec-card__desc2">${esc(c.desc)}</div></div><div class="galsec-card__acc">${accion}</div></div></article>`;
     }).join("");
   }
   function snPintar() { const g = $("secpage-grid"); if (g) g.innerHTML = snGridHTML(); }
-  async function snInstalar(tipo) {
+  async function snInstalar(tipo, themeId) {
     estado.snInstaladas = estado.snInstaladas || {};
     estado.snInstaladas[tipo] = "cargando"; snPintar();
     try {
-      const r = await api("/secciones/instalar", { method: "POST", body: { tipo } });
+      const r = await api("/secciones/instalar", { method: "POST", body: { tipo, themeId } });
       estado.snInstaladas[tipo] = { editorUrl: r.editorUrl };
-      toast("Sección instalada en tu tema. Abrí el editor de temas para agregarla.");
-    } catch (e) { estado.snInstaladas[tipo] = undefined; toast("No se pudo instalar: " + e.message); }
+      toast("Sección añadida al tema. Abrí el editor de temas y agregala desde 'Agregar sección'.");
+    } catch (e) { estado.snInstaladas[tipo] = undefined; toast("No se pudo añadir: " + e.message); }
     snPintar();
   }
   async function pantallaSecciones() {
     estado.snCat = estado.snCat || "popular";
     estado.snInstaladas = estado.snInstaladas || {};
+    // Temas de la tienda para el selector (se cargan una vez).
+    if (!estado.snTemas) {
+      api("/secciones/temas").then((r) => { estado.snTemas = r.temas || []; snPintar(); }).catch(() => { estado.snTemas = []; snPintar(); });
+    }
     vista.innerHTML = `
       <div class="secpage">
         <div class="secpage__cab">
@@ -5702,7 +5720,14 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       const tab = e.target.closest("[data-cat]");
       if (tab) { estado.snCat = tab.dataset.cat; cont.querySelectorAll(".galsec__tab").forEach((t) => t.classList.toggle("is-sel", t === tab)); snPintar(); return; }
       const inst = e.target.closest("[data-inst-sec]");
-      if (inst) { snInstalar(inst.dataset.instSec); return; }
+      if (inst) {
+        const tipo = inst.dataset.instSec;
+        const sel = cont.querySelector(`[data-theme-sel="${tipo}"]`);
+        snInstalar(tipo, sel ? sel.value : undefined);
+        return;
+      }
+      const again = e.target.closest("[data-inst-again]");
+      if (again) { estado.snInstaladas[again.dataset.instAgain] = undefined; snPintar(); return; }
     });
     const q = $("secpage-q");
     if (q) q.addEventListener("input", () => { estado.snQ = q.value; snPintar(); });

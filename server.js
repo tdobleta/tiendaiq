@@ -36,7 +36,7 @@ const {
   sincronizarDescuentos,
   borrarDescuentos
 } = require("./bundles");
-const { catalogoPublico, instalarSeccion, seccionInstalada } = require("./secciones");
+const { catalogoPublico, instalarSeccion, seccionInstalada, listarTemas, idNumericoTema } = require("./secciones");
 
 // Render (y cualquier host) fija el puerto por env; local usa 4321.
 const PUERTO = Number(env.PORT || process.env.PORT || 4321);
@@ -497,15 +497,22 @@ async function api(req, res, url) {
     return json(res, 200, { catalogo: catalogoPublico() });
   }
 
+  // GET /api/secciones/temas — lista de temas de la tienda (selector estilo
+  // Section Store: el merchant elige a cuál inyectar la sección).
+  if (req.method === "GET" && ruta === "/api/secciones/temas") {
+    return json(res, 200, { temas: await listarTemas(sesion) });
+  }
+
   // POST /api/secciones/instalar — escribe la section Liquid + assets en el tema
-  // principal (write_themes). Después el merchant la agrega desde el editor de
-  // temas ("Agregar sección"), que es donde Shopify dibuja el panel nativo.
+  // ELEGIDO (themeId; si falta, el MAIN). Después el merchant la agrega desde el
+  // editor de temas ("Agregar sección"), que es donde Shopify dibuja el panel.
   if (req.method === "POST" && ruta === "/api/secciones/instalar") {
-    const { tipo } = await leerCuerpo(req);
+    const { tipo, themeId } = await leerCuerpo(req);
     if (!tipo) return json(res, 400, { error: "Falta tipo" });
-    const r = await instalarSeccion(sesion, tipo);
-    const editorUrl = `https://${sesion.tienda}/admin/themes/current/editor?template=product&addSectionId=${encodeURIComponent(tipo)}`;
-    return json(res, 200, { ok: true, tema: r.tema, tipo, editorUrl });
+    const r = await instalarSeccion(sesion, tipo, themeId);
+    const idNum = idNumericoTema(r.themeId);
+    const editorUrl = `https://${sesion.tienda}/admin/themes/${idNum}/editor?template=product&addSectionId=${encodeURIComponent(tipo)}`;
+    return json(res, 200, { ok: true, themeId: r.themeId, tipo, editorUrl });
   }
 
   // POST /api/nicho/contenido — monta el contenido del nicho (About/Contact)

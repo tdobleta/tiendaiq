@@ -49,6 +49,21 @@ function catalogoPublico() {
 }
 
 const Q_TEMA = `{ themes(first: 1, roles: [MAIN]) { nodes { id name } } }`;
+const Q_TEMAS = `{ themes(first: 25) { nodes { id name role } } }`;
+
+// Lista de temas de la tienda (para el selector estilo Section Store: el
+// merchant elige a cuál inyectar). El MAIN/live queda marcado.
+async function listarTemas(sesion) {
+  const nodes = (await gql(Q_TEMAS, {}, sesion)).themes.nodes || [];
+  // Se ocultan los temas descargados/borrador de sistema si hiciera falta; por
+  // ahora se muestran todos los que el merchant puede editar.
+  return nodes
+    .filter((t) => t.role !== "DEMO")
+    .map((t) => ({ id: t.id, name: t.name, live: t.role === "MAIN" }));
+}
+
+// id numérico del tema (para el deep link del editor) a partir del gid.
+const idNumericoTema = (gid) => String(gid || "").split("/").pop();
 
 const Q_ARCHIVO = `query($id: ID!, $nombres: [String!]!) {
   theme(id: $id) {
@@ -87,31 +102,30 @@ function archivosDe(def) {
   return files;
 }
 
-// Escribe (idempotente) los archivos de la sección en el tema principal.
-// No toca theme.liquid: el merchant agrega la sección desde el editor de temas
-// ("Agregar sección"), que es lo que da el panel nativo.
-async function instalarSeccion(sesion, tipo, log = () => {}) {
+// Escribe (idempotente) los archivos de la sección en el tema elegido (gid). Si
+// no se pasa themeId, va al MAIN. No toca theme.liquid: el merchant agrega la
+// sección desde el editor de temas ("Agregar sección"), que da el panel nativo.
+async function instalarSeccion(sesion, tipo, themeId, log = () => {}) {
   const def = seccionPorTipo(tipo);
   if (!def) throw new Error(`Sección desconocida: ${tipo}`);
-  const tema = await temaMain(sesion);
-  log(`  tema · ${tema.name}`);
+  const id = themeId || (await temaMain(sesion)).id;
 
   const files = archivosDe(def);
-  const r = await gql(M_ARCHIVOS, { themeId: tema.id, files }, sesion);
+  const r = await gql(M_ARCHIVOS, { themeId: id, files }, sesion);
   const errs = r.themeFilesUpsert.userErrors;
   if (errs.length) throw new Error("Sección: " + JSON.stringify(errs));
   log(`  archivos · ${r.themeFilesUpsert.upsertedThemeFiles.length} escritos`);
-  return { tema: tema.name, tipo };
+  return { themeId: id, tipo };
 }
 
 // ¿Ya está el archivo de section en el tema? (para el estado "Instalada").
-async function seccionInstalada(sesion, tipo) {
+async function seccionInstalada(sesion, tipo, themeId) {
   const def = seccionPorTipo(tipo);
   if (!def) return false;
-  const tema = await temaMain(sesion);
+  const id = themeId || (await temaMain(sesion)).id;
   const nombre = def.archivos[0].dest; // sections/….liquid
-  const r = await gql(Q_ARCHIVO, { id: tema.id, nombres: [nombre] }, sesion);
+  const r = await gql(Q_ARCHIVO, { id, nombres: [nombre] }, sesion);
   return (r.theme?.files?.nodes || []).length > 0;
 }
 
-module.exports = { CATALOGO, catalogoPublico, seccionPorTipo, instalarSeccion, seccionInstalada };
+module.exports = { CATALOGO, catalogoPublico, seccionPorTipo, instalarSeccion, seccionInstalada, listarTemas, idNumericoTema };

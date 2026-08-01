@@ -2787,3 +2787,10 @@ body.sec-panel-abierto .constructor { padding-right: 356px; }
 .galsec-card__ok { display: flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; color: #16a34a; }
 .galsec-card__ok .ico { width: 15px; height: 15px; }
 @media (max-width: 640px) { .secpage__buscar { flex-basis: 100%; } }
+
+/* Selector de tema (estilo Section Store: elegir a cuál inyectar) */
+.sn-add { display: flex; flex-direction: column; gap: 8px; }
+.sn-add__sel { width: 100%; padding: 8px 10px; border: 1px solid var(--borde); border-radius: 8px; background: #fff; font: inherit; font-size: 13px; color: var(--negro); }
+.sn-add .btn { width: 100%; justify-content: center; }
+.sn-add__again { background: none; border: none; color: var(--suave); font: inherit; font-size: 12px; text-decoration: underline; cursor: pointer; padding: 2px; }
+.sn-add__again:hover { color: var(--negro); }
