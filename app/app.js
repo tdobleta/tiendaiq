@@ -3191,15 +3191,10 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   // Catálogo de secciones disponibles (lo que muestra la galería estilo Section
   // Store). Cada una: tipo, nombre, categorías, thumbnail y (si es v2) esquema.
   const CATALOGO_SECCIONES = [
-    {
-      tipo: "videoslider",
-      nombre: "Video slider",
-      desc: "Carrusel de videos verticales con reseña (título + estrellas)",
-      cats: ["popular", "video", "testimonial"],
-      thumb: THUMB_VS,
-      schema: SCHEMA_VS,
-      defaults: DEF_VS
-    },
+    // El "Video slider" viejo (metafield) se sacó del catálogo: el bueno es la
+    // section NATIVA (pantalla "Secciones premium" → editor de temas). El render
+    // de metafield queda por compatibilidad de páginas ya hechas, pero ya no se
+    // ofrece para evitar tener dos video sliders.
     {
       tipo: "videos",
       nombre: "Videos de producto",
