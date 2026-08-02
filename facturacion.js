@@ -13,7 +13,7 @@ const { gql, env } = require("./shopify");
 const { leerTienda, actualizarCamposTienda, consumirCupoTienda, revertirCupoTienda } = require("./tiendas");
 const { metrica } = require("./monitoreo");
 
-const PAGINAS_GRATIS = Number(env.PAGINAS_GRATIS || 3);
+const PAGINAS_GRATIS = Number(env.PAGINAS_GRATIS) || 3; // NaN/vacío → 3
 const PLAN_NOMBRE = "TiendaIQ Pro";
 const PLAN_PRECIO = Number(env.PLAN_PRECIO || 19.99);
 
@@ -110,11 +110,17 @@ async function exigirCupo(sesion) {
 // read-modify-write no atómicos, y dejaban generar de más en ráfaga).
 async function consumirCupo(sesion) {
   const e = await estadoPlan(sesion);
-  const limite = e.plan === "pro" ? null : e.limite; // pro = sin tope
-  const n = await consumirCupoTienda(sesion.tienda, mesActual(), limite);
+  // Pro = sin tope: cuenta el uso pero NUNCA tira 402 (aunque el incremento no
+  // matchee por algún borde de datos, un pro no puede quedar sin cupo).
+  if (e.plan === "pro") {
+    await consumirCupoTienda(sesion.tienda, mesActual(), null);
+    return { ...e, usadas: e.usadas + 1 };
+  }
+  const n = await consumirCupoTienda(sesion.tienda, mesActual(), PAGINAS_GRATIS);
   if (n === null) {
+    // Mensaje con el número real (nunca "null"): usa la constante, no e.limite.
     const err = new Error(
-      `Usaste las ${e.limite} páginas gratis de este mes. Pasate a ${PLAN_NOMBRE} para generar sin límite.`
+      `Usaste las ${PAGINAS_GRATIS} páginas gratis de este mes. Pasate a ${PLAN_NOMBRE} para generar sin límite.`
     );
     err.status = 402;
     err.actualizar = true;
