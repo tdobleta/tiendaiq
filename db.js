@@ -13,6 +13,19 @@
 const fs = require("fs");
 const path = require("path");
 const { env } = require("./shopify");
+const { cifrarToken, descifrarToken } = require("./cripto-tokens");
+
+// El token vive dentro del JSONB `datos`. Se cifra al escribir y se descifra al
+// leer, en esta capa: el resto de la app sigue viendo el token en claro y no se
+// entera. Clonar antes de cifrar para no mutar el objeto del caller.
+function cifrarDatos(datos) {
+  if (!datos || datos.token == null) return datos;
+  return { ...datos, token: cifrarToken(datos.token) };
+}
+function descifrarDatos(datos) {
+  if (!datos || datos.token == null) return datos;
+  return { ...datos, token: descifrarToken(datos.token) };
+}
 
 const USA_PG = !!env.DATABASE_URL;
 
@@ -24,10 +37,19 @@ async function pg() {
   const { Pool } = require("pg");
   // Render exige SSL; un Postgres local no lo tiene. Se detecta por la URL.
   const local = /localhost|127\.0\.0\.1|sslmode=disable/.test(env.DATABASE_URL);
-  pool = new Pool({
-    connectionString: env.DATABASE_URL,
-    ssl: local ? false : { rejectUnauthorized: false }
-  });
+  // Con PG_CA_CERT (el CA de Render) se VALIDA el certificado (anti-MITM). Sin
+  // el CA, se mantiene el comportamiento actual (sin validar) + aviso, para no
+  // romper la conexión: la mejora de seguridad se activa al cargar la env.
+  let ssl;
+  if (local) {
+    ssl = false;
+  } else if (env.PG_CA_CERT) {
+    ssl = { rejectUnauthorized: true, ca: env.PG_CA_CERT };
+  } else {
+    console.warn("⚠ PG_CA_CERT no seteada: conexión a Postgres SIN validar el certificado (MITM posible). Cargá el CA de Render para activar la validación.");
+    ssl = { rejectUnauthorized: false };
+  }
+  pool = new Pool({ connectionString: env.DATABASE_URL, ssl });
   // Esquema mínimo: dos tablas, tal cual el plan.
   await pool.query(`
     CREATE TABLE IF NOT EXISTS tiendas (
@@ -81,15 +103,16 @@ function fileListar(dir) {
 // ---- tiendas ----
 
 async function guardarTiendaDB(dominio, datos) {
+  const cifrado = cifrarDatos(datos); // el token va cifrado en reposo
   if (USA_PG) {
     const p = await pg();
     await p.query(
       `INSERT INTO tiendas (dominio, datos, actualizada) VALUES ($1, $2, now())
        ON CONFLICT (dominio) DO UPDATE SET datos = $2, actualizada = now()`,
-      [dominio, datos]
+      [dominio, cifrado]
     );
   } else {
-    fileGuardar(DIR_TIENDAS, dominio, datos);
+    fileGuardar(DIR_TIENDAS, dominio, cifrado);
   }
 }
 
@@ -97,9 +120,9 @@ async function leerTiendaDB(dominio) {
   if (USA_PG) {
     const p = await pg();
     const r = await p.query(`SELECT datos FROM tiendas WHERE dominio = $1`, [dominio]);
-    return r.rows[0]?.datos ?? null;
+    return descifrarDatos(r.rows[0]?.datos ?? null);
   }
-  return fileLeer(DIR_TIENDAS, dominio);
+  return descifrarDatos(fileLeer(DIR_TIENDAS, dominio));
 }
 
 async function borrarTiendaDB(dominio) {
@@ -115,9 +138,9 @@ async function listarTiendasDB() {
   if (USA_PG) {
     const p = await pg();
     const r = await p.query(`SELECT datos FROM tiendas ORDER BY actualizada DESC`);
-    return r.rows.map((x) => x.datos);
+    return r.rows.map((x) => descifrarDatos(x.datos));
   }
-  return fileListar(DIR_TIENDAS);
+  return fileListar(DIR_TIENDAS).map(descifrarDatos);
 }
 
 // ---- páginas ----
