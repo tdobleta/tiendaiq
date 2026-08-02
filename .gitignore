@@ -16,3 +16,9 @@ oauth.js
 
 # Logs de la herramienta Playwright MCP (no versionar)
 .playwright-mcp/
+
+# Experimentos de nichos (themes por rubro + generador) — no versionar
+construir-nicho.js
+nichos/
+theme-nicho-*/
+app/portadas/_cod-tarjeta-completa-VIEJA.png
