@@ -12,10 +12,9 @@
   <meta name="shopify-api-key" content="{{SHOPIFY_CLIENT_ID}}">
   <script src="https://cdn.shopify.com/shopifycloud/app-bridge.js"></script>
 
-  <!-- Inter: la tipografía del admin de Shopify (y de PagePilot). -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Tipografía del sistema (sin Google Fonts): render-blocking + host de
+       terceros dentro del admin. El admin de Shopify ya usa el stack del
+       sistema; la app lo hereda vía app.css. -->
   <link rel="stylesheet" href="app.css">
 </head>
 <body>
@@ -52,15 +51,9 @@
 
   <main id="vista"></main>
 
-  <!-- El MISMO script/css que se inyecta en la tienda, para que el preview
-       del formulario COD sea idéntico a lo que ve el cliente final. -->
-  <link rel="stylesheet" href="/widgets/tiendaiq-cod.css">
-  <script src="/widgets/tiendaiq-cod.js"></script>
-
-  <!-- El MISMO css que se inyecta en la tienda, para que el preview del
-       widget de bundles sea idéntico a lo que ve el cliente. -->
-  <link rel="stylesheet" href="/widgets/tiendaiq-bundle.css">
-
+  <!-- Los assets del preview de COD/Bundles (el MISMO css/js que ve el cliente)
+       NO se cargan acá: se inyectan diferidos solo al entrar a esas pantallas
+       (app.js → cargarWidget), para no bajarlos ni parsearlos en Inicio/Páginas. -->
   <script src="app.js"></script>
 </body>
 </html>

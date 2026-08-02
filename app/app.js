@@ -630,7 +630,28 @@
     return `<div class="cod-prodbar"><label>Producto de prueba en la vista previa</label><select id="cod-preview-prod">${opciones}</select></div>`;
   }
 
+  // Carga diferida de assets del preview (COD/Bundles): en vez de bajarlos en
+  // toda la app, se inyectan solo al entrar a la pantalla que los usa. Idempotente.
+  const _widgetsCargados = new Set();
+  function cargarWidget(href, tipo) {
+    if (_widgetsCargados.has(href)) return Promise.resolve();
+    _widgetsCargados.add(href);
+    return new Promise((ok) => {
+      // href plano: el navegador lo cachea (ese es el objetivo). Se carga una
+      // vez por sesión (Set idempotente).
+      const el = tipo === "css"
+        ? Object.assign(document.createElement("link"), { rel: "stylesheet", href })
+        : Object.assign(document.createElement("script"), { src: href, defer: true });
+      el.onload = () => ok();
+      el.onerror = () => ok(); // no bloquear el preview si un asset falla
+      document.head.appendChild(el);
+    });
+  }
+
   async function pantallaCod() {
+    // El preview de COD usa el MISMO css/js que ve el cliente (window.TiendaIQCOD).
+    await cargarWidget("/widgets/tiendaiq-cod.css", "css");
+    await cargarWidget("/widgets/tiendaiq-cod.js", "js");
     vista.innerHTML = `<div class="generando"><div class="giro"></div><h2>Leyendo la configuración…</h2></div>`;
     try {
       estado.cod = { config: await api("/cod"), tab: estado.cod?.tab || "vista", sucio: false, previewProd: estado.cod?.previewProd || null };
@@ -3941,6 +3962,8 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   }
 
   async function pantallaBundles() {
+    // El preview de bundles usa el MISMO css que ve el cliente.
+    await cargarWidget("/widgets/tiendaiq-bundle.css", "css");
     if (!estado.bundles) {
       try {
         estado.bundles = { config: await api("/bundles"), vista: "lista", editIdx: null, tab: "ofertas", sucio: false, previewProd: null, metricas: null };
