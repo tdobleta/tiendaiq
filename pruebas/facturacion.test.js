@@ -236,32 +236,58 @@ describe("exigirCupo — el portero antes de generar", () => {
   });
 });
 
-describe("contarUso — no perder ni inventar páginas", () => {
-  test("suma una al mes actual", async () => {
+describe("consumirCupo — reserva ATÓMICA de cupo (sin regalar páginas)", () => {
+  test("reserva una página: incrementa el uso del mes", async () => {
     const { modulo, tiendas } = montar("facturacion.js", {
-      tiendas: { [TIENDA]: { token: "t", uso: { [MES]: 2 } } }
+      tiendas: { [TIENDA]: { token: "t", uso: { [MES]: 1 } } } // gratis, 1 < 3
     });
-
-    await modulo.contarUso(SESION);
-    assert.equal(tiendas._almacen[TIENDA].uso[MES], 3);
+    const e = await modulo.consumirCupo(SESION);
+    assert.equal(tiendas._almacen[TIENDA].uso[MES], 2);
+    assert.equal(e.usadas, 2);
   });
 
   test("arranca el contador si el mes no existía", async () => {
     const { modulo, tiendas } = montar("facturacion.js", { tiendas: { [TIENDA]: { token: "t" } } });
-    await modulo.contarUso(SESION);
+    await modulo.consumirCupo(SESION);
     assert.equal(tiendas._almacen[TIENDA].uso[MES], 1);
+  });
+
+  test("tira 402 al límite y NO incrementa (no se pasa del cupo)", async () => {
+    const { modulo, tiendas } = montar("facturacion.js", {
+      tiendas: { [TIENDA]: { token: "t", uso: { [MES]: 3 } } }, // gratis, 3 >= 3
+      respuestas: [SIN_SUSCRIPCION] // al límite, estadoPlan re-chequea la suscripción
+    });
+    await assert.rejects(() => modulo.consumirCupo(SESION), (err) => err.status === 402);
+    assert.equal(tiendas._almacen[TIENDA].uso[MES], 3, "al límite no debe incrementar");
+  });
+
+  test("plan pro (cortesía por env): reserva SIN tope", async () => {
+    const { modulo, tiendas } = montar("facturacion.js", {
+      env: { TIENDAS_PRO: TIENDA },
+      tiendas: { [TIENDA]: { token: "t", uso: { [MES]: 99 } } }
+    });
+    const e = await modulo.consumirCupo(SESION);
+    assert.equal(e.plan, "pro");
+    assert.equal(tiendas._almacen[TIENDA].uso[MES], 100);
   });
 
   test("no pisa el token ni el resto del registro", async () => {
     const { modulo, tiendas } = montar("facturacion.js", {
+      env: { TIENDAS_PRO: TIENDA },
       tiendas: { [TIENDA]: { token: "shpat_importante", plan: "pro", cod: { activo: true } } }
     });
-
-    await modulo.contarUso(SESION);
+    await modulo.consumirCupo(SESION);
     const t = tiendas._almacen[TIENDA];
     assert.equal(t.token, "shpat_importante", "perder el token deja la tienda muerta");
-    assert.equal(t.plan, "pro");
     assert.deepEqual(t.cod, { activo: true });
+  });
+
+  test("revertirCupo devuelve la página reservada (si la generación falla)", async () => {
+    const { modulo, tiendas } = montar("facturacion.js", {
+      tiendas: { [TIENDA]: { token: "t", uso: { [MES]: 2 } } }
+    });
+    await modulo.revertirCupo(SESION);
+    assert.equal(tiendas._almacen[TIENDA].uso[MES], 1);
   });
 });
 

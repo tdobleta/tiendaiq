@@ -6,7 +6,8 @@
 // Todo lo que toca la base es async.
 // ============================================================
 
-const { guardarTiendaDB, leerTiendaDB, borrarTiendaDB, listarTiendasDB } = require("./db");
+const { guardarTiendaDB, leerTiendaDB, borrarTiendaDB, listarTiendasDB,
+        incrementarUsoDB, decrementarUsoDB, actualizarCamposTiendaDB } = require("./db");
 
 // Shopify manda el dominio de mil formas: con https://, con barra, en el claim
 // `dest` del pase. Se normaliza siempre a "xxx.myshopify.com".
@@ -50,6 +51,22 @@ async function listarTiendas() {
   return listarTiendasDB();
 }
 
+// Reserva ATÓMICA de una página del cupo del mes. Devuelve el nuevo total, o
+// null si no queda cupo (sin pisarse entre requests concurrentes). limite null
+// = sin tope (pro).
+async function consumirCupoTienda(dominio, mes, limite) {
+  return incrementarUsoDB(normalizar(dominio), mes, limite);
+}
+// Devuelve una página al cupo (si la generación falló tras reservar).
+async function revertirCupoTienda(dominio, mes) {
+  return decrementarUsoDB(normalizar(dominio), mes);
+}
+// Actualiza SOLO ciertos campos (plan, plan_verificado…) sin reescribir todo el
+// registro → no pisa uso ni token (fin de los lost updates).
+async function actualizarCamposTienda(dominio, campos) {
+  return actualizarCamposTiendaDB(normalizar(dominio), campos);
+}
+
 // La sesión es lo que viaja por toda la app: quién es y con qué token.
 // Nada llama a Shopify sin una de estas.
 async function sesionDe(dominio) {
@@ -65,5 +82,8 @@ module.exports = {
   leerTienda,
   borrarTienda,
   listarTiendas,
+  consumirCupoTienda,
+  revertirCupoTienda,
+  actualizarCamposTienda,
   sesionDe
 };

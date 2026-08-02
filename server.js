@@ -27,7 +27,7 @@ const { env, sesionDeEnv } = require("./shopify");
 const { sesionDe, borrarTienda, listarTiendas } = require("./tiendas");
 const { guardarPaginaDB, leerPaginaDB, listarPaginasDB } = require("./db");
 const { iniciarInstalacion, terminarInstalacion, tiendaDelPase } = require("./auth");
-const { estadoPlan, exigirCupo, contarUso, crearSuscripcion } = require("./facturacion");
+const { estadoPlan, consumirCupo, revertirCupo, crearSuscripcion } = require("./facturacion");
 const { leerConfigCod, guardarConfigCod, crearPedidoCod } = require("./cod");
 const { reportarError, metrica } = require("./monitoreo");
 const {
@@ -509,10 +509,19 @@ async function api(req, res, url) {
     const { producto_id, idioma = "es", angulo = "", estilo = "clasico" } = await leerCuerpo(req);
     if (!producto_id) return json(res, 400, { error: "Falta producto_id" });
 
-    await exigirCupo(sesion); // 402 si agotó las gratis y no es pro
+    // Reserva ATÓMICA del cupo ANTES de generar (402 si no queda). Si la
+    // generación falla después, se devuelve la página reservada.
+    await consumirCupo(sesion);
 
     const t0 = Date.now();
-    const { data, urls, avisos, uso } = await crearPagina(producto_id, sesion, { idioma, angulo, estilo });
+    let generado;
+    try {
+      generado = await crearPagina(producto_id, sesion, { idioma, angulo, estilo });
+    } catch (e) {
+      await revertirCupo(sesion); // la generación falló → no cobrar la página
+      throw e;
+    }
+    const { data, urls, avisos, uso } = generado;
 
     const registro = await guardarPagina(sesion.tienda, {
       id: idDePagina(producto_id),
@@ -524,7 +533,6 @@ async function api(req, res, url) {
       url_publica: null
     });
 
-    await contarUso(sesion);
     return json(res, 200, { ...registro, segundos: (Date.now() - t0) / 1000, uso });
   }
 

@@ -98,6 +98,26 @@ function montar(rel, { env = {}, tiendas = {}, respuestas = [] } = {}) {
     async listarTiendas() {
       return Object.values(almacen);
     },
+    // Update parcial (no reescribe todo el registro) — como el jsonb_set real.
+    async actualizarCamposTienda(dominio, campos) {
+      if (!almacen[dominio]) almacen[dominio] = { dominio };
+      Object.assign(almacen[dominio], campos);
+      dobleTiendas.escrituras.push(JSON.parse(JSON.stringify(almacen[dominio])));
+    },
+    // Reserva atómica de cupo: incrementa uso[mes] si hay lugar; null si no.
+    async consumirCupoTienda(dominio, mes, limite) {
+      const t = almacen[dominio] || (almacen[dominio] = { dominio });
+      const actual = (t.uso && t.uso[mes]) || 0;
+      if (limite != null && actual >= limite) return null;
+      t.uso = { ...(t.uso || {}), [mes]: actual + 1 };
+      return actual + 1;
+    },
+    async revertirCupoTienda(dominio, mes) {
+      const t = almacen[dominio];
+      if (!t) return;
+      const actual = (t.uso && t.uso[mes]) || 0;
+      t.uso = { ...(t.uso || {}), [mes]: Math.max(0, actual - 1) };
+    },
     async sesionDe(dominio) {
       const t = almacen[dominio];
       if (!t) throw new Error(`La tienda ${dominio} no tiene la app instalada`);

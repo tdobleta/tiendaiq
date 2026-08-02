@@ -10,7 +10,7 @@
 // ============================================================
 
 const { gql, env } = require("./shopify");
-const { leerTienda, guardarTienda } = require("./tiendas");
+const { leerTienda, actualizarCamposTienda, consumirCupoTienda, revertirCupoTienda } = require("./tiendas");
 const { metrica } = require("./monitoreo");
 
 const PAGINAS_GRATIS = Number(env.PAGINAS_GRATIS || 3);
@@ -54,13 +54,12 @@ async function estadoPlan(sesion) {
   }
 
   let plan = t.plan === "pro" ? "pro" : "gratis";
+  // Escritura PARCIAL (solo plan/plan_verificado): no reescribe el registro
+  // entero, así no pisa el contador `uso` ni el token (antes, escribir el plan
+  // desde este GET podía "devolver" páginas gratis por lost update).
   const marcar = async (nuevo) => {
     plan = nuevo;
-    await guardarTienda(sesion.tienda, t.token, {
-      ...t,
-      plan: nuevo,
-      plan_verificado: new Date().toISOString()
-    });
+    await actualizarCamposTienda(sesion.tienda, { plan: nuevo, plan_verificado: new Date().toISOString() });
   };
 
   if (plan === "pro") {
@@ -87,11 +86,7 @@ async function actualizarPlanDesdeWebhook(tienda, payload) {
   const t = (await leerTienda(tienda)) || {};
   if (!t.token) return null;
   const plan = estado === "ACTIVE" ? "pro" : "gratis";
-  await guardarTienda(tienda, t.token, {
-    ...t,
-    plan,
-    plan_verificado: new Date().toISOString()
-  });
+  await actualizarCamposTienda(tienda, { plan, plan_verificado: new Date().toISOString() });
   return plan;
 }
 
@@ -109,12 +104,28 @@ async function exigirCupo(sesion) {
   return e;
 }
 
-// Se llama después de generar con éxito.
-async function contarUso(sesion) {
-  const t = (await leerTienda(sesion.tienda)) || {};
-  const uso = { ...(t.uso || {}) };
-  uso[mesActual()] = (uso[mesActual()] || 0) + 1;
-  await guardarTienda(sesion.tienda, t.token, { ...t, uso });
+// Reserva ATÓMICA una página del cupo ANTES de generar. Un solo UPDATE con
+// chequeo+incremento bajo lock de fila → N requests concurrentes no se pasan del
+// cupo. Tira 402 si no queda. Reemplaza a exigirCupo+contarUso (que eran
+// read-modify-write no atómicos, y dejaban generar de más en ráfaga).
+async function consumirCupo(sesion) {
+  const e = await estadoPlan(sesion);
+  const limite = e.plan === "pro" ? null : e.limite; // pro = sin tope
+  const n = await consumirCupoTienda(sesion.tienda, mesActual(), limite);
+  if (n === null) {
+    const err = new Error(
+      `Usaste las ${e.limite} páginas gratis de este mes. Pasate a ${PLAN_NOMBRE} para generar sin límite.`
+    );
+    err.status = 402;
+    err.actualizar = true;
+    throw err;
+  }
+  return { ...e, usadas: n };
+}
+
+// Devuelve la página reservada si la generación falló después (compensación).
+async function revertirCupo(sesion) {
+  await revertirCupoTienda(sesion.tienda, mesActual());
 }
 
 // Crea la suscripción y devuelve la URL de confirmación de Shopify.
@@ -147,6 +158,6 @@ async function crearSuscripcion(sesion, urlApp) {
 }
 
 module.exports = {
-  estadoPlan, exigirCupo, contarUso, crearSuscripcion, actualizarPlanDesdeWebhook,
+  estadoPlan, exigirCupo, consumirCupo, revertirCupo, crearSuscripcion, actualizarPlanDesdeWebhook,
   PAGINAS_GRATIS, PLAN_PRECIO, PLAN_NOMBRE
 };

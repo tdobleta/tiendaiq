@@ -143,6 +143,72 @@ async function listarTiendasDB() {
   return fileListar(DIR_TIENDAS).map(descifrarDatos);
 }
 
+// Incremento ATÓMICO del uso del mes, con tope. Devuelve el nuevo valor si se
+// incrementó, o null si ya estaba en el límite (sin cupo). En un solo UPDATE:
+// el WHERE hace el chequeo y el jsonb_set el incremento, bajo el lock de fila de
+// Postgres → imposible que dos requests concurrentes se pasen del cupo. `limite`
+// null = sin tope (plan pro). No toca el token (queda cifrado).
+async function incrementarUsoDB(dominio, mes, limite) {
+  if (USA_PG) {
+    const p = await pg();
+    const set = `jsonb_set(datos, ARRAY['uso', $2], to_jsonb(COALESCE((datos->'uso'->>$2)::int, 0) + 1))`;
+    const sql = limite == null
+      ? `UPDATE tiendas SET datos = ${set}, actualizada = now() WHERE dominio = $1 RETURNING (datos->'uso'->>$2)::int AS n`
+      : `UPDATE tiendas SET datos = ${set}, actualizada = now() WHERE dominio = $1 AND COALESCE((datos->'uso'->>$2)::int, 0) < $3 RETURNING (datos->'uso'->>$2)::int AS n`;
+    const r = await p.query(sql, limite == null ? [dominio, mes] : [dominio, mes, limite]);
+    return r.rows[0] ? r.rows[0].n : null;
+  }
+  // Archivos (dev, sin concurrencia): read-modify-write con chequeo.
+  const d = fileLeer(DIR_TIENDAS, dominio) || {};
+  const actual = (d.uso && d.uso[mes]) || 0;
+  if (limite != null && actual >= limite) return null;
+  d.uso = { ...(d.uso || {}), [mes]: actual + 1 };
+  fileGuardar(DIR_TIENDAS, dominio, d);
+  return actual + 1;
+}
+
+// Revierte un incremento (si la generación falló después de reservar el cupo).
+async function decrementarUsoDB(dominio, mes) {
+  if (USA_PG) {
+    const p = await pg();
+    await p.query(
+      `UPDATE tiendas SET datos = jsonb_set(datos, ARRAY['uso', $2], to_jsonb(GREATEST(0, COALESCE((datos->'uso'->>$2)::int, 0) - 1))), actualizada = now() WHERE dominio = $1`,
+      [dominio, mes]
+    );
+    return;
+  }
+  const d = fileLeer(DIR_TIENDAS, dominio);
+  if (!d) return;
+  const actual = (d.uso && d.uso[mes]) || 0;
+  d.uso = { ...(d.uso || {}), [mes]: Math.max(0, actual - 1) };
+  fileGuardar(DIR_TIENDAS, dominio, d);
+}
+
+// Actualiza SOLO los campos indicados de una tienda (jsonb_set por clave), sin
+// reescribir el objeto entero → dos writers de campos distintos no se pisan
+// (fin de los lost updates). No toca el token. `campos` = { plan, plan_verificado, … }.
+async function actualizarCamposTiendaDB(dominio, campos) {
+  const claves = Object.keys(campos);
+  if (!claves.length) return;
+  if (USA_PG) {
+    const p = await pg();
+    let expr = "datos";
+    const vals = [dominio];
+    let i = 2;
+    for (const k of claves) {
+      expr = `jsonb_set(${expr}, ARRAY[$${i}], $${i + 1}::jsonb)`;
+      vals.push(k, JSON.stringify(campos[k] ?? null));
+      i += 2;
+    }
+    await p.query(`UPDATE tiendas SET datos = ${expr}, actualizada = now() WHERE dominio = $1`, vals);
+    return;
+  }
+  const d = fileLeer(DIR_TIENDAS, dominio);
+  if (!d) return;
+  Object.assign(d, campos);
+  fileGuardar(DIR_TIENDAS, dominio, d);
+}
+
 // ---- páginas ----
 
 async function guardarPaginaDB(tienda, id, datos) {
@@ -223,6 +289,7 @@ async function consumirEstadoDB(estado) {
 module.exports = {
   USA_PG,
   guardarTiendaDB, leerTiendaDB, borrarTiendaDB, listarTiendasDB,
+  incrementarUsoDB, decrementarUsoDB, actualizarCamposTiendaDB,
   guardarPaginaDB, leerPaginaDB, listarPaginasDB,
   guardarEstadoDB, consumirEstadoDB
 };
