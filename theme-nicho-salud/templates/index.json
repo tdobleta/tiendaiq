@@ -1,0 +1,294 @@
+{
+  "sections": {
+    "hero": {
+      "type": "iq-hero",
+      "settings": {
+        "image_asset": "iq-hero.jpg",
+        "height": 620,
+        "overlay_opacity": 40,
+        "heading": "Cuidá tu bienestar: productos naturales y prácticos para sentirte mejor cada día",
+        "button_label": "Ver colección 🌿",
+        "button_link": "shopify://collections/all"
+      }
+    },
+    "welcome": {
+      "type": "iq-image-text",
+      "settings": {
+        "image_asset": "iq-welcome.jpg",
+        "image_position": "left",
+        "caption": "Descubrí nuestra misión y nuestros objetivos",
+        "heading": "Bienvenido a VitalCare — todo para cuidar tu cuerpo y tu mente, de forma simple y natural",
+        "text": "<p>Hacemos que cuidarte sea simple y placentero. En VitalCare vas a encontrar suplementos, accesorios de bienestar y cuidado personal de calidad, a buen precio. Envío rápido y cambios sin vueltas.</p>",
+        "button_label": "Conocé nuestra historia 🌿",
+        "button_link": "shopify://pages/about",
+        "color_scheme": "scheme-1",
+        "padding_top": 48,
+        "padding_bottom": 48
+      }
+    },
+    "why_choose_us": {
+      "type": "iq-why",
+      "blocks": {
+        "f1": {
+          "type": "feature",
+          "settings": {
+            "emoji": "🚚",
+            "title": "Envío rápido",
+            "text": "Entrega veloz para que empieces a cuidarte cuanto antes."
+          }
+        },
+        "f2": {
+          "type": "feature",
+          "settings": {
+            "emoji": "🌿",
+            "title": "Natural y seguro",
+            "text": "Ingredientes y materiales testeados, pensados para tu bienestar."
+          }
+        },
+        "f3": {
+          "type": "feature",
+          "settings": {
+            "emoji": "💸",
+            "title": "Precio justo",
+            "text": "Bienestar premium sin vaciarte el bolsillo."
+          }
+        },
+        "f4": {
+          "type": "feature",
+          "settings": {
+            "emoji": "💚",
+            "title": "Con cuidado",
+            "text": "Elegimos cada producto pensando en cómo te hace sentir."
+          }
+        }
+      },
+      "block_order": [
+        "f1",
+        "f2",
+        "f3",
+        "f4"
+      ],
+      "settings": {
+        "title": "¿Por qué elegirnos?",
+        "subtitle": "Nos enfocamos en tu bienestar real, productos seguros y una comunidad que se cuida. Envío rápido y atención copada.",
+        "image_asset": "iq-why.jpg",
+        "gradient_color": "#E8F5EE",
+        "padding_top": 56,
+        "padding_bottom": 56
+      }
+    },
+    "collection": {
+      "type": "featured-collection",
+      "settings": {
+        "title": "Descubrí nuestra colección",
+        "heading_size": "h1",
+        "description": "",
+        "show_description": false,
+        "description_style": "body",
+        "collection": "all",
+        "products_to_show": 10,
+        "columns_desktop": 4,
+        "color_scheme": "scheme-1",
+        "full_width": false,
+        "show_view_all": true,
+        "view_all_style": "solid",
+        "enable_desktop_slider": false,
+        "swipe_on_mobile": true,
+        "image_ratio": "square",
+        "image_shape": "default",
+        "show_secondary_image": false,
+        "show_vendor": false,
+        "show_rating": false,
+        "quick_add": "none",
+        "columns_mobile": "2",
+        "padding_top": 44,
+        "padding_bottom": 44
+      }
+    },
+    "reviews": {
+      "type": "iq-reviews",
+      "blocks": {
+        "r1": {
+          "type": "review",
+          "settings": {
+            "author": "Maya K.",
+            "text": "Compré el kit de aromaterapia y me relaja un montón 🌿 llegó rapidísimo y la calidad es increíble. 10/10, vuelvo a comprar."
+          }
+        },
+        "r2": {
+          "type": "review",
+          "settings": {
+            "author": "Liam R.",
+            "text": "¡Me cambió la rutina!"
+          }
+        },
+        "r3": {
+          "type": "review",
+          "settings": {
+            "author": "Sofía P.",
+            "text": "Tenía miedo de comprar los suplementos online, pero los de VitalCare vinieron impecables y noté la diferencia en dos semanas. El soporte me ayudó a elegir. Recontenta con la calidad y el precio."
+          }
+        },
+        "r4": {
+          "type": "review",
+          "settings": {
+            "author": "Noah H.",
+            "text": "Envío rápido y todo natural."
+          }
+        },
+        "r5": {
+          "type": "review",
+          "settings": {
+            "author": "Ava M.",
+            "text": "El mat de yoga es de lo mejor que probé. Antideslizante y súper cómodo. Además las rutinas que mandan son buenísimas para arrancar el día."
+          }
+        },
+        "r6": {
+          "type": "review",
+          "settings": {
+            "author": "Ethan S.",
+            "text": "Uso el rodillo de masaje todos los días. Recupero mucho mejor, menos tensión en la espalda. Es como tener un spa en casa."
+          }
+        },
+        "r7": {
+          "type": "review",
+          "settings": {
+            "author": "Oliver T.",
+            "text": "Buenísima relación precio-calidad. Compré un combo de bienestar de regalo y a mi mamá le fascinó. El soporte respondió al toque. Vuelvo a comprar."
+          }
+        },
+        "r8": {
+          "type": "review",
+          "settings": {
+            "author": "Isabella G.",
+            "text": "Muy bueno 🤩"
+          }
+        },
+        "r9": {
+          "type": "review",
+          "settings": {
+            "author": "Harper J.",
+            "text": "¡La mejor tienda de bienestar!"
+          }
+        },
+        "r10": {
+          "type": "review",
+          "settings": {
+            "author": "Lucas B.",
+            "text": "Súper feliz con mi pedido: la calidad va con el precio y la atención fue de diez cuando necesité un cambio. Recomendadísimo por lo confiables."
+          }
+        },
+        "r11": {
+          "type": "review",
+          "settings": {
+            "author": "Mia L.",
+            "text": "Perfecto para empezar a meditar. El cojín es cómodo y los aceites huelen divino. Ya armé mi rincón de calma. El packaging venía impecable."
+          }
+        },
+        "r12": {
+          "type": "review",
+          "settings": {
+            "author": "Emma S.",
+            "text": "El soporte me salvó cuando mi pedido se demoró. Me avisaron y me hicieron un pequeño reembolso. El producto funciona genial ahora que llegó. Respeto total."
+          }
+        },
+        "r13": {
+          "type": "review",
+          "settings": {
+            "author": "James P.",
+            "text": "Esta botella térmica vale cada peso. Mantiene la temperatura un montón y me hace tomar más agua. Práctica y linda. Vuelvo a comprar seguro."
+          }
+        },
+        "r14": {
+          "type": "review",
+          "settings": {
+            "author": "Zoe N.",
+            "text": "Natural, accesible y rápido :)"
+          }
+        }
+      },
+      "block_order": [
+        "r1",
+        "r2",
+        "r3",
+        "r4",
+        "r5",
+        "r6",
+        "r7",
+        "r8",
+        "r9",
+        "r10",
+        "r11",
+        "r12",
+        "r13",
+        "r14"
+      ],
+      "settings": {
+        "title": "¡La gente se cuida feliz con nosotros!",
+        "subtitle": "Calificado 4.9/5 por más de 5.000 clientes felices",
+        "color_scheme": "scheme-1",
+        "padding_top": 48,
+        "padding_bottom": 48
+      }
+    },
+    "guarantee": {
+      "type": "rich-text",
+      "blocks": {
+        "heading": {
+          "type": "heading",
+          "settings": {
+            "heading": "🌿 Garantía de devolución de 30 días — Sin riesgo",
+            "heading_size": "h1"
+          }
+        },
+        "text": {
+          "type": "text",
+          "settings": {
+            "text": "<p>Estamos seguros de que vas a amar los productos de VitalCare. Probá cualquier artículo por 30 días y, si no quedás conforme, te devolvemos el dinero. Cambios fáciles, sin preguntas, porque tu confianza es lo que importa.</p>",
+            "text_style": "body"
+          }
+        },
+        "button": {
+          "type": "button",
+          "settings": {
+            "button_label": "Comprar ahora 🛒",
+            "button_link": "shopify://collections/all",
+            "button_style_secondary": false
+          }
+        }
+      },
+      "block_order": [
+        "heading",
+        "text",
+        "button"
+      ],
+      "settings": {
+        "desktop_content_position": "center",
+        "content_alignment": "center",
+        "color_scheme": "scheme-1",
+        "full_width": true,
+        "padding_top": 52,
+        "padding_bottom": 60
+      }
+    },
+    "marquee": {
+      "type": "iq-marquee",
+      "settings": {
+        "color_scheme": "scheme-5",
+        "textos": "Miles de clientes felices | Calidad garantizada | Envío a todo el país | Compra 100% segura | Cambios y devoluciones fáciles",
+        "tamano": 14,
+        "padding": 16,
+        "velocidad": 40
+      }
+    }
+  },
+  "order": [
+    "hero",
+    "marquee",
+    "welcome",
+    "why_choose_us",
+    "collection",
+    "reviews",
+    "guarantee"
+  ]
+}

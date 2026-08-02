@@ -1,0 +1,63 @@
+{%- comment -%} TiendaIQ — Ticker infinito de beneficios. Colores desde el color scheme del theme (matchea la paleta de cada tienda). Pausa al pasar el mouse. {%- endcomment -%}
+<style>
+  #shopify-section-{{ section.id }} .iq-mq {
+    background: rgb(var(--color-background));
+    color: rgb(var(--color-foreground));
+    overflow: hidden;
+    padding: {{ section.settings.padding }}px 0;
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+            mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+  }
+  #shopify-section-{{ section.id }} .iq-mq__track {
+    display: flex;
+    width: max-content;
+    animation: iq-mq-run {{ section.settings.velocidad }}s linear infinite;
+  }
+  #shopify-section-{{ section.id }} .iq-mq:hover .iq-mq__track { animation-play-state: paused; }
+  #shopify-section-{{ section.id }} .iq-mq__item {
+    display: inline-flex;
+    align-items: center;
+    gap: .9rem;
+    padding: 0 2.4rem;
+    font-size: {{ section.settings.tamano }}px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  #shopify-section-{{ section.id }} .iq-mq__dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: rgba(var(--color-foreground), .5);
+    flex: 0 0 auto;
+  }
+  @keyframes iq-mq-run { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+  @media (prefers-reduced-motion: reduce) {
+    #shopify-section-{{ section.id }} .iq-mq__track { animation: none; flex-wrap: wrap; justify-content: center; }
+  }
+</style>
+{%- liquid
+  assign items = section.settings.textos | split: '|'
+-%}
+<div class="iq-mq color-{{ section.settings.color_scheme }}">
+  <div class="iq-mq__track" aria-label="Beneficios">
+    {%- for pasada in (1..2) -%}
+      {%- for it in items -%}
+        <span class="iq-mq__item">{{ it | strip }}<span class="iq-mq__dot" aria-hidden="true"></span></span>
+      {%- endfor -%}
+    {%- endfor -%}
+  </div>
+</div>
+{% schema %}
+{
+  "name": "IQ Marquee",
+  "tag": "section",
+  "settings": [
+    { "type": "color_scheme", "id": "color_scheme", "label": "Esquema de color", "default": "scheme-1" },
+    { "type": "text", "id": "textos", "label": "Frases (separadas por |)", "default": "Miles de clientes felices | Calidad garantizada | Envío a todo el país | Compra 100% segura | Cambios y devoluciones fáciles" },
+    { "type": "range", "id": "tamano", "min": 12, "max": 22, "step": 1, "unit": "px", "label": "Tamaño de letra", "default": 14 },
+    { "type": "range", "id": "padding", "min": 8, "max": 40, "step": 2, "unit": "px", "label": "Alto (padding)", "default": 16 },
+    { "type": "range", "id": "velocidad", "min": 15, "max": 80, "step": 5, "unit": "s", "label": "Velocidad (mayor = más lento)", "default": 40 }
+  ],
+  "presets": [{ "name": "IQ Marquee" }]
+}
+{% endschema %}

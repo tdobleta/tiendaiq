@@ -1,0 +1,70 @@
+{%- comment -%} TiendaIQ — Muro de reseñas masonry estilo PagePilot {%- endcomment -%}
+<style>
+  #shopify-section-{{ section.id }} .iq-rev {
+    padding-top: {{ section.settings.padding_top }}px;
+    padding-bottom: {{ section.settings.padding_bottom }}px;
+  }
+  #shopify-section-{{ section.id }} .iq-rev__head { text-align: center; margin-bottom: 4rem; }
+  #shopify-section-{{ section.id }} .iq-rev__stars-top { color: #FFB800; font-size: 2.6rem; letter-spacing: .3rem; }
+  #shopify-section-{{ section.id }} .iq-rev__title { margin: 1rem 0 .8rem; }
+  #shopify-section-{{ section.id }} .iq-rev__sub { opacity: .75; font-size: 1.6rem; margin: 0; }
+  #shopify-section-{{ section.id }} .iq-rev__wall { columns: 5 220px; column-gap: 2rem; }
+  #shopify-section-{{ section.id }} .iq-rev__card {
+    break-inside: avoid;
+    background: #fff;
+    border: 1px solid rgba(26,26,46,.10);
+    border-radius: 14px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 2px 10px rgba(26,26,46,.05);
+  }
+  #shopify-section-{{ section.id }} .iq-rev__name { font-weight: 700; font-size: 1.6rem; margin: 0 0 .6rem; }
+  #shopify-section-{{ section.id }} .iq-rev__verified { display: inline-flex; align-items: center; gap: .5rem; font-size: 1.3rem; color: #1A1A2E; opacity: .85; margin-bottom: .8rem; }
+  #shopify-section-{{ section.id }} .iq-rev__badge { width: 1.6rem; height: 1.6rem; flex: none; }
+  #shopify-section-{{ section.id }} .iq-rev__stars { color: #FFB800; font-size: 1.5rem; letter-spacing: .1rem; margin-bottom: .8rem; }
+  #shopify-section-{{ section.id }} .iq-rev__text { margin: 0; font-size: 1.5rem; line-height: 1.55; opacity: .9; }
+  @media (max-width: 989px) { #shopify-section-{{ section.id }} .iq-rev__wall { columns: 2 220px; } }
+  @media (max-width: 599px) { #shopify-section-{{ section.id }} .iq-rev__wall { columns: 1; } }
+</style>
+<div class="iq-rev color-{{ section.settings.color_scheme }} gradient">
+  <div class="page-width">
+    <div class="iq-rev__head">
+      <div class="iq-rev__stars-top">★★★★★</div>
+      {%- if section.settings.title != blank -%}<h2 class="iq-rev__title h1">{{ section.settings.title }}</h2>{%- endif -%}
+      {%- if section.settings.subtitle != blank -%}<p class="iq-rev__sub">{{ section.settings.subtitle }}</p>{%- endif -%}
+    </div>
+    <div class="iq-rev__wall">
+      {%- for block in section.blocks -%}
+        <div class="iq-rev__card" {{ block.shopify_attributes }}>
+          <p class="iq-rev__name">{{ block.settings.author }}</p>
+          <span class="iq-rev__verified">
+            <svg class="iq-rev__badge" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="10" cy="10" r="10" fill="#3B82F6"/><path d="M6 10.2l2.6 2.6L14.2 7.2" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Compra verificada
+          </span>
+          <div class="iq-rev__stars">★★★★★</div>
+          <p class="iq-rev__text">{{ block.settings.text }}</p>
+        </div>
+      {%- endfor -%}
+    </div>
+  </div>
+</div>
+{% schema %}
+{
+  "name": "IQ Reseñas",
+  "tag": "section",
+  "settings": [
+    { "type": "inline_richtext", "id": "title", "label": "Título", "default": "¡Nuestros productos enamoran!" },
+    { "type": "text", "id": "subtitle", "label": "Subtítulo", "default": "Calificado 4.9/5 por más de 5.000 clientes felices" },
+    { "type": "color_scheme", "id": "color_scheme", "label": "Esquema de color", "default": "scheme-1" },
+    { "type": "range", "id": "padding_top", "min": 0, "max": 100, "step": 4, "unit": "px", "label": "Padding arriba", "default": 48 },
+    { "type": "range", "id": "padding_bottom", "min": 0, "max": 100, "step": 4, "unit": "px", "label": "Padding abajo", "default": 48 }
+  ],
+  "blocks": [
+    { "type": "review", "name": "Reseña", "settings": [
+      { "type": "text", "id": "author", "label": "Autor", "default": "Cliente" },
+      { "type": "textarea", "id": "text", "label": "Texto", "default": "Excelente producto, súper recomendado." }
+    ]}
+  ],
+  "presets": [{ "name": "IQ Reseñas" }]
+}
+{% endschema %}

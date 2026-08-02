@@ -1,0 +1,294 @@
+{
+  "sections": {
+    "hero": {
+      "type": "iq-hero",
+      "settings": {
+        "image_asset": "iq-hero.jpg",
+        "height": 620,
+        "overlay_opacity": 50,
+        "heading": "Tecnología que simplifica tu día: gadgets y accesorios que rinden y no te vacían el bolsillo",
+        "button_label": "Ver colección ⚡",
+        "button_link": "shopify://collections/all"
+      }
+    },
+    "welcome": {
+      "type": "iq-image-text",
+      "settings": {
+        "image_asset": "iq-welcome.jpg",
+        "image_position": "left",
+        "caption": "Descubrí nuestra misión y nuestros objetivos",
+        "heading": "Bienvenido a TechNova — los gadgets que hacen tu vida más simple, conectada y con estilo",
+        "text": "<p>Hacemos que la tecnología sea simple y accesible. En TechNova vas a encontrar gadgets, accesorios y electrónica de calidad, a buen precio. Envío rápido y cambios sin vueltas.</p>",
+        "button_label": "Conocé nuestra historia ⚡",
+        "button_link": "shopify://pages/about",
+        "color_scheme": "scheme-1",
+        "padding_top": 48,
+        "padding_bottom": 48
+      }
+    },
+    "why_choose_us": {
+      "type": "iq-why",
+      "blocks": {
+        "f1": {
+          "type": "feature",
+          "settings": {
+            "emoji": "🚚",
+            "title": "Envío rápido",
+            "text": "Entrega veloz para que estrenes tu gadget cuanto antes."
+          }
+        },
+        "f2": {
+          "type": "feature",
+          "settings": {
+            "emoji": "⚡",
+            "title": "Calidad probada",
+            "text": "Componentes testeados que rinden y duran."
+          }
+        },
+        "f3": {
+          "type": "feature",
+          "settings": {
+            "emoji": "💸",
+            "title": "Precio justo",
+            "text": "Tecnología premium sin vaciarte el bolsillo."
+          }
+        },
+        "f4": {
+          "type": "feature",
+          "settings": {
+            "emoji": "🔧",
+            "title": "Fácil de usar",
+            "text": "Productos plug-and-play con guías simples para arrancar ya."
+          }
+        }
+      },
+      "block_order": [
+        "f1",
+        "f2",
+        "f3",
+        "f4"
+      ],
+      "settings": {
+        "title": "¿Por qué elegirnos?",
+        "subtitle": "Nos enfocamos en productos que funcionan de verdad, tecnología segura y una comunidad que ama los gadgets. Envío rápido y atención copada.",
+        "image_asset": "iq-why.jpg",
+        "gradient_color": "#EEF1F5",
+        "padding_top": 56,
+        "padding_bottom": 56
+      }
+    },
+    "collection": {
+      "type": "featured-collection",
+      "settings": {
+        "title": "Descubrí nuestra colección",
+        "heading_size": "h1",
+        "description": "",
+        "show_description": false,
+        "description_style": "body",
+        "collection": "all",
+        "products_to_show": 10,
+        "columns_desktop": 4,
+        "color_scheme": "scheme-1",
+        "full_width": false,
+        "show_view_all": true,
+        "view_all_style": "solid",
+        "enable_desktop_slider": false,
+        "swipe_on_mobile": true,
+        "image_ratio": "square",
+        "image_shape": "default",
+        "show_secondary_image": false,
+        "show_vendor": false,
+        "show_rating": false,
+        "quick_add": "none",
+        "columns_mobile": "2",
+        "padding_top": 44,
+        "padding_bottom": 44
+      }
+    },
+    "reviews": {
+      "type": "iq-reviews",
+      "blocks": {
+        "r1": {
+          "type": "review",
+          "settings": {
+            "author": "Maya K.",
+            "text": "Compré los auriculares inalámbricos y son una locura ⚡ batería que dura un montón, llegaron rapidísimo y la calidad es increíble. 10/10, vuelvo a comprar."
+          }
+        },
+        "r2": {
+          "type": "review",
+          "settings": {
+            "author": "Liam R.",
+            "text": "¡Una máquina!"
+          }
+        },
+        "r3": {
+          "type": "review",
+          "settings": {
+            "author": "Sofía P.",
+            "text": "Tenía miedo de comprar el smartwatch online, pero el de TechNova vino impecable y anda perfecto con mi celu. El soporte me ayudó a configurarlo. Recontenta con la calidad y el precio."
+          }
+        },
+        "r4": {
+          "type": "review",
+          "settings": {
+            "author": "Noah H.",
+            "text": "Envío rápido y todo top."
+          }
+        },
+        "r5": {
+          "type": "review",
+          "settings": {
+            "author": "Ava M.",
+            "text": "El hub USB-C es de lo mejor que probé. Conecto todo y funciona al toque. Además las guías de configuración que mandan son buenísimas."
+          }
+        },
+        "r6": {
+          "type": "review",
+          "settings": {
+            "author": "Ethan S.",
+            "text": "Uso el soporte para el celu todos los días. Firme y práctico, cambió mi setup del escritorio. Es como tener un estudio profesional en casa."
+          }
+        },
+        "r7": {
+          "type": "review",
+          "settings": {
+            "author": "Oliver T.",
+            "text": "Buenísima relación precio-calidad. Compré un combo de accesorios de regalo y a mi hermano le fascinó. El soporte respondió al toque. Vuelvo a comprar."
+          }
+        },
+        "r8": {
+          "type": "review",
+          "settings": {
+            "author": "Isabella G.",
+            "text": "Muy bueno 🤩"
+          }
+        },
+        "r9": {
+          "type": "review",
+          "settings": {
+            "author": "Harper J.",
+            "text": "¡La mejor tienda de tecnología!"
+          }
+        },
+        "r10": {
+          "type": "review",
+          "settings": {
+            "author": "Lucas B.",
+            "text": "Súper feliz con mi pedido: la calidad va con el precio y la atención fue de diez cuando necesité un cambio. Recomendadísimo por lo confiables."
+          }
+        },
+        "r11": {
+          "type": "review",
+          "settings": {
+            "author": "Mia L.",
+            "text": "Perfecto para armar el setup. El teclado mecánico es una delicia y el RGB queda increíble. Ya armé mi rincón gamer. El packaging venía impecable."
+          }
+        },
+        "r12": {
+          "type": "review",
+          "settings": {
+            "author": "Emma S.",
+            "text": "El soporte me salvó cuando mi pedido se demoró. Me avisaron y me hicieron un pequeño reembolso. El producto funciona genial ahora que llegó. Respeto total."
+          }
+        },
+        "r13": {
+          "type": "review",
+          "settings": {
+            "author": "James P.",
+            "text": "Este power bank vale cada peso. Carga rápido y aguanta varios días. Compacto y confiable. Vuelvo a comprar seguro."
+          }
+        },
+        "r14": {
+          "type": "review",
+          "settings": {
+            "author": "Zoe N.",
+            "text": "Rápido, accesible y confiable :)"
+          }
+        }
+      },
+      "block_order": [
+        "r1",
+        "r2",
+        "r3",
+        "r4",
+        "r5",
+        "r6",
+        "r7",
+        "r8",
+        "r9",
+        "r10",
+        "r11",
+        "r12",
+        "r13",
+        "r14"
+      ],
+      "settings": {
+        "title": "¡La gente ama sus gadgets con nosotros!",
+        "subtitle": "Calificado 4.9/5 por más de 5.000 clientes felices",
+        "color_scheme": "scheme-1",
+        "padding_top": 48,
+        "padding_bottom": 48
+      }
+    },
+    "guarantee": {
+      "type": "rich-text",
+      "blocks": {
+        "heading": {
+          "type": "heading",
+          "settings": {
+            "heading": "⚡ Garantía de devolución de 30 días — Sin riesgo",
+            "heading_size": "h1"
+          }
+        },
+        "text": {
+          "type": "text",
+          "settings": {
+            "text": "<p>Estamos seguros de que vas a amar los productos de TechNova. Probá cualquier artículo por 30 días y, si no quedás conforme, te devolvemos el dinero. Cambios fáciles, sin preguntas, porque tu confianza es lo que importa.</p>",
+            "text_style": "body"
+          }
+        },
+        "button": {
+          "type": "button",
+          "settings": {
+            "button_label": "Comprar ahora 🛒",
+            "button_link": "shopify://collections/all",
+            "button_style_secondary": false
+          }
+        }
+      },
+      "block_order": [
+        "heading",
+        "text",
+        "button"
+      ],
+      "settings": {
+        "desktop_content_position": "center",
+        "content_alignment": "center",
+        "color_scheme": "scheme-1",
+        "full_width": true,
+        "padding_top": 52,
+        "padding_bottom": 60
+      }
+    },
+    "marquee": {
+      "type": "iq-marquee",
+      "settings": {
+        "color_scheme": "scheme-5",
+        "textos": "Miles de clientes felices | Calidad garantizada | Envío a todo el país | Compra 100% segura | Cambios y devoluciones fáciles",
+        "tamano": 14,
+        "padding": 16,
+        "velocidad": 40
+      }
+    }
+  },
+  "order": [
+    "hero",
+    "marquee",
+    "welcome",
+    "why_choose_us",
+    "collection",
+    "reviews",
+    "guarantee"
+  ]
+}

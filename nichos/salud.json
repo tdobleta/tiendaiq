@@ -1,0 +1,87 @@
+{
+  "marca": "VitalCare",
+  "theme_name": "TiendaIQ Salud",
+  "estilo": {
+    "type_header_font": "work_sans_n7",
+    "type_body_font": "poppins_n4",
+    "buttons_radius": 30,
+    "media_radius": 16,
+    "card_corner_radius": 14,
+    "inputs_radius": 10,
+    "badge_corner_radius": 30,
+    "gradient_color": "#E8F5EE"
+  },
+  "color_schemes": {
+    "scheme-1": { "settings": { "background": "#FFFFFF", "background_gradient": "", "text": "#1E3A2E", "button": "#2E9E6B", "button_label": "#FFFFFF", "secondary_button_label": "#2E9E6B", "shadow": "#1E3A2E" } },
+    "scheme-2": { "settings": { "background": "#E8F5EE", "background_gradient": "", "text": "#1E3A2E", "button": "#2E9E6B", "button_label": "#FFFFFF", "secondary_button_label": "#2E9E6B", "shadow": "#1E3A2E" } },
+    "scheme-3": { "settings": { "background": "#D3EEDF", "background_gradient": "", "text": "#1E3A2E", "button": "#2E9E6B", "button_label": "#FFFFFF", "secondary_button_label": "#1E3A2E", "shadow": "#1E3A2E" } },
+    "scheme-4": { "settings": { "background": "#1E3A2E", "background_gradient": "", "text": "#FFFFFF", "button": "#2E9E6B", "button_label": "#FFFFFF", "secondary_button_label": "#FFFFFF", "shadow": "#121212" } },
+    "scheme-5": { "settings": { "background": "#2E9E6B", "background_gradient": "", "text": "#FFFFFF", "button": "#FFFFFF", "button_label": "#2E9E6B", "secondary_button_label": "#FFFFFF", "shadow": "#121212" } }
+  },
+  "announcement": "🌿 HASTA 50% OFF — ENVÍO GRATIS POR TIEMPO LIMITADO 🌿",
+  "hero": {
+    "heading": "Cuidá tu bienestar: productos naturales y prácticos para sentirte mejor cada día",
+    "button_label": "Ver colección 🌿",
+    "overlay_opacity": 40
+  },
+  "welcome": {
+    "caption": "Descubrí nuestra misión y nuestros objetivos",
+    "heading": "Bienvenido a VitalCare — todo para cuidar tu cuerpo y tu mente, de forma simple y natural",
+    "text": "Hacemos que cuidarte sea simple y placentero. En VitalCare vas a encontrar suplementos, accesorios de bienestar y cuidado personal de calidad, a buen precio. Envío rápido y cambios sin vueltas.",
+    "button_label": "Conocé nuestra historia 🌿"
+  },
+  "why": {
+    "title": "¿Por qué elegirnos?",
+    "subtitle": "Nos enfocamos en tu bienestar real, productos seguros y una comunidad que se cuida. Envío rápido y atención copada.",
+    "features": [
+      { "emoji": "🚚", "title": "Envío rápido", "text": "Entrega veloz para que empieces a cuidarte cuanto antes." },
+      { "emoji": "🌿", "title": "Natural y seguro", "text": "Ingredientes y materiales testeados, pensados para tu bienestar." },
+      { "emoji": "💸", "title": "Precio justo", "text": "Bienestar premium sin vaciarte el bolsillo." },
+      { "emoji": "💚", "title": "Con cuidado", "text": "Elegimos cada producto pensando en cómo te hace sentir." }
+    ]
+  },
+  "reviews": {
+    "title": "¡La gente se cuida feliz con nosotros!",
+    "subtitle": "Calificado 4.9/5 por más de 5.000 clientes felices",
+    "items": [
+      { "author": "Maya K.", "text": "Compré el kit de aromaterapia y me relaja un montón 🌿 llegó rapidísimo y la calidad es increíble. 10/10, vuelvo a comprar." },
+      { "author": "Liam R.", "text": "¡Me cambió la rutina!" },
+      { "author": "Sofía P.", "text": "Tenía miedo de comprar los suplementos online, pero los de VitalCare vinieron impecables y noté la diferencia en dos semanas. El soporte me ayudó a elegir. Recontenta con la calidad y el precio." },
+      { "author": "Noah H.", "text": "Envío rápido y todo natural." },
+      { "author": "Ava M.", "text": "El mat de yoga es de lo mejor que probé. Antideslizante y súper cómodo. Además las rutinas que mandan son buenísimas para arrancar el día." },
+      { "author": "Ethan S.", "text": "Uso el rodillo de masaje todos los días. Recupero mucho mejor, menos tensión en la espalda. Es como tener un spa en casa." },
+      { "author": "Oliver T.", "text": "Buenísima relación precio-calidad. Compré un combo de bienestar de regalo y a mi mamá le fascinó. El soporte respondió al toque. Vuelvo a comprar." },
+      { "author": "Isabella G.", "text": "Muy bueno 🤩" },
+      { "author": "Harper J.", "text": "¡La mejor tienda de bienestar!" },
+      { "author": "Lucas B.", "text": "Súper feliz con mi pedido: la calidad va con el precio y la atención fue de diez cuando necesité un cambio. Recomendadísimo por lo confiables." },
+      { "author": "Mia L.", "text": "Perfecto para empezar a meditar. El cojín es cómodo y los aceites huelen divino. Ya armé mi rincón de calma. El packaging venía impecable." },
+      { "author": "Emma S.", "text": "El soporte me salvó cuando mi pedido se demoró. Me avisaron y me hicieron un pequeño reembolso. El producto funciona genial ahora que llegó. Respeto total." },
+      { "author": "James P.", "text": "Esta botella térmica vale cada peso. Mantiene la temperatura un montón y me hace tomar más agua. Práctica y linda. Vuelvo a comprar seguro." },
+      { "author": "Zoe N.", "text": "Natural, accesible y rápido :)" }
+    ]
+  },
+  "guarantee": {
+    "heading": "🌿 Garantía de devolución de 30 días — Sin riesgo",
+    "text": "Estamos seguros de que vas a amar los productos de VitalCare. Probá cualquier artículo por 30 días y, si no quedás conforme, te devolvemos el dinero. Cambios fáciles, sin preguntas, porque tu confianza es lo que importa.",
+    "button_label": "Comprar ahora 🛒"
+  },
+  "about": {
+    "blocks": [
+      { "heading": "Bienvenido a la familia VitalCare", "text": "VitalCare es una marca pensada para gente que quiere cuidarse sin complicarse. Creamos y elegimos productos fáciles de usar que te ayudan a sentirte mejor cada día. Sumate a la comunidad por tips, rutinas y recomendaciones honestas.", "button_label": "Comprar ahora 👉" },
+      { "heading": "Nuestro secreto", "text": "Probamos todos los productos para asegurar seguridad y bienestar real, y los enviamos a precios inteligentes para que más gente se cuide sin gastar de más. Sumate ahora: lanzamos novedades seguido y se agotan rápido, así que llevate tus favoritos." },
+      { "heading": "Nuestra misión", "text": "Queremos que cuidarte sea simple, seguro y placentero. VitalCare te acompaña con productos confiables, guías claras y atención copada." }
+    ]
+  },
+  "footer": {
+    "about_heading": "Sobre VitalCare",
+    "about_text": "VitalCare trae productos de bienestar con estilo y fáciles para el día a día. Combinamos calidad y cuidado para crear cosas que te hacen sentir mejor. Envío rápido, atención copada y precios accesibles para que cuidarte sea simple."
+  },
+  "imagenes": {
+    "hero": 6193554,
+    "welcome": 6958258,
+    "why": 6697354,
+    "about1": 7900272,
+    "about2": 6193713,
+    "about3": 13675388
+  }
+}

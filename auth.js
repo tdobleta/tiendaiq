@@ -26,13 +26,11 @@ const { guardarEstadoDB, consumirEstadoDB } = require("./db");
 // que Shopify hace cumplir en el checkout.
 // write_online_store_navigation: el menú principal (Inicio/Comprar/Nosotros/
 // Contacto) es contenido de tienda, compartido por todos los themes.
-// Sin read_themes/write_themes: la app NO toca el tema (todo es theme app
-// extension). La verificación de que la landing quedó viva se hace fetcheando
-// el storefront público, no leyendo el tema por API.
-// read_themes/write_themes: las SECCIONES nativas (estilo Section Store) se
-// escriben como archivos Liquid en el tema (secciones.js → themeFilesUpsert).
-// ⚠ Requiere la exención de escritura de temas de Shopify para publicar.
-const ALCANCES = "read_products,write_products,write_orders,read_files,write_files,read_content,write_content,write_discounts,write_online_store_navigation,read_themes,write_themes";
+// Sin read_themes/write_themes: la app NO toca el tema (compliance App Store —
+// escribir archivos al tema no se exenta para este caso de uso). El video
+// slider y demás secciones viven en la landing (metafield + app block), no en
+// el tema. La verificación de "landing viva" se hace fetcheando el storefront.
+const ALCANCES = "read_products,write_products,write_orders,read_files,write_files,read_content,write_content,write_discounts,write_online_store_navigation";
 
 // Comparación en tiempo constante: comparar firmas con === filtra el secreto
 // de a un carácter por vez.

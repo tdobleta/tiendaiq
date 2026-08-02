@@ -1,0 +1,294 @@
+{
+  "sections": {
+    "hero": {
+      "type": "iq-hero",
+      "settings": {
+        "image_asset": "iq-hero.jpg",
+        "height": 620,
+        "overlay_opacity": 50,
+        "heading": "Brillá con confianza: belleza limpia y a la moda que se adapta a tu vida y a tu bolsillo",
+        "button_label": "Ver colección 💖",
+        "button_link": "shopify://collections/all"
+      }
+    },
+    "marquee": {
+      "type": "iq-marquee",
+      "settings": {
+        "color_scheme": "scheme-5",
+        "textos": "Miles de clientes felices | Calidad garantizada | Envío a todo el país | Compra 100% segura | Cambios y devoluciones fáciles",
+        "tamano": 14,
+        "padding": 16,
+        "velocidad": 40
+      }
+    },
+    "welcome": {
+      "type": "iq-image-text",
+      "settings": {
+        "image_asset": "iq-welcome.jpg",
+        "image_position": "left",
+        "caption": "Descubrí nuestra misión y nuestros objetivos",
+        "heading": "Bienvenida a VelourVanity — tu lugar para una belleza fácil, rica y que brilla",
+        "text": "<p>Hacemos que la belleza sea simple y divertida. En VelourVanity vas a encontrar maquillaje, skincare y herramientas suaves, con estilo y a buen precio. Envío rápido y cambios sin vueltas.</p>",
+        "button_label": "Conocé nuestra historia 💄",
+        "button_link": "shopify://pages/about",
+        "color_scheme": "scheme-1",
+        "padding_top": 48,
+        "padding_bottom": 48
+      }
+    },
+    "why_choose_us": {
+      "type": "iq-why",
+      "blocks": {
+        "f1": {
+          "type": "feature",
+          "settings": {
+            "emoji": "🚚",
+            "title": "Envío rápido",
+            "text": "Entrega veloz para que estrenes tu nuevo look y lo disfrutes antes."
+          }
+        },
+        "f2": {
+          "type": "feature",
+          "settings": {
+            "emoji": "✨",
+            "title": "Fórmulas de calidad",
+            "text": "Ingredientes limpios y testeados que funcionan en muchos tipos de piel y quedan increíbles."
+          }
+        },
+        "f3": {
+          "type": "feature",
+          "settings": {
+            "emoji": "💸",
+            "title": "Lujo accesible",
+            "text": "Productos a la moda que se sienten premium sin vaciarte el bolsillo."
+          }
+        },
+        "f4": {
+          "type": "feature",
+          "settings": {
+            "emoji": "🛠️",
+            "title": "Fácil de usar",
+            "text": "Guías y herramientas simples para lograr resultados de salón en tu casa."
+          }
+        }
+      },
+      "block_order": [
+        "f1",
+        "f2",
+        "f3",
+        "f4"
+      ],
+      "settings": {
+        "title": "¿Por qué elegirnos?",
+        "subtitle": "Nos enfocamos en resultados reales, ingredientes seguros y looks que te dan confianza. Envío rápido y atención amable.",
+        "image_asset": "iq-why.jpg",
+        "gradient_color": "#FCE1EC",
+        "padding_top": 56,
+        "padding_bottom": 56
+      }
+    },
+    "collection": {
+      "type": "featured-collection",
+      "settings": {
+        "title": "Descubrí nuestra colección",
+        "heading_size": "h1",
+        "description": "",
+        "show_description": false,
+        "description_style": "body",
+        "collection": "all",
+        "products_to_show": 10,
+        "columns_desktop": 4,
+        "color_scheme": "scheme-1",
+        "full_width": false,
+        "show_view_all": true,
+        "view_all_style": "solid",
+        "enable_desktop_slider": false,
+        "swipe_on_mobile": true,
+        "image_ratio": "square",
+        "image_shape": "default",
+        "show_secondary_image": false,
+        "show_vendor": false,
+        "show_rating": false,
+        "quick_add": "none",
+        "columns_mobile": "2",
+        "padding_top": 44,
+        "padding_bottom": 44
+      }
+    },
+    "reviews": {
+      "type": "iq-reviews",
+      "blocks": {
+        "r1": {
+          "type": "review",
+          "settings": {
+            "author": "Maya K.",
+            "text": "Amo este iluminador 🔥 me dura todo el día y me llueven los halagos. El packaging re lindo y el envío llegó rapidísimo. 10/10, vuelvo a comprar."
+          }
+        },
+        "r2": {
+          "type": "review",
+          "settings": {
+            "author": "Liam R.",
+            "text": "¡Me encanta!"
+          }
+        },
+        "r3": {
+          "type": "review",
+          "settings": {
+            "author": "Sofía P.",
+            "text": "Tenía miedo de probar skincare nuevo, pero el limpiador de VelourVanity me dejó la piel impecable en dos semanas. El soporte me ayudó a elegir la crema justa. Recontenta con el resultado y el precio."
+          }
+        },
+        "r4": {
+          "type": "review",
+          "settings": {
+            "author": "Noah H.",
+            "text": "Envío rápido, productos hermosos."
+          }
+        },
+        "r5": {
+          "type": "review",
+          "settings": {
+            "author": "Ava M.",
+            "text": "Esta máscara de pestañas es de lo mejor que probé. No apelmaza y las pestañas quedan larguísimas. Además los videos tutoriales son buenísimos, me ahorraron un montón de tiempo."
+          }
+        },
+        "r6": {
+          "type": "review",
+          "settings": {
+            "author": "Ethan S.",
+            "text": "Uso el tónico de VelourVanity todos los días. La piel me quedó menos grasosa y más equilibrada. Aroma suave, sin irritación. Es como un mini spa en casa."
+          }
+        },
+        "r7": {
+          "type": "review",
+          "settings": {
+            "author": "Oliver T.",
+            "text": "Buenísima relación precio-calidad. Compré un set de regalo y a mi hermana le fascinó. El soporte respondió al toque cuando tuve una duda de talle. Vuelvo a comprar."
+          }
+        },
+        "r8": {
+          "type": "review",
+          "settings": {
+            "author": "Isabella G.",
+            "text": "Muy bueno 🤩"
+          }
+        },
+        "r9": {
+          "type": "review",
+          "settings": {
+            "author": "Harper J.",
+            "text": "¡La mejor tienda!"
+          }
+        },
+        "r10": {
+          "type": "review",
+          "settings": {
+            "author": "Lucas B.",
+            "text": "Súper feliz con mi pedido: la calidad va con el precio y la atención fue de diez cuando necesité un cambio. Recomendadísimo por lo confiables y modernos."
+          }
+        },
+        "r11": {
+          "type": "review",
+          "settings": {
+            "author": "Mia L.",
+            "text": "Perfecto para principiantes. El kit de cejas es re simple y el pincel muy suave. Ya me hago las cejas en 5 minutos. El packaging también es divino."
+          }
+        },
+        "r12": {
+          "type": "review",
+          "settings": {
+            "author": "Emma S.",
+            "text": "El soporte me salvó cuando mi pedido se demoró. Me avisaron y me hicieron un pequeño reembolso. El producto funciona genial ahora que llegó. Respeto total."
+          }
+        },
+        "r13": {
+          "type": "review",
+          "settings": {
+            "author": "James P.",
+            "text": "Este labial dura un montón. Aguanta el café y las comidas. El color es perfecto y para nada pegajoso. Vuelvo a comprar seguro."
+          }
+        },
+        "r14": {
+          "type": "review",
+          "settings": {
+            "author": "Zoe N.",
+            "text": "Lindo, accesible y rápido :)"
+          }
+        }
+      },
+      "block_order": [
+        "r1",
+        "r2",
+        "r3",
+        "r4",
+        "r5",
+        "r6",
+        "r7",
+        "r8",
+        "r9",
+        "r10",
+        "r11",
+        "r12",
+        "r13",
+        "r14"
+      ],
+      "settings": {
+        "title": "¡Nuestros productos enamoran!",
+        "subtitle": "Calificado 4.9/5 por más de 5.000 clientes felices",
+        "color_scheme": "scheme-1",
+        "padding_top": 48,
+        "padding_bottom": 48
+      }
+    },
+    "guarantee": {
+      "type": "rich-text",
+      "blocks": {
+        "heading": {
+          "type": "heading",
+          "settings": {
+            "heading": "💗 Garantía de devolución de 30 días — Sin riesgo",
+            "heading_size": "h1"
+          }
+        },
+        "text": {
+          "type": "text",
+          "settings": {
+            "text": "<p>Estamos seguros de que vas a amar los productos de VelourVanity. Probá cualquier artículo por 30 días y, si no quedás conforme, te devolvemos el dinero. Cambios fáciles, sin preguntas, porque tu confianza es lo que importa.</p>",
+            "text_style": "body"
+          }
+        },
+        "button": {
+          "type": "button",
+          "settings": {
+            "button_label": "Comprar ahora 🛍️",
+            "button_link": "shopify://collections/all",
+            "button_style_secondary": false
+          }
+        }
+      },
+      "block_order": [
+        "heading",
+        "text",
+        "button"
+      ],
+      "settings": {
+        "desktop_content_position": "center",
+        "content_alignment": "center",
+        "color_scheme": "scheme-1",
+        "full_width": true,
+        "padding_top": 52,
+        "padding_bottom": 60
+      }
+    }
+  },
+  "order": [
+    "hero",
+    "marquee",
+    "welcome",
+    "why_choose_us",
+    "collection",
+    "reviews",
+    "guarantee"
+  ]
+}

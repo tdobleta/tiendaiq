@@ -1,0 +1,78 @@
+{
+  "sections": {
+    "title": {
+      "type": "rich-text",
+      "blocks": {
+        "heading": {
+          "type": "heading",
+          "settings": {
+            "heading": "Sobre nosotros",
+            "heading_size": "h0"
+          }
+        }
+      },
+      "block_order": [
+        "heading"
+      ],
+      "settings": {
+        "desktop_content_position": "center",
+        "content_alignment": "center",
+        "color_scheme": "scheme-1",
+        "full_width": true,
+        "padding_top": 52,
+        "padding_bottom": 16
+      }
+    },
+    "b1": {
+      "type": "iq-image-text",
+      "settings": {
+        "image_asset": "iq-about-1.jpg",
+        "image_position": "left",
+        "caption": "",
+        "heading": "Bienvenido a la familia TechNova",
+        "text": "<p>TechNova es una marca pensada para gente que quiere tecnología útil sin pagar de más. Creamos y elegimos gadgets fáciles de usar que hacen tu día mejor. Sumate a la comunidad por reviews, tips y recomendaciones honestas.</p>",
+        "button_label": "Comprar ahora 👉",
+        "button_link": "shopify://collections/all",
+        "color_scheme": "scheme-1",
+        "padding_top": 40,
+        "padding_bottom": 40
+      }
+    },
+    "b2": {
+      "type": "iq-image-text",
+      "settings": {
+        "image_asset": "iq-about-2.jpg",
+        "image_position": "right",
+        "caption": "",
+        "heading": "Nuestro secreto",
+        "text": "<p>Probamos todos los productos para asegurar rendimiento y calidad real, y los enviamos a precios inteligentes para que más gente acceda a la mejor tecnología sin gastar de más. Sumate ahora: lanzamos novedades seguido y se agotan rápido, así que llevate tus favoritos.</p>",
+        "button_label": "",
+        "button_link": "",
+        "color_scheme": "scheme-2",
+        "padding_top": 56,
+        "padding_bottom": 56
+      }
+    },
+    "b3": {
+      "type": "iq-image-text",
+      "settings": {
+        "image_asset": "iq-about-3.jpg",
+        "image_position": "left",
+        "caption": "",
+        "heading": "Nuestra misión",
+        "text": "<p>Queremos que la tecnología sea simple, útil y accesible. TechNova te ayuda con productos confiables, guías claras y atención copada.</p>",
+        "button_label": "",
+        "button_link": "",
+        "color_scheme": "scheme-1",
+        "padding_top": 40,
+        "padding_bottom": 52
+      }
+    }
+  },
+  "order": [
+    "title",
+    "b1",
+    "b2",
+    "b3"
+  ]
+}

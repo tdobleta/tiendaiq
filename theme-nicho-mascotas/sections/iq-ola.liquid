@@ -1,0 +1,56 @@
+{%- comment -%} TiendaIQ — Divisor de olas animadas en LOOP INFINITO real (dos tiles idénticos + translateX -50%). El color sale del color scheme (matchea el footer); fondo transparente para fundirse con lo de arriba. {%- endcomment -%}
+<style>
+  #shopify-section-{{ section.id }} .iq-ola {
+    position: relative;
+    height: {{ section.settings.alto }}px;
+    overflow: hidden;
+    background: transparent;
+    {% if section.settings.flip %}transform: scaleY(-1);{% endif %}
+  }
+  #shopify-section-{{ section.id }} .iq-ola__capa {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    width: 200%;
+  }
+  #shopify-section-{{ section.id }} .iq-ola__capa svg {
+    flex: 0 0 50%;
+    width: 50%;
+    height: 100%;
+    display: block;
+  }
+  #shopify-section-{{ section.id }} .iq-ola__capa path { fill: rgb(var(--color-background)); }
+  #shopify-section-{{ section.id }} .iq-ola__capa--frente {
+    animation: iq-ola-run {{ section.settings.velocidad }}s linear infinite;
+  }
+  #shopify-section-{{ section.id }} .iq-ola__capa--fondo {
+    animation: iq-ola-run {{ section.settings.velocidad | times: 1.8 }}s linear infinite;
+    opacity: .5;
+  }
+  @keyframes iq-ola-run {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    #shopify-section-{{ section.id }} .iq-ola__capa { animation: none; }
+  }
+</style>
+{%- capture ola_fondo -%}<svg viewBox="0 0 1440 120" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false"><path d="M0,60 C240,110 480,10 720,60 C960,110 1200,10 1440,60 L1440,120 L0,120 Z"></path></svg>{%- endcapture -%}
+{%- capture ola_frente -%}<svg viewBox="0 0 1440 120" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false"><path d="M0,80 C240,40 480,120 720,80 C960,40 1200,120 1440,80 L1440,120 L0,120 Z"></path></svg>{%- endcapture -%}
+<div class="iq-ola color-{{ section.settings.color_scheme }}">
+  <div class="iq-ola__capa iq-ola__capa--fondo">{{ ola_fondo }}{{ ola_fondo }}</div>
+  <div class="iq-ola__capa iq-ola__capa--frente">{{ ola_frente }}{{ ola_frente }}</div>
+</div>
+{% schema %}
+{
+  "name": "IQ Olas",
+  "tag": "section",
+  "settings": [
+    { "type": "color_scheme", "id": "color_scheme", "label": "Color de la ola (esquema)", "default": "scheme-2" },
+    { "type": "range", "id": "alto", "min": 40, "max": 200, "step": 10, "unit": "px", "label": "Alto", "default": 90 },
+    { "type": "range", "id": "velocidad", "min": 6, "max": 40, "step": 2, "unit": "s", "label": "Velocidad (mayor = más lento)", "default": 18 },
+    { "type": "checkbox", "id": "flip", "label": "Invertir (olas hacia arriba)", "default": false }
+  ],
+  "presets": [{ "name": "IQ Olas" }]
+}
+{% endschema %}
