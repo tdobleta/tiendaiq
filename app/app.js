@@ -3972,28 +3972,27 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   function bloqueMetricas() {
     const m = estado.bundles.metricas;
     const rango = estado.bundles.rango || 30;
-    const selector = `<div class="bdl-rango" role="group" aria-label="Rango de tiempo">
-      ${[7, 30, 90].map((d) => `<button class="bdl-rango__b ${rango === d ? "is-sel" : ""}" data-rango="${d}">${d} días</button>`).join("")}
-    </div>`;
+    const selector = `<s-stack direction="inline" gap="small-500">
+      ${[7, 30, 90].map((d) => `<s-button data-rango="${d}" ${rango === d ? `variant="primary"` : ""}>${d} días</s-button>`).join("")}
+    </s-stack>`;
+    const tile = (t, v) => `<s-box padding="large-100" borderRadius="base" background="subdued">
+      <s-stack direction="block" gap="small-500"><s-text color="subdued">${esc(t)}</s-text><s-heading>${v}</s-heading></s-stack>
+    </s-box>`;
+    const grilla = (cells) => `<s-grid gridTemplateColumns="repeat(auto-fit, minmax(180px, 1fr))" gap="base">${cells}</s-grid>`;
+    // Mientras cargan las métricas reales, "—" (un "0" fijo leería a dato falso).
     if (!m) {
-      // Skeleton mientras cargan (un "0" o "—" fijo lee a dato falso).
-      const sk = (t) => `<div class="bdl-metrica"><div class="bdl-metrica__t">${esc(t)}</div><div class="bdl-metrica__v"><span class="bdl-sk"></span></div></div>`;
-      return selector + `<div class="bdl-metricas">
-        ${sk("Pedidos con bundle")}${sk("Ingresos")}${sk("Ticket promedio")}${sk("Descuento aplicado")}
-      </div>`;
+      return selector + grilla(
+        tile("Pedidos con bundle", "—") + tile("Ingresos", "—") + tile("Ticket promedio", "—") + tile("Descuento aplicado", "—")
+      );
     }
     const plata = (n) =>
       "$ " + Number(n).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    return selector + `
-      <div class="bdl-metricas">
-        ${tarjetaMetrica("Pedidos con bundle", String(m.pedidos), `Pedidos de los últimos ${m.dias} días que llegaron con un descuento de TiendaIQ aplicado.`)}
-        ${tarjetaMetrica("Ingresos", plata(m.ingresos), "Suma del total de esos pedidos.")}
-        ${tarjetaMetrica("Ticket promedio", plata(m.ticket), "Ingresos divididos por la cantidad de pedidos con bundle.")}
-        ${tarjetaMetrica("Descuento aplicado", plata(m.descuento), "Total de descuentos otorgados en esos pedidos.")}
-      </div>
-      <div class="panel__sub" style="margin:-8px 0 18px">
-        Últimos ${m.dias} días · moneda ${esc(m.moneda)}${m.parcial ? " · muestra parcial (se recorrieron los 500 pedidos más recientes)" : ""}
-      </div>`;
+    return selector + grilla(
+      tile("Pedidos con bundle", String(m.pedidos)) +
+      tile("Ingresos", plata(m.ingresos)) +
+      tile("Ticket promedio", plata(m.ticket)) +
+      tile("Descuento aplicado", plata(m.descuento))
+    ) + `<s-text color="subdued">Últimos ${m.dias} días · moneda ${esc(m.moneda)}${m.parcial ? " · muestra parcial (500 pedidos más recientes)" : ""}</s-text>`;
   }
 
   // ---------- galería "Elegí el tema" (nueva, estilo Pumper) ----------
@@ -4174,7 +4173,10 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     // Store). El merchant activa el "app embed" una sola vez en el editor de temas;
     // la config viaja en vivo. Por eso siempre mostramos el paso de activación.
     const widgetEstado = lista.length
-      ? `<div class="bdl-wstatus"><span class="bdl-wdot" aria-hidden="true"></span><span class="bdl-wtxt">Para que los bundles aparezcan en tu tienda, activá el widget en tu tema <strong>una sola vez</strong>.</span><button class="bdl-wlink" id="bdl-instalar">Activá el widget</button></div>`
+      ? `<s-banner tone="info">
+           <s-paragraph>Para que los bundles aparezcan en tu tienda, activá el widget en tu tema una sola vez.</s-paragraph>
+           <s-button id="bdl-instalar">Activá el widget</s-button>
+         </s-banner>`
       : "";
 
     const pasoOnb = (hecho, texto, accion) =>
@@ -4199,15 +4201,12 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       </div>`;
 
     vista.innerHTML = `
-      <div class="inicio-cabecera">
-        <h1 class="titulo-nav"><button class="volver-flecha" id="volver-inicio"></button> Bundles, upsells y regalos</h1>
-        <div class="inicio-cabecera__acciones"><button class="btn btn--marca" id="bdl-nuevo">${ico("mas")} Crear bundle</button></div>
-      </div>
-      ${widgetEstado}
-      ${lista.length ? bloqueMetricas() + tabsHTML + bulkBar + cuerpoTabla : onboarding}
-      <div class="pagina-help">¿Dudas? Revisá la documentación de bundles.</div>`;
+      <s-page heading="Bundles, upsells y regalos">
+        <s-button slot="primary-action" variant="primary" id="bdl-nuevo">Crear bundle</s-button>
+        ${widgetEstado}
+        ${lista.length ? bloqueMetricas() + tabsHTML + bulkBar + cuerpoTabla : onboarding}
+      </s-page>`;
 
-    $("volver-inicio").onclick = () => ir("inicio");
     const crearTipo = (tipo) => {
       estado.bundles.config.lista.push(nuevoBundleLocal(tipo));
       estado.bundles.editIdx = estado.bundles.config.lista.length - 1;
