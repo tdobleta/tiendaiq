@@ -2932,10 +2932,9 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     sucio = true;
     const b = $("guardar");
     if (b) {
-      b.disabled = false;
+      b.removeAttribute("disabled");
       b.textContent = "Guardar cambios";
-      b.classList.add("btn--acento");
-      b.classList.remove("btn--fantasma");
+      b.setAttribute("variant", "primary");
     }
     // Editar una página YA publicada = deja de estar al día con la tienda.
     // El estado se comunica por el pill, no por un banner-sermón.
@@ -2986,7 +2985,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   async function guardarCambios() {
     const b = $("guardar");
     if (b) {
-      b.disabled = true;
+      b.setAttribute("disabled", "");
       b.textContent = "Guardando…";
     }
     try {
@@ -2999,16 +2998,15 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       // ya no hay nada pendiente. El feedback de guardado va por toast, no por
       // un botón que muestra un adjetivo.
       if (b) {
-        b.disabled = true;
+        b.setAttribute("disabled", "");
         b.textContent = "Guardar cambios";
-        b.classList.remove("btn--acento");
-        b.classList.add("btn--fantasma");
+        b.setAttribute("variant", "secondary");
       }
       toast("Cambios guardados");
       return true;
     } catch (e) {
       if (b) {
-        b.disabled = false;
+        b.removeAttribute("disabled");
         b.textContent = "Guardar cambios";
       }
       vista.insertAdjacentHTML("afterbegin", `<div class="error">${ico("x","ico--banner")} No se pudo guardar: ${esc(e.message)}</div>`);
@@ -3642,9 +3640,9 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
             : ""}
         </div>
         <div class="preview-barra__acciones">
-          <button class="btn btn--fantasma" id="guardar" disabled>Guardar cambios</button>
-          <button class="btn btn--fantasma" id="regenerar">Regenerar</button>
-          <button class="btn ${publicada ? "btn--fantasma" : "btn--acento"}" id="publicar">${publicada ? "Volver a publicar" : "Publicar página"}</button>
+          <s-button variant="secondary" id="guardar" disabled>Guardar cambios</s-button>
+          <s-button variant="secondary" id="regenerar">Regenerar</s-button>
+          <s-button variant="${publicada ? "secondary" : "primary"}" id="publicar">${publicada ? "Volver a publicar" : "Publicar página"}</s-button>
         </div>
       </div>
 
@@ -3731,7 +3729,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     if (sucio && !(await guardarCambios())) return;
 
     const b = $("publicar");
-    b.disabled = true;
+    b.setAttribute("disabled", "");
     b.textContent = "Publicando…";
     try {
       estado.pagina = await api(`/paginas/${estado.pagina.id}/publicar`, { method: "POST" });
@@ -3742,7 +3740,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         ? "Publicada. Falta activar la plantilla en tu tema (ver abajo)."
         : "¡Publicada! Ya está en tu tienda.");
     } catch (e) {
-      b.disabled = false;
+      b.removeAttribute("disabled");
       b.textContent = "Publicar página";
       vista.insertAdjacentHTML("afterbegin", `<div class="error">${ico("x","ico--banner")} ${esc(e.message)}</div>`);
     }
