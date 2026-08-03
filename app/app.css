@@ -30,11 +30,14 @@
   --marca-azul: #1e8fd5;
   --gradiente-marca: linear-gradient(135deg, #45c26a 0%, #1e8fd5 100%);
 
-  /* IA (tile índigo del logo). --acento es el alias histórico. */
-  --ia: #4f46e5;
-  --ia-fondo: #eef2ff;
-  --ia-borde: #dfe3f8;
-  --acento: #4f46e5;
+  /* Acento interactivo = azul Polaris (el color de acción nativo del admin de
+     Shopify). Reemplazó al índigo #4f46e5, que leía como "hecho con IA": las
+     apps maduras (Releasit/Polaris) usan este azul para CTA/links/foco, no un
+     violeta de marca en cada botón. --acento es el alias histórico. */
+  --ia: #005bd3;
+  --ia-fondo: #ebf3fe;
+  --ia-borde: #cfe1f9;
+  --acento: #005bd3;
 
   /* estado */
   --ok: #157f3d;
@@ -184,7 +187,7 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
 .btn--fantasma { background: var(--superficie); color: var(--negro); border: 1px solid var(--borde); }
 .btn--fantasma:hover:not(:disabled) { background: var(--fondo); border-color: #d6d6dc; }
 .btn--acento { background: var(--ia); }
-.btn--acento:hover:not(:disabled) { background: #4338ca; }
+.btn--acento:hover:not(:disabled) { background: #004299; }
 .btn--grande { height: 44px; padding: 0 24px; font-size: 14px; }
 .btn--chico { height: 30px; padding: 0 12px; font-size: 12.5px; }
 
@@ -1755,11 +1758,11 @@ summary:focus-visible, label:focus-visible {
 /* métricas compactas: color SOLO en las dos primeras, y apenas */
 .metrica { padding: 14px 16px; }
 .metrica__valor { font-size: 21px; margin-top: 6px; color: var(--negro); }
-.metrica--violeta { background: #f8f7ff; border-color: #e9e6fb; }
+.metrica--violeta { background: var(--ia-fondo); border-color: var(--ia-borde); }
 .metrica--verde   { background: #f2fbf5; border-color: #dcf1e3; }
-.metrica--violeta .metrica__valor { color: #4f46e5; }
+.metrica--violeta .metrica__valor { color: var(--ia); }
 .metrica--verde   .metrica__valor { color: #1a8a48; }
-.metrica--violeta .metrica__icono { color: #4f46e5; }
+.metrica--violeta .metrica__icono { color: var(--ia); }
 .metrica--verde   .metrica__icono { color: #1a8a48; }
 
 /* ============================================================
@@ -1908,7 +1911,7 @@ summary:focus-visible, label:focus-visible {
 }
 .section-card__mini--videos span {
   width: 8px; height: 22px; border-radius: 2px;
-  background: linear-gradient(160deg, #6366f1, #8b5cf6);
+  background: linear-gradient(160deg, #338aff, #005bd3);
 }
 .section-card__mini--videos span:nth-child(2) { height: 28px; opacity: .8; }
 .section-card__mini--imgs span {
@@ -1981,7 +1984,7 @@ summary:focus-visible, label:focus-visible {
   width: 32%; border-radius: 5px; box-shadow: 0 3px 10px rgba(80,40,160,.28);
   background: linear-gradient(150deg, #fda4af, #f43f5e 60%, #be123c);
 }
-.tiq-thumb--videos span { width: 8px; height: 22px; border-radius: 2px; background: linear-gradient(160deg, #6366f1, #8b5cf6); }
+.tiq-thumb--videos span { width: 8px; height: 22px; border-radius: 2px; background: linear-gradient(160deg, #338aff, #005bd3); }
 .tiq-thumb--videos span:nth-child(2) { height: 28px; opacity: .85; }
 .tiq-thumb--imgs { flex-wrap: wrap; width: 40px; }
 .tiq-thumb--imgs span { width: 9px; height: 9px; border-radius: 2px; background: #93c5fd; }

@@ -2677,7 +2677,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       #tiq-edit-bar .tiq-del { color: #dc2626; }
       #tiq-edit-bar .tiq-del:hover { background: #fdeaea; }
       #tiq-edit-bar .ico { width: 15px; height: 15px; flex-shrink: 0; }
-      .tiq-zona-hover { outline: 2px dashed #4f46e5; outline-offset: 5px; border-radius: 4px; }`;
+      .tiq-zona-hover { outline: 2px dashed #005bd3; outline-offset: 5px; border-radius: 4px; }`;
     doc.head.appendChild(st);
 
     const bar = doc.createElement("div");
@@ -2854,7 +2854,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     const linea = doc.createElement("div");
     linea.className = "tiq-drop-line";
     linea.style.cssText =
-      "position:absolute;left:0;right:0;height:3px;background:#4f46e5;z-index:100000;display:none;box-shadow:0 0 0 4px rgba(79,70,229,.15);border-radius:2px;pointer-events:none";
+      "position:absolute;left:0;right:0;height:3px;background:#005bd3;z-index:100000;display:none;box-shadow:0 0 0 4px rgba(0,91,211,.15);border-radius:2px;pointer-events:none";
     doc.body.appendChild(linea);
 
     let ancla = null; // dónde caería
