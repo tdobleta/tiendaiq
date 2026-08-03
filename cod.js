@@ -80,7 +80,7 @@ function configDefault() {
     textos: {
       titulo: "Pago contra reembolso",
       subtitulo: "Ingresá tus datos de envío",
-      cta: "Completá tu compra — {total}",
+      cta: "Completá tu compra",
       subtotal: "Subtotal",
       total: "Total",
       gratis: "Gratis",
@@ -109,7 +109,15 @@ function mezclar(base, extra) {
 
 async function leerConfigCod(tienda) {
   const t = (await leerTienda(tienda)) || {};
-  return mezclar(configDefault(), t.cod || {});
+  const config = mezclar(configDefault(), t.cod || {});
+  // Migración suave del CTA: dejó de incluir el precio y ahora lleva ícono de
+  // carrito (pedido del merchant, para igualar apps como Releasit). Las tiendas
+  // que nunca tocaron el texto tienen guardado el default viejo EXACTO → se
+  // actualiza al nuevo; los textos personalizados no se tocan.
+  if (config.textos?.cta === "Completá tu compra — {total}") {
+    config.textos.cta = "Completá tu compra";
+  }
+  return config;
 }
 
 async function guardarConfigCod(tienda, config) {

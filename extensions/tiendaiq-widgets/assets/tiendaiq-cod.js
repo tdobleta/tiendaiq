@@ -334,7 +334,7 @@
                 <div class="tiq-cod-desc__msg" data-zona="desc-msg"></div>` : ""}
 
               <div class="tiq-cod-error-envio" data-zona="error"></div>
-              <button class="tiq-cod-enviar" type="submit" style="${variablesBoton(c)}" data-zona="cta"></button>
+              <button class="tiq-cod-enviar" type="submit" style="${variablesBoton(c)}"><span class="tiq-cod-enviar__ico">${ICONOS.carrito}</span><span data-zona="cta"></span></button>
             </div>
           </div>
         </form>
@@ -394,7 +394,7 @@
         }
       }
       q('[data-zona="total"]').textContent = plata(t.total, producto.moneda);
-      q('[data-zona="cta"]').textContent = (c.textos?.cta || "Completá tu compra — {total}")
+      q('[data-zona="cta"]').textContent = (c.textos?.cta || "Completá tu compra")
         .replace("{total}", plata(t.total, producto.moneda));
     }
 

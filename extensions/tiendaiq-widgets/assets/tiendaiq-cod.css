@@ -393,21 +393,25 @@
 
 /* CTA */
 .tiq-cod-enviar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
   width: 100%;
   margin-top: 4px;
-  padding: 16px;
+  padding: 15px 18px;
   background: var(--tiq-fondo, #000);
   color: var(--tiq-texto, #fff);
   border: 0;
   border-radius: var(--tiq-radio, 8px);
   font-size: 16px;
-  font-weight: 800;
-  letter-spacing: .03em;
+  font-weight: 700;
   cursor: pointer;
   font-family: inherit;
-  text-transform: uppercase;
 }
 .tiq-cod-enviar:hover { opacity: .92; }
+.tiq-cod-enviar__ico { display: inline-flex; flex: 0 0 auto; }
+.tiq-cod-enviar__ico svg { width: 20px; height: 20px; }
 .tiq-cod-enviar[disabled] { opacity: .6; cursor: wait; }
 .tiq-cod-error-envio {
   display: none;
