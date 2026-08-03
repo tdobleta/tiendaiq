@@ -1062,16 +1062,17 @@
     </section>`;
   }
 
-  function renderPremium(data) {
+  function renderPremium(data, opts = {}) {
     const f = data.facetas;
     const g = data.global;
-    const partes = [
-      hero(f, data.fuente, g),
+    const partes = [];
+    if (!opts.sinHero) partes.push(hero(f, data.fuente, g)); // el SSR ya lo pintó
+    partes.push(
       comparacion(f, g),
       iconos(f.iconos),
       resenasMarquee(f.resenas),
       recomendados(f.recomendados)
-    ];
+    );
     // Las sections del merchant se agregan al final (el premium tiene orden fijo).
     const secs = Array.isArray(data.secciones) ? data.secciones.map(seccionHTML) : [];
     return partes.concat(secs).join("\n");
@@ -1103,12 +1104,14 @@
 
   // ---------- ensamblado ----------
 
-  function render(data) {
+  // opts.sinHero: no emite el bloque hero (lo pintó el SSR de pagina.liquid);
+  // igual mantiene las sections ancladas a "hero" en su lugar.
+  function render(data, opts = {}) {
     const f = data.facetas;
     const g = data.global;
     // Modelo de página elegido en la creación. "clasico" = comportamiento de
     // siempre; "premium" = armado alternativo (timer + comparación + marquee).
-    if (g && g.estilo === "premium") return renderPremium(data);
+    if (g && g.estilo === "premium") return renderPremium(data, opts);
     // Bloques fijos, cada uno con su id: las sections del merchant se
     // intercalan según su `ancla` (= id del bloque tras el cual va).
     const fijos = [
@@ -1135,7 +1138,9 @@
     if (grupos.top) out.push(...grupos.top);
     const usados = new Set(["top"]);
     for (const [id, html] of fijos) {
-      if (!ocultas.has(id)) out.push(marcar(id, html));
+      // sinHero: saltea el HTML del hero (ya está en el SSR) pero deja pasar las
+      // sections ancladas a "hero".
+      if (!ocultas.has(id) && !(id === "hero" && opts.sinHero)) out.push(marcar(id, html));
       if (grupos[id]) out.push(...grupos[id]);
       usados.add(id);
     }
@@ -1256,7 +1261,13 @@
     // variante → queda el color del rubro (comportamiento de siempre).
     if (datos?.global?.tema) app.dataset.tema = datos.global.tema;
     else app.removeAttribute("data-tema");
-    app.innerHTML = render(datos);
+    // SSR: si pagina.liquid ya pintó el hero (#tiq-hero + #tiq-resto), pintamos
+    // SOLO el resto y dejamos el hero server-side intacto (mejor LCP/CLS/SEO).
+    // Los handlers del hero son inline globales (cambiarPrincipal / tiendaiqAgregar)
+    // → funcionan sobre el DOM del SSR sin re-montar nada. Fallback: render total.
+    const resto = app.dataset.ssr === "1" ? document.getElementById("tiq-resto") : null;
+    if (resto) resto.innerHTML = render(datos, { sinHero: true });
+    else app.innerHTML = render(datos);
     app.style.minHeight = ""; // la reserva de CLS (pagina.liquid) ya cumplió; altura real
     iniciarVcar(); // centra los carruseles de video
     autoplayMuro(); // los videos del muro se reproducen solos al entrar en vista
