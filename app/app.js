@@ -1672,75 +1672,65 @@
     const p = estado.producto;
 
     vista.innerHTML = `
-      <button class="volver-flecha" id="volver"></button>
-      <div class="cabecera">
-        <h1>Información del producto</h1>
-        <p>Revisá esto antes de generar. Cambiarlo después cuesta una regeneración.</p>
-      </div>
-      <div class="dos-columnas">
-        <div>
-          <div class="tarjeta">
-            <div class="tarjeta__titulo">Copywriting</div>
-            <div class="campo">
-              <label for="angulo">Ángulo del producto / enfoque (opcional)</label>
-              <input type="text" id="angulo" placeholder="ejemplo: para escritorios chicos">
-              <div class="ayuda">Si lo cargás, todos los textos se inclinan hacia ese ángulo.</div>
-            </div>
-            <div class="campo">
-              <label for="idioma">Idioma</label>
-              <select id="idioma">
-                <option value="es" selected>Español (rioplatense)</option>
-                <option value="en">English</option>
-                <option value="pt">Português</option>
-              </select>
-              <div class="ayuda">Aplica solo al texto. Las imágenes se usan como están.</div>
-            </div>
-          </div>
+      <s-page heading="Información del producto">
+        <s-button slot="secondary-actions" id="volver">Elegir otro producto</s-button>
 
-          <div class="tarjeta">
-            <div class="tarjeta__titulo">Modelo de página</div>
-            <div class="panel__sub" style="margin-bottom:12px">Elegí el estilo de la landing. Después no se cambia sin regenerar.</div>
-            <div class="modelos" id="modelos">
-              <button type="button" class="modelo-card ${(estado.modeloPagina || "clasico") === "clasico" ? "is-sel" : ""}" data-modelo="clasico">
-                <span class="modelo-card__mini modelo-card__mini--clasico"><i></i><i></i><i></i></span>
-                <span class="modelo-card__nom">Clásico ${ico("check")}</span>
-                <span class="modelo-card__desc">Hero, beneficios, reseñas en grilla y FAQ.</span>
-              </button>
-              <button type="button" class="modelo-card ${estado.modeloPagina === "premium" ? "is-sel" : ""}" data-modelo="premium">
-                <span class="modelo-card__mini modelo-card__mini--premium"><i></i><i></i><i></i></span>
-                <span class="modelo-card__nom">Premium <span class="modelo-card__badge">Nuevo</span> ${ico("check")}</span>
-                <span class="modelo-card__desc">Timer de oferta, comparación y reseñas en carrusel infinito.</span>
-              </button>
-            </div>
-          </div>
+        <s-paragraph>Revisá esto antes de generar. Cambiarlo después cuesta una regeneración.</s-paragraph>
 
-          <div class="tarjeta">
-            <div class="tarjeta__titulo">Color de la página</div>
-            <div class="panel__sub" style="margin-bottom:12px">Elegí el color del botón, los círculos de % y los detalles. Después lo podés cambiar en el editor.</div>
-            <div id="tema-previo">${swatchesTema(estado.temaElegido === "auto" ? null : estado.temaElegido)}</div>
-          </div>
+        <s-grid gridTemplateColumns="repeat(auto-fit, minmax(320px, 1fr))" gap="base">
+          <s-stack direction="block" gap="base">
+            <s-section heading="Copywriting">
+              <s-stack direction="block" gap="base">
+                <s-text-field label="Ángulo del producto / enfoque (opcional)" id="angulo" placeholder="ejemplo: para escritorios chicos" details="Si lo cargás, todos los textos se inclinan hacia ese ángulo."></s-text-field>
+                <s-select label="Idioma" id="idioma" value="es" details="Aplica solo al texto. Las imágenes se usan como están.">
+                  <s-option value="es">Español (rioplatense)</s-option>
+                  <s-option value="en">English</s-option>
+                  <s-option value="pt">Português</s-option>
+                </s-select>
+              </s-stack>
+            </s-section>
 
-          <div class="tarjeta">
-            <div class="tarjeta__titulo">Medios</div>
-            <div class="medios" id="medios"><span class="ayuda">Cargando…</span></div>
-            <div class="nota" id="nota-medios"></div>
-          </div>
+            <s-section heading="Modelo de página">
+              <s-stack direction="block" gap="base">
+                <s-text color="subdued">Elegí el estilo de la landing. Después no se cambia sin regenerar.</s-text>
+                <div class="modelos" id="modelos">
+                  <button type="button" class="modelo-card ${(estado.modeloPagina || "clasico") === "clasico" ? "is-sel" : ""}" data-modelo="clasico">
+                    <span class="modelo-card__mini modelo-card__mini--clasico"><i></i><i></i><i></i></span>
+                    <span class="modelo-card__nom">Clásico ${ico("check")}</span>
+                    <span class="modelo-card__desc">Hero, beneficios, reseñas en grilla y FAQ.</span>
+                  </button>
+                  <button type="button" class="modelo-card ${estado.modeloPagina === "premium" ? "is-sel" : ""}" data-modelo="premium">
+                    <span class="modelo-card__mini modelo-card__mini--premium"><i></i><i></i><i></i></span>
+                    <span class="modelo-card__nom">Premium <span class="modelo-card__badge">Nuevo</span> ${ico("check")}</span>
+                    <span class="modelo-card__desc">Timer de oferta, comparación y reseñas en carrusel infinito.</span>
+                  </button>
+                </div>
+              </s-stack>
+            </s-section>
 
-          <button class="btn btn--acento btn--grande" id="generar">${ico("chispa")} Crear página de producto con IA</button>
-          ${
-            p.estado
-              ? `<button class="btn btn--fantasma btn--grande" id="abrir" style="margin-top:10px">${ico("lapiz")} Editar la página existente</button>`
-              : ""
-          }
-        </div>
+            <s-section heading="Color de la página">
+              <s-stack direction="block" gap="base">
+                <s-text color="subdued">Elegí el color del botón, los círculos de % y los detalles. Después lo podés cambiar en el editor.</s-text>
+                <div id="tema-previo">${swatchesTema(estado.temaElegido === "auto" ? null : estado.temaElegido)}</div>
+              </s-stack>
+            </s-section>
 
-        <div class="tarjeta">
-          <div class="tarjeta__titulo">Producto</div>
-          <div class="ficha__titulo" id="f-titulo">${esc(p.titulo)}</div>
-          <div class="ficha__meta" id="f-meta">Cargando…</div>
-          <div class="ficha__descripcion" id="f-desc"></div>
-        </div>
-      </div>`;
+            <s-section heading="Medios">
+              <div class="medios" id="medios"><s-text color="subdued">Cargando…</s-text></div>
+              <div class="nota" id="nota-medios"></div>
+            </s-section>
+
+            <s-button variant="primary" id="generar">Crear página de producto con IA</s-button>
+            ${p.estado ? `<s-button id="abrir">Editar la página existente</s-button>` : ""}
+          </s-stack>
+
+          <s-section heading="Producto">
+            <div class="ficha__titulo" id="f-titulo">${esc(p.titulo)}</div>
+            <div class="ficha__meta" id="f-meta">Cargando…</div>
+            <div class="ficha__descripcion" id="f-desc"></div>
+          </s-section>
+        </s-grid>
+      </s-page>`;
 
     $("volver").onclick = () => ir("lista");
     $("generar").onclick = generar;
