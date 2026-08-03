@@ -4438,8 +4438,8 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         <button class="volver-flecha" id="bdl-volver"></button>
         <h1>Crear un descuento por cantidad</h1>
         <div class="be-top__act">
-          <button class="btn btn--fantasma" id="bdl-borrador">Guardar como borrador</button>
-          <button class="btn" id="bdl-guardar">Publicar</button>
+          <s-button variant="secondary" id="bdl-borrador">Guardar como borrador</s-button>
+          <s-button variant="primary" id="bdl-guardar">Publicar</s-button>
         </div>
       </div>
       <div class="be-layout">
@@ -5582,7 +5582,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   function marcarSucioBundles() {
     estado.bundles.sucio = true;
     const b = $("bdl-guardar");
-    if (b) { b.disabled = false; b.textContent = "Guardar cambios"; b.classList.add("btn--acento"); b.classList.remove("btn--fantasma"); }
+    if (b) { b.removeAttribute("disabled"); b.textContent = "Guardar cambios"; b.setAttribute("variant", "primary"); }
     saveBar.show({ onSave: () => guardarBundles(), onDiscard: () => descartarBundles() });
   }
 
@@ -5600,17 +5600,17 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
 
   async function guardarBundles() {
     const b = $("bdl-guardar");
-    if (b) { b.disabled = true; b.textContent = "Guardando…"; }
+    if (b) { b.setAttribute("disabled", ""); b.textContent = "Guardando…"; }
     saveBar.guardando(true);
     try {
       estado.bundles.config = await api("/bundles", { method: "PUT", body: { config: estado.bundles.config } });
       estado.bundles.sucio = false;
-      if (b) { b.textContent = "Guardado"; b.classList.remove("btn--acento"); b.classList.add("btn--fantasma"); }
+      if (b) { b.removeAttribute("disabled"); b.textContent = "Guardado"; b.setAttribute("variant", "secondary"); }
       saveBar.guardando(false);
       saveBar.hide();
       return true;
     } catch (e) {
-      if (b) { b.disabled = false; b.textContent = "Guardar cambios"; }
+      if (b) { b.removeAttribute("disabled"); b.textContent = "Guardar cambios"; }
       saveBar.guardando(false);
       vista.insertAdjacentHTML("afterbegin", `<div class="error">${ico("x","ico--banner")} No se pudo guardar: ${esc(e.message)}</div>`);
       return false;
