@@ -101,7 +101,7 @@
                         {%- if mgid == gid -%}{%- assign mini = m.preview_image -%}{%- break -%}{%- endif -%}
                       {%- endif -%}
                     {%- endfor -%}
-                    {%- if mini -%}<button class="hero__mini{% if forloop.first %} activa{% endif %}" onclick="cambiarPrincipal('{{ gid }}', this)"><img src="{{ mini | image_url: width: 160 }}" alt="" loading="lazy" decoding="async"></button>{%- endif -%}
+                    {%- if mini -%}<button class="hero__mini{% if forloop.first %} activa{% endif %}" onclick="cambiarPrincipal('{{ gid }}', this)"><img src="{{ mini | image_url: width: 160 }}" alt="" width="{{ mini.width }}" height="{{ mini.height }}" loading="lazy" decoding="async"></button>{%- endif -%}
                   {%- endfor -%}
                 </div>
               </div>
@@ -122,7 +122,7 @@
                     <li>{%- if b.emoji != blank -%}<span class="hero__bullet-emoji">{{ b.emoji }}</span>{%- else -%}<span class="hero__bullet-ico">{{ svg_tick }}</span>{%- endif -%}<span>{%- if b.fuerte != blank and b.resto != blank -%}<strong>{{ b.fuerte | escape }}</strong> – {{ b.resto | escape }}{%- elsif b.fuerte != blank -%}<strong>{{ b.fuerte | escape }}</strong>{%- else -%}{{ b.resto | default: b | escape }}{%- endif -%}</span></li>
                   {%- endfor -%}
                 </ul>
-                <form method="post" action="/cart/add" onsubmit="return tiendaiqAgregar(event)">
+                <form method="post" action="{{ routes.cart_add_url }}" onsubmit="return tiendaiqAgregar(event)">
                   <input type="hidden" name="id" value="{{ v.id }}">
                   <input type="hidden" name="quantity" value="1" id="tiendaiq-cantidad-form">
                   <button type="submit" class="cta cta--full">{{ g.cta | default: 'Agregar al carrito' | escape }}</button>
