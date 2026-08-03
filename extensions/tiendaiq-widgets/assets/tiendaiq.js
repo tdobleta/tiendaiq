@@ -39,10 +39,32 @@
   // preview local lo deja el adaptador. Media_id borrado → placeholder.
   const urlImagen = (mediaId) => MAPA_URLS[mediaId] || `img/${mediaId}.jpg`;
 
-  // <img> que degrada a placeholder si el archivo no existe
-  const img = (mediaId, alt = "") => {
+  // Reescribe el ancho de una URL del CDN de Shopify (?width=N) para pedir el
+  // tamaño justo por dispositivo. Solo aplica si la URL ya trae width=.
+  const anchoUrl = (url, w) => url.replace(/([?&]width=)\d+/, "$1" + w);
+  const srcsetDe = (url, anchos) =>
+    /[?&]width=\d+/.test(url) ? anchos.map((w) => `${anchoUrl(url, w)} ${w}w`).join(", ") : "";
+
+  // <img> que degrada a placeholder si el archivo no existe.
+  // opts: { hero } = imagen LCP (eager + fetchpriority + srcset amplio);
+  //       { ancho } = miniatura (pide un ancho chico, sin srcset);
+  //       resto = lazy + srcset responsive. Todo aditivo: URLs sin width= (dev)
+  //       o placeholders siguen igual.
+  const img = (mediaId, alt = "", opts = {}) => {
     if (!mediaId) return `<div class="ph-img">Imagen pendiente</div>`;
-    return `<img src="${esc(urlImagen(mediaId))}" alt="${esc(alt)}"
+    let url = urlImagen(mediaId);
+    const tieneW = /[?&]width=\d+/.test(url);
+    if (opts.ancho && tieneW) url = anchoUrl(url, opts.ancho); // miniatura → ancho chico
+    const carga = opts.hero
+      ? `loading="eager" fetchpriority="high" decoding="async"`
+      : `loading="lazy" decoding="async"`;
+    let respons = "";
+    if (!opts.ancho && tieneW) {
+      const ss = srcsetDe(url, opts.hero ? [400, 600, 900, 1200, 1600] : [400, 700, 1000]);
+      const sizes = opts.sizes || (opts.hero ? "(max-width:749px) 100vw, 45vw" : "(max-width:749px) 90vw, 340px");
+      respons = ` srcset="${esc(ss)}" sizes="${esc(sizes)}"`;
+    }
+    return `<img src="${esc(url)}" alt="${esc(alt)}"${respons} ${carga}
       onerror="this.outerHTML='<div class=\\'ph-img\\'>${esc(mediaId)}</div>'">`;
   };
 
@@ -154,7 +176,7 @@
       .map(
         (id, i) =>
           `<button class="hero__mini ${i === 0 ? "activa" : ""}"
-             onclick="cambiarPrincipal('${esc(id)}', this)">${img(id)}</button>`
+             onclick="cambiarPrincipal('${esc(id)}', this)">${img(id, "", { ancho: 160 })}</button>`
       )
       .join("");
 
@@ -232,7 +254,7 @@
       <div class="contenedor">
         <div class="hero__grid">
           <div class="hero__galeria">
-            <div class="hero__principal" id="imagen-principal">${img(principal, h.titulo)}</div>
+            <div class="hero__principal" id="imagen-principal">${img(principal, h.titulo, { hero: true })}</div>
             <div class="hero__miniaturas">${miniaturas}</div>
           </div>
           <div>
