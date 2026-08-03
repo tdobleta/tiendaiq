@@ -5720,6 +5720,12 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     pintarPasos();
     PANTALLAS[pantalla]();
     window.scrollTo(0, 0);
+    // A11y SPA: al cambiar de pantalla el foco se lleva al <main> (landmark),
+    // así el teclado y el lector de pantalla entran al contenido nuevo en vez
+    // de quedar en el control anterior. tabindex=-1 = enfocable por script sin
+    // meterlo en el orden de tabulación; el ring se apaga por CSS (#vista:focus).
+    vista.setAttribute("tabindex", "-1");
+    vista.focus({ preventScroll: true });
   }
 
   async function cargarLista() {

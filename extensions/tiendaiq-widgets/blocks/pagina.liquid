@@ -107,7 +107,7 @@
               </div>
               <div>
                 <div class="hero__urgencia">{{ h.urgencia | default: 'Ya es viral | Pocas unidades' | escape }}</div>
-                <div class="hero__resenas"><span class="estrellas">★★★★★</span> <span>Calificación {{ h.puntaje | default: 4.9 }}/5.0 ({{ h.resenas_count }})</span></div>
+                <div class="hero__resenas"><span class="estrellas" aria-hidden="true">★★★★★</span> <span>Calificación {{ h.puntaje | default: 4.9 }}/5.0 ({{ h.resenas_count }})</span></div>
                 <h1 class="hero__titulo">{{ h.titulo | escape }}</h1>
                 <div class="hero__precios">
                   <span class="hero__precio">{{ v.price | money }}</span>
@@ -136,7 +136,7 @@
                   {%- assign rd = h.resena_destacada -%}
                   <div class="resena-destacada">
                     <div class="resena-destacada__foto"><div class="resena-destacada__avatar"><span class="resena-destacada__silueta">👤</span></div></div>
-                    <div class="resena-destacada__cuerpo"><span class="estrellas">★★★★★</span><p class="resena-destacada__texto">"{{ rd.texto | escape }}"</p><div class="resena-destacada__autor">{{ svg_verif }} {{ rd.autor | default: 'Cliente' | escape }}</div></div>
+                    <div class="resena-destacada__cuerpo"><span class="estrellas" role="img" aria-label="5 de 5 estrellas">★★★★★</span><p class="resena-destacada__texto">"{{ rd.texto | escape }}"</p><div class="resena-destacada__autor">{{ svg_verif }} {{ rd.autor | default: 'Cliente' | escape }}</div></div>
                   </div>
                 {%- endif -%}
                 {%- for a in h.acordeones -%}

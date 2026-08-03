@@ -82,7 +82,9 @@
     return `<img src="${esc(encodeURI(src))}" alt="" onerror="this.outerHTML='${respaldo.replace(/'/g, "\\'")}'">`;
   };
 
-  const estrellas = (n = 5) => `<span class="estrellas">${"★".repeat(n)}</span>`;
+  // role="img" + aria-label: el lector de pantalla anuncia "N de 5 estrellas"
+  // en vez de deletrear los glyphs "★★★★★". Sin cambio visual.
+  const estrellas = (n = 5) => `<span class="estrellas" role="img" aria-label="${n} de 5 estrellas">${"★".repeat(n)}</span>`;
   // Miles con punto (es-AR): 1205 → "1.205".
   const miles = (n) => String(n ?? "").replace(/\B(?=(\d{3})+(?!\d))/g, ".");
   // Puntaje siempre con un decimal: 4.9 → "4.9", 5 → "5.0".
@@ -503,7 +505,7 @@
     <section class="resenas">
       <div class="contenedor">
         <div class="resenas__cabecera">
-          <div class="estrellas">★★★★★</div>
+          <div class="estrellas" role="img" aria-label="5 de 5 estrellas">★★★★★</div>
           <h2>${esc(f.titular)}</h2>
           <p>${esc(f.subtitulo)}</p>
         </div>
@@ -1051,7 +1053,7 @@
     return `
     <section class="resenas tiq-mq" data-bloque="resenas" data-fijo="1">
       <div class="tiq-mq__cab">
-        <div class="estrellas">★★★★★</div>
+        <div class="estrellas" role="img" aria-label="5 de 5 estrellas">★★★★★</div>
         <h2>${esc(f.titular || "Amado por miles de clientes")}</h2>
         ${f.subtitulo ? `<p>${esc(f.subtitulo)}</p>` : ""}
       </div>

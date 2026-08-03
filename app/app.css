@@ -76,6 +76,9 @@ img { display: block; max-width: 100%; }
 /* Cada pantalla aparece con un fade mínimo (150ms, ease-out). Nada llamativo. */
 @keyframes aparecer { from { opacity: 0; transform: translateY(3px); } }
 #vista > * { animation: aparecer .15s ease-out both; }
+/* El <main> recibe foco por script al cambiar de pantalla (a11y SPA): es para
+   el lector de pantalla, no un control tabulable → sin ring visible. */
+#vista:focus { outline: none; }
 
 ::selection { background: var(--ia-fondo); color: var(--negro); }
 
