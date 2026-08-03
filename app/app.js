@@ -4071,7 +4071,11 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       <div class="bt-card">
         <div class="bt-card__tit">${tit}</div>
         <div class="bt-card__prev">${prev}</div>
-        <button class="bt-card__btn ${activo ? "" : "is-soon"}" ${activo ? `data-tema="${tipo}"` : "disabled"}>${activo ? btnTxt : "Próximamente"}</button>
+        <div class="bt-card__accion">${
+          activo
+            ? `<s-button variant="primary" data-tema="${tipo}">${btnTxt}</s-button>`
+            : `<s-button disabled>Próximamente</s-button>`
+        }</div>
       </div>`;
 
     vista.innerHTML = `
@@ -4091,7 +4095,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
 
     $("bt-volver").onclick = () => { estado.bundles.vista = "lista"; pintarDashboardBundles(); };
     vista.querySelectorAll(".bt-sw").forEach((b) => (b.onclick = () => { estado.bundles.temaColor = b.dataset.color; pantallaBundleTemas(); }));
-    vista.querySelectorAll(".bt-card__btn[data-tema]").forEach((b) => (b.onclick = () => crearDesdeTema(b.dataset.tema)));
+    vista.querySelectorAll("s-button[data-tema]").forEach((b) => (b.onclick = () => crearDesdeTema(b.dataset.tema)));
   }
 
   function pintarDashboardBundles() {
@@ -4186,8 +4190,8 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       <div class="tarjeta bdl-onboard">
         <div class="bdl-onboard__cab"><strong>Primeros pasos</strong><span class="panel__sub">${nHechos} de 3 completado${nHechos === 1 ? "" : "s"}</span></div>
         <div class="bdl-onboard__bar"><i style="width:${Math.round((nHechos / 3) * 100)}%"></i></div>
-        ${pasoOnb(!!inst, "Activá el widget en tu tema", `<button class="btn btn--chico" id="bdl-instalar">Activá el widget</button>`)}
-        ${pasoOnb(false, "Creá tu primer bundle", `<button class="btn btn--chico bdl-onb-crear">Crear</button>`)}
+        ${pasoOnb(!!inst, "Activá el widget en tu tema", `<s-button id="bdl-instalar">Activá el widget</s-button>`)}
+        ${pasoOnb(false, "Creá tu primer bundle", `<s-button class="bdl-onb-crear">Crear</s-button>`)}
         ${pasoOnb(false, "Previsualizá en tu tienda", `<span class="panel__sub">tras crear</span>`)}
       </div>
       <div class="tarjeta bdl-vacio">

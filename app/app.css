@@ -591,9 +591,7 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
 .bt-card { display: flex; flex-direction: column; background: var(--superficie); border: 1px solid var(--borde); border-radius: 12px; padding: 18px; }
 .bt-card__tit { text-align: center; font-size: 14px; font-weight: 600; color: var(--negro); padding-bottom: 14px; margin-bottom: 14px; border-bottom: 1px solid var(--borde-suave); }
 .bt-card__prev { display: flex; flex-direction: column; gap: 10px; flex: 1; }
-.bt-card__btn { margin-top: 16px; height: 40px; border: none; border-radius: 8px; background: var(--negro); color: #fff; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
-.bt-card__btn:hover:not(:disabled) { background: #000; }
-.bt-card__btn.is-soon { background: var(--fondo); color: var(--suave); cursor: not-allowed; }
+.bt-card__accion { margin-top: 16px; text-align: center; }
 
 /* Filas de oferta */
 .bt-row { position: relative; display: flex; align-items: center; gap: 10px; padding: 12px 14px; border: 1.5px solid transparent; border-radius: 10px; background: var(--bt-tint); }
