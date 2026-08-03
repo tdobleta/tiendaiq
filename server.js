@@ -94,27 +94,40 @@ const linkEditorPagina = (tienda) =>
 const linkActivarEmbed = (tienda, handle) =>
   `https://${tienda}/admin/themes/current/editor?context=apps&activateAppId=${CLIENT_ID}/${handle}`;
 
-// ¿La landing de producto se ve DE VERDAD en la tienda? En vez de leer el tema
-// (scope que Shopify no otorga), fetcheamos el HTML público del producto y
-// buscamos el marcador del app block. Devuelve:
-//   true  → la landing se está pintando (plantilla activa)
-//   false → cae al producto nativo (el merchant no creó/activó la plantilla)
-//   null  → no se pudo verificar (timeout, tienda con contraseña, sin URL)
+// ¿La landing de producto se ve, y CÓMO? En vez de leer el tema (scope que
+// Shopify no otorga), fetcheamos el HTML público del producto y distinguimos
+// quién la está pintando mirando de dónde salen los assets. Devuelve:
+//   "app_block" → la pinta el app block de la extensión (CDN de extensiones) ✓
+//   "legacy"    → la pinta una plantilla/asset VIEJO que quedó ESCRITO en el
+//                 tema (época de themeFilesUpsert): tiendaiq.js sale de
+//                 /cdn/shop/t/…/assets/. Hay que limpiarlo — le gana al bloque.
+//   "inactiva"  → sin marcador: cae al producto nativo (falta crear/activar la
+//                 plantilla con el bloque).
+//   null        → no verificable (timeout, tienda con contraseña, sin URL).
+// El estado "legacy" es clave: el marcador TIENDAIQ_DATA está en AMBOS (bloque y
+// plantilla vieja), así que mirarlo solo daba falso positivo — por eso miramos
+// el origen de los assets.
 const cacheViva = new Map(); // url -> { t, v }
-async function verificarUrlViva(url) {
+async function verificarUrlViva(url, fresh = false) {
   if (!url) return null;
-  const c = cacheViva.get(url);
-  if (c && Date.now() - c.t < 60 * 1000) return c.v;
+  if (!fresh) {
+    const c = cacheViva.get(url);
+    if (c && Date.now() - c.t < 60 * 1000) return c.v;
+  }
   let v = null;
   try {
     const señal = typeof AbortSignal !== "undefined" && AbortSignal.timeout ? AbortSignal.timeout(6000) : undefined;
     const r = await fetch(url, { redirect: "follow", signal: señal });
     // Tienda con contraseña: la storefront redirige a /password (200) sin el
-    // marcador. Eso NO es "no se ve" — es "no verificable" (null), no false.
+    // marcador. Eso NO es "no se ve" — es "no verificable" (null).
     const esPassword = /\/password(\/|\?|$)/.test(r.url || "");
     if (r.ok && !esPassword) {
       const html = await r.text();
-      v = html.includes("TIENDAIQ_DATA");
+      if (!html.includes("TIENDAIQ_DATA")) v = "inactiva";
+      // Asset de render servido desde el TEMA (/cdn/shop/t/<id>/assets/) =
+      // plantilla vieja inyectada. El app block lo sirve desde cdn.shopify.com/extensions/.
+      else if (/\/cdn\/shop\/t\/\d+\/assets\/tiendaiq\.(?:js|css)/.test(html)) v = "legacy";
+      else v = "app_block";
     }
   } catch {
     v = null;
@@ -443,7 +456,7 @@ async function api(req, res, url) {
       .sort((a, b) => (b.actualizado || "").localeCompare(a.actualizado || ""))[0];
     return json(res, 200, {
       hayPublicadas: !!pub,
-      configurado: pub ? await verificarUrlViva(pub.url_publica) : null,
+      estado: pub ? await verificarUrlViva(pub.url_publica, url.searchParams.get("fresh") === "1") : null,
       ejemploUrl: pub?.url_publica || null,
       setupUrl: linkEditorPagina(sesion.tienda)
     });
@@ -676,7 +689,7 @@ async function api(req, res, url) {
     // Verificamos si la landing se ve DE VERDAD (o si cae al producto nativo
     // porque falta la plantilla) + deep link al editor. No se persiste: es para
     // la pantalla de éxito. La app NO escribe el tema, solo lo mira desde afuera.
-    registro.paginaViva = await verificarUrlViva(url);
+    registro.paginaEstado = await verificarUrlViva(url);
     registro.setupPaginaUrl = linkEditorPagina(sesion.tienda);
     return json(res, 200, registro);
   }

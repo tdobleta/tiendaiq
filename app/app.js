@@ -532,22 +532,40 @@
       b.onclick = () => abrirDesdeTabla(b.dataset.editar);
     });
 
-    // Banner persistente: ¿las páginas publicadas se ven DE VERDAD en la tienda?
-    // Chequeo asíncrono (no demora la lista). Si falta activar la plantilla, la
-    // landing cae al producto nativo en silencio — este es el único aviso.
+    // Banner persistente + AUTO-DIAGNÓSTICO: ¿las páginas publicadas se ven, y
+    // CÓMO? Distingue "no se ve" (falta la plantilla) de "plantilla vieja pegada
+    // al tema" (de la época de inyección — le gana al app block) y ofrece
+    // re-verificar en vivo sin recargar (fresh=1 saltea el cache del server).
     if (paginas.some((p) => p.estado === "publicada")) {
-      api("/pagina-estado")
-        .then((e) => {
-          if (estado.pantalla !== "paginas" || !e || e.configurado !== false) return;
-          const cont = $("banner-pagina");
-          if (!cont) return;
-          cont.innerHTML = `
-            <s-banner tone="warning" heading="Falta activar la plantilla en tu tema">
-              <s-paragraph>Tus páginas publicadas todavía no se ven en la tienda: activá la plantilla en tu tema (una sola vez).</s-paragraph>
-              <s-link href="${esc(e.setupUrl)}" target="_blank">Activar plantilla</s-link>
-            </s-banner>`;
-        })
-        .catch(() => {});
+      const banner = (e) => {
+        const st = e && e.estado;
+        const abrir = `<s-link href="${esc(e.setupUrl)}" target="_blank">Abrir editor de temas</s-link>`;
+        const verif = `<s-button id="pag-verificar">Verificar de nuevo</s-button>`;
+        if (st === "legacy") return `<s-banner tone="warning" heading="Tenés una plantilla vieja pegada a tu tema">
+          <s-paragraph>Tu página la está pintando una versión anterior que quedó escrita en tu tema (de cuando la app inyectaba en el tema) — por eso podés ver un diseño viejo o desactualizado. Borrá del tema la plantilla <s-text type="strong">product.tiendaiq</s-text> y los assets <s-text type="strong">tiendaiq.js</s-text>/<s-text type="strong">tiendaiq.css</s-text>, y dejá activo el bloque nuevo.</s-paragraph>
+          ${abrir}${verif}
+        </s-banner>`;
+        if (st === "inactiva") return `<s-banner tone="warning" heading="Tus páginas no se ven en la tienda">
+          <s-paragraph>Caen a la página de producto nativa. Creá una vez la plantilla <s-text type="strong">tiendaiq</s-text> con el bloque <s-text type="strong">TiendaIQ Página</s-text> en tu tema.</s-paragraph>
+          ${abrir}${verif}
+        </s-banner>`;
+        return ""; // app_block (todo bien) o null (no verificable) → sin alarma
+      };
+      const verificar = (fresh) => {
+        const cont = $("banner-pagina");
+        if (cont && fresh) cont.innerHTML = `<div style="padding:8px 0"><s-spinner accessibilityLabel="Verificando en tu tienda"></s-spinner></div>`;
+        api("/pagina-estado" + (fresh ? "?fresh=1" : ""))
+          .then((e) => {
+            if (estado.pantalla !== "paginas") return;
+            const c = $("banner-pagina");
+            if (!c) return;
+            c.innerHTML = banner(e);
+            const rb = $("pag-verificar");
+            if (rb) rb.onclick = () => verificar(true);
+          })
+          .catch(() => {});
+      };
+      verificar(false);
     }
   }
 
@@ -3619,7 +3637,8 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         ? { c: "pend", t: "Cambios sin publicar" }
         : { c: "publicada", t: "Publicada" };
     const volverTxt = estado.volverA === "paginas" ? "Volver a mis páginas" : "Volver a los productos";
-    const mostrarSetup = publicada && pg.paginaViva !== true && pg.setupPaginaUrl;
+    const st = pg.paginaEstado; // "app_block" | "legacy" | "inactiva" | null
+    const mostrarSetup = publicada && st !== "app_block" && pg.setupPaginaUrl;
     const mostrarCoach = !localStorage.getItem("tiq_coach_editor");
 
     vista.innerHTML = `
@@ -3644,24 +3663,39 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
 
       ${
         mostrarSetup
-          ? `<div class="setup-pagina ${pg.paginaViva === false ? "setup-pagina--alerta" : ""}">
+          ? `<div class="setup-pagina ${st === "app_block" ? "" : "setup-pagina--alerta"}">
                <div class="setup-pagina__cab">${
-                 pg.paginaViva === false
-                   ? ico("aviso") + " Tu landing todavía NO se ve en la tienda"
-                   : "Activá la plantilla en tu tema — una sola vez"
+                 st === "legacy"
+                   ? ico("aviso") + " Tenés una plantilla vieja pegada a tu tema"
+                   : st === "inactiva"
+                     ? ico("aviso") + " Tu landing todavía NO se ve en la tienda"
+                     : "Activá la plantilla en tu tema — una sola vez"
                }</div>
-               <p class="setup-pagina__txt">${
-                 pg.paginaViva === false
-                   ? "La página se publicó, pero tu tema todavía muestra el producto nativo. Falta crear <strong>una vez</strong> la plantilla con el bloque de TiendaIQ:"
-                   : "Para que la landing se vea, tu tema necesita una plantilla de producto con el bloque de TiendaIQ. Se hace una vez y todas tus páginas la usan:"
-               }</p>
-               <ol class="setup-pagina__pasos">
-                 <li>Tocá <strong>Abrir editor de temas</strong>.</li>
-                 <li>En el selector de plantilla (arriba), elegí <strong>Crear plantilla</strong> → basada en <em>product</em> → escribí exactamente <strong>tiendaiq</strong> (minúscula, sin espacios).</li>
-                 <li>Dejá solo el bloque <strong>Apps → TiendaIQ Página</strong> y quitá las secciones nativas del producto.</li>
-                 <li>Guardá. Listo — no lo hacés nunca más.</li>
-               </ol>
-               <a class="btn btn--fantasma btn--chico" href="${esc(pg.setupPaginaUrl)}" target="_blank" rel="noopener">Abrir editor de temas</a>
+               ${
+                 st === "legacy"
+                   ? `<p class="setup-pagina__txt">Tu página la está pintando una <strong>versión anterior que quedó escrita en tu tema</strong> (de cuando la app inyectaba en el tema). Por eso podés ver un diseño viejo o desactualizado. Limpiala una vez:</p>
+                      <ol class="setup-pagina__pasos">
+                        <li>Online Store → Themes → <strong>⋯ → Editar código</strong>.</li>
+                        <li>En <strong>Templates</strong>, borrá <strong>product.tiendaiq.liquid</strong>.</li>
+                        <li>En <strong>Assets</strong>, borrá <strong>tiendaiq.js</strong> y <strong>tiendaiq.css</strong>.</li>
+                        <li>Creá la plantilla <strong>tiendaiq</strong> con el bloque <strong>Apps → TiendaIQ Página</strong> y guardá.</li>
+                      </ol>`
+                   : `<p class="setup-pagina__txt">${
+                        st === "inactiva"
+                          ? "La página se publicó, pero tu tema todavía muestra el producto nativo. Falta crear <strong>una vez</strong> la plantilla con el bloque de TiendaIQ:"
+                          : "Para que la landing se vea, tu tema necesita una plantilla de producto con el bloque de TiendaIQ. Se hace una vez y todas tus páginas la usan:"
+                      }</p>
+                      <ol class="setup-pagina__pasos">
+                        <li>Tocá <strong>Abrir editor de temas</strong>.</li>
+                        <li>En el selector de plantilla (arriba), elegí <strong>Crear plantilla</strong> → basada en <em>product</em> → escribí exactamente <strong>tiendaiq</strong> (minúscula, sin espacios).</li>
+                        <li>Dejá solo el bloque <strong>Apps → TiendaIQ Página</strong> y quitá las secciones nativas del producto.</li>
+                        <li>Guardá. Listo — no lo hacés nunca más.</li>
+                      </ol>`
+               }
+               <div class="setup-pagina__acc" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
+                 <a class="btn btn--fantasma btn--chico" href="${esc(pg.setupPaginaUrl)}" target="_blank" rel="noopener">Abrir editor de temas</a>
+                 <button class="btn btn--chico" id="setup-verificar" type="button">Verificar de nuevo</button>
+               </div>
              </div>`
           : ""
       }
@@ -3712,6 +3746,15 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     };
     $("guardar").onclick = guardarCambios;
     $("publicar").onclick = publicar;
+    // Re-verifica en vivo si la landing ya se ve (fresh=1 saltea el cache) y
+    // repinta la pantalla con el estado nuevo — sin recargar toda la app.
+    const sv = $("setup-verificar");
+    if (sv) sv.onclick = async () => {
+      sv.setAttribute("disabled", "");
+      sv.textContent = "Verificando…";
+      try { estado.pagina.paginaEstado = (await api("/pagina-estado?fresh=1")).estado; } catch {}
+      pantallaPreview();
+    };
     // Coach-mark del editor: se muestra una sola vez (flag en localStorage).
     const coachX = $("coach-x");
     if (coachX) coachX.onclick = () => {
@@ -3732,8 +3775,8 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       cambiosSinPublicar = false; // recién publicada: lo que se ve es lo que hay
       pantallaPreview();
       // Éxito = señal efímera, no banner permanente. El estado vive en el pill.
-      toast(estado.pagina.paginaViva === false
-        ? "Publicada. Falta activar la plantilla en tu tema (ver abajo)."
+      toast((estado.pagina.paginaEstado === "legacy" || estado.pagina.paginaEstado === "inactiva")
+        ? "Publicada. Falta activar/limpiar la plantilla en tu tema (ver abajo)."
         : "¡Publicada! Ya está en tu tienda.");
     } catch (e) {
       b.removeAttribute("disabled");
