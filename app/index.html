@@ -12,6 +12,12 @@
   <meta name="shopify-api-key" content="{{SHOPIFY_CLIENT_ID}}">
   <script src="https://cdn.shopify.com/shopifycloud/app-bridge.js"></script>
 
+  <!-- Polaris web components (chrome nativo del admin: <s-page>, <s-section>,
+       <s-button>, <s-grid>, <s-box>, <s-badge>, <s-banner>…). Se registran como
+       custom elements y renderizan con el look real de Shopify. Migración
+       incremental pantalla por pantalla (arranca por Inicio). -->
+  <script src="https://cdn.shopify.com/shopifycloud/polaris.js"></script>
+
   <!-- Tipografía del sistema (sin Google Fonts): render-blocking + host de
        terceros dentro del admin. El admin de Shopify ya usa el stack del
        sistema; la app lo hereda vía app.css. -->

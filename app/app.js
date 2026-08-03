@@ -237,13 +237,20 @@
     // lo comunica el propio ícono, no solo el chip de abajo.
     const IC_CHECK = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg>`;
 
-    const pasoCard = (icono, titulo, texto, hecho, cola, tinte) => `
-      <article class="paso-card paso-card--${tinte} ${hecho ? "is-hecho" : ""}">
-        <div class="paso-card__icono">${icono}${hecho ? `<span class="paso-card__check">${IC_CHECK}</span>` : ""}</div>
-        <div class="paso-card__titulo">${titulo}</div>
-        <p class="paso-card__texto">${texto}</p>
-        <div class="paso-card__cola">${cola}</div>
-      </article>`;
+    // Tarjeta de paso, nativa Polaris: contenedor s-box con el ícono, el estado
+    // (badge "Completado" cuando está hecho) y, si falta, el botón de acción.
+    const pasoCard = (icono, titulo, texto, hecho, boton) => `
+      <s-box padding="large-100" borderRadius="base" background="subdued">
+        <s-stack direction="block" gap="base">
+          <s-stack direction="inline" gap="base" alignItems="center" justifyContent="space-between">
+            <span class="tiq-ini-ico">${icono}</span>
+            ${hecho ? `<s-badge tone="success">Completado</s-badge>` : ""}
+          </s-stack>
+          <s-heading>${titulo}</s-heading>
+          <s-paragraph>${texto}</s-paragraph>
+          ${hecho ? "" : `<div>${boton}</div>`}
+        </s-stack>
+      </s-box>`;
 
     // Tiles de métrica al estilo PagePilot: ícono + label arriba, valor
     // grande abajo alineado con el label.
@@ -254,14 +261,17 @@
       estrella: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3.5l2.5 5.4 5.9.7-4.4 4 1.2 5.9L12 16.6l-5.2 2.9 1.2-5.9-4.4-4 5.9-.7z"/></svg>`
     };
 
-    const metrica = (icono, nombre, valor, tinte) => `
-      <div class="metrica ${tinte ? "metrica--" + tinte : ""}">
-        <div class="metrica__fila">
-          <span class="metrica__icono">${icono}</span>
-          <span class="metrica__nombre">${nombre}</span>
-        </div>
-        <div class="metrica__valor">${valor}</div>
-      </div>`;
+    // Tile de métrica, nativo Polaris: label con ícono arriba, valor grande abajo.
+    const metrica = (icono, nombre, valor) => `
+      <s-box padding="large-100" borderRadius="base" background="subdued">
+        <s-stack direction="block" gap="small-500">
+          <s-stack direction="inline" gap="small-500" alignItems="center">
+            <span class="tiq-ini-ico tiq-ini-ico--sm">${icono}</span>
+            <s-text color="subdued">${nombre}</s-text>
+          </s-stack>
+          <s-heading>${valor}</s-heading>
+        </s-stack>
+      </s-box>`;
 
     // Iconos de los botones de la cabecera (SVG de línea, no glyphs).
     const IC_PAGINAS = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3.5" width="14" height="17" rx="2"/><path d="M9 8.5h6M9 12h6M9 15.5h4"/></svg>`;
@@ -271,187 +281,153 @@
     const publicadasLista = estado.paginas.filter((p) => p.estado === "publicada");
 
     vista.innerHTML = `
-      <div class="inicio-cabecera">
-        <div>
-          <h1>Bienvenido a TiendaIQ</h1>
-          <p class="inicio-cabecera__sub">Generá páginas de producto con IA y armá descuentos por volumen — todo desde acá.</p>
-        </div>
-        <div class="inicio-cabecera__acciones">
-          <button class="btn btn--fantasma" id="ir-paginas">${IC_PAGINAS} Ver mis páginas</button>
-          <button class="btn btn--marca" id="ir-crear">${ICONO_PASO.chispa} Crear página con IA</button>
-        </div>
-      </div>
+      <style>
+        /* Los íconos propios (SVG feather) viven como light DOM dentro de los
+           componentes Polaris; solo necesitan tamaño y color heredable. */
+        .tiq-ini-ico{display:inline-flex;align-items:center;justify-content:center;color:#4a4a4a}
+        .tiq-ini-ico svg{width:24px;height:24px}
+        .tiq-ini-ico--sm svg{width:18px;height:18px}
+      </style>
+      <s-page heading="Bienvenido a TiendaIQ">
+        <s-button slot="primary-action" variant="primary" id="ir-crear">Crear página con IA</s-button>
+        <s-button slot="secondary-actions" id="ir-paginas">Ver mis páginas</s-button>
 
-      ${
-        sinCupo
-          ? `<div class="banner-plan">
-               <span class="banner-plan__icono">!</span>
-               <span class="banner-plan__texto">Necesitás una <strong>suscripción activa</strong> para crear más páginas de producto.</span>
-               <button class="btn btn--chico" id="ir-plan">Actualizar plan</button>
-             </div>`
-          : ""
-      }
+        <s-paragraph>Generá páginas de producto con IA y armá descuentos por volumen — todo desde acá.</s-paragraph>
 
-      <section class="tarjeta">
-        <div class="panel__cabecera">
-          <div>
-            <div class="tarjeta__titulo">Primeros pasos</div>
-            <div class="panel__sub">Completá estos pasos para empezar a vender con TiendaIQ</div>
-          </div>
-          <div class="progreso">
-            <span>${hechos} de ${TOTAL_PASOS} completado${hechos === 1 ? "" : "s"}</span>
-            <div class="progreso__barra"><div style="width:${(hechos / TOTAL_PASOS) * 100}%"></div></div>
-          </div>
-        </div>
-        <div class="pasos-grilla">
-          ${pasoCard(
-            ICONO_PASO.chispa,
-            "Crear página de producto",
-            "Generá tu primera página de producto con IA.",
-            creadas > 0,
-            creadas
-              ? `<span class="chip-estado chip-estado--ok">Completado</span>`
-              : `<button class="btn btn--chico" id="paso-crear">Crear página</button>`,
-            "violeta"
-          )}
-          ${pasoCard(
-            ICONO_PASO.publicar,
-            "Publicar en la tienda",
-            "Publicá una página de producto en tu tienda.",
-            publicadas > 0,
-            publicadas
-              ? `<span class="chip-estado chip-estado--ok">Completado</span>`
-              : `<button class="btn btn--chico" id="paso-publicar">Publicar página</button>`,
-            "verde"
-          )}
-          ${COD_VISIBLE ? pasoCard(
-            ICONO_PASO.cod,
-            "Activar el pago contra reembolso",
-            "Que tus clientes pidan y paguen al recibir.",
-            codListo,
-            codListo
-              ? `<span class="chip-estado chip-estado--ok">Completado</span>`
-              : `<button class="btn btn--chico" id="paso-cod">${estado.inicioCod?.instalado ? "Prender el formulario" : "Configurar COD"}</button>`,
-            "naranja"
-          ) : ""}
-          ${pasoCard(
-            ICONO_PASO.bundle,
-            "Crear tu primer bundle",
-            "Descuentos por volumen para subir el valor del pedido.",
-            bundlesListo,
-            bundlesListo
-              ? `<span class="chip-estado chip-estado--ok">Completado</span>`
-              : `<button class="btn btn--chico" id="paso-bundles">${(estado.inicioBundles?.lista || []).length ? "Inyectar en el tema" : "Crear bundle"}</button>`,
-            "azul"
-          )}
-        </div>
-      </section>
+        ${
+          sinCupo
+            ? `<s-banner tone="warning" heading="Necesitás una suscripción activa">
+                 <s-paragraph>Para crear más páginas de producto necesitás una suscripción activa.</s-paragraph>
+                 <s-button slot="secondary-actions" id="ir-plan">Actualizar plan</s-button>
+               </s-banner>`
+            : ""
+        }
 
-      <section class="tarjeta">
-        <div class="tarjeta__titulo">Tus números</div>
-        <div class="panel__sub">Sincronizado con tu tienda, en tiempo real</div>
-        <div class="metricas">
-          ${metrica(ICONO_METRICA.pagina, "Páginas creadas", creadas, "violeta")}
-          ${metrica(ICONO_METRICA.check, "Publicadas", publicadas, "verde")}
-          ${metrica(ICONO_METRICA.lapiz, "Borradores", creadas - publicadas)}
-          ${metrica(ICONO_PASO.bundle, "Bundles activos", bundlesActivos)}
-        </div>
+        <s-section heading="Primeros pasos">
+          <s-stack direction="block" gap="base">
+            <s-stack direction="inline" gap="base" alignItems="center" justifyContent="space-between">
+              <s-text color="subdued">Completá estos pasos para empezar a vender con TiendaIQ</s-text>
+              <s-badge tone="${hechos === TOTAL_PASOS ? "success" : "info"}">${hechos} de ${TOTAL_PASOS} completado${hechos === 1 ? "" : "s"}</s-badge>
+            </s-stack>
+            <s-grid gridTemplateColumns="repeat(auto-fit, minmax(240px, 1fr))" gap="base">
+              ${pasoCard(
+                ICONO_PASO.chispa,
+                "Crear página de producto",
+                "Generá tu primera página de producto con IA.",
+                creadas > 0,
+                `<s-button id="paso-crear">Crear página</s-button>`
+              )}
+              ${pasoCard(
+                ICONO_PASO.publicar,
+                "Publicar en la tienda",
+                "Publicá una página de producto en tu tienda.",
+                publicadas > 0,
+                `<s-button id="paso-publicar">Publicar página</s-button>`
+              )}
+              ${COD_VISIBLE ? pasoCard(
+                ICONO_PASO.cod,
+                "Activar el pago contra reembolso",
+                "Que tus clientes pidan y paguen al recibir.",
+                codListo,
+                `<s-button id="paso-cod">${estado.inicioCod?.instalado ? "Prender el formulario" : "Configurar COD"}</s-button>`
+              ) : ""}
+              ${pasoCard(
+                ICONO_PASO.bundle,
+                "Crear tu primer bundle",
+                "Descuentos por volumen para subir el valor del pedido.",
+                bundlesListo,
+                `<s-button id="paso-bundles">${(estado.inicioBundles?.lista || []).length ? "Inyectar en el tema" : "Crear bundle"}</s-button>`
+              )}
+            </s-grid>
+          </s-stack>
+        </s-section>
 
-        <div class="plan-medidor ${esPro ? "plan-medidor--pro" : ""} ${!esPro && plan.usadas >= plan.limite ? "is-lleno" : ""}">
-          <div class="plan-medidor__info">
-            <span class="plan-medidor__nombre">${esPro ? "Plan Pro" : "Plan gratis"}</span>
-            <span class="plan-medidor__detalle">${
-              esPro
-                ? "Páginas de producto ilimitadas."
-                : `Usaste <strong>${plan.usadas} de ${plan.limite}</strong> páginas este mes.`
-            }</span>
-          </div>
-          <div class="plan-medidor__barra"><div style="width:${usoPct}%"></div></div>
-          ${
-            esPro
-              ? `<span class="chip-estado chip-estado--ok">Activo</span>`
-              : `<button class="btn btn--chico" id="plan-mejorar">Mejorar a Pro</button>`
-          }
-        </div>
-      </section>
+        <s-section heading="Tus números">
+          <s-stack direction="block" gap="base">
+            <s-text color="subdued">Sincronizado con tu tienda, en tiempo real</s-text>
+            <s-grid gridTemplateColumns="repeat(auto-fit, minmax(180px, 1fr))" gap="base">
+              ${metrica(ICONO_METRICA.pagina, "Páginas creadas", creadas)}
+              ${metrica(ICONO_METRICA.check, "Publicadas", publicadas)}
+              ${metrica(ICONO_METRICA.lapiz, "Borradores", creadas - publicadas)}
+              ${metrica(ICONO_PASO.bundle, "Bundles activos", bundlesActivos)}
+            </s-grid>
+            <s-box padding="large-100" borderRadius="base" background="subdued">
+              <s-stack direction="inline" gap="base" alignItems="center" justifyContent="space-between">
+                <s-stack direction="block" gap="small-500">
+                  <s-text type="strong">${esPro ? "Plan Pro" : "Plan gratis"}</s-text>
+                  <s-text color="subdued">${
+                    esPro
+                      ? "Páginas de producto ilimitadas."
+                      : `Usaste ${plan.usadas} de ${plan.limite} páginas este mes.`
+                  }</s-text>
+                </s-stack>
+                ${
+                  esPro
+                    ? `<s-badge tone="success">Activo</s-badge>`
+                    : `<s-button id="plan-mejorar">Mejorar a Pro</s-button>`
+                }
+              </s-stack>
+            </s-box>
+          </s-stack>
+        </s-section>
 
-      <section class="tarjeta">
-        <div class="tarjeta__titulo">Herramientas</div>
-        <div class="tarjeta__titulo-sub panel__sub">Lo que TiendaIQ puede hacer por tu tienda.</div>
-        <div class="herramientas">
-          <div class="herramienta">
-            <div class="herramienta__nombre">Páginas de producto con IA</div>
-            <p>Elegí un producto y la IA arma la landing completa.</p>
-            <button class="btn btn--chico" id="herr-crear">Crear página de producto</button>
-            <div class="herramienta__preview herramienta__preview--img">
-              <img src="/portadas/portada-paginas.png" alt="Vista previa: página de producto con IA" loading="lazy">
-            </div>
-          </div>
-          ${COD_VISIBLE ? `<div class="herramienta">
-            <div class="herramienta__nombre">Formulario contra reembolso (COD)</div>
-            <p>Tus clientes piden y pagan al recibir: el formulario crea el pedido en Shopify.</p>
-            <button class="btn btn--chico" id="herr-cod">Configurar COD</button>
-            <div class="herramienta__preview herramienta__preview--img">
-              <img src="/portadas/portada-cod.png" alt="Vista previa: formulario contra reembolso (COD)" loading="lazy">
-            </div>
-          </div>` : ""}
-          <div class="herramienta">
-            <div class="herramienta__nombre">Bundles y descuentos</div>
-            <p>Descuentos por volumen y "comprá X y obtené Y". El precio lo hace cumplir Shopify.</p>
-            <button class="btn btn--chico" id="herr-bundles">Crear bundles</button>
-            <div class="herramienta__preview herramienta__preview--bdl">
-              <div class="tiq-bdl">
-                <div class="tiq-bdl__cards">
-                  <label class="tiq-bdl__card">
-                    <span class="tiq-bdl__radio"></span>
-                    <span class="tiq-bdl__main"><span class="tiq-bdl__titulo">Comprá 1</span></span>
-                    <span class="tiq-bdl__precio"><span class="tiq-bdl__precio-now">$ 24,99</span></span>
-                  </label>
-                  <label class="tiq-bdl__card is-sel is-pop">
-                    <span class="tiq-bdl__badge">Más elegido</span>
-                    <span class="tiq-bdl__radio"></span>
-                    <span class="tiq-bdl__main">
-                      <span class="tiq-bdl__titulo">Comprá 2 <span class="tiq-bdl__etq">10% OFF</span></span>
-                      <span class="tiq-bdl__ahorro">Ahorrás $ 5,00</span>
-                    </span>
-                    <span class="tiq-bdl__precio">
-                      <span class="tiq-bdl__precio-now">$ 44,98</span>
-                      <span class="tiq-bdl__precio-old">$ 49,98</span>
-                    </span>
-                  </label>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+        <s-section heading="Herramientas">
+          <s-stack direction="block" gap="base">
+            <s-text color="subdued">Lo que TiendaIQ puede hacer por tu tienda.</s-text>
+            <s-grid gridTemplateColumns="repeat(auto-fit, minmax(280px, 1fr))" gap="base">
+              <s-box padding="large-100" borderRadius="base" background="subdued">
+                <s-stack direction="block" gap="base">
+                  <s-heading>Páginas de producto con IA</s-heading>
+                  <s-paragraph>Elegí un producto y la IA arma la landing completa.</s-paragraph>
+                  <div><s-button id="herr-crear">Crear página de producto</s-button></div>
+                </s-stack>
+              </s-box>
+              ${COD_VISIBLE ? `<s-box padding="large-100" borderRadius="base" background="subdued">
+                <s-stack direction="block" gap="base">
+                  <s-heading>Formulario contra reembolso (COD)</s-heading>
+                  <s-paragraph>Tus clientes piden y pagan al recibir: el formulario crea el pedido en Shopify.</s-paragraph>
+                  <div><s-button id="herr-cod">Configurar COD</s-button></div>
+                </s-stack>
+              </s-box>` : ""}
+              <s-box padding="large-100" borderRadius="base" background="subdued">
+                <s-stack direction="block" gap="base">
+                  <s-heading>Bundles y descuentos</s-heading>
+                  <s-paragraph>Descuentos por volumen y "comprá X y obtené Y". El precio lo hace cumplir Shopify.</s-paragraph>
+                  <div><s-button id="herr-bundles">Crear bundles</s-button></div>
+                </s-stack>
+              </s-box>
+            </s-grid>
+          </s-stack>
+        </s-section>
 
-      ${
-        publicadasLista.length
-          ? `<section class="tarjeta">
-               <div class="tarjeta__titulo">Últimas páginas publicadas</div>
-               <div class="tarjeta__titulo-sub panel__sub">Están vivas en tu tienda ahora mismo.</div>
-               <div class="pub-lista">
-                 ${publicadasLista
-                   .slice(0, 5)
-                   .map(
-                     (p) => `
-                     <div class="pub-fila">
-                       <div class="pub-fila__foto">${p.imagen ? `<img src="${esc(p.imagen)}" alt="" loading="lazy">` : ico("imagen", "ico--ph")}</div>
-                       <div class="pub-fila__titulo">${esc(p.titulo || "Sin título")}</div>
-                       ${p.url_publica ? `<a class="pub-fila__link" href="${esc(p.url_publica)}" target="_blank" rel="noopener">Ver en la tienda ${ico("externo")}</a>` : ""}
-                     </div>`
-                   )
-                   .join("")}
-               </div>
-             </section>`
-          : ""
-      }
+        ${
+          publicadasLista.length
+            ? `<s-section heading="Últimas páginas publicadas">
+                 <s-stack direction="block" gap="base">
+                   <s-text color="subdued">Están vivas en tu tienda ahora mismo.</s-text>
+                   ${publicadasLista
+                     .slice(0, 5)
+                     .map(
+                       (p) => `
+                       <s-stack direction="inline" gap="base" alignItems="center">
+                         ${p.imagen ? `<s-thumbnail src="${esc(p.imagen)}" alt=""></s-thumbnail>` : ""}
+                         <s-text type="strong">${esc(p.titulo || "Sin título")}</s-text>
+                         ${p.url_publica ? `<s-link href="${esc(p.url_publica)}" target="_blank">Ver en la tienda</s-link>` : ""}
+                       </s-stack>`
+                     )
+                     .join("")}
+                 </s-stack>
+               </s-section>`
+            : ""
+        }
 
-      <div class="ayuda-strip">
-        <span class="ayuda-strip__txt">¿Necesitás una mano? Escribinos a <a href="mailto:soporte@tiendaiq.com">soporte@tiendaiq.com</a></span>
-        <a class="ayuda-strip__link" href="/terminos" target="_blank" rel="noopener">Términos y privacidad ${ico("externo")}</a>
-      </div>`;
+        <s-section>
+          <s-stack direction="inline" gap="base" alignItems="center" justifyContent="space-between">
+            <s-text color="subdued">¿Necesitás una mano? Escribinos a soporte@tiendaiq.com</s-text>
+            <s-link href="/terminos" target="_blank">Términos y privacidad</s-link>
+          </s-stack>
+        </s-section>
+      </s-page>`;
 
     const aLista = () => cargarLista();
     ["ir-crear", "paso-crear", "herr-crear"].forEach((id) => {
