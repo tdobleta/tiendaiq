@@ -12,6 +12,12 @@
 (function () {
   "use strict";
 
+  // COD OCULTO POR AHORA: no ofrecemos el formulario contra reembolso. Este flag
+  // apaga todos los puntos de entrada del admin (paso de "primeros pasos", card
+  // de "herramientas", ruta /cod). Poner en true para volver a mostrarlo — el
+  // código de la pantalla y el widget siguen intactos.
+  const COD_VISIBLE = false;
+
   const $ = (id) => document.getElementById(id);
   const vista = $("vista");
 
@@ -183,7 +189,7 @@
       const [plan, paginas, cod, bundles] = await Promise.all([
         api("/plan"),
         api("/paginas"),
-        api("/cod").catch(() => null),
+        COD_VISIBLE ? api("/cod").catch(() => null) : Promise.resolve(null), // COD oculto: no lo consultamos
         api("/bundles").catch(() => null)
       ]);
       estado.plan = plan;
@@ -268,7 +274,7 @@
       <div class="inicio-cabecera">
         <div>
           <h1>Bienvenido a TiendaIQ</h1>
-          <p class="inicio-cabecera__sub">Generá páginas de producto con IA, cobrá contra reembolso y armá descuentos por volumen — todo desde acá.</p>
+          <p class="inicio-cabecera__sub">Generá páginas de producto con IA y armá descuentos por volumen — todo desde acá.</p>
         </div>
         <div class="inicio-cabecera__acciones">
           <button class="btn btn--fantasma" id="ir-paginas">${IC_PAGINAS} Ver mis páginas</button>
@@ -318,7 +324,7 @@
               : `<button class="btn btn--chico" id="paso-publicar">Publicar página</button>`,
             "verde"
           )}
-          ${pasoCard(
+          ${COD_VISIBLE ? pasoCard(
             ICONO_PASO.cod,
             "Activar el pago contra reembolso",
             "Que tus clientes pidan y paguen al recibir.",
@@ -327,7 +333,7 @@
               ? `<span class="chip-estado chip-estado--ok">Completado</span>`
               : `<button class="btn btn--chico" id="paso-cod">${estado.inicioCod?.instalado ? "Prender el formulario" : "Configurar COD"}</button>`,
             "naranja"
-          )}
+          ) : ""}
           ${pasoCard(
             ICONO_PASO.bundle,
             "Crear tu primer bundle",
@@ -381,14 +387,14 @@
               <img src="/portadas/portada-paginas.png" alt="Vista previa: página de producto con IA" loading="lazy">
             </div>
           </div>
-          <div class="herramienta">
+          ${COD_VISIBLE ? `<div class="herramienta">
             <div class="herramienta__nombre">Formulario contra reembolso (COD)</div>
             <p>Tus clientes piden y pagan al recibir: el formulario crea el pedido en Shopify.</p>
             <button class="btn btn--chico" id="herr-cod">Configurar COD</button>
             <div class="herramienta__preview herramienta__preview--img">
               <img src="/portadas/portada-cod.png" alt="Vista previa: formulario contra reembolso (COD)" loading="lazy">
             </div>
-          </div>
+          </div>` : ""}
           <div class="herramienta">
             <div class="herramienta__nombre">Bundles y descuentos</div>
             <p>Descuentos por volumen y "comprá X y obtené Y". El precio lo hace cumplir Shopify.</p>
@@ -5752,7 +5758,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   function rutear() {
     const ruta = location.pathname.replace(/\/$/, "");
     if (ruta === "/paginas") ir("paginas");
-    else if (ruta === "/cod") ir("cod");
+    else if (ruta === "/cod") ir(COD_VISIBLE ? "cod" : "inicio"); // COD oculto: /cod cae al inicio
     else if (ruta === "/bundles") ir("bundles");
     else if (ruta === "/crear") cargarLista();
     else ir("inicio");
