@@ -2,6 +2,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.112.0",
     "cloudflared": "^0.7.1",
+    "esbuild": "^0.28.1",
     "pg": "^8.22.0"
   },
   "optionalDependencies": {

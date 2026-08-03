@@ -301,7 +301,37 @@ function servirLegal(res, archivo) {
   res.end(html);
 }
 
-function servirEstatico(res, base, rel) {
+const zlib = require("zlib");
+const cacheAsset = new Map(); // archivo -> { mtimeMs, min: Buffer, gz: Buffer }
+
+// Minifica JS/CSS con esbuild y cachea el resultado (+ su gzip) por mtime del
+// archivo. Es para lo que sirve NUESTRO server sin comprimir (los assets del
+// admin: app.js pesa cientos de KB); los del extension los comprime el CDN de
+// Shopify. Fallback al original si esbuild falla; en DEV_MODE ni se minifica.
+function assetOptimizado(archivo, ext) {
+  const st = fs.statSync(archivo);
+  const hit = cacheAsset.get(archivo);
+  if (hit && hit.mtimeMs === st.mtimeMs) return hit;
+  let cuerpo = fs.readFileSync(archivo);
+  try {
+    const esbuild = require("esbuild");
+    cuerpo = Buffer.from(
+      esbuild.transformSync(cuerpo.toString("utf8"), {
+        loader: ext === ".css" ? "css" : "js",
+        minify: true,
+        legalComments: "none"
+      }).code
+    );
+  } catch (e) {
+    console.error("⚠ minify", path.basename(archivo) + ":", e.message);
+    cuerpo = fs.readFileSync(archivo); // el original, sin tocar
+  }
+  const entry = { mtimeMs: st.mtimeMs, min: cuerpo, gz: zlib.gzipSync(cuerpo, { level: 6 }) };
+  cacheAsset.set(archivo, entry);
+  return entry;
+}
+
+function servirEstatico(req, res, base, rel) {
   // decodeURIComponent: los avatares traen espacios en el nombre.
   const limpio = path.normalize(decodeURIComponent(rel)).replace(/^(\.\.[/\\])+/, "");
   const archivo = path.join(base, limpio);
@@ -309,8 +339,26 @@ function servirEstatico(res, base, rel) {
     res.writeHead(404).end("no encontrado");
     return;
   }
+  const ext = path.extname(archivo).toLowerCase();
+  const tipo = TIPOS[ext] || "application/octet-stream";
+
+  // JS/CSS: se sirve minificado (+ gzip si el cliente lo acepta), salvo DEV_MODE.
+  if ((ext === ".js" || ext === ".css") && env.DEV_MODE !== "1") {
+    const { min, gz } = assetOptimizado(archivo, ext);
+    const aceptaGzip = /\bgzip\b/.test(req.headers["accept-encoding"] || "");
+    const salida = aceptaGzip ? gz : min;
+    res.writeHead(200, {
+      "Content-Type": tipo,
+      "Cache-Control": "no-cache", // revalidar tras deploy (con ?v= igual baja lo nuevo)
+      "Content-Length": salida.length,
+      Vary: "Accept-Encoding",
+      ...(aceptaGzip ? { "Content-Encoding": "gzip" } : {})
+    });
+    return void res.end(salida);
+  }
+
   res.writeHead(200, {
-    "Content-Type": TIPOS[path.extname(archivo).toLowerCase()] || "application/octet-stream",
+    "Content-Type": tipo,
     // Sin esto el navegador se queda con app.js/css viejos después de un
     // deploy y "los cambios no aparecen". no-cache = revalidar siempre.
     "Cache-Control": "no-cache"
@@ -818,7 +866,7 @@ const servidor = http.createServer(async (req, res) => {
     // Código del storefront (widget de bundles + formulario COD). Lo usa el
     // preview del admin, y es EL MISMO archivo que publica el extension.
     if (url.pathname.startsWith("/widgets/")) {
-      return servirEstatico(res, DIR_WIDGETS, url.pathname.replace(/^\/widgets\/?/, ""));
+      return servirEstatico(req, res, DIR_WIDGETS, url.pathname.replace(/^\/widgets\/?/, ""));
     }
 
     if (url.pathname.startsWith("/preview")) {
@@ -832,7 +880,7 @@ const servidor = http.createServer(async (req, res) => {
         res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" });
         return res.end(html);
       }
-      return servirEstatico(res, DIR_PLANTILLA, rel);
+      return servirEstatico(req, res, DIR_PLANTILLA, rel);
     }
 
     // /paginas y /crear son rutas del frontend (el menú lateral del admin
@@ -840,7 +888,7 @@ const servidor = http.createServer(async (req, res) => {
     if (["/", "/index.html", "/paginas", "/crear", "/cod", "/bundles"].includes(url.pathname))
       return servirIndex(res);
 
-    return servirEstatico(res, DIR_APP, url.pathname);
+    return servirEstatico(req, res, DIR_APP, url.pathname);
   } catch (e) {
     // Token muerto = desinstalaron o rotaron. Se borra la tienda para que el
     // próximo ingreso la mande a reinstalar en vez de fallar para siempre.
