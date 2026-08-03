@@ -1904,9 +1904,9 @@
   }
 
   const selectorEstrellas = (ruta, v) =>
-    `<select data-ruta="${ruta}" data-tipo="numero">${[5, 4, 3, 2, 1]
-      .map((n) => `<option value="${n}" ${n === v ? "selected" : ""}>${"★".repeat(n)}${"☆".repeat(5 - n)}</option>`)
-      .join("")}</select>`;
+    `<s-select data-ruta="${ruta}" data-tipo="numero" value="${v}">${[5, 4, 3, 2, 1]
+      .map((n) => `<s-option value="${n}">${"★".repeat(n)}${"☆".repeat(5 - n)}</s-option>`)
+      .join("")}</s-select>`;
 
   // ---- edición sobre el preview, estilo PagePilot ----
   //
@@ -2060,12 +2060,9 @@
               ${swatchesTema(leer(estado.pagina.data, "global.tema"))}
               <div class="ayuda">Cambia el color del botón, los círculos de % y los detalles. Todo lo demás queda igual.</div>
             </div>` +
-            `<div class="campo campo--editor">
-              <label>Rubro (define el color si elegís “Automático”)</label>
-              <select data-ruta="global.nicho">${NICHOS.map(
-                ([k, t]) => `<option value="${k}" ${k === nichoActual ? "selected" : ""}>${t}</option>`
-              ).join("")}</select>
-            </div>`
+            `<s-select label="Rubro (define el color si elegís “Automático”)" data-ruta="global.nicho" value="${esc(nichoActual)}">${NICHOS.map(
+                ([k, t]) => `<s-option value="${k}">${t}</s-option>`
+              ).join("")}</s-select>`
           );
         }
       },
@@ -2219,12 +2216,24 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
 
   let modalDef = null; // def activa del modal (bloque fijo o section)
 
+  // GOTCHA Polaris: <s-select> NO toma el atributo `value` al montar → se fija la
+  // propiedad post-render leyendo del modelo por data-ruta. Idempotente: sincroniza
+  // TODOS los s-select[data-ruta] del documento (cubre modal + panel de sección).
+  function sincSelectsPag() {
+    if (!estado.pagina?.data) return;
+    document.querySelectorAll("s-select[data-ruta]").forEach((sel) => {
+      const v = leer(estado.pagina.data, sel.dataset.ruta);
+      if (v != null && v !== "") sel.value = String(v);
+    });
+  }
+
   function refrescarModal() {
     const cuerpo = document.getElementById("editor-modal-cuerpo");
     if (cuerpo && modalDef) cuerpo.innerHTML = modalDef.html();
     // Las subidas de imagen/video reutilizan estos helpers; si lo abierto es el
     // panel lateral de una sección v2, refrescalo también.
     refrescarPanelSeccion();
+    sincSelectsPag();
   }
 
   // ---- editor de una section incrustada ----
@@ -2254,14 +2263,9 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   function htmlSeccion(s, i) {
     const base = `secciones.${i}`;
     const ubicacion = `
-      <div class="campo campo--editor">
-        <label>Ubicación en la página</label>
-        <select data-ruta="${base}.ancla">
-          ${ANCLAS_UBICACION.map(
-            ([v, t]) => `<option value="${v}" ${(s.ancla || "top") === v ? "selected" : ""}>${t}</option>`
-          ).join("")}
-        </select>
-      </div>`;
+      <s-select label="Ubicación en la página" data-ruta="${base}.ancla" value="${esc(s.ancla || "top")}">
+        ${ANCLAS_UBICACION.map(([v, t]) => `<s-option value="${v}">${t}</s-option>`).join("")}
+      </s-select>`;
     const tituloCampo = (s.tipo === "videos" || s.tipo === "videoslider") ? campo(`${base}.titulo`, "Título de la sección") : "";
     const cabecera = tituloCampo + ubicacion;
 
@@ -2445,6 +2449,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         </div>
       </div>`;
     document.body.appendChild(m);
+    sincSelectsPag(); // fija el .value de los s-select del modal (gotcha Polaris)
 
     // A11y: Esc cierra, foco al primer control, y se devuelve el foco al cerrar.
     m._focoPrevio = document.activeElement;
@@ -3454,10 +3459,9 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     const i = idxSec(s.id);
     const cabecera = `
       ${campo(`secciones.${i}.titulo`, "Título de la sección", 0, true)}
-      <div class="campo campo--editor"><label>Ubicación en la página</label>
-        <select data-ruta="secciones.${i}.ancla">
-          ${ANCLAS_UBICACION.map(([v, t]) => `<option value="${v}"${(s.ancla || "top") === v ? "selected" : ""}>${t}</option>`).join("")}
-        </select></div>`;
+      <s-select label="Ubicación en la página" data-ruta="secciones.${i}.ancla" value="${esc(s.ancla || "top")}">
+        ${ANCLAS_UBICACION.map(([v, t]) => `<s-option value="${v}">${t}</s-option>`).join("")}
+      </s-select>`;
     const grupos = SCHEMA_VS.map((g) => secAcordeon(g.id, g.tit, g.ctrls.map((c) => ctrlPanel(s, c)).join(""))).join("");
     const cssCustom = `<div class="sp-acc ${panelOpen.css ? "is-open" : ""}">
         <button type="button" class="sp-acc__head" data-vacc="css"><span>CSS personalizado</span><span class="sp-acc__chev">${ico("chevron")}</span></button>
@@ -3475,7 +3479,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   function refrescarPanelSeccion() {
     const s = secActual();
     const body = document.getElementById("sp-body");
-    if (s && body) body.innerHTML = panelSeccionHTML(s);
+    if (s && body) { body.innerHTML = panelSeccionHTML(s); sincSelectsPag(); }
   }
 
   function setVS(s, k, val) {
