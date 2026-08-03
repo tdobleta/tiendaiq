@@ -1257,6 +1257,7 @@
     if (datos?.global?.tema) app.dataset.tema = datos.global.tema;
     else app.removeAttribute("data-tema");
     app.innerHTML = render(datos);
+    app.style.minHeight = ""; // la reserva de CLS (pagina.liquid) ya cumplió; altura real
     iniciarVcar(); // centra los carruseles de video
     autoplayMuro(); // los videos del muro se reproducen solos al entrar en vista
     autoplayVS(); // los slides del video slider también auto-reproducen en vista

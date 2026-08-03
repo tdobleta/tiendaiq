@@ -20,6 +20,26 @@
   así verificarUrlViva (server) no da falso positivo.
 {%- endcomment -%}
 {%- if product and product.metafields.tiendaiq.pagina.value -%}
+  {%- comment -%}
+    PRELOAD del LCP: la imagen del hero (galeria[0] del metafield) se descarga
+    temprano, ANTES de que baje tiendaiq.js, así el LCP no espera al JS. Es solo
+    un hint: si la URL no resuelve, el navegador lo ignora (no rompe nada).
+  {%- endcomment -%}
+  {%- assign tq_pagina = product.metafields.tiendaiq.pagina.value -%}
+  {%- assign tq_hero_gid = tq_pagina.facetas.hero.galeria.first -%}
+  {%- assign tq_hero_img = product.featured_image -%}
+  {%- for m in product.media -%}
+    {%- if m.media_type == 'image' -%}
+      {%- capture tq_gid -%}gid://shopify/MediaImage/{{ m.id }}{%- endcapture -%}
+      {%- if tq_gid == tq_hero_gid -%}{%- assign tq_hero_img = m.preview_image -%}{%- break -%}{%- endif -%}
+    {%- endif -%}
+  {%- endfor -%}
+  {%- if tq_hero_img -%}
+    <link rel="preload" as="image" fetchpriority="high"
+          href="{{ tq_hero_img | image_url: width: 900 }}"
+          imagesrcset="{{ tq_hero_img | image_url: width: 400 }} 400w, {{ tq_hero_img | image_url: width: 600 }} 600w, {{ tq_hero_img | image_url: width: 900 }} 900w, {{ tq_hero_img | image_url: width: 1200 }} 1200w"
+          imagesizes="(max-width: 749px) 100vw, 45vw">
+  {%- endif -%}
   {{ 'tiendaiq.css' | asset_url | stylesheet_tag }}
   <script>
     window.TIENDAIQ_DATA = {{ product.metafields.tiendaiq.pagina.value | json }};
@@ -41,7 +61,10 @@
     };
   </script>
 
-  <div id="app"></div>
+  {%- comment -%} min-height reserva altura antes de que el JS pinte, para que
+     el footer del tema no salte (reduce CLS). El JS luego lo llena y el
+     contenido real supera esta altura. {%- endcomment -%}
+  <div id="app" style="min-height:70vh"></div>
 
   <script src="{{ 'tiendaiq.js' | asset_url }}" defer></script>
 {%- endif -%}
