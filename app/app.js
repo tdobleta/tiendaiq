@@ -476,53 +476,54 @@
       (b.actualizado || "").localeCompare(a.actualizado || "")
     );
 
+    // Cada página son 5 celdas sueltas de un mismo s-grid (foto · producto ·
+    // estado · tienda · acción) → todas las filas comparten columnas y quedan
+    // alineadas como una tabla, sin s-table.
+    const TONO_ESTADO = { publicada: "success", borrador: "info" };
     const fila = (p) => `
-      <div class="pagina-fila" data-id="${esc(p.id)}">
-        <div class="pagina-fila__foto">${p.imagen ? `<img src="${esc(p.imagen)}" alt="" loading="lazy">` : ico("imagen", "ico--ph")}</div>
-        <div class="pagina-fila__info">
-          <div class="pagina-fila__titulo">${esc(p.titulo || "Sin título")}</div>
-          <div class="pagina-fila__fecha">${esc(fechaCorta(p.actualizado))}</div>
-        </div>
-        <span class="chip-estado chip-estado--${esc(p.estado)}">${ESTADO_ETQ[p.estado] || esc(p.estado)}</span>
-        ${
-          p.url_publica
-            ? `<a class="pagina-fila__link" href="${esc(p.url_publica)}" target="_blank">Ver en la tienda</a>`
-            : `<span class="pagina-fila__link pagina-fila__link--vacio"></span>`
-        }
-        <button class="btn btn--fantasma btn--chico" data-editar="${esc(p.id)}">${ico("lapiz")} Editar y publicar</button>
-      </div>`;
+      <span class="pagina-fila__foto">${p.imagen ? `<img src="${esc(p.imagen)}" alt="" loading="lazy">` : ico("imagen", "ico--ph")}</span>
+      <s-stack direction="block" gap="small-500">
+        <s-text type="strong">${esc(p.titulo || "Sin título")}</s-text>
+        <s-text color="subdued">${esc(fechaCorta(p.actualizado))}</s-text>
+      </s-stack>
+      <s-badge tone="${TONO_ESTADO[p.estado] || "neutral"}">${ESTADO_ETQ[p.estado] || esc(p.estado)}</s-badge>
+      ${
+        p.url_publica
+          ? `<s-link href="${esc(p.url_publica)}" target="_blank">Ver en la tienda</s-link>`
+          : `<s-text></s-text>`
+      }
+      <s-button data-editar="${esc(p.id)}">Editar y publicar</s-button>`;
 
     vista.innerHTML = `
-      <div class="inicio-cabecera">
-        <h1 class="titulo-nav"><button class="volver-flecha" id="volver-inicio"></button> Páginas de producto</h1>
-        <div class="inicio-cabecera__acciones">
-          <button class="btn btn--marca" id="ir-crear">${ico("chispa")} Crear página de producto con IA</button>
-        </div>
-      </div>
+      <s-page heading="Páginas de producto">
+        <s-button slot="primary-action" variant="primary" id="ir-crear">Crear página de producto con IA</s-button>
 
-      <div id="banner-pagina"></div>
+        <div id="banner-pagina"></div>
 
-      <div class="tarjeta">
-        <div class="tarjeta__titulo">Páginas de producto</div>
-        <div class="panel__sub">Administrá tus páginas de producto generadas por IA</div>
-        ${
-          paginas.length
-            ? `<div class="pagina-tabla">
-                 <div class="pagina-tabla__cabecera">
-                   <span></span><span>Producto</span><span>Estado</span><span>Tienda</span><span></span>
-                 </div>
-                 ${paginas.map(fila).join("")}
-               </div>`
-            : `<div class="vacio-panel">
-                 <div class="vacio-panel__ico">${ico("documento")}</div>
-                 <div class="vacio-panel__tit">Todavía no generaste ninguna página</div>
-                 <p>Elegí un producto de tu tienda y armamos su página de venta con IA en segundos.</p>
-                 <button class="btn" id="vacio-crear">${ico("chispa")} Crear página con IA</button>
-               </div>`
-        }
-      </div>`;
+        <s-section heading="Páginas de producto">
+          <s-stack direction="block" gap="base">
+            <s-text color="subdued">Administrá tus páginas de producto generadas por IA</s-text>
+            ${
+              paginas.length
+                ? `<s-grid gridTemplateColumns="auto minmax(0, 1fr) auto auto auto" gap="base" alignItems="center">
+                     <s-text color="subdued"></s-text>
+                     <s-text color="subdued">Producto</s-text>
+                     <s-text color="subdued">Estado</s-text>
+                     <s-text color="subdued">Tienda</s-text>
+                     <s-text color="subdued"></s-text>
+                     ${paginas.map(fila).join("")}
+                   </s-grid>`
+                : `<s-stack direction="block" gap="base" alignItems="center">
+                     ${ico("documento")}
+                     <s-heading>Todavía no generaste ninguna página</s-heading>
+                     <s-paragraph>Elegí un producto de tu tienda y armamos su página de venta con IA en segundos.</s-paragraph>
+                     <s-button variant="primary" id="vacio-crear">Crear página con IA</s-button>
+                   </s-stack>`
+            }
+          </s-stack>
+        </s-section>
+      </s-page>`;
 
-    $("volver-inicio").onclick = () => ir("inicio");
     const crear = $("ir-crear") || $("vacio-crear");
     if (crear) crear.onclick = () => cargarLista();
     const vacioCrear = $("vacio-crear");
@@ -541,11 +542,10 @@
           const cont = $("banner-pagina");
           if (!cont) return;
           cont.innerHTML = `
-            <div class="banner-tema">
-              <span class="banner-tema__ico">${ico("aviso")}</span>
-              <span class="banner-tema__txt">Tus páginas publicadas <strong>todavía no se ven en la tienda</strong>: falta activar la plantilla en tu tema (una sola vez).</span>
-              <a class="btn btn--chico" href="${esc(e.setupUrl)}" target="_blank" rel="noopener">Activar plantilla</a>
-            </div>`;
+            <s-banner tone="warning" heading="Falta activar la plantilla en tu tema">
+              <s-paragraph>Tus páginas publicadas todavía no se ven en la tienda: activá la plantilla en tu tema (una sola vez).</s-paragraph>
+              <s-link href="${esc(e.setupUrl)}" target="_blank">Activar plantilla</s-link>
+            </s-banner>`;
         })
         .catch(() => {});
     }
@@ -1849,12 +1849,16 @@
 
   function pantallaGenerando() {
     vista.innerHTML = `
-      <div class="generando">
-        <div class="giro"></div>
-        <h2>Generando la página…</h2>
-        <p>Leyendo las fotos y escribiendo el copy · <span class="reloj" id="reloj">0s</span></p>
-        <p class="ayuda" style="margin-top:10px;color:#9b9b9b">Suele tardar unos 35 segundos.</p>
-      </div>`;
+      <s-page heading="Creando tu página">
+        <s-section>
+          <s-stack direction="block" gap="base" alignItems="center">
+            <s-spinner accessibilityLabel="Generando la página"></s-spinner>
+            <s-heading>Generando la página…</s-heading>
+            <s-paragraph>Leyendo las fotos y escribiendo el copy · <s-text id="reloj">0s</s-text></s-paragraph>
+            <s-text color="subdued">Suele tardar unos 35 segundos.</s-text>
+          </s-stack>
+        </s-section>
+      </s-page>`;
   }
 
   // ---------- abrir una página ya generada (sin gastar generación) ----------
