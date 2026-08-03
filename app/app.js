@@ -5130,13 +5130,10 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   function bloqueActivador(b) {
     const a = b.activador || { tipo: "todos", ids: [] };
     return `
-      <div class="campo campo--editor">
-        <label>Se aplica a</label>
-        <select data-b="activador.tipo">
-          <option value="todos" ${a.tipo === "todos" ? "selected" : ""}>Todos los productos</option>
-          <option value="productos" ${a.tipo === "productos" ? "selected" : ""}>Productos específicos</option>
-        </select>
-      </div>
+      <s-select label="Se aplica a" data-b="activador.tipo" value="${esc(a.tipo || "todos")}">
+        <s-option value="todos">Todos los productos</s-option>
+        <s-option value="productos">Productos específicos</s-option>
+      </s-select>
       ${a.tipo === "productos" ? selectorProductos(a.ids || []) : ""}`;
   }
 
