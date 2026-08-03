@@ -61,10 +61,95 @@
     };
   </script>
 
-  {%- comment -%} min-height reserva altura antes de que el JS pinte, para que
-     el footer del tema no salte (reduce CLS). El JS luego lo llena y el
-     contenido real supera esta altura. {%- endcomment -%}
-  <div id="app" style="min-height:70vh"></div>
+  {%- comment -%}
+    SSR del HERO: se emite el above-the-fold como HTML real (LCP + H1 + precio +
+    CTA en el HTML servido) → mejor LCP/CLS/SEO. tiendaiq.js detecta #tiq-hero +
+    #tiq-resto y pinta SOLO el resto, sin re-renderizar el hero. Los handlers son
+    inline globales (cambiarPrincipal / tiendaiqAgregar). El SSR es solo para el
+    estilo clásico; premium cae al render completo del JS (sin #tiq-hero).
+    min-height reserva altura para que el footer no salte (CLS).
+  {%- endcomment -%}
+  {%- assign h = tq_pagina.facetas.hero -%}
+  {%- assign g = tq_pagina.global -%}
+  {%- assign v = product.selected_or_first_available_variant -%}
+  {%- if g.estilo == 'premium' -%}
+    {%- comment -%} Premium: sin SSR de hero (el JS arma el timer). {%- endcomment -%}
+    <div id="app" data-nicho="{{ g.nicho | default: 'general' }}"{% if g.tema %} data-tema="{{ g.tema }}"{% endif %} style="min-height:70vh"></div>
+  {%- else -%}
+    {%- capture svg_camion %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 7h13v9H1z"/><path d="M14 10h4l3 3v3h-7z"/><circle cx="5.5" cy="18" r="1.8"/><circle cx="17.5" cy="18" r="1.8"/></svg>{% endcapture -%}
+    {%- capture svg_paquete %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8.5v9L12 22l-9-4.5v-9L12 4l9 4.5z"/><path d="M3 8.5l9 4.5 9-4.5"/><path d="M12 13v9"/><path d="M7.5 6.25l9 4.5"/></svg>{% endcapture -%}
+    {%- capture svg_corazon %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.5S3.5 15 3.5 9.3C3.5 6.4 5.7 4.5 8 4.5c1.7 0 3.2.9 4 2.3.8-1.4 2.3-2.3 4-2.3 2.3 0 4.5 1.9 4.5 4.8 0 5.7-8.5 11.2-8.5 11.2z"/></svg>{% endcapture -%}
+    {%- capture svg_tick %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12.8l4.7 4.7L19.5 6.8"/></svg>{% endcapture -%}
+    {%- capture svg_verif %}<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/><path d="M10.2 16.4l-4-4 1.4-1.4 2.6 2.6 6-6 1.4 1.4z" fill="#fff"/></svg>{% endcapture -%}
+    {%- capture svg_globo %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a13.5 13.5 0 0 1 0 18a13.5 13.5 0 0 1 0-18z"/></svg>{% endcapture -%}
+    {%- capture svg_retorno %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg>{% endcapture -%}
+    <div id="app" data-ssr="1" data-nicho="{{ g.nicho | default: 'general' }}"{% if g.tema %} data-tema="{{ g.tema }}"{% endif %} style="min-height:70vh">
+      <div id="tiq-hero">
+        <section class="hero">
+          <div class="contenedor">
+            <div class="hero__grid">
+              <div class="hero__galeria">
+                <div class="hero__principal" id="imagen-principal">
+                  {%- if tq_hero_img -%}<img src="{{ tq_hero_img | image_url: width: 900 }}" srcset="{{ tq_hero_img | image_url: width: 400 }} 400w, {{ tq_hero_img | image_url: width: 600 }} 600w, {{ tq_hero_img | image_url: width: 900 }} 900w, {{ tq_hero_img | image_url: width: 1200 }} 1200w" sizes="(max-width:749px) 100vw, 45vw" width="{{ tq_hero_img.width }}" height="{{ tq_hero_img.height }}" alt="{{ h.titulo | escape }}" loading="eager" fetchpriority="high" decoding="async">{%- else -%}<div class="ph-img">Imagen pendiente</div>{%- endif -%}
+                </div>
+                <div class="hero__miniaturas">
+                  {%- for gid in h.galeria -%}
+                    {%- assign mini = nil -%}
+                    {%- for m in product.media -%}
+                      {%- if m.media_type == 'image' -%}
+                        {%- capture mgid -%}gid://shopify/MediaImage/{{ m.id }}{%- endcapture -%}
+                        {%- if mgid == gid -%}{%- assign mini = m.preview_image -%}{%- break -%}{%- endif -%}
+                      {%- endif -%}
+                    {%- endfor -%}
+                    {%- if mini -%}<button class="hero__mini{% if forloop.first %} activa{% endif %}" onclick="cambiarPrincipal('{{ gid }}', this)"><img src="{{ mini | image_url: width: 160 }}" alt="" loading="lazy" decoding="async"></button>{%- endif -%}
+                  {%- endfor -%}
+                </div>
+              </div>
+              <div>
+                <div class="hero__urgencia">{{ h.urgencia | default: 'Ya es viral | Pocas unidades' | escape }}</div>
+                <div class="hero__resenas"><span class="estrellas">★★★★★</span> <span>Calificación {{ h.puntaje | default: 4.9 }}/5.0 ({{ h.resenas_count }})</span></div>
+                <h1 class="hero__titulo">{{ h.titulo | escape }}</h1>
+                <div class="hero__precios">
+                  <span class="hero__precio">{{ v.price | money }}</span>
+                  {%- if v.compare_at_price > v.price -%}
+                    <span class="hero__comparativo">{{ v.compare_at_price | money }}</span>
+                    <span class="hero__descuento">-{{ v.compare_at_price | minus: v.price | times: 100 | divided_by: v.compare_at_price }}%</span>
+                  {%- endif -%}
+                </div>
+                <p class="hero__impuestos">Impuestos incluidos.</p>
+                <ul class="hero__bullets">
+                  {%- for b in h.bullets -%}
+                    <li>{%- if b.emoji != blank -%}<span class="hero__bullet-emoji">{{ b.emoji }}</span>{%- else -%}<span class="hero__bullet-ico">{{ svg_tick }}</span>{%- endif -%}<span>{%- if b.fuerte != blank and b.resto != blank -%}<strong>{{ b.fuerte | escape }}</strong> – {{ b.resto | escape }}{%- elsif b.fuerte != blank -%}<strong>{{ b.fuerte | escape }}</strong>{%- else -%}{{ b.resto | default: b | escape }}{%- endif -%}</span></li>
+                  {%- endfor -%}
+                </ul>
+                <form method="post" action="/cart/add" onsubmit="return tiendaiqAgregar(event)">
+                  <input type="hidden" name="id" value="{{ v.id }}">
+                  <input type="hidden" name="quantity" value="1" id="tiendaiq-cantidad-form">
+                  <button type="submit" class="cta cta--full">{{ g.cta | default: 'Agregar al carrito' | escape }}</button>
+                </form>
+                <div class="hero__badges">
+                  <div class="badge"><span class="badge__icono">{{ svg_camion }}</span>Envío rastreado y asegurado</div>
+                  <div class="badge"><span class="badge__icono">{{ svg_paquete }}</span>30 días de garantía</div>
+                  <div class="badge"><span class="badge__icono">{{ svg_corazon }}</span>Devoluciones gratis</div>
+                </div>
+                {%- if h.resena_destacada and h.resena_destacada.texto != blank -%}
+                  {%- assign rd = h.resena_destacada -%}
+                  <div class="resena-destacada">
+                    <div class="resena-destacada__foto"><div class="resena-destacada__avatar"><span class="resena-destacada__silueta">👤</span></div></div>
+                    <div class="resena-destacada__cuerpo"><span class="estrellas">★★★★★</span><p class="resena-destacada__texto">"{{ rd.texto | escape }}"</p><div class="resena-destacada__autor">{{ svg_verif }} {{ rd.autor | default: 'Cliente' | escape }}</div></div>
+                  </div>
+                {%- endif -%}
+                {%- for a in h.acordeones -%}
+                  <details class="acordeon"><summary><span class="acordeon__titulo"><span class="acordeon__icono">{% if forloop.first %}{{ svg_globo }}{% else %}{{ svg_retorno }}{% endif %}</span>{{ a.titulo | escape }}</span></summary><p>{{ a.contenido | escape }}</p></details>
+                {%- endfor -%}
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+      <div id="tiq-resto"></div>
+    </div>
+  {%- endif -%}
 
   <script src="{{ 'tiendaiq.js' | asset_url }}" defer></script>
 {%- endif -%}
