@@ -4479,7 +4479,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         <div class="be-block">
           ${campoBdl("nombre", "Nombre de la oferta")}
           <div class="be-field-row">
-            <div class="campo campo--editor" style="flex:1">${campoBdl("diseno.titulo", "Texto de encabezado").replace(/^<div class="campo campo--editor">|<\/div>$/g, "")}</div>
+            <div style="flex:1">${campoBdl("diseno.titulo", "Texto de encabezado")}</div>
             <button class="be-eye ${verEnc ? "" : "is-off"}" data-toggle-b="diseno.mostrar_encabezado" title="Mostrar/ocultar">${verEnc ? BE_OJO : BE_OJO_OFF}</button>
           </div>
         </div>
@@ -5224,11 +5224,9 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       return `<label class="cod-check"><input type="checkbox" data-b="${ruta}" data-tipo="bool" ${v ? "checked" : ""}> ${etiqueta}</label>`;
     }
     if (tipo === "numero") {
-      return `<div class="campo campo--editor"><label>${etiqueta}</label>
-        <input type="number" data-b="${ruta}" data-tipo="numero" value="${esc(v ?? 0)}" ${extra}></div>`;
+      return `<s-text-field label="${esc(etiqueta)}" type="number" data-b="${ruta}" data-tipo="numero" value="${esc(v ?? 0)}" ${extra}></s-text-field>`;
     }
-    return `<div class="campo campo--editor"><label>${etiqueta}</label>
-      <input type="text" data-b="${ruta}" value="${esc(v ?? "")}"></div>`;
+    return `<s-text-field label="${esc(etiqueta)}" data-b="${ruta}" value="${esc(v ?? "")}"></s-text-field>`;
   }
 
   function bindPanelBundle() {
