@@ -1411,6 +1411,8 @@
   }
 
   const ESTADO_ETQ = { publicada: "Publicada", borrador: "Borrador" };
+  // Tono del s-badge de estado (Polaris). pend = "Cambios sin publicar".
+  const TONO_ESTADO = { publicada: "success", borrador: "info", pend: "warning" };
 
   // Variantes de color de la plantilla (solo pisan el acento; la lógica queda
   // igual). "auto" = usa el color del rubro. Los hex viven en styles.css
@@ -1515,7 +1517,7 @@
         </span>
         ${
           p.estado
-            ? `<span class="chip-estado chip-estado--${p.estado}">${ESTADO_ETQ[p.estado] || p.estado}</span>`
+            ? `<s-badge tone="${TONO_ESTADO[p.estado] || "neutral"}">${ESTADO_ETQ[p.estado] || esc(p.estado)}</s-badge>`
             : `<span class="fila__cta">Crear página ${ico("flecha")}</span>`
         }
       </button>`;
@@ -1633,7 +1635,7 @@
         </span>
         ${
           p.estado
-            ? `<span class="chip-estado chip-estado--${p.estado}">${ESTADO_ETQ[p.estado] || p.estado}</span>`
+            ? `<s-badge tone="${TONO_ESTADO[p.estado] || "neutral"}">${ESTADO_ETQ[p.estado] || esc(p.estado)}</s-badge>`
             : `<span class="fila__cta">Elegir ${ico("flecha")}</span>`
         }
       </button>`;
@@ -2937,7 +2939,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   // Refleja el estado actual en el pill de la barra (Borrador / Publicada /
   // Cambios sin publicar) sin re-renderizar toda la pantalla.
   function actualizarPill() {
-    const chip = $("barra-estado")?.querySelector(".chip-estado");
+    const chip = $("barra-estado")?.querySelector("s-badge");
     if (!chip) return;
     const publicada = estado.pagina?.estado === "publicada";
     const est = !publicada
@@ -2945,7 +2947,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       : cambiosSinPublicar
         ? { c: "pend", t: "Cambios sin publicar" }
         : { c: "publicada", t: "Publicada" };
-    chip.className = "chip-estado chip-estado--" + est.c;
+    chip.setAttribute("tone", TONO_ESTADO[est.c] || "neutral");
     chip.textContent = est.t;
   }
 
@@ -3624,7 +3626,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
           <div class="preview-barra__sub">${esc(pg.data.facetas.hero.subtitulo)}</div>
         </div>
         <div class="preview-barra__estado" id="barra-estado">
-          <span class="chip-estado chip-estado--${est.c}">${est.t}</span>
+          <s-badge tone="${TONO_ESTADO[est.c] || "neutral"}">${est.t}</s-badge>
           ${publicada && pg.url_publica
             ? `<a class="preview-barra__ver" href="${esc(pg.url_publica)}" target="_blank" rel="noopener">Ver en la tienda ${ico("externo")}</a>`
             : ""}
