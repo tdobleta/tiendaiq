@@ -940,7 +940,7 @@
     panel.addEventListener("input", (e) => {
       const ruta = e.target.dataset.cfg;
       if (!ruta) return;
-      let v = e.target.type === "checkbox" ? e.target.checked : e.target.value;
+      let v = (e.target.type === "checkbox" || e.target.tagName === "S-CHECKBOX") ? e.target.checked : e.target.value;
       if (e.target.dataset.tipo === "numero") v = Number(v) || 0;
       fijar(estado.cod.config, ruta, v);
       // el código junto al selector de color refleja el valor
@@ -4465,6 +4465,14 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     bindEditorBundle(b, s);
     pintarPreviewBundle();
 
+    // GOTCHA Polaris: <s-select> NO toma el atributo `value` al montar (la
+    // propiedad queda en la 1ª opción). Se fija por PROPIEDAD post-render,
+    // releyendo del modelo por data-b, para que muestre la opción guardada.
+    vista.querySelectorAll("s-select[data-b]").forEach((sel) => {
+      const val = leer(b, sel.dataset.b);
+      if (val != null && val !== "") sel.value = String(val);
+    });
+
     if (!(estado.productos || []).length) {
       api("/productos").then((prods) => { estado.productos = prods; if (estado.bundles.vista === "editor") pintarEditorBundle(); }).catch(() => {});
     }
@@ -4670,8 +4678,8 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   // Select atado a una ruta del modelo. opciones = [[valor, etiqueta], ...].
   function selectBdl(ruta, etiqueta, opciones, tipo) {
     const v = leer(bundleActual(), ruta);
-    const opts = opciones.map(([val, lab]) => `<option value="${esc(val)}" ${String(v) === String(val) ? "selected" : ""}>${esc(lab)}</option>`).join("");
-    return `<div class="campo campo--editor"><label>${esc(etiqueta)}</label><select data-b="${ruta}"${tipo ? ` data-tipo="${tipo}"` : ""}>${opts}</select></div>`;
+    const opts = opciones.map(([val, lab]) => `<s-option value="${esc(val)}">${esc(lab)}</s-option>`).join("");
+    return `<s-select label="${esc(etiqueta)}" data-b="${ruta}" value="${esc(v ?? "")}"${tipo ? ` data-tipo="${tipo}"` : ""}>${opts}</s-select>`;
   }
 
   // Mapa "Personalizar": refleja el color tocado en la mini-tarjeta del editor
@@ -4983,7 +4991,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       }
       const ruta = e.target.dataset.b;
       if (!ruta) return;
-      let v = e.target.type === "checkbox" ? e.target.checked : e.target.value;
+      let v = (e.target.type === "checkbox" || e.target.tagName === "S-CHECKBOX") ? e.target.checked : e.target.value;
       if (e.target.dataset.tipo === "numero") v = Number(v) || 0;
       fijar(b, ruta, v);
       // Editar un color a mano rompe el vínculo con el preset: deja de marcarlo
@@ -5221,7 +5229,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         <code>${esc(v || "#000000")}</code></span></div>`;
     }
     if (tipo === "bool") {
-      return `<label class="cod-check"><input type="checkbox" data-b="${ruta}" data-tipo="bool" ${v ? "checked" : ""}> ${etiqueta}</label>`;
+      return `<s-checkbox label="${esc(etiqueta)}" data-b="${ruta}" data-tipo="bool" ${v ? "checked" : ""}></s-checkbox>`;
     }
     if (tipo === "numero") {
       return `<s-text-field label="${esc(etiqueta)}" type="number" data-b="${ruta}" data-tipo="numero" value="${esc(v ?? 0)}" ${extra}></s-text-field>`;
@@ -5236,7 +5244,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     panel.addEventListener("input", (e) => {
       const ruta = e.target.dataset.b;
       if (!ruta) return;
-      let v = e.target.type === "checkbox" ? e.target.checked : e.target.value;
+      let v = (e.target.type === "checkbox" || e.target.tagName === "S-CHECKBOX") ? e.target.checked : e.target.value;
       if (e.target.dataset.tipo === "numero") v = Number(v) || 0;
       fijar(b, ruta, v);
       if (e.target.type === "color") e.target.parentElement.querySelector("code").textContent = v;
