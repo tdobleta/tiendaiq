@@ -82,8 +82,11 @@
     const estado = {
       cantidad: 1,
       tarifa: (c.tarifas && c.tarifas[0]) || null,
-      oferta: null // tier elegido de ofertas de cantidad
+      oferta: null, // tier elegido de ofertas de cantidad
+      descuento: null // { code, tipo, porcentaje|monto } tras "Aplicar"
     };
+    // El campo de descuento se muestra salvo que el merchant lo apague.
+    const mostrarDescuento = c.extras?.descuento !== false;
 
     const campoHTML = (x) => {
       if (x.visible === false) return "";
@@ -318,9 +321,17 @@
 
               <div class="tiq-cod-caja-gris">
                 <div class="tiq-cod-linea"><span>${esc(c.textos?.subtotal || "Subtotal")}</span><span data-zona="subtotal"></span></div>
+                <div class="tiq-cod-linea tiq-cod-linea--desc" data-zona="linea-desc" hidden><span data-zona="desc-etq">${esc(c.textos?.descuento_linea || "Descuento")}</span><span data-zona="descuento"></span></div>
                 ${tarifasHTML}
                 <div class="tiq-cod-linea tiq-cod-linea--total"><span>${esc(c.textos?.total || "Total")}</span><span data-zona="total"></span></div>
               </div>
+
+              ${mostrarDescuento ? `
+                <div class="tiq-cod-desc">
+                  <input class="tiq-cod-desc__input" type="text" name="codigo_descuento" placeholder="${esc(c.textos?.descuento_ph || "Código de descuento")}" autocomplete="off">
+                  <button class="tiq-cod-desc__btn" type="button" data-zona="desc-aplicar">${esc(c.textos?.descuento_btn || "Aplicar")}</button>
+                </div>
+                <div class="tiq-cod-desc__msg" data-zona="desc-msg"></div>` : ""}
 
               <div class="tiq-cod-error-envio" data-zona="error"></div>
               <button class="tiq-cod-enviar" type="submit" style="${variablesBoton(c)}" data-zona="cta"></button>
@@ -339,8 +350,18 @@
       const desc = estado.oferta?.descuento || 0;
       const unitario = Math.round(variante.precio * (1 - desc / 100));
       const subtotal = unitario * cant;
-      const envio = Math.round((estado.tarifa?.precio || 0) * 100);
-      return { cant, unitario, subtotal, envio, total: subtotal + envio };
+      let envio = Math.round((estado.tarifa?.precio || 0) * 100);
+      // Descuento por código: SOLO para mostrar. El server lo re-valida y aplica
+      // al crear el pedido (fuente de verdad). porcentaje viene como 0–1.
+      let descMonto = 0;
+      const d = estado.descuento;
+      if (d) {
+        if (d.tipo === "porcentaje") descMonto = Math.round(subtotal * (Number(d.porcentaje) || 0));
+        else if (d.tipo === "monto") descMonto = Math.min(subtotal, Math.round((Number(d.monto) || 0) * 100));
+        else if (d.tipo === "envio") envio = 0;
+      }
+      const total = Math.max(0, subtotal - descMonto + envio);
+      return { cant, unitario, subtotal, envio, descMonto, total };
     }
 
     // El valor de un campo, sea cual sea su tipo de entrada.
@@ -359,13 +380,72 @@
         plata(t.unitario, producto.moneda) + (t.cant > 1 ? ` × ${t.cant}` : "");
       capa.querySelectorAll('[data-zona="cantidad"]').forEach((z) => (z.textContent = t.cant));
       q('[data-zona="subtotal"]').textContent = plata(t.subtotal, producto.moneda);
+      // Línea de descuento: visible solo si hay uno aplicado.
+      const lineaDesc = q('[data-zona="linea-desc"]');
+      if (lineaDesc) {
+        const hayEnvio = estado.descuento?.tipo === "envio";
+        if (t.descMonto > 0 || hayEnvio) {
+          lineaDesc.hidden = false;
+          q('[data-zona="descuento"]').textContent = hayEnvio
+            ? "−" + (c.textos?.gratis || "Gratis")
+            : "−" + plata(t.descMonto, producto.moneda);
+        } else {
+          lineaDesc.hidden = true;
+        }
+      }
       q('[data-zona="total"]').textContent = plata(t.total, producto.moneda);
       q('[data-zona="cta"]').textContent = (c.textos?.cta || "Completá tu compra — {total}")
         .replace("{total}", plata(t.total, producto.moneda));
     }
 
+    // "Aplicar" el código de descuento: valida contra el server (read-only) y
+    // refleja el descuento en el total. El pedido lo re-valida al crearse.
+    async function aplicarDescuento() {
+      const input = q('input[name="codigo_descuento"]');
+      const msg = q('[data-zona="desc-msg"]');
+      const btn = q('[data-zona="desc-aplicar"]');
+      const code = (input?.value || "").trim();
+      if (!code || !msg || !btn) return;
+      btn.disabled = true;
+      const txt = btn.textContent;
+      msg.className = "tiq-cod-desc__msg";
+      msg.textContent = "";
+      try {
+        if (preview) {
+          estado.descuento = { code, tipo: "porcentaje", porcentaje: 0.1 };
+          msg.classList.add("es-ok");
+          msg.textContent = "Vista previa: código aplicado (ejemplo −10%).";
+        } else {
+          const r = await fetch(`${c.app_url}/cod/descuento`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ tienda: c.tienda, code })
+          });
+          const data = await r.json().catch(() => ({}));
+          if (data.valido) {
+            estado.descuento = data;
+            msg.classList.add("es-ok");
+            msg.textContent = c.textos?.descuento_ok || "Código aplicado ✓";
+          } else {
+            estado.descuento = null;
+            msg.classList.add("es-error");
+            msg.textContent = c.textos?.descuento_error || "Código inválido o vencido.";
+          }
+        }
+      } catch {
+        estado.descuento = null;
+        msg.classList.add("es-error");
+        msg.textContent = c.textos?.descuento_error || "No se pudo validar el código.";
+      } finally {
+        btn.disabled = false;
+        btn.textContent = txt;
+        repintar();
+      }
+    }
+
     capa.addEventListener("click", (e) => {
       if (e.target === capa || e.target.closest(".tiq-cod-cerrar")) cerrar();
+      if (e.target.closest('[data-zona="desc-aplicar"]')) { aplicarDescuento(); return; }
       const btnCant = e.target.closest("[data-cant]");
       if (btnCant) {
         estado.cantidad = Math.min(10, Math.max(1, estado.cantidad + Number(btnCant.dataset.cant)));
@@ -472,6 +552,7 @@
             cantidad: t.cant,
             oferta: estado.oferta ? tiers.indexOf(estado.oferta) : null,
             tarifa_id: estado.tarifa?.id || null,
+            codigo_descuento: estado.descuento?.code || (q('input[name="codigo_descuento"]')?.value.trim() || null),
             campos: datos,
             extras: datosExtra,
             boletin: !!q('input[name="boletin"]')?.checked,

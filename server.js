@@ -28,7 +28,7 @@ const { sesionDe, borrarTienda, listarTiendas } = require("./tiendas");
 const { guardarPaginaDB, leerPaginaDB, listarPaginasDB } = require("./db");
 const { iniciarInstalacion, terminarInstalacion, tiendaDelPase } = require("./auth");
 const { estadoPlan, consumirCupo, revertirCupo, crearSuscripcion } = require("./facturacion");
-const { leerConfigCod, guardarConfigCod, crearPedidoCod } = require("./cod");
+const { leerConfigCod, guardarConfigCod, crearPedidoCod, validarDescuentoCod } = require("./cod");
 const { reportarError, metrica } = require("./monitoreo");
 const {
   leerConfigBundles,
@@ -693,6 +693,31 @@ async function pedidoCod(req, res) {
   }
 }
 
+// POST /cod/descuento — el botón "Aplicar" del formulario valida un código
+// contra la tienda (read-only) y devuelve tipo+valor para reflejarlo en el
+// total. La aplicación REAL al pedido la hace crearPedidoCod re-validando; esto
+// es solo para el preview del cliente. Fail-safe: cualquier problema → inválido.
+async function descuentoCod(req, res) {
+  if (req.method === "OPTIONS") return void res.writeHead(204, CORS_COD).end();
+  const responder = (codigo, cuerpo) => {
+    res.writeHead(codigo, { "Content-Type": "application/json; charset=utf-8", ...CORS_COD });
+    res.end(JSON.stringify(cuerpo));
+  };
+  try {
+    const body = await leerCuerpo(req);
+    const sesion = await sesionDe(String(body.tienda || ""));
+    const ip = req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || req.socket.remoteAddress || "?";
+    if (!pasaRateLimit(`desc|${sesion.tienda}|${ip}`)) {
+      return responder(429, { ok: false, valido: false });
+    }
+    const dc = await validarDescuentoCod(sesion, body.code);
+    return responder(200, { ok: true, ...dc });
+  } catch (e) {
+    console.error("✖ descuento COD:", e.message);
+    return responder(200, { ok: true, valido: false });
+  }
+}
+
 const CORS_PUB = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, OPTIONS",
@@ -777,6 +802,7 @@ const servidor = http.createServer(async (req, res) => {
 
     // --- pedido COD desde la tienda del merchant (público, con CORS) ---
     if (url.pathname === "/cod/pedido") return await pedidoCod(req, res);
+    if (url.pathname === "/cod/descuento") return await descuentoCod(req, res);
 
     // --- config pública de bundles/COD (la trae el app embed del storefront) ---
     if (url.pathname === "/publico/bundles") return await bundlesPublico(req, res, url);

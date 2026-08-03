@@ -143,7 +143,56 @@ const M_PEDIDO = `mutation($order: OrderCreateOrderInput!, $options: OrderCreate
 
 const round2 = (n) => Math.round(n * 100) / 100;
 
-// pedido = { variante_id, cantidad, oferta, tarifa_id, campos, boletin, hp }
+// Busca un código de descuento de la tienda (read-only) y devuelve su tipo y
+// valor. NO lo aplica: eso lo decide crearPedidoCod. Fail-safe: cualquier error
+// o código desconocido/inactivo → { valido:false } (nunca rompe el flujo).
+// `percentage` de Shopify viene como fracción 0–1 (0.15 = 15%).
+const Q_DESCUENTO = `query($code: String!) {
+  codeDiscountNodeByCode(code: $code) {
+    codeDiscount {
+      __typename
+      ... on DiscountCodeBasic {
+        status
+        customerGets { value {
+          __typename
+          ... on DiscountPercentage { percentage }
+          ... on DiscountAmount { amount { amount currencyCode } }
+        } }
+      }
+      ... on DiscountCodeFreeShipping { status }
+    }
+  }
+}`;
+
+async function validarDescuentoCod(sesion, code) {
+  const codigo = String(code || "").trim();
+  if (!codigo) return { valido: false };
+  try {
+    const d = await gql(Q_DESCUENTO, { code: codigo }, sesion);
+    const cd = d.codeDiscountNodeByCode?.codeDiscount;
+    if (!cd || cd.status !== "ACTIVE") return { valido: false };
+    if (cd.__typename === "DiscountCodeFreeShipping") {
+      return { valido: true, code: codigo, tipo: "envio" };
+    }
+    const v = cd.customerGets?.value;
+    if (v?.__typename === "DiscountPercentage") {
+      const pct = Number(v.percentage) || 0; // 0–1
+      if (pct <= 0) return { valido: false };
+      return { valido: true, code: codigo, tipo: "porcentaje", porcentaje: pct };
+    }
+    if (v?.__typename === "DiscountAmount") {
+      const monto = Number(v.amount?.amount) || 0; // en unidad principal
+      if (monto <= 0) return { valido: false };
+      return { valido: true, code: codigo, tipo: "monto", monto, moneda: v.amount?.currencyCode || null };
+    }
+    return { valido: false };
+  } catch (e) {
+    console.error("✖ validar descuento COD:", e.message);
+    return { valido: false };
+  }
+}
+
+// pedido = { variante_id, cantidad, oferta, tarifa_id, campos, boletin, hp, codigo_descuento }
 async function crearPedidoCod(sesion, pedido) {
   const config = await leerConfigCod(sesion.tienda);
   if (!config.activo) throw new Error("El formulario COD está desactivado en esta tienda.");
@@ -259,11 +308,33 @@ async function crearPedidoCod(sesion, pedido) {
     ];
   }
 
-  const r = await gql(
-    M_PEDIDO,
-    { order, options: { inventoryBehaviour: "DECREMENT_OBEYING_POLICY", sendReceipt: false } },
-    sesion
-  );
+  // Descuento por código (opcional): SIEMPRE se re-valida server-side (jamás se
+  // confía en lo que mande el browser) y recién ahí se aplica. Código inexistente
+  // o inactivo → se ignora y la venta sigue igual. `percentage` de Shopify es
+  // 0–1; el input de orderCreate lo espera en 0–100.
+  if (pedido.codigo_descuento) {
+    const dc = await validarDescuentoCod(sesion, pedido.codigo_descuento);
+    if (dc.valido && dc.tipo === "porcentaje") {
+      order.discountCode = { itemPercentageDiscountCode: { code: dc.code, percentage: round2(dc.porcentaje * 100) } };
+    } else if (dc.valido && dc.tipo === "monto") {
+      order.discountCode = { itemFixedDiscountCode: { code: dc.code, amountSet: { shopMoney: { amount: round2(dc.monto).toFixed(2), currencyCode: moneda } } } };
+    } else if (dc.valido && dc.tipo === "envio") {
+      order.discountCode = { freeShippingDiscountCode: { code: dc.code } };
+    }
+  }
+
+  const crear = (orderInput) =>
+    gql(M_PEDIDO, { order: orderInput, options: { inventoryBehaviour: "DECREMENT_OBEYING_POLICY", sendReceipt: false } }, sesion);
+
+  let r = await crear(order);
+  // Fail-safe: si el pedido falló y llevaba descuento, reintentar SIN él. Mejor
+  // una venta sin descuento que una venta perdida por un código conflictivo.
+  if (r.orderCreate.userErrors?.length && order.discountCode) {
+    console.error("⚠ orderCreate con descuento falló, reintento sin descuento:", r.orderCreate.userErrors.map((e) => e.message).join(" · "));
+    const sinDescuento = { ...order };
+    delete sinDescuento.discountCode;
+    r = await crear(sinDescuento);
+  }
   if (r.orderCreate.userErrors?.length) {
     throw new Error("No se pudo crear el pedido: " + r.orderCreate.userErrors.map((e) => e.message).join(" · "));
   }
@@ -271,4 +342,4 @@ async function crearPedidoCod(sesion, pedido) {
   return { orden: r.orderCreate.order.name, id: r.orderCreate.order.id };
 }
 
-module.exports = { configDefault, leerConfigCod, guardarConfigCod, crearPedidoCod };
+module.exports = { configDefault, leerConfigCod, guardarConfigCod, crearPedidoCod, validarDescuentoCod };

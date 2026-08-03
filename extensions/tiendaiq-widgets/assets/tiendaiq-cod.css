@@ -364,6 +364,33 @@
 .tiq-cod-envio__opcion--activa { border-color: #111; }
 .tiq-cod-envio__nombre { flex: 1; font-weight: 600; }
 
+/* código de descuento (input + Aplicar, estilo Releasit) */
+.tiq-cod-desc { display: flex; gap: 8px; }
+.tiq-cod-desc__input {
+  flex: 1; min-width: 0; min-height: 42px;
+  padding: 10px 12px;
+  border: var(--tiq-campo-borde-ancho, 1px) solid var(--tiq-campo-borde, #cbcbcb);
+  border-radius: var(--tiq-campo-radio, 8px);
+  background: var(--tiq-campo-fondo, #fff);
+  color: var(--tiq-campo-texto, #111);
+  font-size: 14px; font-family: inherit; outline: none;
+}
+.tiq-cod-desc__input:focus { border-color: #111; }
+.tiq-cod-desc__btn {
+  flex: 0 0 auto;
+  padding: 0 18px; min-height: 42px;
+  background: #111; color: #fff;
+  border: 0; border-radius: var(--tiq-campo-radio, 8px);
+  font-size: 14px; font-weight: 700; cursor: pointer;
+  font-family: inherit;
+}
+.tiq-cod-desc__btn:hover:not(:disabled) { opacity: .9; }
+.tiq-cod-desc__btn:disabled { opacity: .5; cursor: wait; }
+.tiq-cod-desc__msg { font-size: 12.5px; }
+.tiq-cod-desc__msg.es-ok { color: #157f3d; }
+.tiq-cod-desc__msg.es-error { color: #d40000; }
+.tiq-cod-linea--desc { color: #157f3d; }
+
 /* CTA */
 .tiq-cod-enviar {
   width: 100%;
