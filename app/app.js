@@ -1891,24 +1891,14 @@
   function campo(ruta, etiqueta, filas, nulo) {
     const v = leer(estado.pagina.data, ruta) ?? "";
     const atributos = `data-ruta="${ruta}"${nulo ? ` data-nulo="1"` : ""}`;
-    return `
-      <div class="campo campo--editor">
-        <label>${etiqueta}</label>
-        ${
-          filas
-            ? `<textarea rows="${filas}" ${atributos}>${esc(v)}</textarea>`
-            : `<input type="text" ${atributos} value="${esc(v)}">`
-        }
-      </div>`;
+    return filas
+      ? `<s-text-area label="${esc(etiqueta)}" rows="${filas}" ${atributos} value="${esc(v)}"></s-text-area>`
+      : `<s-text-field label="${esc(etiqueta)}" ${atributos} value="${esc(v)}"></s-text-field>`;
   }
 
   function campoNumero(ruta, etiqueta) {
     const v = leer(estado.pagina.data, ruta) ?? 0;
-    return `
-      <div class="campo campo--editor">
-        <label>${etiqueta}</label>
-        <input type="number" min="0" data-ruta="${ruta}" data-tipo="numero" value="${esc(v)}">
-      </div>`;
+    return `<s-text-field label="${esc(etiqueta)}" type="number" min="0" data-ruta="${ruta}" data-tipo="numero" value="${esc(v)}"></s-text-field>`;
   }
 
   const selectorEstrellas = (ruta, v) =>
