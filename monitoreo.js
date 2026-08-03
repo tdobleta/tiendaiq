@@ -48,7 +48,7 @@ function enviarSentry(payload) {
 // Reporta una excepción. Mantiene el console.error de siempre + Sentry si hay DSN.
 function reportarError(err, ctx = {}) {
   const stack = err && err.stack ? err.stack : String(err);
-  console.error("✖", ctx.donde || ctx.tipo || "", (err && err.message) || err);
+  console.error("✖", ctx.donde || ctx.tipo || "", (err && err.message) || err, ctx.detalle ? `· ${ctx.detalle}` : "");
   enviarSentry({
     event_id: crypto.randomBytes(16).toString("hex"),
     timestamp: Date.now() / 1000,

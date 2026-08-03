@@ -77,10 +77,20 @@ async function gql(query, variables = {}, sesion) {
     throw e;
   }
 
-  if (!r.ok) throw new Error(`HTTP ${r.status}: ${await r.text()}`);
+  // El cuerpo crudo de Shopify puede traer detalle sensible/ruidoso: se guarda
+  // en e.detalle (para nuestros logs) pero NO en el mensaje que sube al cliente.
+  if (!r.ok) {
+    const e = new Error(`Shopify respondió ${r.status}`);
+    e.detalle = (await r.text()).slice(0, 500);
+    throw e;
+  }
 
   const json = await r.json();
-  if (json.errors) throw new Error(JSON.stringify(json.errors, null, 2));
+  if (json.errors) {
+    const e = new Error("Shopify devolvió errores de GraphQL");
+    e.detalle = JSON.stringify(json.errors).slice(0, 500);
+    throw e;
+  }
   return json.data;
 }
 

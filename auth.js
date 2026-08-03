@@ -116,10 +116,24 @@ async function terminarInstalacion(res, url) {
 
   const datos = await r.json();
   if (!datos.access_token) {
-    return void res.writeHead(502, { "Content-Type": "text/plain; charset=utf-8" }).end("Shopify no devolvió token: " + JSON.stringify(datos));
+    // No filtrar la respuesta cruda de Shopify al navegador: se loguea del lado
+    // nuestro y el merchant ve un mensaje genérico.
+    console.error(`  ✖ OAuth ${tienda}: sin access_token en la respuesta ·`, JSON.stringify(datos).slice(0, 300));
+    return void res.writeHead(502, { "Content-Type": "text/plain; charset=utf-8" }).end("No se pudo completar la instalación. Volvé a intentarlo.");
   }
 
-  await guardarTienda(tienda, datos.access_token, { alcances: datos.scope });
+  // Aviso si Shopify concedió MENOS alcances que los pedidos (p. ej. el merchant
+  // instaló con un token viejo): la app funcionará pero puede fallar en runtime
+  // (ACCESS_DENIED) en las features del alcance faltante. Se registra para que
+  // el problema sea visible desde la instalación, no recién al usar la feature.
+  const pedidos = ALCANCES.split(",");
+  const concedidos = new Set(String(datos.scope || "").split(","));
+  const faltantes = pedidos.filter((a) => !concedidos.has(a));
+  if (faltantes.length) {
+    console.log(`  ⚠ ${tienda}: alcances no concedidos → ${faltantes.join(", ")} (puede requerir re-autorización)`);
+  }
+
+  await guardarTienda(tienda, datos.access_token, { alcances: datos.scope, alcances_faltantes: faltantes });
   console.log(`  ✚ instalada · ${tienda}`);
   metrica("instalacion", { tienda });
 
@@ -181,6 +195,15 @@ function tiendaDelPase(pase) {
   if (c.exp && ahora >= c.exp) throw new Error("Pase de sesión vencido");
   if (c.nbf && ahora < c.nbf - 5) throw new Error("Pase de sesión todavía no válido");
   if (c.aud !== env.SHOPIFY_CLIENT_ID) throw new Error("Pase de sesión emitido para otra app");
+
+  // La doc de Shopify (set-up-session-tokens) exige que `iss` (quién emitió el
+  // pase) y `dest` (a qué tienda va dirigido) apunten a la MISMA tienda. Sin
+  // este chequeo, un pase legítimo de una tienda podría reusarse apuntando a
+  // otra. Comparamos por host.
+  const hostDe = (u) => { try { return new URL(String(u)).host; } catch { return null; } };
+  const hIss = hostDe(c.iss);
+  const hDest = hostDe(c.dest);
+  if (!hIss || !hDest || hIss !== hDest) throw new Error("Pase de sesión inconsistente (iss ≠ dest)");
 
   const tienda = normalizar(c.dest);
   if (!esDominioValido(tienda)) throw new Error("El pase no trae una tienda válida");

@@ -236,13 +236,49 @@ async function leerPaginaDB(tienda, id) {
   return fs.existsSync(r) ? JSON.parse(fs.readFileSync(r, "utf8")) : null;
 }
 
+// Devuelve un RESUMEN por página (no el JSONB `datos` entero). Una página con
+// IA pesa cientos de KB; una tienda con muchas transfería megabytes por request
+// solo para pintar una lista de títulos. Se proyectan en el SQL únicamente los
+// campos que consumen las vistas de lista/estado. Para el contenido completo de
+// UNA página está leerPaginaDB.
 async function listarPaginasDB(tienda) {
   if (USA_PG) {
     const p = await pg();
-    const r = await p.query(`SELECT datos FROM paginas WHERE tienda = $1`, [tienda]);
-    return r.rows.map((x) => x.datos);
+    const r = await p.query(
+      `SELECT
+         datos->>'id'                         AS id,
+         datos->>'shopify_product_id'         AS shopify_product_id,
+         datos->>'estado'                     AS estado,
+         datos->>'url_publica'                AS url_publica,
+         datos->>'actualizado'                AS actualizado,
+         datos#>>'{data,facetas,hero,titulo}' AS titulo,
+         (datos->'urls') ->> (datos#>>'{data,facetas,hero,galeria,0}') AS imagen
+       FROM paginas WHERE tienda = $1`,
+      [tienda]
+    );
+    return r.rows.map((x) => ({
+      id: x.id,
+      shopify_product_id: x.shopify_product_id || null,
+      estado: x.estado,
+      url_publica: x.url_publica || null,
+      actualizado: x.actualizado || null,
+      titulo: x.titulo || null,
+      imagen: x.imagen || null
+    }));
   }
-  return fileListar(path.join(DIR_PAGINAS, seguro(tienda)));
+  // Archivos (dev): mismo resumen, calculado en memoria.
+  return fileListar(path.join(DIR_PAGINAS, seguro(tienda))).map((p) => {
+    const galeria = p.data?.facetas?.hero?.galeria || [];
+    return {
+      id: p.id,
+      shopify_product_id: p.shopify_product_id || null,
+      estado: p.estado,
+      url_publica: p.url_publica || null,
+      actualizado: p.actualizado || null,
+      titulo: p.data?.facetas?.hero?.titulo || null,
+      imagen: (galeria.length && p.urls?.[galeria[0]]) || null
+    };
+  });
 }
 
 // ---- estados de OAuth ----

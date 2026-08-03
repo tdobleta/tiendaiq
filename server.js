@@ -141,6 +141,28 @@ function leerCrudo(req) {
   });
 }
 
+// Dedup de webhooks: Shopify reintenta (hasta 8 veces) y puede entregar el
+// mismo evento más de una vez. Hoy los handlers son idempotentes, pero registrar
+// el `x-shopify-webhook-id` evita doble ejecución si se agrega uno con efectos.
+// Map acotado con TTL en memoria: alcanza para una instancia (el deploy actual
+// corre una sola); tras reinicio se pierde, sin consecuencia por ser idempotente.
+const WEBHOOKS_VISTOS = new Map(); // id -> vence (ms)
+const WEBHOOK_TTL = 10 * 60 * 1000;
+const WEBHOOKS_MAX = 2000;
+function webhookRepetido(id) {
+  if (!id) return false;
+  const ahora = Date.now();
+  // Limpieza perezosa de vencidos + tope duro (evita fuga de memoria).
+  if (WEBHOOKS_VISTOS.size > WEBHOOKS_MAX) {
+    for (const [k, v] of WEBHOOKS_VISTOS) if (v < ahora) WEBHOOKS_VISTOS.delete(k);
+    if (WEBHOOKS_VISTOS.size > WEBHOOKS_MAX) WEBHOOKS_VISTOS.clear();
+  }
+  const visto = WEBHOOKS_VISTOS.get(id);
+  if (visto && visto > ahora) return true;
+  WEBHOOKS_VISTOS.set(id, ahora + WEBHOOK_TTL);
+  return false;
+}
+
 // POST /webhooks — desinstalación y pedidos de privacidad (GDPR).
 // Shopify exige responder 200 a los de privacidad aunque no guardemos datos
 // de clientes (no guardamos ninguno: solo tokens de tienda y páginas).
@@ -154,6 +176,12 @@ async function webhooks(req, res) {
   const a = Buffer.from(esperada), b = Buffer.from(firma);
   if (a.length !== b.length || !require("crypto").timingSafeEqual(a, b)) {
     return void res.writeHead(401).end();
+  }
+
+  // Repetido (reintento de Shopify): ya lo procesamos → 200 y cortar, así deja
+  // de reintentar. Va DESPUÉS del HMAC para no dejar registrar ids sin firmar.
+  if (webhookRepetido(req.headers["x-shopify-webhook-id"] || "")) {
+    return void res.writeHead(200).end();
   }
 
   const topico = req.headers["x-shopify-topic"] || "";
@@ -182,21 +210,28 @@ async function webhooks(req, res) {
 
 function leerCuerpo(req, limite = 1_000_000) {
   return new Promise((resolve, reject) => {
-    let d = "";
+    const trozos = [];
+    let bytes = 0;
     // Tope de 1 MB por defecto: /cod/pedido es público y sin esto cualquiera
     // nos infla la memoria. La subida de imágenes pasa un límite mayor.
+    // Se mide por BYTES reales (Buffer.length), no por largo de string: con
+    // multibyte el corte en .length no coincide con los bytes recibidos, y
+    // acumular en string materializa el base64 de 15 MB en memoria UTF-16.
     req.on("data", (c) => {
-      d += c;
-      if (d.length > limite) {
+      bytes += c.length;
+      if (bytes > limite) {
         reject(Object.assign(new Error("Cuerpo demasiado grande"), { status: 413 }));
         req.destroy();
+        return;
       }
+      trozos.push(c);
     });
     req.on("end", () => {
+      if (!bytes) return resolve({});
       try {
-        resolve(d ? JSON.parse(d) : {});
+        resolve(JSON.parse(Buffer.concat(trozos).toString("utf8")));
       } catch {
-        reject(new Error("Cuerpo JSON inválido"));
+        reject(Object.assign(new Error("Cuerpo JSON inválido"), { status: 400 }));
       }
     });
     req.on("error", reject);
@@ -345,23 +380,9 @@ async function api(req, res, url) {
   // GET /api/paginas — resumen para el inicio y la tabla de páginas
   // (no toca Shopify, solo DB)
   if (req.method === "GET" && ruta === "/api/paginas") {
-    const ps = await listarPaginas(sesion.tienda);
-    return json(
-      res,
-      200,
-      ps.map((p) => {
-        const galeria = p.data?.facetas?.hero?.galeria || [];
-        return {
-          id: p.id,
-          shopify_product_id: p.shopify_product_id || null,
-          estado: p.estado,
-          url_publica: p.url_publica || null,
-          titulo: p.data?.facetas?.hero?.titulo || null,
-          imagen: (galeria.length && p.urls?.[galeria[0]]) || null,
-          actualizado: p.actualizado || null
-        };
-      })
-    );
+    // listarPaginas ya devuelve el resumen proyectado (id/estado/título/imagen/…),
+    // no el JSONB entero de cada página.
+    return json(res, 200, await listarPaginas(sesion.tienda));
   }
 
   // GET /api/pagina-estado — ¿las páginas publicadas se ven en la tienda?
@@ -803,9 +824,15 @@ const servidor = http.createServer(async (req, res) => {
       return json(res, 401, { error: e.message, reinstalar: true });
     }
     // 401 = churn de auth esperado (token rotado/desinstalado): no es un bug.
-    // El resto sí se reporta (console + Sentry si hay DSN).
-    if (e.status !== 401) reportarError(e, { donde: url.pathname, metodo: req.method });
-    json(res, e.status || 500, { error: e.message });
+    // El resto sí se reporta (console + Sentry si hay DSN), con e.detalle si lo
+    // trae (respuesta cruda de Shopify/GraphQL, que NO va al cliente).
+    if (e.status !== 401) reportarError(e, { donde: url.pathname, metodo: req.method, detalle: e.detalle });
+    // Nunca filtrar internals: los errores con e.status son mensajes nuestros
+    // (400/402/413…) y son seguros de mostrar; cualquier 5xx inesperado (incluye
+    // mensajes crudos de Shopify/GraphQL o bugs) se responde genérico — el
+    // detalle real ya quedó logueado arriba.
+    const codigo = e.status || 500;
+    json(res, codigo, { error: codigo >= 500 ? "Ocurrió un error interno. Probá de nuevo en un momento." : e.message });
   }
 });
 
