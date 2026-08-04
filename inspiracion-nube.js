@@ -21,16 +21,21 @@ const CLOUD = env.CLOUDINARY_CLOUD_NAME || "";
 const KEY = env.CLOUDINARY_API_KEY || "";
 const SECRET = env.CLOUDINARY_API_SECRET || "";
 
+// SUBIR requiere las 3 (firma el upload). SERVIR solo necesita el cloud name:
+// las URLs de entrega son públicas y no llevan secret → en prod (Render) alcanza
+// con CLOUDINARY_CLOUD_NAME, sin exponer la API secret en el server.
 const nubeConfigurada = () => !!(CLOUD && KEY && SECRET);
+const nubeServible = () => !!CLOUD;
 
 // URL del video (auto formato/calidad, lo elige el CDN por dispositivo).
 const urlVideo = (pid) =>
   `https://res.cloudinary.com/${CLOUD}/video/upload/f_auto,q_auto/${pid}.mp4`;
 
-// URL del POSTER: un frame a los 0,5s recortado a 9:16 (vertical de TikTok).
-// Esto es lo que hace que el thumbnail cargue al instante y jamás salga negro.
+// URL del POSTER: frame a los 2s recortado a 9:16 (vertical de TikTok). A los 2s
+// el video ya pasó cualquier fade/negro del arranque (so_auto sería ideal pero
+// es add-on de pago) → el thumbnail carga al instante y no sale negro.
 const urlPoster = (pid) =>
-  `https://res.cloudinary.com/${CLOUD}/video/upload/so_0.5,c_fill,w_500,h_888,f_auto,q_auto/${pid}.jpg`;
+  `https://res.cloudinary.com/${CLOUD}/video/upload/so_2,c_fill,w_500,h_888,f_auto,q_auto/${pid}.jpg`;
 
 // Firma de Cloudinary: sha1( params ordenados + api_secret ).
 function firmar(params) {
@@ -98,4 +103,4 @@ function subir(archivo, publicId, folder = "inspiracion") {
   });
 }
 
-module.exports = { nubeConfigurada, urlVideo, urlPoster, subir };
+module.exports = { nubeConfigurada, nubeServible, urlVideo, urlPoster, subir };

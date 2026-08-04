@@ -27,7 +27,7 @@ const { env, sesionDeEnv } = require("./shopify");
 const { sesionDe, borrarTienda, listarTiendas } = require("./tiendas");
 const { guardarPaginaDB, leerPaginaDB, listarPaginasDB } = require("./db");
 const { iniciarInstalacion, terminarInstalacion, tiendaDelPase } = require("./auth");
-const { nubeConfigurada, urlVideo, urlPoster } = require("./inspiracion-nube");
+const { nubeServible, urlVideo, urlPoster } = require("./inspiracion-nube");
 const { estadoPlan, consumirCupo, revertirCupo, crearSuscripcion } = require("./facturacion");
 const { leerConfigCod, guardarConfigCod, crearPedidoCod, validarDescuentoCod } = require("./cod");
 const { reportarError, metrica } = require("./monitoreo");
@@ -406,7 +406,7 @@ const metricasDeNombre = (nombre) => {
 // instantáneo, lo que ven los merchants en prod); si no está configurada o no
 // hay manifiesto, cae al modo LOCAL (lee la carpeta) para desarrollo.
 function listarInspiracion() {
-  if (nubeConfigurada() && fs.existsSync(MANIFIESTO_INSP)) {
+  if (nubeServible() && fs.existsSync(MANIFIESTO_INSP)) {
     try {
       const items = JSON.parse(fs.readFileSync(MANIFIESTO_INSP, "utf8"));
       if (Array.isArray(items) && items.length) {
