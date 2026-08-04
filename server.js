@@ -27,6 +27,7 @@ const { env, sesionDeEnv } = require("./shopify");
 const { sesionDe, borrarTienda, listarTiendas } = require("./tiendas");
 const { guardarPaginaDB, leerPaginaDB, listarPaginasDB } = require("./db");
 const { iniciarInstalacion, terminarInstalacion, tiendaDelPase } = require("./auth");
+const { nubeConfigurada, urlVideo, urlPoster } = require("./inspiracion-nube");
 const { estadoPlan, consumirCupo, revertirCupo, crearSuscripcion } = require("./facturacion");
 const { leerConfigCod, guardarConfigCod, crearPedidoCod, validarDescuentoCod } = require("./cod");
 const { reportarError, metrica } = require("./monitoreo");
@@ -390,25 +391,48 @@ function servirEstatico(req, res, base, rel) {
 // ---------- inspiración (videos de venta orgánica) ----------
 
 const RE_VIDEO = /\.(mp4|m4v|webm|mov)$/i;
+// Manifiesto que escribe el script de subida (scripts/subir-inspiracion.js):
+// [{ public_id, vistas, likes, comentarios }]. Es chico y SÍ se versiona.
+const MANIFIESTO_INSP = path.join(__dirname, "inspiracion.json");
 
-// Lee la carpeta y arma la lista. El nombre del archivo codifica las métricas
-// como tres números en orden: vistas . likes . comentarios (ej "46100.1233.26.mp4",
-// tolera espacios). Se extraen con \d+ para aguantar separadores raros.
+// Números de las métricas a partir del nombre: vistas . likes . comentarios
+// (ej "46100 . 1233 . 26.mp4"). \d+ aguanta espacios y prefijos tipo "(AI)".
+const metricasDeNombre = (nombre) => {
+  const nums = (nombre.replace(RE_VIDEO, "").match(/\d+/g) || []).map((n) => parseInt(n, 10));
+  return { vistas: nums[0] ?? 0, likes: nums[1] ?? 0, comentarios: nums[2] ?? 0 };
+};
+
+// Lista los videos con sus métricas. Prioriza la NUBE (Cloudinary: CDN + poster
+// instantáneo, lo que ven los merchants en prod); si no está configurada o no
+// hay manifiesto, cae al modo LOCAL (lee la carpeta) para desarrollo.
 function listarInspiracion() {
+  if (nubeConfigurada() && fs.existsSync(MANIFIESTO_INSP)) {
+    try {
+      const items = JSON.parse(fs.readFileSync(MANIFIESTO_INSP, "utf8"));
+      if (Array.isArray(items) && items.length) {
+        return items.map((it) => ({
+          archivo: it.public_id,
+          url: urlVideo(it.public_id),
+          poster: urlPoster(it.public_id), // thumbnail del CDN (nunca negro)
+          vistas: it.vistas ?? 0,
+          likes: it.likes ?? 0,
+          comentarios: it.comentarios ?? 0
+        }));
+      }
+    } catch (e) {
+      console.error("⚠ inspiracion.json inválido, uso carpeta local:", e.message);
+    }
+  }
+  // Fallback local.
   let archivos = [];
   try { archivos = fs.readdirSync(DIR_INSPIRACION); } catch { return []; }
   return archivos
     .filter((f) => RE_VIDEO.test(f))
-    .map((f) => {
-      const nums = (f.replace(RE_VIDEO, "").match(/\d+/g) || []).map((n) => parseInt(n, 10));
-      return {
-        archivo: f,
-        url: "/inspiracion-media/" + encodeURIComponent(f),
-        vistas: nums[0] ?? 0,
-        likes: nums[1] ?? 0,
-        comentarios: nums[2] ?? 0
-      };
-    });
+    .map((f) => ({
+      archivo: f,
+      url: "/inspiracion-media/" + encodeURIComponent(f),
+      ...metricasDeNombre(f)
+    }));
 }
 
 // Sirve un video con soporte de Range (206). Es lo que permite que el navegador

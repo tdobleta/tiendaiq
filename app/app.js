@@ -5801,7 +5801,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         <div class="insp-card">
           <div class="insp-thumb" data-src="${esc(v.url)}">
             <span class="insp-rank">#${i + 1}</span>
-            <video src="${esc(v.url)}#t=0.1" preload="metadata" muted playsinline></video>
+            <video src="${esc(v.url)}${v.poster ? "" : "#t=0.1"}"${v.poster ? ` poster="${esc(v.poster)}"` : ""} preload="${v.poster ? "none" : "metadata"}" muted playsinline loop></video>
           </div>
           <div class="insp-stats">
             <span class="insp-stat" title="Vistas">${ICO_INSP.vistas}<s-text>${fmtNum(v.vistas)}</s-text></span>
