@@ -245,8 +245,8 @@
           <span class="paso-ico ${hecho ? "is-done" : ""}">${icono}</span>
           ${hecho ? `<s-badge tone="success">Completado</s-badge>` : ""}
         </div>
-        <div class="tiq-paso__t">${titulo}</div>
-        <div class="tiq-paso__d">${texto}</div>
+        <s-heading>${titulo}</s-heading>
+        <s-text color="subdued">${texto}</s-text>
         ${hecho ? "" : `<div>${boton}</div>`}
       </div>`;
 
@@ -285,22 +285,15 @@
 
     vista.innerHTML = `
       <style>
-        .tiq-ini-ico{display:inline-flex;align-items:center;justify-content:center;color:#4a4a4a}
-        .tiq-ini-ico svg{width:24px;height:24px}
-        .tiq-subt{font-size:14px;color:var(--suave)}
         .tiq-pasos-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
-        .tiq-paso{background:#fff;border:1px solid var(--borde);border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:12px}
+        .tiq-paso{background:#fff;border:1px solid var(--borde);border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:10px}
         .tiq-paso__top{display:flex;align-items:center;justify-content:space-between;min-height:26px}
         .paso-ico{width:42px;height:42px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;border:1.5px solid var(--borde);color:var(--negro);background:#fff}
         .paso-ico svg{width:21px;height:21px}
         .paso-ico.is-done{background:var(--negro);border-color:var(--negro);color:#fff}
-        .tiq-paso__t{font-size:15px;font-weight:600;color:var(--negro)}
-        .tiq-paso__d{font-size:13.5px;color:var(--suave);line-height:1.55;flex:1}
         .tiq-tools{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
         .tiq-tool{background:#fff;border:1px solid var(--borde);border-radius:12px;overflow:hidden;display:flex;flex-direction:column}
-        .tiq-tool__body{padding:18px 18px 16px}
-        .tiq-tool__t{font-size:15px;font-weight:600;color:var(--negro);margin:0}
-        .tiq-tool__d{font-size:13px;color:var(--suave);margin:5px 0 14px;line-height:1.5}
+        .tiq-tool__body{padding:18px;display:flex;flex-direction:column;gap:8px}
         .tiq-tool__prev{margin-top:auto;height:162px;background:#eef1f6;border-top:1px solid var(--borde);overflow:hidden}
         .tiq-tool__prev img{width:100%;height:100%;object-fit:cover;object-position:top center;display:block}
         .tiq-bmini{padding:16px;display:flex;flex-direction:column;gap:8px;height:100%;background:linear-gradient(135deg,#eef4ff,#f5f0ff)}
@@ -309,11 +302,9 @@
         .tiq-bmini__tag{background:#111;color:#fff;border-radius:5px;padding:1px 6px;font-size:10px;font-weight:600;margin-left:6px}
         .tiq-bmini__old{color:#9ca3af;text-decoration:line-through;margin-left:6px}
         .tiq-info{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
-        .tiq-infocard{background:#fff;border:1px solid var(--borde);border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:9px}
+        .tiq-infocard{background:#fff;border:1px solid var(--borde);border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:8px}
         .tiq-infocard__ic{width:34px;height:34px;border-radius:9px;background:var(--fondo);display:flex;align-items:center;justify-content:center;color:var(--negro)}
         .tiq-infocard__ic svg{width:19px;height:19px}
-        .tiq-infocard__t{font-size:14px;font-weight:600;color:var(--negro)}
-        .tiq-infocard__d{font-size:12.5px;color:var(--suave);line-height:1.5;flex:1}
       </style>
       <s-page heading="Bienvenido a TiendaIQ">
         <s-button slot="primary-action" variant="primary" id="ir-crear">Crear página con IA</s-button>
@@ -333,7 +324,7 @@
         <s-section heading="Primeros pasos">
           <s-stack direction="block" gap="base">
             <s-stack direction="inline" gap="base" alignItems="center" justifyContent="space-between">
-              <div class="tiq-subt">Completá estos pasos para empezar a vender con TiendaIQ</div>
+              <s-text color="subdued">Completá estos pasos para empezar a vender con TiendaIQ</s-text>
               <s-badge tone="${hechos === TOTAL_PASOS ? "success" : "info"}">${hechos} de ${TOTAL_PASOS} completado${hechos === 1 ? "" : "s"}</s-badge>
             </s-stack>
             <div class="tiq-pasos-grid">
@@ -371,21 +362,21 @@
 
         <s-section heading="Herramientas útiles">
           <s-stack direction="block" gap="base">
-            <div class="tiq-subt">Explorá lo que TiendaIQ hace por tu tienda.</div>
+            <s-text color="subdued">Explorá lo que TiendaIQ hace por tu tienda.</s-text>
             <div class="tiq-tools">
               <div class="tiq-tool">
                 <div class="tiq-tool__body">
-                  <div class="tiq-tool__t">Páginas de producto con IA</div>
-                  <div class="tiq-tool__d">Elegí un producto y la IA arma la landing completa: copy, reseñas, FAQ y diseño.</div>
-                  <s-button variant="primary" id="herr-crear">Crear página de producto</s-button>
+                  <s-heading>Páginas de producto con IA</s-heading>
+                  <s-text color="subdued">Elegí un producto y la IA arma la landing completa: copy, reseñas, FAQ y diseño.</s-text>
+                  <div style="margin-top:4px"><s-button variant="primary" id="herr-crear">Crear página de producto</s-button></div>
                 </div>
                 <div class="tiq-tool__prev"><img src="/portadas/portada-paginas.png" alt="" loading="lazy"></div>
               </div>
               <div class="tiq-tool">
                 <div class="tiq-tool__body">
-                  <div class="tiq-tool__t">Creá paquetes y aumentá el AOV</div>
-                  <div class="tiq-tool__d">Descuentos por volumen y "comprá X y llevá Y". El precio lo hace cumplir Shopify.</div>
-                  <s-button variant="primary" id="herr-bundles">Crear bundles</s-button>
+                  <s-heading>Creá paquetes y aumentá el AOV</s-heading>
+                  <s-text color="subdued">Descuentos por volumen y "comprá X y llevá Y". El precio lo hace cumplir Shopify.</s-text>
+                  <div style="margin-top:4px"><s-button variant="primary" id="herr-bundles">Crear bundles</s-button></div>
                 </div>
                 <div class="tiq-tool__prev">
                   <div class="tiq-bmini">
@@ -401,31 +392,31 @@
 
         <s-section heading="Información y comunidad">
           <s-stack direction="block" gap="base">
-            <div class="tiq-subt">Recursos y ayuda para sacarle el jugo a TiendaIQ.</div>
+            <s-text color="subdued">Recursos y ayuda para sacarle el jugo a TiendaIQ.</s-text>
             <div class="tiq-info">
               <div class="tiq-infocard">
                 <div class="tiq-infocard__ic">${ICO_INFO.chat}</div>
-                <div class="tiq-infocard__t">Soporte</div>
-                <div class="tiq-infocard__d">¿Trabado con algo? Escribinos y te damos una mano.</div>
-                <s-link href="mailto:soporte@tiendaiq.com">Escribir a soporte</s-link>
+                <s-heading>Soporte</s-heading>
+                <s-text color="subdued">¿Trabado con algo? Escribinos y te damos una mano.</s-text>
+                <div style="margin-top:4px"><s-button variant="secondary" id="info-soporte">Escribir a soporte</s-button></div>
               </div>
               <div class="tiq-infocard">
                 <div class="tiq-infocard__ic">${ICO_INFO.gente}</div>
-                <div class="tiq-infocard__t">Comunidad</div>
-                <div class="tiq-infocard__d">Seguinos para tips de dropshipping y productos ganadores.</div>
-                <s-link href="${TIKTOK_URL}" target="_blank">Ir a la comunidad</s-link>
+                <s-heading>Comunidad</s-heading>
+                <s-text color="subdued">Seguinos para tips de dropshipping y productos ganadores.</s-text>
+                <div style="margin-top:4px"><s-button variant="secondary" id="info-comunidad">Ir a la comunidad</s-button></div>
               </div>
               <div class="tiq-infocard">
                 <div class="tiq-infocard__ic">${ICO_INFO.estrella}</div>
-                <div class="tiq-infocard__t">¿Te sirve TiendaIQ?</div>
-                <div class="tiq-infocard__d">Contanos qué te gustaría mejorar — leemos todo.</div>
-                <s-link href="mailto:soporte@tiendaiq.com?subject=Feedback%20TiendaIQ">Dejar mi opinión</s-link>
+                <s-heading>¿Te sirve TiendaIQ?</s-heading>
+                <s-text color="subdued">Contanos qué te gustaría mejorar — leemos todo.</s-text>
+                <div style="margin-top:4px"><s-button variant="secondary" id="info-feedback">Dejar mi opinión</s-button></div>
               </div>
               <div class="tiq-infocard">
                 <div class="tiq-infocard__ic">${ICO_INFO.ayuda}</div>
-                <div class="tiq-infocard__t">Legales</div>
-                <div class="tiq-infocard__d">Términos de uso y política de privacidad.</div>
-                <s-link href="/terminos" target="_blank">Ver términos y privacidad</s-link>
+                <s-heading>Legales</s-heading>
+                <s-text color="subdued">Términos de uso y política de privacidad.</s-text>
+                <div style="margin-top:4px"><s-button variant="secondary" id="info-legales">Términos y privacidad</s-button></div>
               </div>
             </div>
           </s-stack>
@@ -455,6 +446,12 @@
       const b = $(id);
       if (b) b.onclick = () => ir("bundles");
     });
+    // Cards de Información: cada botón nativo abre su link en pestaña nueva.
+    const abrirInfo = (id, url) => { const b = $(id); if (b) b.onclick = () => window.open(url, "_blank"); };
+    abrirInfo("info-soporte", "mailto:soporte@tiendaiq.com");
+    abrirInfo("info-comunidad", TIKTOK_URL);
+    abrirInfo("info-feedback", "mailto:soporte@tiendaiq.com?subject=Feedback%20TiendaIQ");
+    abrirInfo("info-legales", "/terminos");
   }
 
   // ---------- 0b. mis páginas (tabla de páginas generadas) ----------
