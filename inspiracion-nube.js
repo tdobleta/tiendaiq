@@ -17,7 +17,10 @@ const https = require("https");
 const crypto = require("crypto");
 const { env } = require("./shopify");
 
-const CLOUD = env.CLOUDINARY_CLOUD_NAME || "";
+// Cloud name (público: va en cada URL del CDN). Default para que SERVIR funcione
+// en prod sin config extra; env lo sobreescribe. La API key/secret NO tienen
+// default (solo se usan para subir, en local).
+const CLOUD = env.CLOUDINARY_CLOUD_NAME || "ov5mc5xd";
 const KEY = env.CLOUDINARY_API_KEY || "";
 const SECRET = env.CLOUDINARY_API_SECRET || "";
 
