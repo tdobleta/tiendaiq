@@ -283,18 +283,36 @@
     vista.innerHTML = `
       <style>
         .tiq-pasos-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
-        .tiq-paso{background:#fff;border:1px solid var(--borde);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:10px}
-        .paso-ico{width:44px;height:44px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;border:1.5px solid var(--borde);color:var(--negro);background:#fff}
-        .paso-ico svg{width:22px;height:22px}
-        .paso-ico.is-done{background:var(--negro);border-color:var(--negro);color:#fff}
-        .tiq-paso__accion{margin-top:auto;padding-top:6px}
+        .tiq-paso{background:#fff;border:1px solid var(--borde);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:8px;min-width:0}
+        .paso-ico{width:40px;height:40px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;color:#8a8a8a;background:#f1f1f1;margin-bottom:4px}
+        .paso-ico svg{width:20px;height:20px}
+        .paso-ico.is-done{background:var(--negro);color:#fff}
+        .tiq-paso__accion{margin-top:auto;padding-top:8px}
+        .tiq-prog{display:flex;align-items:center;gap:10px}
+        .tiq-prog__bar{width:120px;height:6px;border-radius:3px;background:#e3e3e3;overflow:hidden}
+        .tiq-prog__fill{height:100%;background:var(--negro);border-radius:3px}
         .tiq-tools{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
-        .tiq-tool{background:#fff;border:1px solid var(--borde);border-radius:14px;overflow:hidden;display:flex;flex-direction:column}
-        .tiq-tool__body{padding:20px;display:flex;flex-direction:column;gap:8px}
-        .tiq-tool__prev{margin-top:auto;height:162px;background:#eef1f6;border-top:1px solid var(--borde);overflow:hidden}
-        .tiq-genprev{width:100%;height:100%;display:block}
-        .tiq-genprev--a{background:linear-gradient(135deg,#e9f0ff,#f3e9ff)}
-        .tiq-genprev--b{background:linear-gradient(135deg,#fdeef4,#eef4ff)}
+        .tiq-tool{background:#fff;border:1px solid var(--borde);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;min-width:0}
+        .tiq-tool__body{padding:16px;display:flex;flex-direction:column;gap:6px}
+        .tiq-tool__prev{margin-top:auto;height:168px;background:#f6f6f7;border-top:1px solid #ececec;overflow:hidden;display:flex;flex-direction:column}
+        /* previews mockup (placeholders sin imagen real): estructura sobre base clara, nunca gradiente pleno */
+        .mb-bar{height:28px;background:#ededed;display:flex;align-items:center;gap:6px;padding:0 10px}
+        .mb-bar .dot{width:8px;height:8px;border-radius:50%;background:#c9c9c9}
+        .mb-url{flex:1;height:10px;border-radius:5px;background:#fff;margin-left:8px}
+        .mb-body{padding:12px 14px;display:flex;flex-direction:column;gap:8px;background:#fff;flex:1}
+        .mb-hero{height:52px;border-radius:8px;background:linear-gradient(135deg,#e7ecff,#dce4ff)}
+        .mb-line{height:9px;border-radius:5px;background:#e8e8e8}
+        .mb-line.w80{width:80%}.mb-line.w60{width:60%}
+        .mb-cta{width:96px;height:22px;border-radius:6px;background:var(--negro)}
+        .pg-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px 14px;background:#fff;flex:1}
+        .pg-card{background:#fafafa;border:1px solid #eee;border-radius:8px;padding:6px;display:flex;flex-direction:column;gap:5px}
+        .pg-thumb{height:30px;border-radius:6px}
+        .pg-thumb.t1{background:linear-gradient(135deg,#ffe1cc,#ffd0b0)}
+        .pg-thumb.t2{background:linear-gradient(135deg,#d6f0e0,#bfe8d0)}
+        .pg-thumb.t3{background:linear-gradient(135deg,#dce4ff,#c9d6ff)}
+        .pg-thumb.t4{background:linear-gradient(135deg,#f3ddf7,#e9cbf0)}
+        .pg-t{height:7px;width:70%;border-radius:4px;background:#e6e6e6}
+        .pg-price{height:7px;width:34%;border-radius:4px;background:var(--negro)}
         @media (max-width:1040px){.tiq-pasos-grid,.tiq-tools{grid-template-columns:repeat(2,minmax(0,1fr))}}
         @media (max-width:560px){.tiq-pasos-grid,.tiq-tools{grid-template-columns:1fr}}
         .tiq-tool__prev img{width:100%;height:100%;object-fit:cover;object-position:top center;display:block}
@@ -308,7 +326,7 @@
         .tiq-infocard__ic{width:34px;height:34px;border-radius:9px;background:var(--fondo);display:flex;align-items:center;justify-content:center;color:var(--negro)}
         .tiq-infocard__ic svg{width:19px;height:19px}
       </style>
-      <s-page heading="Bienvenido a TiendaIQ">
+      <s-page heading="Bienvenido a TiendaIQ" inlineSize="large">
         <s-button slot="primary-action" variant="primary" id="ir-crear">Crear página con IA</s-button>
         <s-button slot="secondary-actions" id="ir-paginas">Ver mis páginas</s-button>
 
@@ -327,7 +345,10 @@
           <s-stack direction="block" gap="base">
             <s-stack direction="inline" gap="base" alignItems="center" justifyContent="space-between">
               <s-text color="subdued">Completá estos pasos para empezar a vender con TiendaIQ</s-text>
-              <s-badge tone="${hechos === TOTAL_PASOS ? "success" : "info"}">${hechos} de ${TOTAL_PASOS} completado${hechos === 1 ? "" : "s"}</s-badge>
+              <div class="tiq-prog">
+                <div class="tiq-prog__bar"><div class="tiq-prog__fill" style="width:${Math.round((hechos / TOTAL_PASOS) * 100)}%"></div></div>
+                <s-text color="subdued">${hechos} de ${TOTAL_PASOS} completado${hechos === 1 ? "" : "s"}</s-text>
+              </div>
             </s-stack>
             <div class="tiq-pasos-grid">
               ${pasoCard(
@@ -335,14 +356,14 @@
                 "Crear página de producto",
                 "Generá tu primera página de producto con IA.",
                 creadas > 0,
-                `<s-button id="paso-crear">Crear página</s-button>`
+                `<s-button variant="primary" id="paso-crear">Crear página</s-button>`
               )}
               ${pasoCard(
                 ICONO_PASO.publicar,
                 "Publicar en la tienda",
                 "Publicá una página de producto en tu tienda.",
                 publicadas > 0,
-                `<s-button id="paso-publicar">Publicar página</s-button>`
+                `<s-button variant="primary" id="paso-publicar">Publicar página</s-button>`
               )}
               ${COD_VISIBLE ? pasoCard(
                 ICONO_PASO.cod,
@@ -356,7 +377,7 @@
                 "Crear tu primer bundle",
                 "Descuentos por volumen para subir el valor del pedido.",
                 bundlesListo,
-                `<s-button id="paso-bundles">${(estado.inicioBundles?.lista || []).length ? "Inyectar en el tema" : "Crear bundle"}</s-button>`
+                `<s-button variant="primary" id="paso-bundles">${(estado.inicioBundles?.lista || []).length ? "Inyectar en el tema" : "Crear bundle"}</s-button>`
               )}
               <!-- 4ª casilla (placeholder a definir): se rellena para igualar la grilla 4-up de PagePilot. -->
               <div class="tiq-paso">
@@ -402,7 +423,14 @@
                   <s-text color="subdued">Encontrá productos ganadores para tu nicho.</s-text>
                   <div style="margin-top:4px"><s-button disabled>Próximamente</s-button></div>
                 </div>
-                <div class="tiq-tool__prev"><span class="tiq-genprev tiq-genprev--a"></span></div>
+                <div class="tiq-tool__prev">
+                  <div class="pg-grid">
+                    <div class="pg-card"><div class="pg-thumb t1"></div><div class="pg-t"></div><div class="pg-price"></div></div>
+                    <div class="pg-card"><div class="pg-thumb t2"></div><div class="pg-t"></div><div class="pg-price"></div></div>
+                    <div class="pg-card"><div class="pg-thumb t3"></div><div class="pg-t"></div><div class="pg-price"></div></div>
+                    <div class="pg-card"><div class="pg-thumb t4"></div><div class="pg-t"></div><div class="pg-price"></div></div>
+                  </div>
+                </div>
               </div>
               <div class="tiq-tool">
                 <div class="tiq-tool__body">
@@ -410,7 +438,10 @@
                   <s-text color="subdued">Aprendé a escalar tu tienda paso a paso.</s-text>
                   <div style="margin-top:4px"><s-button disabled>Próximamente</s-button></div>
                 </div>
-                <div class="tiq-tool__prev"><span class="tiq-genprev tiq-genprev--b"></span></div>
+                <div class="tiq-tool__prev">
+                  <div class="mb-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><div class="mb-url"></div></div>
+                  <div class="mb-body"><div class="mb-hero"></div><div class="mb-line w80"></div><div class="mb-line w60"></div><div class="mb-cta"></div></div>
+                </div>
               </div>
             </div>
           </s-stack>
