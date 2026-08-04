@@ -3639,7 +3639,6 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     const volverTxt = estado.volverA === "paginas" ? "Volver a mis páginas" : "Volver a los productos";
     const st = pg.paginaEstado; // "app_block" | "legacy" | "inactiva" | null
     const mostrarSetup = publicada && st !== "app_block" && pg.setupPaginaUrl;
-    const mostrarCoach = !localStorage.getItem("tiq_coach_editor");
 
     vista.innerHTML = `
       <div class="preview-barra" id="barra-accion">
@@ -3651,7 +3650,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         <div class="preview-barra__estado" id="barra-estado">
           <s-badge tone="${TONO_ESTADO[est.c] || "neutral"}">${est.t}</s-badge>
           ${publicada && pg.url_publica
-            ? `<a class="preview-barra__ver" href="${esc(pg.url_publica)}" target="_blank" rel="noopener">Ver en la tienda ${ico("externo")}</a>`
+            ? `<s-link href="${esc(pg.url_publica)}" target="_blank">Ver en la tienda</s-link>`
             : ""}
         </div>
         <div class="preview-barra__acciones">
@@ -3663,59 +3662,24 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
 
       ${
         mostrarSetup
-          ? `<div class="setup-pagina ${st === "app_block" ? "" : "setup-pagina--alerta"}">
-               <div class="setup-pagina__cab">${
-                 st === "legacy"
-                   ? ico("aviso") + " Tenés una plantilla vieja pegada a tu tema"
-                   : st === "inactiva"
-                     ? ico("aviso") + " Tu landing todavía NO se ve en la tienda"
-                     : "Activá la plantilla en tu tema — una sola vez"
-               }</div>
+          ? `<s-banner tone="warning" heading="${
+                st === "legacy" ? "Tenés una plantilla vieja pegada a tu tema"
+                : st === "inactiva" ? "Tu landing todavía no se ve en la tienda"
+                : "Activá la plantilla en tu tema — una sola vez"
+             }">
                ${
                  st === "legacy"
-                   ? `<p class="setup-pagina__txt">Tu página la está pintando una <strong>versión anterior que quedó escrita en tu tema</strong> (de cuando la app inyectaba en el tema). Por eso podés ver un diseño viejo o desactualizado. Limpiala una vez:</p>
-                      <ol class="setup-pagina__pasos">
-                        <li>Online Store → Themes → <strong>⋯ → Editar código</strong>.</li>
-                        <li>En <strong>Templates</strong>, borrá <strong>product.tiendaiq.liquid</strong>.</li>
-                        <li>En <strong>Assets</strong>, borrá <strong>tiendaiq.js</strong> y <strong>tiendaiq.css</strong>.</li>
-                        <li>Creá la plantilla <strong>tiendaiq</strong> con el bloque <strong>Apps → TiendaIQ Página</strong> y guardá.</li>
-                      </ol>`
-                   : `<p class="setup-pagina__txt">${
-                        st === "inactiva"
-                          ? "La página se publicó, pero tu tema todavía muestra el producto nativo. Falta crear <strong>una vez</strong> la plantilla con el bloque de TiendaIQ:"
-                          : "Para que la landing se vea, tu tema necesita una plantilla de producto con el bloque de TiendaIQ. Se hace una vez y todas tus páginas la usan:"
-                      }</p>
-                      <ol class="setup-pagina__pasos">
-                        <li>Tocá <strong>Abrir editor de temas</strong>.</li>
-                        <li>En el selector de plantilla (arriba), elegí <strong>Crear plantilla</strong> → basada en <em>product</em> → escribí exactamente <strong>tiendaiq</strong> (minúscula, sin espacios).</li>
-                        <li>Dejá solo el bloque <strong>Apps → TiendaIQ Página</strong> y quitá las secciones nativas del producto.</li>
-                        <li>Guardá. Listo — no lo hacés nunca más.</li>
-                      </ol>`
+                   ? `<s-paragraph>La está pintando una versión anterior que quedó escrita en tu tema. Borrá del tema la plantilla <s-text type="strong">product.tiendaiq.liquid</s-text> y los assets <s-text type="strong">tiendaiq.js</s-text>/<s-text type="strong">tiendaiq.css</s-text>, y dejá la plantilla <s-text type="strong">tiendaiq</s-text> con el bloque <s-text type="strong">TiendaIQ Página</s-text>.</s-paragraph>`
+                   : `<s-paragraph>${st === "inactiva" ? "Se publicó, pero tu tema muestra el producto nativo." : "Tu tema necesita el bloque de TiendaIQ."} Creá una vez la plantilla <s-text type="strong">tiendaiq</s-text> (basada en <s-text type="strong">product</s-text>), dejá solo el bloque <s-text type="strong">Apps → TiendaIQ Página</s-text> y guardá.</s-paragraph>`
                }
-               <div class="setup-pagina__acc" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
-                 <a class="btn btn--fantasma btn--chico" href="${esc(pg.setupPaginaUrl)}" target="_blank" rel="noopener">Abrir editor de temas</a>
-                 <button class="btn btn--chico" id="setup-verificar" type="button">Verificar de nuevo</button>
-               </div>
-             </div>`
+               <s-link href="${esc(pg.setupPaginaUrl)}" target="_blank">Abrir editor de temas</s-link>
+               <s-button id="setup-verificar">Verificar de nuevo</s-button>
+             </s-banner>`
           : ""
       }
 
-      ${
-        mostrarCoach
-          ? `<div class="editor-hint" id="coach-editor">${ico("lapiz")} Pasá el mouse por cualquier bloque y tocá <strong>Editar</strong>. Arrastrá una <strong>sección</strong> del panel izquierdo a la página para sumarla.<button class="editor-hint__x" id="coach-x" type="button" aria-label="Entendido">${ico("x")}</button></div>`
-          : ""
-      }
-
-      <div class="constructor">
-        <aside class="panel-sections" id="panel-sections">
-          <div class="panel-sections__titulo">Secciones</div>
-          <button class="panel-sections__ver" id="ver-secciones" type="button">${ico("mas")} Ver todas las secciones disponibles</button>
-          <div class="panel-sections__chips" id="sec-chips">${chipsSeccionesHTML()}</div>
-        </aside>
-
-        <div class="marco marco--full">
-          <iframe id="marco" src="/preview/index.html?app=1&t=${Date.now()}"></iframe>
-        </div>
+      <div class="marco marco--full">
+        <iframe id="marco" src="/preview/index.html?app=1&t=${Date.now()}"></iframe>
       </div>`;
 
     // El iframe no lee ningún archivo global: recibe LOS DATOS DE ESTA página
@@ -3725,15 +3689,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     marco.onload = () => {
       repintarPreview();
       montarEdicionEnIframe(marco);
-      montarDragSections(marco);
     };
-
-    $("ver-secciones").onclick = () => abrirGaleriaSecciones(marco);
-    // Insertar una sección desde su chip con el botón "+" (sin arrastrar).
-    $("sec-chips").addEventListener("click", (e) => {
-      const ins = e.target.closest("[data-ins-sec]");
-      if (ins) { e.stopPropagation(); soltarSection(ins.dataset.insSec, "top"); }
-    });
 
     $("volver").onclick = () => {
       if (sucio && !confirm("Hay cambios sin guardar. ¿Salir igual?")) return;
@@ -3754,12 +3710,6 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       sv.textContent = "Verificando…";
       try { estado.pagina.paginaEstado = (await api("/pagina-estado?fresh=1")).estado; } catch {}
       pantallaPreview();
-    };
-    // Coach-mark del editor: se muestra una sola vez (flag en localStorage).
-    const coachX = $("coach-x");
-    if (coachX) coachX.onclick = () => {
-      try { localStorage.setItem("tiq_coach_editor", "1"); } catch {}
-      $("coach-editor")?.remove();
     };
   }
 
