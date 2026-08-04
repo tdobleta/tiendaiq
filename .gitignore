@@ -22,3 +22,7 @@ construir-nicho.js
 nichos/
 theme-nicho-*/
 app/portadas/_cod-tarjeta-completa-VIEJA.png
+
+# Videos de "Inspírate de los mejores" (pesados, no versionar; solo el .gitkeep)
+inspiracion-organica/*
+!inspiracion-organica/.gitkeep

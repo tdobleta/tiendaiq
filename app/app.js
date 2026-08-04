@@ -419,9 +419,9 @@
               <!-- 3ª y 4ª herramienta (placeholders a definir): rellenas con preview genérico para igualar la grilla 4-up de PagePilot. -->
               <div class="tiq-tool">
                 <div class="tiq-tool__body">
-                  <s-heading>Investigación de productos</s-heading>
-                  <s-text color="subdued">Encontrá productos ganadores para tu nicho.</s-text>
-                  <div style="margin-top:4px"><s-button disabled>Próximamente</s-button></div>
+                  <s-heading>Inspírate de los mejores</s-heading>
+                  <s-text color="subdued">Estudiá videos de venta orgánica que explotaron en TikTok.</s-text>
+                  <div style="margin-top:4px"><s-button variant="primary" id="herr-inspiracion">Ver videos</s-button></div>
                 </div>
                 <div class="tiq-tool__prev">
                   <div class="pg-grid">
@@ -503,6 +503,7 @@
       const b = $(id);
       if (b) b.onclick = () => ir("bundles");
     });
+    { const b = $("herr-inspiracion"); if (b) b.onclick = () => ir("inspiracion"); }
     // Cards de Información: cada botón nativo abre su link en pestaña nueva.
     const abrirInfo = (id, url) => { const b = $(id); if (b) b.onclick = () => window.open(url, "_blank"); };
     abrirInfo("info-soporte", "mailto:soporte@tiendaiq.com");
@@ -5742,6 +5743,129 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     pintarDashboardBundles();
   }
 
+  // ---------- inspírate de los mejores ----------
+  //
+  // Galería de videos de venta orgánica (TikToks) guardados en una carpeta del
+  // server. El nombre del archivo trae las métricas (vistas.likes.comentarios),
+  // que el server parsea y acá se ordenan de mayor a menor y viceversa.
+
+  // Íconos de línea (estilo feather, grandes y claros) para las 3 métricas.
+  const ICO_INSP = {
+    vistas: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>`,
+    likes: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.3l-1.4-1.3C5.4 14.3 2.5 11.6 2.5 8.4 2.5 6 4.4 4 6.9 4c1.5 0 2.9.7 3.8 1.8l.3.4.3-.4A5 5 0 0 1 15.1 4c2.5 0 4.4 2 4.4 4.4 0 3.2-2.9 5.9-8.1 10.6z"/></svg>`,
+    comentarios: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-12.3 7.6L3 21l1.9-5.7A8.5 8.5 0 1 1 21 11.5z"/></svg>`
+  };
+
+  // 2.400.000 → "2,4 M"; 46.100 → "46,1 K"; 224 → "224". Coma decimal (es).
+  function fmtNum(n) {
+    if (n >= 1e6) return (n / 1e6).toFixed(1).replace(/\.0$/, "").replace(".", ",") + " M";
+    if (n >= 1e3) return (n / 1e3).toFixed(1).replace(/\.0$/, "").replace(".", ",") + " K";
+    return String(n);
+  }
+
+  const OPCIONES_ORDEN = [
+    ["vistas-desc", "Más vistas"],
+    ["vistas-asc", "Menos vistas"],
+    ["likes-desc", "Más likes"],
+    ["likes-asc", "Menos likes"],
+    ["comentarios-desc", "Más comentarios"],
+    ["comentarios-asc", "Menos comentarios"]
+  ];
+
+  async function pantallaInspiracion() {
+    vista.innerHTML = `<div class="generando"><div class="giro"></div><h2>Cargando inspiración…</h2></div>`;
+    let videos = [];
+    try {
+      videos = await api("/inspiracion");
+    } catch (e) {
+      vista.innerHTML = `<div class="error">${ico("x", "ico--banner")} No se pudo leer la carpeta de videos: ${esc(e.message)}</div>`;
+      return;
+    }
+    if (estado.pantalla !== "inspiracion") return; // navegó mientras cargaba
+    estado.inspiracion = { videos, orden: estado.inspiracion?.orden || "vistas-desc" };
+    pintarInspiracion();
+  }
+
+  function pintarInspiracion() {
+    const { videos, orden } = estado.inspiracion;
+    const [clave, dir] = orden.split("-");
+    const lista = [...videos].sort((a, b) => (dir === "desc" ? b[clave] - a[clave] : a[clave] - b[clave]));
+
+    const opciones = OPCIONES_ORDEN
+      .map(([v, t]) => `<s-option value="${v}"${v === orden ? " selected" : ""}>${t}</s-option>`)
+      .join("");
+
+    const cards = lista
+      .map(
+        (v, i) => `
+        <div class="insp-card">
+          <div class="insp-thumb" data-src="${esc(v.url)}">
+            <span class="insp-rank">#${i + 1}</span>
+            <video src="${esc(v.url)}#t=0.1" preload="metadata" muted playsinline></video>
+          </div>
+          <div class="insp-stats">
+            <span class="insp-stat" title="Vistas">${ICO_INSP.vistas}<s-text>${fmtNum(v.vistas)}</s-text></span>
+            <span class="insp-stat" title="Likes">${ICO_INSP.likes}<s-text>${fmtNum(v.likes)}</s-text></span>
+            <span class="insp-stat" title="Comentarios">${ICO_INSP.comentarios}<s-text>${fmtNum(v.comentarios)}</s-text></span>
+          </div>
+        </div>`
+      )
+      .join("");
+
+    const cuerpo = lista.length
+      ? `<div class="insp-grid">${cards}</div>`
+      : `<div class="vacio-panel">
+           <div class="vacio-panel__ico">${ico("estrella")}</div>
+           <div class="vacio-panel__tit">Todavía no hay videos</div>
+           <p>Guardá tus TikToks en la carpeta de inspiración con el nombre en formato <strong>vistas . likes . comentarios</strong> (ej. <strong>2400000 . 28300 . 224.mp4</strong>) y aparecerán acá ordenados por rendimiento.</p>
+         </div>`;
+
+    vista.innerHTML = `
+      <style>
+        .insp-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+        .insp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:18px}
+        .insp-card{display:flex;flex-direction:column;gap:9px;min-width:0}
+        .insp-thumb{position:relative;aspect-ratio:9/16;background:#0b0b0b;border-radius:14px;overflow:hidden;border:1px solid var(--borde);cursor:pointer}
+        .insp-thumb video{width:100%;height:100%;object-fit:cover;display:block;background:#0b0b0b}
+        .insp-rank{position:absolute;top:8px;left:8px;z-index:2;background:rgba(0,0,0,.62);color:#fff;font-size:12px;font-weight:600;line-height:1;padding:4px 8px;border-radius:20px;backdrop-filter:blur(2px)}
+        .insp-thumb::after{content:"";position:absolute;inset:auto 0 0 0;height:38%;background:linear-gradient(180deg,transparent,rgba(0,0,0,.28));pointer-events:none}
+        .insp-stats{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:0 2px}
+        .insp-stat{display:inline-flex;align-items:center;gap:6px;color:var(--negro);font-variant-numeric:tabular-nums}
+        .insp-stat svg{width:19px;height:19px;flex:none}
+      </style>
+      <s-page heading="Inspírate de los mejores" inlineSize="large">
+        <s-paragraph>Videos de venta orgánica ordenados por rendimiento. Filtrá por vistas, likes o comentarios para estudiar qué funciona.</s-paragraph>
+        <s-section>
+          <s-stack direction="block" gap="base">
+            <div class="insp-bar">
+              <s-select label="Ordenar por" labelAccessibilityVisibility="exclusive" id="insp-orden">${opciones}</s-select>
+              <s-text color="subdued">${lista.length} video${lista.length === 1 ? "" : "s"}</s-text>
+            </div>
+            ${cuerpo}
+          </s-stack>
+        </s-section>
+      </s-page>`;
+
+    const sel = $("insp-orden");
+    if (sel) {
+      sel.value = orden; // preselección (gotcha s-select: value no aplica al montar)
+      sel.addEventListener("change", () => {
+        estado.inspiracion.orden = sel.value;
+        pintarInspiracion();
+      });
+    }
+
+    // Thumbnail sin negro: al cargar metadata se hace seek a un frame real.
+    // Hover = reproducir en silencio; salir = pausar y volver al frame.
+    vista.querySelectorAll(".insp-thumb").forEach((t) => {
+      const v = t.querySelector("video");
+      const alFrame = () => { try { if (v.currentTime < 0.1) v.currentTime = 0.1; } catch {} };
+      v.addEventListener("loadeddata", alFrame, { once: true });
+      t.addEventListener("mouseenter", () => { v.play().catch(() => {}); });
+      t.addEventListener("mouseleave", () => { v.pause(); alFrame(); });
+    });
+  }
+
   // ---------- ruteo ----------
 
   const PANTALLAS = {
@@ -5752,7 +5876,8 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     lista: pantallaLista,
     informacion: pantallaInformacion,
     generando: pantallaGenerando,
-    preview: pantallaPreview
+    preview: pantallaPreview,
+    inspiracion: pantallaInspiracion
   };
 
   // Título nativo del admin (App Bridge ui-title-bar). Fuera del admin embebido
@@ -5767,7 +5892,8 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     lista: "Elegí un producto",
     informacion: "Información del producto",
     generando: "Creando tu página",
-    preview: "Editor de página"
+    preview: "Editor de página",
+    inspiracion: "Inspírate de los mejores"
   };
   const _tituloBar = document.getElementById("tiq-title-bar");
   function setTituloBar(pantalla) {
@@ -5782,6 +5908,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       pantalla === "paginas" ? "/paginas"
       : pantalla === "cod" ? "/cod"
       : pantalla === "bundles" ? "/bundles"
+      : pantalla === "inspiracion" ? "/inspiracion"
       : pantalla === "inicio" ? "/" : "/crear";
     if (location.pathname !== ruta) {
       history.pushState({ pantalla }, "", ruta + location.search);
@@ -5832,6 +5959,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     if (ruta === "/paginas") ir("paginas");
     else if (ruta === "/cod") ir(COD_VISIBLE ? "cod" : "inicio"); // COD oculto: /cod cae al inicio
     else if (ruta === "/bundles") ir("bundles");
+    else if (ruta === "/inspiracion") ir("inspiracion");
     else if (ruta === "/crear") cargarLista();
     else ir("inicio");
   }

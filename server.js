@@ -41,6 +41,10 @@ const {
 const PUERTO = Number(env.PORT || process.env.PORT || 4321);
 const DIR_APP = path.join(__dirname, "app");
 const DIR_PLANTILLA = path.join(__dirname, "plantilla-producto");
+// Carpeta de videos de "Inspírate de los mejores" (TikToks de venta orgánica).
+// Por defecto vive en el repo; se puede apuntar a otra ruta con INSPIRACION_DIR
+// (ej. una carpeta local con GB de videos que no querés versionar).
+const DIR_INSPIRACION = env.INSPIRACION_DIR || path.join(__dirname, "inspiracion-organica");
 
 // Cache-busting: un token que cambia cuando cambia cualquier asset del front.
 // Se inyecta en las URLs de app.js/app.css y render.js/styles.css, así después
@@ -260,7 +264,11 @@ const TIPOS = {
   ".jpg": "image/jpeg",
   ".jpeg": "image/jpeg",
   ".webp": "image/webp",
-  ".svg": "image/svg+xml"
+  ".svg": "image/svg+xml",
+  ".mp4": "video/mp4",
+  ".m4v": "video/mp4",
+  ".webm": "video/webm",
+  ".mov": "video/quicktime"
 };
 
 function servirIndex(res) {
@@ -379,6 +387,67 @@ function servirEstatico(req, res, base, rel) {
   fs.createReadStream(archivo).pipe(res);
 }
 
+// ---------- inspiración (videos de venta orgánica) ----------
+
+const RE_VIDEO = /\.(mp4|m4v|webm|mov)$/i;
+
+// Lee la carpeta y arma la lista. El nombre del archivo codifica las métricas
+// como tres números en orden: vistas . likes . comentarios (ej "46100.1233.26.mp4",
+// tolera espacios). Se extraen con \d+ para aguantar separadores raros.
+function listarInspiracion() {
+  let archivos = [];
+  try { archivos = fs.readdirSync(DIR_INSPIRACION); } catch { return []; }
+  return archivos
+    .filter((f) => RE_VIDEO.test(f))
+    .map((f) => {
+      const nums = (f.replace(RE_VIDEO, "").match(/\d+/g) || []).map((n) => parseInt(n, 10));
+      return {
+        archivo: f,
+        url: "/inspiracion-media/" + encodeURIComponent(f),
+        vistas: nums[0] ?? 0,
+        likes: nums[1] ?? 0,
+        comentarios: nums[2] ?? 0
+      };
+    });
+}
+
+// Sirve un video con soporte de Range (206). Es lo que permite que el navegador
+// haga seek a un frame para la vista previa (así NO se ve negra) y que el video
+// se pueda scrubbear/reproducir sin bajarlo entero.
+function servirVideo(req, res, rel) {
+  const limpio = path.normalize(decodeURIComponent(rel)).replace(/^(\.\.[/\\])+/, "");
+  const archivo = path.join(DIR_INSPIRACION, limpio);
+  if (!archivo.startsWith(DIR_INSPIRACION) || !fs.existsSync(archivo) || fs.statSync(archivo).isDirectory()) {
+    return void res.writeHead(404).end("no encontrado");
+  }
+  const tipo = TIPOS[path.extname(archivo).toLowerCase()] || "application/octet-stream";
+  const st = fs.statSync(archivo);
+  const rango = req.headers.range;
+  if (rango) {
+    const m = /bytes=(\d*)-(\d*)/.exec(rango);
+    let ini = m && m[1] ? parseInt(m[1], 10) : 0;
+    let fin = m && m[2] ? parseInt(m[2], 10) : st.size - 1;
+    if (!(ini >= 0)) ini = 0;
+    if (!(fin < st.size)) fin = st.size - 1;
+    if (ini > fin) return void res.writeHead(416, { "Content-Range": `bytes */${st.size}` }).end();
+    res.writeHead(206, {
+      "Content-Type": tipo,
+      "Content-Range": `bytes ${ini}-${fin}/${st.size}`,
+      "Accept-Ranges": "bytes",
+      "Content-Length": fin - ini + 1,
+      "Cache-Control": "no-cache"
+    });
+    return void fs.createReadStream(archivo, { start: ini, end: fin }).pipe(res);
+  }
+  res.writeHead(200, {
+    "Content-Type": tipo,
+    "Accept-Ranges": "bytes",
+    "Content-Length": st.size,
+    "Cache-Control": "no-cache"
+  });
+  fs.createReadStream(archivo).pipe(res);
+}
+
 // ---------- quién pregunta ----------
 
 // Devuelve { tienda, token } o tira. El pase viene del frontend, que se lo
@@ -436,6 +505,12 @@ async function api(req, res, url) {
         }))
       }))
     );
+  }
+
+  // GET /api/inspiracion — lista los videos de la carpeta con sus métricas
+  // parseadas del nombre. El orden/filtro lo hace el front (es data local).
+  if (req.method === "GET" && ruta === "/api/inspiracion") {
+    return json(res, 200, listarInspiracion());
   }
 
   // GET /api/paginas — resumen para el inicio y la tabla de páginas
@@ -910,9 +985,15 @@ const servidor = http.createServer(async (req, res) => {
       return servirEstatico(req, res, DIR_PLANTILLA, rel);
     }
 
+    // Videos de "Inspírate de los mejores" (con Range, sin pase: los <video>
+    // no pueden mandar Authorization). Van desde DIR_INSPIRACION.
+    if (url.pathname.startsWith("/inspiracion-media/")) {
+      return servirVideo(req, res, url.pathname.replace(/^\/inspiracion-media\/?/, ""));
+    }
+
     // /paginas y /crear son rutas del frontend (el menú lateral del admin
     // navega por URL): sirven la misma app, que rutea por pathname.
-    if (["/", "/index.html", "/paginas", "/crear", "/cod", "/bundles"].includes(url.pathname))
+    if (["/", "/index.html", "/paginas", "/crear", "/cod", "/bundles", "/inspiracion"].includes(url.pathname))
       return servirIndex(res);
 
     return servirEstatico(req, res, DIR_APP, url.pathname);
