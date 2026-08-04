@@ -369,18 +369,44 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
 
 /* ---------- generando ---------- */
 
-.generando { text-align: center; padding: 90px 20px; }
-/* El "spinner" es el propio logo girando 360° sobre su eje (loop continuo). */
+.generando { text-align: center; padding: 74px 20px; }
+
+/* Logo de carga: la marca PULSA y emite ondas hacia afuera (no gira). */
 .giro {
-  width: 46px; height: 46px; margin: 0 auto 18px;
-  background: url("/marca/impulso.svg") center / contain no-repeat;
-  animation: girar 1s linear infinite;
-  transform-origin: 50% 50%;
+  position: relative; width: 64px; height: 64px; margin: 0 auto 24px;
+  background: url("/marca/iq.svg") center / contain no-repeat;
+  border-radius: 14px;
+  animation: tiqPulse 1.8s ease-in-out infinite;
 }
+.giro::before, .giro::after {
+  content: ""; position: absolute; inset: -2px; border-radius: 16px;
+  border: 2px solid #48bdf7; animation: tiqRipple 1.8s ease-out infinite;
+}
+.giro::after { animation-delay: .9s; }
+@keyframes tiqPulse { 0%, 100% { opacity: .82; transform: scale(.98); } 50% { opacity: 1; transform: scale(1.04); } }
+@keyframes tiqRipple { 0% { transform: scale(1); opacity: .5; } 100% { transform: scale(1.75); opacity: 0; } }
 @keyframes girar { to { transform: rotate(360deg); } }
-.generando h2 { font-size: 16px; color: var(--negro); font-weight: 600; }
-.generando p { color: var(--suave); margin-top: 5px; }
+
+.generando h2 { font-size: 19px; color: var(--negro); font-weight: 600; }
+.generando p { color: var(--suave); margin-top: 6px; }
 .generando .reloj { font-variant-numeric: tabular-nums; color: var(--acento); font-weight: 600; }
+
+/* Progreso + checklist estilo Atlas (pantalla de generado). */
+.gen-pct { font-size: 13px; color: var(--suave); margin: 14px 0 8px; }
+.gen-bar { max-width: 520px; margin: 0 auto; height: 6px; background: var(--borde); border-radius: 4px; overflow: hidden; }
+.gen-bar > div { height: 100%; width: 0; background: var(--negro); border-radius: 4px; transition: width .35s ease; }
+.gen-pasos { list-style: none; max-width: 520px; margin: 24px auto 0; padding: 0; text-align: left; border: 1px solid var(--borde); border-radius: var(--radio); overflow: hidden; }
+.gen-pasos li { display: flex; align-items: center; gap: 13px; padding: 15px 18px; font-size: 14px; color: var(--suave); border-top: 1px solid var(--borde); transition: color .25s; }
+.gen-pasos li:first-child { border-top: 0; }
+.gen-pasos li.is-now, .gen-pasos li.is-done { color: var(--negro); font-weight: 500; }
+.gen-ic { width: 19px; height: 19px; flex: 0 0 auto; border-radius: 50%; border: 2px solid var(--borde); position: relative; box-sizing: border-box; }
+.gen-pasos li.is-now .gen-ic { border-color: var(--acento); border-top-color: transparent; animation: girar .8s linear infinite; }
+.gen-pasos li.is-done .gen-ic { border-color: var(--marca-verde); background: var(--marca-verde); }
+.gen-pasos li.is-done .gen-ic::after { content: ""; position: absolute; left: 5px; top: 2px; width: 5px; height: 9px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+.gen-nota { max-width: 520px; margin: 18px auto 0; text-align: left; display: flex; gap: 11px; align-items: flex-start; background: var(--ia-fondo); border: 1px solid var(--ia-borde); border-radius: var(--radio); padding: 15px 18px; }
+.gen-nota__dot { width: 9px; height: 9px; border-radius: 50%; background: var(--acento); flex: 0 0 auto; margin-top: 5px; }
+.gen-nota b { display: block; color: var(--negro); font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+.gen-nota span { color: var(--suave); font-size: 13px; line-height: 1.5; }
 
 /* ---------- 3. preview ---------- */
 

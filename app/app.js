@@ -1858,17 +1858,48 @@
   }
 
   function pantallaGenerando() {
+    const PASOS = [
+      "Leyendo las fotos del producto",
+      "Investigando el mercado con IA",
+      "Escribiendo el copy de venta",
+      "Armando el diseño de la página",
+      "Finalizando tu página"
+    ];
     vista.innerHTML = `
-      <s-page heading="Creando tu página">
-        <s-section>
-          <s-stack direction="block" gap="base" alignItems="center">
-            <s-spinner accessibilityLabel="Generando la página"></s-spinner>
-            <s-heading>Generando la página…</s-heading>
-            <s-paragraph>Leyendo las fotos y escribiendo el copy · <s-text id="reloj">0s</s-text></s-paragraph>
-            <s-text color="subdued">Suele tardar unos 35 segundos.</s-text>
-          </s-stack>
-        </s-section>
-      </s-page>`;
+      <div class="generando">
+        <div class="giro"></div>
+        <h2>Creando tu página de producto…</h2>
+        <div class="gen-pct" id="gen-pct">0% completado</div>
+        <div class="gen-bar"><div id="gen-bar"></div></div>
+        <ul class="gen-pasos" id="gen-pasos">
+          ${PASOS.map((p) => `<li><span class="gen-ic"></span>${p}</li>`).join("")}
+        </ul>
+        <div class="gen-nota">
+          <span class="gen-nota__dot"></span>
+          <div><b>Un momento — suele tardar ~35 segundos.</b><span>La IA lee tus fotos, investiga el mercado y escribe el copy. Dejá esta pantalla abierta; abrimos el editor apenas esté lista.</span></div>
+        </div>
+      </div>`;
+
+    // Progreso cosmético (como Atlas): avanza por tiempo estimado y termina de
+    // verdad cuando generar() navega a "preview". Se auto-limpia al cambiar de
+    // pantalla (los ids dejan de existir / estado.pantalla cambia).
+    const t0 = Date.now();
+    const EST = 34000;
+    const lis = [...document.querySelectorAll("#gen-pasos li")];
+    clearInterval(pantallaGenerando._t);
+    pantallaGenerando._t = setInterval(() => {
+      const bar = $("gen-bar");
+      if (!bar || estado.pantalla !== "generando") { clearInterval(pantallaGenerando._t); return; }
+      const e = Date.now() - t0;
+      const p = Math.min(94, Math.round((e / EST) * 100));
+      bar.style.width = p + "%";
+      $("gen-pct").textContent = p + "% completado";
+      const idx = Math.min(lis.length - 1, Math.floor(e / (EST / lis.length)));
+      lis.forEach((li, i) => {
+        li.classList.toggle("is-done", i < idx);
+        li.classList.toggle("is-now", i === idx);
+      });
+    }, 200);
   }
 
   // ---------- abrir una página ya generada (sin gastar generación) ----------
