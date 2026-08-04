@@ -3656,6 +3656,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         <div class="preview-barra__acciones">
           <s-button variant="secondary" id="guardar" disabled>Guardar cambios</s-button>
           <s-button variant="secondary" id="regenerar">Regenerar</s-button>
+          ${publicada ? `<s-button variant="tertiary" id="despublicar">Volver a la página nativa</s-button>` : ""}
           <s-button variant="${publicada ? "secondary" : "primary"}" id="publicar">${publicada ? "Volver a publicar" : "Publicar página"}</s-button>
         </div>
       </div>
@@ -3702,6 +3703,8 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     };
     $("guardar").onclick = guardarCambios;
     $("publicar").onclick = publicar;
+    const bDespub = $("despublicar");
+    if (bDespub) bDespub.onclick = despublicar;
     // Re-verifica en vivo si la landing ya se ve (fresh=1 saltea el cache) y
     // repinta la pantalla con el estado nuevo — sin recargar toda la app.
     const sv = $("setup-verificar");
@@ -3731,6 +3734,24 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     } catch (e) {
       b.removeAttribute("disabled");
       b.textContent = "Publicar página";
+      vista.insertAdjacentHTML("afterbegin", `<div class="error">${ico("x","ico--banner")} ${esc(e.message)}</div>`);
+    }
+  }
+
+  // Vuelve el producto a su página NATIVA (saca el templateSuffix en el server).
+  // Reversible: el metafield queda, re-publicar la reusa sin regenerar. Sirve si
+  // publicaste al producto equivocado o querés volver atrás.
+  async function despublicar() {
+    if (!confirm("El producto vuelve a su página nativa de Shopify. La página queda guardada como borrador y podés re-publicarla cuando quieras. ¿Seguir?")) return;
+    const b = $("despublicar");
+    if (b) { b.setAttribute("disabled", ""); b.textContent = "Volviendo…"; }
+    try {
+      estado.pagina = await api(`/paginas/${estado.pagina.id}/despublicar`, { method: "POST" });
+      cambiosSinPublicar = false;
+      pantallaPreview();
+      toast("Volviste a la página nativa. La página quedó como borrador.");
+    } catch (e) {
+      if (b) { b.removeAttribute("disabled"); b.textContent = "Volver a la página nativa"; }
       vista.insertAdjacentHTML("afterbegin", `<div class="error">${ico("x","ico--banner")} ${esc(e.message)}</div>`);
     }
   }

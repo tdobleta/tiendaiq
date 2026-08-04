@@ -142,7 +142,19 @@ async function publicarPagina(data, sesion, log = () => {}) {
   return { url: p.onlineStoreUrl || `https://${sesion.tienda}/products/${p.handle}` };
 }
 
-module.exports = { publicarPagina };
+// Revierte un producto a su página NATIVA: le saca el templateSuffix "tiendaiq"
+// (vuelve a usar la plantilla product por defecto). NO borra el metafield: queda
+// como dato (re-publicar lo reusa sin regenerar). Escritura de PRODUCTO, no de
+// tema → permitida sin exención, igual que publicar.
+async function despublicarPagina(data, sesion) {
+  const idProducto = data.fuente.shopify_product_id;
+  const r = await gql(M_SUFIJO, { product: { id: idProducto, templateSuffix: null } }, sesion);
+  if (r.productUpdate.userErrors.length) {
+    throw new Error("templateSuffix: " + JSON.stringify(r.productUpdate.userErrors));
+  }
+}
+
+module.exports = { publicarPagina, despublicarPagina };
 
 // ---------- CLI ----------
 

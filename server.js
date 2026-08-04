@@ -22,7 +22,7 @@ const http = require("http");
 const fs = require("fs");
 const path = require("path");
 const { listarProductos, crearPagina, escribirPreview } = require("./adaptador");
-const { publicarPagina } = require("./publicar");
+const { publicarPagina, despublicarPagina } = require("./publicar");
 const { env, sesionDeEnv } = require("./shopify");
 const { sesionDe, borrarTienda, listarTiendas } = require("./tiendas");
 const { guardarPaginaDB, leerPaginaDB, listarPaginasDB } = require("./db");
@@ -691,6 +691,20 @@ async function api(req, res, url) {
     // la pantalla de éxito. La app NO escribe el tema, solo lo mira desde afuera.
     registro.paginaEstado = await verificarUrlViva(url);
     registro.setupPaginaUrl = linkEditorPagina(sesion.tienda);
+    return json(res, 200, registro);
+  }
+
+  // POST /api/paginas/:id/despublicar — vuelve el producto a su página nativa
+  // (saca el templateSuffix). El metafield queda para re-publicar sin regenerar.
+  const mDespub = ruta.match(/^\/api\/paginas\/([^/]+)\/despublicar$/);
+  if (req.method === "POST" && mDespub) {
+    const registro = await leerPagina(sesion.tienda, mDespub[1]);
+    if (!registro) return json(res, 404, { error: "No existe esa página" });
+    await despublicarPagina(registro.data, sesion);
+    registro.estado = "borrador";
+    registro.url_publica = null;
+    await guardarPagina(sesion.tienda, registro);
+    metrica("pagina_despublicada", { tienda: sesion.tienda });
     return json(res, 200, registro);
   }
 
