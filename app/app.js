@@ -276,17 +276,37 @@
     // Iconos de los botones de la cabecera (SVG de línea, no glyphs).
     const IC_PAGINAS = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3.5" width="14" height="17" rx="2"/><path d="M9 8.5h6M9 12h6M9 15.5h4"/></svg>`;
 
-    // Últimas páginas publicadas: dato REAL de la DB. Solo se muestra la sección
-    // si hay algo que mostrar — nada de listas vacías ni de embudos en cero.
-    const publicadasLista = estado.paginas.filter((p) => p.estado === "publicada");
+    // ⚠ Reemplazar por la URL real de la comunidad (TikTok del usuario).
+    const TIKTOK_URL = "https://www.tiktok.com/@tiendaiq";
+    const ICO_INFO = {
+      chat: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-12.3 7.6L3 21l1.9-5.7A8.5 8.5 0 1 1 21 11.5z"/></svg>`,
+      gente: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><path d="M16 5.2a3 3 0 0 1 0 5.6M18.5 19a5.2 5.2 0 0 0-3-4.7"/></svg>`,
+      estrella: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3.5l2.5 5.4 5.9.7-4.4 4 1.2 5.9L12 16.6l-5.2 2.9 1.2-5.9-4.4-4 5.9-.7z"/></svg>`,
+      ayuda: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.8.4-1 .9-1 1.7"/><path d="M12 17h.01"/></svg>`
+    };
 
     vista.innerHTML = `
       <style>
-        /* Los íconos propios (SVG feather) viven como light DOM dentro de los
-           componentes Polaris; solo necesitan tamaño y color heredable. */
         .tiq-ini-ico{display:inline-flex;align-items:center;justify-content:center;color:#4a4a4a}
         .tiq-ini-ico svg{width:24px;height:24px}
-        .tiq-ini-ico--sm svg{width:18px;height:18px}
+        .tiq-tools{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+        .tiq-tool{background:#fff;border:1px solid var(--borde);border-radius:12px;overflow:hidden;display:flex;flex-direction:column}
+        .tiq-tool__body{padding:18px 18px 16px}
+        .tiq-tool__t{font-size:15px;font-weight:600;color:var(--negro);margin:0}
+        .tiq-tool__d{font-size:13px;color:var(--suave);margin:5px 0 14px;line-height:1.5}
+        .tiq-tool__prev{margin-top:auto;height:162px;background:#eef1f6;border-top:1px solid var(--borde);overflow:hidden}
+        .tiq-tool__prev img{width:100%;height:100%;object-fit:cover;object-position:top center;display:block}
+        .tiq-bmini{padding:16px;display:flex;flex-direction:column;gap:8px;height:100%;background:linear-gradient(135deg,#eef4ff,#f5f0ff)}
+        .tiq-bmini__row{display:flex;align-items:center;justify-content:space-between;background:#fff;border:1px solid #e7e7ee;border-radius:8px;padding:8px 11px;font-size:12px;color:var(--negro)}
+        .tiq-bmini__row.sel{border-color:#111;border-width:1.5px}
+        .tiq-bmini__tag{background:#111;color:#fff;border-radius:5px;padding:1px 6px;font-size:10px;font-weight:600;margin-left:6px}
+        .tiq-bmini__old{color:#9ca3af;text-decoration:line-through;margin-left:6px}
+        .tiq-info{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
+        .tiq-infocard{background:#fff;border:1px solid var(--borde);border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:9px}
+        .tiq-infocard__ic{width:34px;height:34px;border-radius:9px;background:var(--fondo);display:flex;align-items:center;justify-content:center;color:var(--negro)}
+        .tiq-infocard__ic svg{width:19px;height:19px}
+        .tiq-infocard__t{font-size:14px;font-weight:600;color:var(--negro)}
+        .tiq-infocard__d{font-size:12.5px;color:var(--suave);line-height:1.5;flex:1}
       </style>
       <s-page heading="Bienvenido a TiendaIQ">
         <s-button slot="primary-action" variant="primary" id="ir-crear">Crear página con IA</s-button>
@@ -342,89 +362,65 @@
           </s-stack>
         </s-section>
 
-        <s-section heading="Tus números">
+        <s-section heading="Herramientas útiles">
           <s-stack direction="block" gap="base">
-            <s-text color="subdued">Sincronizado con tu tienda, en tiempo real</s-text>
-            <s-grid gridTemplateColumns="repeat(auto-fit, minmax(180px, 1fr))" gap="base">
-              ${metrica(ICONO_METRICA.pagina, "Páginas creadas", creadas)}
-              ${metrica(ICONO_METRICA.check, "Publicadas", publicadas)}
-              ${metrica(ICONO_METRICA.lapiz, "Borradores", creadas - publicadas)}
-              ${metrica(ICONO_PASO.bundle, "Bundles activos", bundlesActivos)}
-            </s-grid>
-            <s-box padding="large-100" borderRadius="base" background="subdued">
-              <s-stack direction="inline" gap="base" alignItems="center" justifyContent="space-between">
-                <s-stack direction="block" gap="small-500">
-                  <s-text type="strong">${esPro ? "Plan Pro" : "Plan gratis"}</s-text>
-                  <s-text color="subdued">${
-                    esPro
-                      ? "Páginas de producto ilimitadas."
-                      : `Usaste ${plan.usadas} de ${plan.limite} páginas este mes.`
-                  }</s-text>
-                </s-stack>
-                ${
-                  esPro
-                    ? `<s-badge tone="success">Activo</s-badge>`
-                    : `<s-button id="plan-mejorar">Mejorar a Pro</s-button>`
-                }
-              </s-stack>
-            </s-box>
+            <s-text color="subdued">Explorá lo que TiendaIQ hace por tu tienda.</s-text>
+            <div class="tiq-tools">
+              <div class="tiq-tool">
+                <div class="tiq-tool__body">
+                  <div class="tiq-tool__t">Páginas de producto con IA</div>
+                  <div class="tiq-tool__d">Elegí un producto y la IA arma la landing completa: copy, reseñas, FAQ y diseño.</div>
+                  <s-button variant="primary" id="herr-crear">Crear página de producto</s-button>
+                </div>
+                <div class="tiq-tool__prev"><img src="/portadas/portada-paginas.png" alt="" loading="lazy"></div>
+              </div>
+              <div class="tiq-tool">
+                <div class="tiq-tool__body">
+                  <div class="tiq-tool__t">Creá paquetes y aumentá el AOV</div>
+                  <div class="tiq-tool__d">Descuentos por volumen y "comprá X y llevá Y". El precio lo hace cumplir Shopify.</div>
+                  <s-button variant="primary" id="herr-bundles">Crear bundles</s-button>
+                </div>
+                <div class="tiq-tool__prev">
+                  <div class="tiq-bmini">
+                    <div class="tiq-bmini__row"><span>Comprá 1</span><span>$ 24,99</span></div>
+                    <div class="tiq-bmini__row sel"><span>Comprá 2 <span class="tiq-bmini__tag">10% OFF</span></span><span>$ 44,98<span class="tiq-bmini__old">$ 49,98</span></span></div>
+                    <div class="tiq-bmini__row"><span>Comprá 3 <span class="tiq-bmini__tag">15% OFF</span></span><span>$ 63,72<span class="tiq-bmini__old">$ 74,97</span></span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </s-stack>
         </s-section>
 
-        <s-section heading="Herramientas">
+        <s-section heading="Información y comunidad">
           <s-stack direction="block" gap="base">
-            <s-text color="subdued">Lo que TiendaIQ puede hacer por tu tienda.</s-text>
-            <s-grid gridTemplateColumns="repeat(auto-fit, minmax(280px, 1fr))" gap="base">
-              <s-box padding="large-100" borderRadius="base" background="subdued">
-                <s-stack direction="block" gap="base">
-                  <s-heading>Páginas de producto con IA</s-heading>
-                  <s-paragraph>Elegí un producto y la IA arma la landing completa.</s-paragraph>
-                  <div><s-button id="herr-crear">Crear página de producto</s-button></div>
-                </s-stack>
-              </s-box>
-              ${COD_VISIBLE ? `<s-box padding="large-100" borderRadius="base" background="subdued">
-                <s-stack direction="block" gap="base">
-                  <s-heading>Formulario contra reembolso (COD)</s-heading>
-                  <s-paragraph>Tus clientes piden y pagan al recibir: el formulario crea el pedido en Shopify.</s-paragraph>
-                  <div><s-button id="herr-cod">Configurar COD</s-button></div>
-                </s-stack>
-              </s-box>` : ""}
-              <s-box padding="large-100" borderRadius="base" background="subdued">
-                <s-stack direction="block" gap="base">
-                  <s-heading>Bundles y descuentos</s-heading>
-                  <s-paragraph>Descuentos por volumen y "comprá X y obtené Y". El precio lo hace cumplir Shopify.</s-paragraph>
-                  <div><s-button id="herr-bundles">Crear bundles</s-button></div>
-                </s-stack>
-              </s-box>
-            </s-grid>
-          </s-stack>
-        </s-section>
-
-        ${
-          publicadasLista.length
-            ? `<s-section heading="Últimas páginas publicadas">
-                 <s-stack direction="block" gap="base">
-                   <s-text color="subdued">Están vivas en tu tienda ahora mismo.</s-text>
-                   ${publicadasLista
-                     .slice(0, 5)
-                     .map(
-                       (p) => `
-                       <s-stack direction="inline" gap="base" alignItems="center">
-                         ${p.imagen ? `<s-thumbnail src="${esc(p.imagen)}" alt=""></s-thumbnail>` : ""}
-                         <s-text type="strong">${esc(p.titulo || "Sin título")}</s-text>
-                         ${p.url_publica ? `<s-link href="${esc(p.url_publica)}" target="_blank">Ver en la tienda</s-link>` : ""}
-                       </s-stack>`
-                     )
-                     .join("")}
-                 </s-stack>
-               </s-section>`
-            : ""
-        }
-
-        <s-section>
-          <s-stack direction="inline" gap="base" alignItems="center" justifyContent="space-between">
-            <s-text color="subdued">¿Necesitás una mano? Escribinos a soporte@tiendaiq.com</s-text>
-            <s-link href="/terminos" target="_blank">Términos y privacidad</s-link>
+            <s-text color="subdued">Recursos y ayuda para sacarle el jugo a TiendaIQ.</s-text>
+            <div class="tiq-info">
+              <div class="tiq-infocard">
+                <div class="tiq-infocard__ic">${ICO_INFO.chat}</div>
+                <div class="tiq-infocard__t">Soporte</div>
+                <div class="tiq-infocard__d">¿Trabado con algo? Escribinos y te damos una mano.</div>
+                <s-link href="mailto:soporte@tiendaiq.com">Escribir a soporte</s-link>
+              </div>
+              <div class="tiq-infocard">
+                <div class="tiq-infocard__ic">${ICO_INFO.gente}</div>
+                <div class="tiq-infocard__t">Comunidad</div>
+                <div class="tiq-infocard__d">Seguinos para tips de dropshipping y productos ganadores.</div>
+                <s-link href="${TIKTOK_URL}" target="_blank">Ir a la comunidad</s-link>
+              </div>
+              <div class="tiq-infocard">
+                <div class="tiq-infocard__ic">${ICO_INFO.estrella}</div>
+                <div class="tiq-infocard__t">¿Te sirve TiendaIQ?</div>
+                <div class="tiq-infocard__d">Contanos qué te gustaría mejorar — leemos todo.</div>
+                <s-link href="mailto:soporte@tiendaiq.com?subject=Feedback%20TiendaIQ">Dejar mi opinión</s-link>
+              </div>
+              <div class="tiq-infocard">
+                <div class="tiq-infocard__ic">${ICO_INFO.ayuda}</div>
+                <div class="tiq-infocard__t">Legales</div>
+                <div class="tiq-infocard__d">Términos de uso y política de privacidad.</div>
+                <s-link href="/terminos" target="_blank">Ver términos y privacidad</s-link>
+              </div>
+            </div>
           </s-stack>
         </s-section>
       </s-page>`;
