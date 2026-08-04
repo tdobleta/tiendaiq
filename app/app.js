@@ -5750,10 +5750,14 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   // que el server parsea y acá se ordenan de mayor a menor y viceversa.
 
   // Íconos de línea (estilo feather, grandes y claros) para las 3 métricas.
+  // Trazo grueso (2.3) a propósito: el usuario rechazó las líneas/letras finas
+  // por verse poco maduras. Íconos macizos, no de una línea delgada.
   const ICO_INSP = {
-    vistas: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>`,
-    likes: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.3l-1.4-1.3C5.4 14.3 2.5 11.6 2.5 8.4 2.5 6 4.4 4 6.9 4c1.5 0 2.9.7 3.8 1.8l.3.4.3-.4A5 5 0 0 1 15.1 4c2.5 0 4.4 2 4.4 4.4 0 3.2-2.9 5.9-8.1 10.6z"/></svg>`,
-    comentarios: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-12.3 7.6L3 21l1.9-5.7A8.5 8.5 0 1 1 21 11.5z"/></svg>`
+    vistas: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>`,
+    likes: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.3l-1.4-1.3C5.4 14.3 2.5 11.6 2.5 8.4 2.5 6 4.4 4 6.9 4c1.5 0 2.9.7 3.8 1.8l.3.4.3-.4A5 5 0 0 1 15.1 4c2.5 0 4.4 2 4.4 4.4 0 3.2-2.9 5.9-8.1 10.6z"/></svg>`,
+    comentarios: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-12.3 7.6L3 21l1.9-5.7A8.5 8.5 0 1 1 21 11.5z"/></svg>`,
+    abajo: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M6 13l6 6 6-6"/></svg>`,
+    arriba: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="M6 11l6-6 6 6"/></svg>`
   };
 
   // 2.400.000 → "2,4 M"; 46.100 → "46,1 K"; 224 → "224". Coma decimal (es).
@@ -5763,14 +5767,16 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     return String(n);
   }
 
-  const OPCIONES_ORDEN = [
-    ["vistas-desc", "Más vistas"],
-    ["vistas-asc", "Menos vistas"],
-    ["likes-desc", "Más likes"],
-    ["likes-asc", "Menos likes"],
-    ["comentarios-desc", "Más comentarios"],
-    ["comentarios-asc", "Menos comentarios"]
+  // Filtro reconstruido: 2 ejes separados (métrica × dirección), no un select
+  // de 6 opciones planas. La métrica se elige con botones segmentados; la
+  // dirección con un toggle. Estos mapas alimentan el subtítulo-lente en prosa.
+  const METRICAS = [
+    ["vistas", "Vistas", "vistas"],
+    ["likes", "Likes", "likes"],
+    ["comentarios", "Comentarios", "comentarios"]
   ];
+  const DIR_PROSA = { desc: "de mayor a menor", asc: "de menor a mayor" };
+  const DIR_ETQ = { desc: "Mayor a menor", asc: "Menor a mayor" };
 
   async function pantallaInspiracion() {
     vista.innerHTML = `<div class="generando"><div class="giro"></div><h2>Cargando inspiración…</h2></div>`;
@@ -5791,10 +5797,6 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     const [clave, dir] = orden.split("-");
     const lista = [...videos].sort((a, b) => (dir === "desc" ? b[clave] - a[clave] : a[clave] - b[clave]));
 
-    const opciones = OPCIONES_ORDEN
-      .map(([v, t]) => `<s-option value="${v}"${v === orden ? " selected" : ""}>${t}</s-option>`)
-      .join("");
-
     // El orden es un lente: cambia qué métrica manda. La activa se resalta en
     // cada card (fuerte + ícono en color de acento); las otras dos, subdued.
     const STATS = [
@@ -5810,14 +5812,15 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       "comentarios-desc": "El más comentado", "comentarios-asc": "El menos comentado"
     };
     const gana = dir === "desc"; // solo coronamos en "Más …" (top real)
-    const claveLabel = STATS.find(([k]) => k === clave)[1];
+    const claveLabel = METRICAS.find(([k]) => k === clave)[1]; // "Vistas"
+    const claveProsa = METRICAS.find(([k]) => k === clave)[2]; // "vistas"
 
     const vid = (v) =>
       `<video src="${esc(v.url)}${v.poster ? "" : "#t=0.1"}"${v.poster ? ` poster="${esc(v.poster)}"` : ""} preload="${v.poster ? "none" : "metadata"}" muted playsinline loop></video>`;
     const fila = (v, cls = "") =>
       `<div class="insp-stats${cls}">${STATS.map(([k, etq, svg]) => {
         const on = k === clave;
-        return `<span class="insp-stat${on ? " insp-stat--on" : ""}" title="${etq}">${svg}<s-text ${on ? 'type="strong"' : 'color="subdued"'}>${fmtNum(v[k])}</s-text></span>`;
+        return `<span class="insp-stat${on ? " insp-stat--on" : ""}" title="${etq}">${svg}<s-text type="strong"${on ? "" : ' color="subdued"'}>${fmtNum(v[k])}</s-text></span>`;
       }).join("")}</div>`;
 
     const top = lista[0];
@@ -5826,7 +5829,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     const hero = top
       ? `<div class="insp-hero${gana ? " is-win" : ""}">
            <div class="insp-thumb insp-hero__media" data-src="${esc(top.url)}">
-             <span class="insp-rank insp-rank--hero">#1</span>
+             <span class="insp-rank insp-rank--hero${gana ? " insp-rank--win" : ""}">#1</span>
              ${vid(top)}
            </div>
            <div class="insp-hero__panel">
@@ -5868,58 +5871,87 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
            <p>Guardá tus TikToks en la carpeta de inspiración con el nombre en formato <strong>vistas . likes . comentarios</strong> (ej. <strong>2400000 . 28300 . 224.mp4</strong>) y aparecerán acá ordenados por rendimiento.</p>
          </div>`;
 
+    // Subtítulo-lente (signature): prosa viva que se reescribe con el estado
+    // activo del filtro e incorpora el conteo (en vez de un "34 videos" suelto).
+    const subtitulo = lista.length
+      ? `${lista.length} video${lista.length === 1 ? "" : "s"} de venta orgánica, rankeados por ${claveProsa}, ${DIR_PROSA[dir]}.`
+      : "Videos de venta orgánica rankeados por rendimiento. Guardá tus TikToks con las métricas en el nombre y aparecerán acá.";
+
+    // Filtro reconstruido: eje MÉTRICA = botones segmentados (activo sólido);
+    // eje DIRECCIÓN = un toggle con flecha SVG + texto. Ancho al contenido.
+    const seg = METRICAS
+      .map(([k, etq]) => `<s-button variant="${k === clave ? "primary" : "secondary"}" data-metrica="${k}">${etq}</s-button>`)
+      .join("");
+    const filtro = lista.length
+      ? `<div class="insp-filtro">
+           <div class="insp-filtro__eje">
+             <s-text color="subdued" class="insp-filtro__etq">Ordenar por</s-text>
+             <div class="insp-seg">${seg}</div>
+           </div>
+           <s-button variant="secondary" id="insp-dir" class="insp-dir" data-dir="${dir}"><span class="insp-dir__ico">${dir === "desc" ? ICO_INSP.abajo : ICO_INSP.arriba}</span>${DIR_ETQ[dir]}</s-button>
+         </div>`
+      : "";
+
     vista.innerHTML = `
       <style>
         /* Gotcha del proyecto: las variables :root (--suave, --negro, --borde…)
            NO cruzan el shadow boundary de s-section/s-stack — dentro de este
            subtree hay que usar los valores literales de los tokens. --insp-on
-           sí funciona porque se define inline en .insp-wrap (ya dentro). */
-        .insp-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-        .insp-wrap{display:flex;flex-direction:column;gap:22px}
-        .insp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:18px}
-        .insp-card{display:flex;flex-direction:column;gap:9px;min-width:0}
-        .insp-thumb{position:relative;aspect-ratio:9/16;background:#0b0b0b;border-radius:14px;overflow:hidden;border:1px solid #e6e6ea;cursor:pointer}
+           sí funciona porque se define inline en .insp-wrap (ya dentro).
+           Estética: macizo, no fino — superficies rellenas en vez de hairlines,
+           tipografía y rank contundentes (feedback del usuario: sin líneas/
+           letras finas). */
+        .insp-wrap{display:flex;flex-direction:column;gap:26px}
+        /* Filtro: 2 ejes separados, ancho al contenido (NUNCA full-width). */
+        .insp-filtro{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+        .insp-filtro__eje{display:flex;align-items:center;gap:8px;min-width:0}
+        .insp-filtro__etq{flex:none}
+        .insp-seg{display:flex;gap:6px;flex-wrap:wrap}
+        .insp-dir{display:inline-flex}
+        .insp-dir svg{width:17px;height:17px}
+        .insp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(196px,1fr));gap:20px}
+        .insp-card{display:flex;flex-direction:column;gap:11px;min-width:0}
+        .insp-thumb{position:relative;aspect-ratio:9/16;background:#0b0b0b;border-radius:16px;overflow:hidden;cursor:pointer}
         .insp-thumb video{width:100%;height:100%;object-fit:cover;display:block;background:#0b0b0b}
-        .insp-rank{position:absolute;top:8px;left:8px;z-index:2;background:rgba(0,0,0,.62);color:#fff;font-size:12px;font-weight:600;line-height:1;padding:4px 8px;border-radius:20px;backdrop-filter:blur(2px)}
-        .insp-rank--hero{top:12px;left:12px;font-size:13px;padding:5px 11px}
-        .insp-thumb::after{content:"";position:absolute;inset:auto 0 0 0;height:38%;background:linear-gradient(180deg,transparent,rgba(0,0,0,.28));pointer-events:none}
-        .insp-stats{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:0 2px}
+        .insp-thumb::after{content:"";position:absolute;inset:auto 0 0 0;height:42%;background:linear-gradient(180deg,transparent,rgba(0,0,0,.55));pointer-events:none}
+        /* Rank: chip macizo, peso 800, número tabular. Nada endeble. */
+        .insp-rank{position:absolute;top:10px;left:10px;z-index:2;background:rgba(0,0,0,.78);color:#fff;font-size:13px;font-weight:800;line-height:1;letter-spacing:-.2px;font-variant-numeric:tabular-nums;padding:6px 10px;border-radius:10px}
+        .insp-rank--hero{top:14px;left:14px;font-size:16px;padding:8px 13px}
+        .insp-rank--win{background:#2f9e58}
+        .insp-stats{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 1px}
         .insp-stat{display:inline-flex;align-items:center;gap:6px;color:#6d7175;font-variant-numeric:tabular-nums}
         .insp-stat--on{color:var(--insp-on)}
-        .insp-stat svg{width:19px;height:19px;flex:none}
-        /* Destacado: el #1 del orden actual manda pixeles. El verde de marca
-           (crecimiento orgánico) solo aparece cuando corona un top real (desc). */
-        .insp-hero{display:grid;grid-template-columns:minmax(0,220px) minmax(0,1fr);gap:20px;align-items:center;padding:16px;border:1px solid #e6e6ea;border-radius:16px;background:#ffffff}
-        .insp-hero.is-win{border-color:#bfe6cb;background:linear-gradient(180deg,#f2fbf5,#ffffff 55%)}
-        .insp-hero__media{max-width:220px;width:100%}
+        .insp-stat svg{width:20px;height:20px;flex:none}
+        /* Destacado: superficie RELLENA (no hairline). El verde de marca
+           (crecimiento orgánico) solo corona un top real (desc). */
+        .insp-hero{display:grid;grid-template-columns:minmax(0,236px) minmax(0,1fr);gap:24px;align-items:center;padding:20px;border-radius:18px;background:#f1f2f4}
+        .insp-hero.is-win{background:linear-gradient(135deg,#e3f6ea,#f1f8f3)}
+        .insp-hero__media{max-width:236px;width:100%}
         .insp-hero__panel{min-width:0}
-        .insp-stats--hero{justify-content:flex-start;gap:20px;padding:0}
+        .insp-stats--hero{justify-content:flex-start;gap:24px;padding:0}
         @media(max-width:640px){
-          .insp-hero{grid-template-columns:1fr;gap:16px}
-          .insp-hero__media{max-width:200px;margin:0 auto}
+          .insp-hero{grid-template-columns:1fr;gap:18px;padding:16px}
+          .insp-hero__media{max-width:210px;margin:0 auto}
         }
       </style>
       <s-page heading="Inspírate de los mejores" inlineSize="large">
-        <s-paragraph>Videos de venta orgánica ordenados por rendimiento. Filtrá por vistas, likes o comentarios para estudiar qué funciona.</s-paragraph>
         <s-section>
-          <s-stack direction="block" gap="base">
-            <div class="insp-bar">
-              <s-select label="Ordenar por" labelAccessibilityVisibility="exclusive" id="insp-orden">${opciones}</s-select>
-              <s-text color="subdued">${lista.length} video${lista.length === 1 ? "" : "s"}</s-text>
-            </div>
+          <s-stack direction="block" gap="large">
+            <s-text color="subdued">${subtitulo}</s-text>
+            ${filtro}
             ${cuerpo}
           </s-stack>
         </s-section>
       </s-page>`;
 
-    const sel = $("insp-orden");
-    if (sel) {
-      sel.value = orden; // preselección (gotcha s-select: value no aplica al montar)
-      sel.addEventListener("change", () => {
-        estado.inspiracion.orden = sel.value;
-        pintarInspiracion();
-      });
-    }
+    // Filtro: elegir métrica conserva la dirección; el toggle invierte la
+    // dirección conservando la métrica. Ambos re-renderizan (re-corona + relente).
+    const reordenar = (nuevo) => { estado.inspiracion.orden = nuevo; pintarInspiracion(); };
+    vista.querySelectorAll("[data-metrica]").forEach((b) => {
+      b.addEventListener("click", () => reordenar(`${b.dataset.metrica}-${dir}`));
+    });
+    const btnDir = $("insp-dir");
+    if (btnDir) btnDir.addEventListener("click", () => reordenar(`${clave}-${dir === "desc" ? "asc" : "desc"}`));
 
     // Thumbnail sin negro: al cargar metadata se hace seek a un frame real.
     // Hover = reproducir en silencio; salir = pausar y volver al frame. Si el
