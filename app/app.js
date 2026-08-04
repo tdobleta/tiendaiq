@@ -5795,25 +5795,73 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       .map(([v, t]) => `<s-option value="${v}"${v === orden ? " selected" : ""}>${t}</s-option>`)
       .join("");
 
-    const cards = lista
+    // El orden es un lente: cambia qué métrica manda. La activa se resalta en
+    // cada card (fuerte + ícono en color de acento); las otras dos, subdued.
+    const STATS = [
+      ["vistas", "Vistas", ICO_INSP.vistas],
+      ["likes", "Likes", ICO_INSP.likes],
+      ["comentarios", "Comentarios", ICO_INSP.comentarios]
+    ];
+    // Superlativo del destacado según el lente activo (honesto en asc: es el #1
+    // de ESE orden, aunque sea el de menor rendimiento).
+    const SUPERLATIVO = {
+      "vistas-desc": "El más visto", "vistas-asc": "El menos visto",
+      "likes-desc": "El más gustado", "likes-asc": "El menos gustado",
+      "comentarios-desc": "El más comentado", "comentarios-asc": "El menos comentado"
+    };
+    const gana = dir === "desc"; // solo coronamos en "Más …" (top real)
+    const claveLabel = STATS.find(([k]) => k === clave)[1];
+
+    const vid = (v) =>
+      `<video src="${esc(v.url)}${v.poster ? "" : "#t=0.1"}"${v.poster ? ` poster="${esc(v.poster)}"` : ""} preload="${v.poster ? "none" : "metadata"}" muted playsinline loop></video>`;
+    const fila = (v, cls = "") =>
+      `<div class="insp-stats${cls}">${STATS.map(([k, etq, svg]) => {
+        const on = k === clave;
+        return `<span class="insp-stat${on ? " insp-stat--on" : ""}" title="${etq}">${svg}<s-text ${on ? 'type="strong"' : 'color="subdued"'}>${fmtNum(v[k])}</s-text></span>`;
+      }).join("")}</div>`;
+
+    const top = lista[0];
+    const resto = lista.slice(1);
+
+    const hero = top
+      ? `<div class="insp-hero${gana ? " is-win" : ""}">
+           <div class="insp-thumb insp-hero__media" data-src="${esc(top.url)}">
+             <span class="insp-rank insp-rank--hero">#1</span>
+             ${vid(top)}
+           </div>
+           <div class="insp-hero__panel">
+             <s-stack direction="block" gap="base">
+               <div><s-badge tone="${gana ? "success" : "neutral"}">${SUPERLATIVO[orden]}</s-badge></div>
+               <s-box padding="large-100" borderRadius="base" background="subdued">
+                 <s-stack direction="block" gap="small-500">
+                   <s-text color="subdued">${claveLabel}</s-text>
+                   <s-heading>${fmtNum(top[clave])}</s-heading>
+                 </s-stack>
+               </s-box>
+               ${fila(top, " insp-stats--hero")}
+             </s-stack>
+           </div>
+         </div>`
+      : "";
+
+    const cards = resto
       .map(
         (v, i) => `
         <div class="insp-card">
           <div class="insp-thumb" data-src="${esc(v.url)}">
-            <span class="insp-rank">#${i + 1}</span>
-            <video src="${esc(v.url)}${v.poster ? "" : "#t=0.1"}"${v.poster ? ` poster="${esc(v.poster)}"` : ""} preload="${v.poster ? "none" : "metadata"}" muted playsinline loop></video>
+            <span class="insp-rank">#${i + 2}</span>
+            ${vid(v)}
           </div>
-          <div class="insp-stats">
-            <span class="insp-stat" title="Vistas">${ICO_INSP.vistas}<s-text>${fmtNum(v.vistas)}</s-text></span>
-            <span class="insp-stat" title="Likes">${ICO_INSP.likes}<s-text>${fmtNum(v.likes)}</s-text></span>
-            <span class="insp-stat" title="Comentarios">${ICO_INSP.comentarios}<s-text>${fmtNum(v.comentarios)}</s-text></span>
-          </div>
+          ${fila(v)}
         </div>`
       )
       .join("");
 
     const cuerpo = lista.length
-      ? `<div class="insp-grid">${cards}</div>`
+      ? `<div class="insp-wrap" style="--insp-on:${gana ? "#45c26a" : "#202223"}">
+           ${hero}
+           ${resto.length ? `<div class="insp-grid">${cards}</div>` : ""}
+         </div>`
       : `<div class="vacio-panel">
            <div class="vacio-panel__ico">${ico("estrella")}</div>
            <div class="vacio-panel__tit">Todavía no hay videos</div>
@@ -5822,16 +5870,34 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
 
     vista.innerHTML = `
       <style>
+        /* Gotcha del proyecto: las variables :root (--suave, --negro, --borde…)
+           NO cruzan el shadow boundary de s-section/s-stack — dentro de este
+           subtree hay que usar los valores literales de los tokens. --insp-on
+           sí funciona porque se define inline en .insp-wrap (ya dentro). */
         .insp-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+        .insp-wrap{display:flex;flex-direction:column;gap:22px}
         .insp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:18px}
         .insp-card{display:flex;flex-direction:column;gap:9px;min-width:0}
-        .insp-thumb{position:relative;aspect-ratio:9/16;background:#0b0b0b;border-radius:14px;overflow:hidden;border:1px solid var(--borde);cursor:pointer}
+        .insp-thumb{position:relative;aspect-ratio:9/16;background:#0b0b0b;border-radius:14px;overflow:hidden;border:1px solid #e6e6ea;cursor:pointer}
         .insp-thumb video{width:100%;height:100%;object-fit:cover;display:block;background:#0b0b0b}
         .insp-rank{position:absolute;top:8px;left:8px;z-index:2;background:rgba(0,0,0,.62);color:#fff;font-size:12px;font-weight:600;line-height:1;padding:4px 8px;border-radius:20px;backdrop-filter:blur(2px)}
+        .insp-rank--hero{top:12px;left:12px;font-size:13px;padding:5px 11px}
         .insp-thumb::after{content:"";position:absolute;inset:auto 0 0 0;height:38%;background:linear-gradient(180deg,transparent,rgba(0,0,0,.28));pointer-events:none}
         .insp-stats{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:0 2px}
-        .insp-stat{display:inline-flex;align-items:center;gap:6px;color:var(--negro);font-variant-numeric:tabular-nums}
+        .insp-stat{display:inline-flex;align-items:center;gap:6px;color:#6d7175;font-variant-numeric:tabular-nums}
+        .insp-stat--on{color:var(--insp-on)}
         .insp-stat svg{width:19px;height:19px;flex:none}
+        /* Destacado: el #1 del orden actual manda pixeles. El verde de marca
+           (crecimiento orgánico) solo aparece cuando corona un top real (desc). */
+        .insp-hero{display:grid;grid-template-columns:minmax(0,220px) minmax(0,1fr);gap:20px;align-items:center;padding:16px;border:1px solid #e6e6ea;border-radius:16px;background:#ffffff}
+        .insp-hero.is-win{border-color:#bfe6cb;background:linear-gradient(180deg,#f2fbf5,#ffffff 55%)}
+        .insp-hero__media{max-width:220px;width:100%}
+        .insp-hero__panel{min-width:0}
+        .insp-stats--hero{justify-content:flex-start;gap:20px;padding:0}
+        @media(max-width:640px){
+          .insp-hero{grid-template-columns:1fr;gap:16px}
+          .insp-hero__media{max-width:200px;margin:0 auto}
+        }
       </style>
       <s-page heading="Inspírate de los mejores" inlineSize="large">
         <s-paragraph>Videos de venta orgánica ordenados por rendimiento. Filtrá por vistas, likes o comentarios para estudiar qué funciona.</s-paragraph>
@@ -5856,11 +5922,14 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     }
 
     // Thumbnail sin negro: al cargar metadata se hace seek a un frame real.
-    // Hover = reproducir en silencio; salir = pausar y volver al frame.
+    // Hover = reproducir en silencio; salir = pausar y volver al frame. Si el
+    // usuario pidió menos movimiento, dejamos el frame fijo (sin autoplay).
+    const menosMovimiento = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
     vista.querySelectorAll(".insp-thumb").forEach((t) => {
       const v = t.querySelector("video");
       const alFrame = () => { try { if (v.currentTime < 0.1) v.currentTime = 0.1; } catch {} };
       v.addEventListener("loadeddata", alFrame, { once: true });
+      if (menosMovimiento) return;
       t.addEventListener("mouseenter", () => { v.play().catch(() => {}); });
       t.addEventListener("mouseleave", () => { v.pause(); alFrame(); });
     });
