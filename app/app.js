@@ -5872,10 +5872,14 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
          </div>`;
 
     // Subtítulo-lente (signature): prosa viva que se reescribe con el estado
-    // activo del filtro e incorpora el conteo (en vez de un "34 videos" suelto).
+    // activo del filtro. Sin conteo (el usuario lo pidió). EXCEPCIÓN a la regla
+    // "solo tipografía nativa": s-heading/s-text de Polaris quedan clavados en
+    // 13px (verificado: ni nivel ni size los agranda) y el usuario rechazó ese
+    // tamaño por "fino y chico/ilegible" → se estila a escala de heading real
+    // (17px/700) con .insp-lente.
     const subtitulo = lista.length
-      ? `${lista.length} video${lista.length === 1 ? "" : "s"} de venta orgánica, rankeados por ${claveProsa}, ${DIR_PROSA[dir]}.`
-      : "Videos de venta orgánica rankeados por rendimiento. Guardá tus TikToks con las métricas en el nombre y aparecerán acá.";
+      ? `Videos de venta orgánica, rankeados por ${claveProsa}, ${DIR_PROSA[dir]}.`
+      : "";
 
     // Filtro reconstruido: eje MÉTRICA = botones segmentados (activo sólido);
     // eje DIRECCIÓN = un toggle con flecha SVG + texto. Ancho al contenido.
@@ -5901,7 +5905,16 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
            Estética: macizo, no fino — superficies rellenas en vez de hairlines,
            tipografía y rank contundentes (feedback del usuario: sin líneas/
            letras finas). */
-        .insp-wrap{display:flex;flex-direction:column;gap:26px}
+        /* Esta sección usa casi todo el ancho (pedido del usuario). Sube el tope
+           de #vista SOLO mientras esta pantalla está montada (se revierte al
+           navegar, porque el <style> vive en el innerHTML de la pantalla). El
+           default global es 1240px en app.css. */
+        #vista{max-width:1600px}
+        .insp-wrap{display:flex;flex-direction:column;gap:28px}
+        /* Subtítulo-lente: Polaris no da headings >13px, y el usuario pidió algo
+           legible y con peso. Escala de heading real, color literal (los tokens
+           :root no cruzan el shadow boundary de s-section). */
+        .insp-lente{font-size:17px;font-weight:700;color:#202223;letter-spacing:-.2px;line-height:1.35;margin:0}
         /* Filtro: 2 ejes separados, ancho al contenido (NUNCA full-width). */
         .insp-filtro{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
         .insp-filtro__eje{display:flex;align-items:center;gap:8px;min-width:0}
@@ -5909,7 +5922,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         .insp-seg{display:flex;gap:6px;flex-wrap:wrap}
         .insp-dir{display:inline-flex}
         .insp-dir svg{width:17px;height:17px}
-        .insp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(196px,1fr));gap:20px}
+        .insp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(228px,1fr));gap:22px}
         .insp-card{display:flex;flex-direction:column;gap:11px;min-width:0}
         .insp-thumb{position:relative;aspect-ratio:9/16;background:#0b0b0b;border-radius:16px;overflow:hidden;cursor:pointer}
         .insp-thumb video{width:100%;height:100%;object-fit:cover;display:block;background:#0b0b0b}
@@ -5924,9 +5937,9 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         .insp-stat svg{width:20px;height:20px;flex:none}
         /* Destacado: superficie RELLENA (no hairline). El verde de marca
            (crecimiento orgánico) solo corona un top real (desc). */
-        .insp-hero{display:grid;grid-template-columns:minmax(0,236px) minmax(0,1fr);gap:24px;align-items:center;padding:20px;border-radius:18px;background:#f1f2f4}
+        .insp-hero{display:grid;grid-template-columns:minmax(0,300px) minmax(0,1fr);gap:32px;align-items:center;padding:28px;border-radius:20px;background:#f1f2f4}
         .insp-hero.is-win{background:linear-gradient(135deg,#e3f6ea,#f1f8f3)}
-        .insp-hero__media{max-width:236px;width:100%}
+        .insp-hero__media{max-width:300px;width:100%}
         .insp-hero__panel{min-width:0}
         .insp-stats--hero{justify-content:flex-start;gap:24px;padding:0}
         @media(max-width:640px){
@@ -5937,7 +5950,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       <s-page heading="Inspírate de los mejores" inlineSize="large">
         <s-section>
           <s-stack direction="block" gap="large">
-            <s-text color="subdued">${subtitulo}</s-text>
+            ${subtitulo ? `<div class="insp-lente">${subtitulo}</div>` : ""}
             ${filtro}
             ${cuerpo}
           </s-stack>
