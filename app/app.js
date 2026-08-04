@@ -240,17 +240,15 @@
     // Tarjeta de paso, nativa Polaris: contenedor s-box con el ícono, el estado
     // (badge "Completado" cuando está hecho) y, si falta, el botón de acción.
     const pasoCard = (icono, titulo, texto, hecho, boton) => `
-      <s-box padding="large-100" borderRadius="base" background="subdued">
-        <s-stack direction="block" gap="base">
-          <s-stack direction="inline" gap="base" alignItems="center" justifyContent="space-between">
-            <span class="tiq-ini-ico">${icono}</span>
-            ${hecho ? `<s-badge tone="success">Completado</s-badge>` : ""}
-          </s-stack>
-          <s-heading>${titulo}</s-heading>
-          <s-paragraph>${texto}</s-paragraph>
-          ${hecho ? "" : `<div>${boton}</div>`}
-        </s-stack>
-      </s-box>`;
+      <div class="tiq-paso">
+        <div class="tiq-paso__top">
+          <span class="paso-ico ${hecho ? "is-done" : ""}">${icono}</span>
+          ${hecho ? `<s-badge tone="success">Completado</s-badge>` : ""}
+        </div>
+        <div class="tiq-paso__t">${titulo}</div>
+        <div class="tiq-paso__d">${texto}</div>
+        ${hecho ? "" : `<div>${boton}</div>`}
+      </div>`;
 
     // Tiles de métrica al estilo PagePilot: ícono + label arriba, valor
     // grande abajo alineado con el label.
@@ -289,6 +287,15 @@
       <style>
         .tiq-ini-ico{display:inline-flex;align-items:center;justify-content:center;color:#4a4a4a}
         .tiq-ini-ico svg{width:24px;height:24px}
+        .tiq-subt{font-size:14px;color:var(--suave)}
+        .tiq-pasos-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+        .tiq-paso{background:#fff;border:1px solid var(--borde);border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:12px}
+        .tiq-paso__top{display:flex;align-items:center;justify-content:space-between;min-height:26px}
+        .paso-ico{width:42px;height:42px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;border:1.5px solid var(--borde);color:var(--negro);background:#fff}
+        .paso-ico svg{width:21px;height:21px}
+        .paso-ico.is-done{background:var(--negro);border-color:var(--negro);color:#fff}
+        .tiq-paso__t{font-size:15px;font-weight:600;color:var(--negro)}
+        .tiq-paso__d{font-size:13.5px;color:var(--suave);line-height:1.55;flex:1}
         .tiq-tools{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
         .tiq-tool{background:#fff;border:1px solid var(--borde);border-radius:12px;overflow:hidden;display:flex;flex-direction:column}
         .tiq-tool__body{padding:18px 18px 16px}
@@ -326,10 +333,10 @@
         <s-section heading="Primeros pasos">
           <s-stack direction="block" gap="base">
             <s-stack direction="inline" gap="base" alignItems="center" justifyContent="space-between">
-              <s-text color="subdued">Completá estos pasos para empezar a vender con TiendaIQ</s-text>
+              <div class="tiq-subt">Completá estos pasos para empezar a vender con TiendaIQ</div>
               <s-badge tone="${hechos === TOTAL_PASOS ? "success" : "info"}">${hechos} de ${TOTAL_PASOS} completado${hechos === 1 ? "" : "s"}</s-badge>
             </s-stack>
-            <s-grid gridTemplateColumns="repeat(auto-fit, minmax(240px, 1fr))" gap="base">
+            <div class="tiq-pasos-grid">
               ${pasoCard(
                 ICONO_PASO.chispa,
                 "Crear página de producto",
@@ -358,13 +365,13 @@
                 bundlesListo,
                 `<s-button id="paso-bundles">${(estado.inicioBundles?.lista || []).length ? "Inyectar en el tema" : "Crear bundle"}</s-button>`
               )}
-            </s-grid>
+            </div>
           </s-stack>
         </s-section>
 
         <s-section heading="Herramientas útiles">
           <s-stack direction="block" gap="base">
-            <s-text color="subdued">Explorá lo que TiendaIQ hace por tu tienda.</s-text>
+            <div class="tiq-subt">Explorá lo que TiendaIQ hace por tu tienda.</div>
             <div class="tiq-tools">
               <div class="tiq-tool">
                 <div class="tiq-tool__body">
@@ -394,7 +401,7 @@
 
         <s-section heading="Información y comunidad">
           <s-stack direction="block" gap="base">
-            <s-text color="subdued">Recursos y ayuda para sacarle el jugo a TiendaIQ.</s-text>
+            <div class="tiq-subt">Recursos y ayuda para sacarle el jugo a TiendaIQ.</div>
             <div class="tiq-info">
               <div class="tiq-infocard">
                 <div class="tiq-infocard__ic">${ICO_INFO.chat}</div>
