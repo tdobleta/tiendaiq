@@ -241,13 +241,10 @@
     // (badge "Completado" cuando está hecho) y, si falta, el botón de acción.
     const pasoCard = (icono, titulo, texto, hecho, boton) => `
       <div class="tiq-paso">
-        <div class="tiq-paso__top">
-          <span class="paso-ico ${hecho ? "is-done" : ""}">${icono}</span>
-          ${hecho ? `<s-badge tone="success">Completado</s-badge>` : ""}
-        </div>
+        <span class="paso-ico ${hecho ? "is-done" : ""}">${icono}</span>
         <s-heading>${titulo}</s-heading>
         <s-text color="subdued">${texto}</s-text>
-        ${hecho ? "" : `<div>${boton}</div>`}
+        <div class="tiq-paso__accion">${hecho ? `<s-badge tone="success">Completado</s-badge>` : boton}</div>
       </div>`;
 
     // Tiles de métrica al estilo PagePilot: ícono + label arriba, valor
@@ -285,25 +282,26 @@
 
     vista.innerHTML = `
       <style>
-        .tiq-pasos-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:20px}
-        .tiq-paso{background:#fff;border:1px solid var(--borde);border-radius:16px;padding:22px;display:flex;flex-direction:column;gap:12px}
-        .tiq-paso__top{display:flex;align-items:center;justify-content:space-between;min-height:28px}
-        .paso-ico{width:48px;height:48px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;border:1.5px solid var(--borde);color:var(--negro);background:#fff}
-        .paso-ico svg{width:23px;height:23px}
+        .tiq-pasos-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+        .tiq-paso{background:#fff;border:1px solid var(--borde);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:10px}
+        .paso-ico{width:44px;height:44px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;border:1.5px solid var(--borde);color:var(--negro);background:#fff}
+        .paso-ico svg{width:22px;height:22px}
         .paso-ico.is-done{background:var(--negro);border-color:var(--negro);color:#fff}
-        .tiq-paso--vacio{border-style:dashed;background:var(--fondo);min-height:172px}
-        .tiq-tools{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:20px}
-        .tiq-tool{background:#fff;border:1px solid var(--borde);border-radius:16px;overflow:hidden;display:flex;flex-direction:column}
-        .tiq-tool--vacio{border-style:dashed;background:var(--fondo);min-height:320px}
-        .tiq-tool__body{padding:22px;display:flex;flex-direction:column;gap:8px}
-        .tiq-tool__prev{margin-top:auto;height:180px;background:#eef1f6;border-top:1px solid var(--borde);overflow:hidden}
+        .tiq-paso__accion{margin-top:auto;padding-top:6px}
+        .tiq-tools{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+        .tiq-tool{background:#fff;border:1px solid var(--borde);border-radius:14px;overflow:hidden;display:flex;flex-direction:column}
+        .tiq-tool__body{padding:20px;display:flex;flex-direction:column;gap:8px}
+        .tiq-tool__prev{margin-top:auto;height:162px;background:#eef1f6;border-top:1px solid var(--borde);overflow:hidden}
+        .tiq-genprev{width:100%;height:100%;display:block}
+        .tiq-genprev--a{background:linear-gradient(135deg,#e9f0ff,#f3e9ff)}
+        .tiq-genprev--b{background:linear-gradient(135deg,#fdeef4,#eef4ff)}
         @media (max-width:1040px){.tiq-pasos-grid,.tiq-tools{grid-template-columns:repeat(2,minmax(0,1fr))}}
         @media (max-width:560px){.tiq-pasos-grid,.tiq-tools{grid-template-columns:1fr}}
         .tiq-tool__prev img{width:100%;height:100%;object-fit:cover;object-position:top center;display:block}
-        .tiq-bmini{padding:16px;display:flex;flex-direction:column;gap:8px;height:100%;background:linear-gradient(135deg,#eef4ff,#f5f0ff)}
-        .tiq-bmini__row{display:flex;align-items:center;justify-content:space-between;background:#fff;border:1px solid #e7e7ee;border-radius:8px;padding:8px 11px;font-size:12px;color:var(--negro)}
+        .tiq-bmini{padding:14px;display:flex;flex-direction:column;gap:8px;height:100%;background:linear-gradient(135deg,#eef4ff,#f5f0ff)}
+        .tiq-bmini__row{display:flex;align-items:center;justify-content:space-between;gap:8px;white-space:nowrap;background:#fff;border:1px solid #e7e7ee;border-radius:8px;padding:8px 11px;font-size:12px;color:var(--negro)}
         .tiq-bmini__row.sel{border-color:#111;border-width:1.5px}
-        .tiq-bmini__tag{background:#111;color:#fff;border-radius:5px;padding:1px 6px;font-size:10px;font-weight:600;margin-left:6px}
+        .tiq-bmini__tag{background:#111;color:#fff;border-radius:5px;padding:1px 6px;font-size:10px;font-weight:600;margin-left:6px;white-space:nowrap}
         .tiq-bmini__old{color:#9ca3af;text-decoration:line-through;margin-left:6px}
         .tiq-info{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
         .tiq-infocard{background:#fff;border:1px solid var(--borde);border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:8px}
@@ -360,8 +358,13 @@
                 bundlesListo,
                 `<s-button id="paso-bundles">${(estado.inicioBundles?.lista || []).length ? "Inyectar en el tema" : "Crear bundle"}</s-button>`
               )}
-              <!-- Slot vacío: 4ª casilla para completar la grilla estilo PagePilot (a llenar). -->
-              <div class="tiq-paso tiq-paso--vacio" aria-hidden="true"></div>
+              <!-- 4ª casilla (placeholder a definir): se rellena para igualar la grilla 4-up de PagePilot. -->
+              <div class="tiq-paso">
+                <span class="paso-ico">${ICONO_PASO.tienda}</span>
+                <s-heading>Personalizá tu tienda</s-heading>
+                <s-text color="subdued">Ajustá el look de tus páginas y bundles.</s-text>
+                <div class="tiq-paso__accion"><s-button disabled>Próximamente</s-button></div>
+              </div>
             </div>
           </s-stack>
         </s-section>
@@ -392,9 +395,23 @@
                   </div>
                 </div>
               </div>
-              <!-- Slots vacíos: 3ª y 4ª herramienta para completar la grilla estilo PagePilot (a llenar). -->
-              <div class="tiq-tool tiq-tool--vacio" aria-hidden="true"></div>
-              <div class="tiq-tool tiq-tool--vacio" aria-hidden="true"></div>
+              <!-- 3ª y 4ª herramienta (placeholders a definir): rellenas con preview genérico para igualar la grilla 4-up de PagePilot. -->
+              <div class="tiq-tool">
+                <div class="tiq-tool__body">
+                  <s-heading>Investigación de productos</s-heading>
+                  <s-text color="subdued">Encontrá productos ganadores para tu nicho.</s-text>
+                  <div style="margin-top:4px"><s-button disabled>Próximamente</s-button></div>
+                </div>
+                <div class="tiq-tool__prev"><span class="tiq-genprev tiq-genprev--a"></span></div>
+              </div>
+              <div class="tiq-tool">
+                <div class="tiq-tool__body">
+                  <s-heading>Curso de ecommerce</s-heading>
+                  <s-text color="subdued">Aprendé a escalar tu tienda paso a paso.</s-text>
+                  <div style="margin-top:4px"><s-button disabled>Próximamente</s-button></div>
+                </div>
+                <div class="tiq-tool__prev"><span class="tiq-genprev tiq-genprev--b"></span></div>
+              </div>
             </div>
           </s-stack>
         </s-section>
