@@ -285,16 +285,20 @@
 
     vista.innerHTML = `
       <style>
-        .tiq-pasos-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
-        .tiq-paso{background:#fff;border:1px solid var(--borde);border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:10px}
-        .tiq-paso__top{display:flex;align-items:center;justify-content:space-between;min-height:26px}
-        .paso-ico{width:42px;height:42px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;border:1.5px solid var(--borde);color:var(--negro);background:#fff}
-        .paso-ico svg{width:21px;height:21px}
+        .tiq-pasos-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:20px}
+        .tiq-paso{background:#fff;border:1px solid var(--borde);border-radius:16px;padding:22px;display:flex;flex-direction:column;gap:12px}
+        .tiq-paso__top{display:flex;align-items:center;justify-content:space-between;min-height:28px}
+        .paso-ico{width:48px;height:48px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;border:1.5px solid var(--borde);color:var(--negro);background:#fff}
+        .paso-ico svg{width:23px;height:23px}
         .paso-ico.is-done{background:var(--negro);border-color:var(--negro);color:#fff}
-        .tiq-tools{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
-        .tiq-tool{background:#fff;border:1px solid var(--borde);border-radius:12px;overflow:hidden;display:flex;flex-direction:column}
-        .tiq-tool__body{padding:18px;display:flex;flex-direction:column;gap:8px}
-        .tiq-tool__prev{margin-top:auto;height:162px;background:#eef1f6;border-top:1px solid var(--borde);overflow:hidden}
+        .tiq-paso--vacio{border-style:dashed;background:var(--fondo);min-height:172px}
+        .tiq-tools{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:20px}
+        .tiq-tool{background:#fff;border:1px solid var(--borde);border-radius:16px;overflow:hidden;display:flex;flex-direction:column}
+        .tiq-tool--vacio{border-style:dashed;background:var(--fondo);min-height:320px}
+        .tiq-tool__body{padding:22px;display:flex;flex-direction:column;gap:8px}
+        .tiq-tool__prev{margin-top:auto;height:180px;background:#eef1f6;border-top:1px solid var(--borde);overflow:hidden}
+        @media (max-width:1040px){.tiq-pasos-grid,.tiq-tools{grid-template-columns:repeat(2,minmax(0,1fr))}}
+        @media (max-width:560px){.tiq-pasos-grid,.tiq-tools{grid-template-columns:1fr}}
         .tiq-tool__prev img{width:100%;height:100%;object-fit:cover;object-position:top center;display:block}
         .tiq-bmini{padding:16px;display:flex;flex-direction:column;gap:8px;height:100%;background:linear-gradient(135deg,#eef4ff,#f5f0ff)}
         .tiq-bmini__row{display:flex;align-items:center;justify-content:space-between;background:#fff;border:1px solid #e7e7ee;border-radius:8px;padding:8px 11px;font-size:12px;color:var(--negro)}
@@ -356,6 +360,8 @@
                 bundlesListo,
                 `<s-button id="paso-bundles">${(estado.inicioBundles?.lista || []).length ? "Inyectar en el tema" : "Crear bundle"}</s-button>`
               )}
+              <!-- Slot vacío: 4ª casilla para completar la grilla estilo PagePilot (a llenar). -->
+              <div class="tiq-paso tiq-paso--vacio" aria-hidden="true"></div>
             </div>
           </s-stack>
         </s-section>
@@ -386,6 +392,9 @@
                   </div>
                 </div>
               </div>
+              <!-- Slots vacíos: 3ª y 4ª herramienta para completar la grilla estilo PagePilot (a llenar). -->
+              <div class="tiq-tool tiq-tool--vacio" aria-hidden="true"></div>
+              <div class="tiq-tool tiq-tool--vacio" aria-hidden="true"></div>
             </div>
           </s-stack>
         </s-section>
