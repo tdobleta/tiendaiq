@@ -760,7 +760,7 @@
 
               <div class="crear-market-note">
                 <span>Nota de mercado</span>
-                <p>El comercio directo al consumidor ya probó su fuerza en Estados Unidos y Europa. En Sudamérica todavía hay espacio para marcas ágiles que eligen buenos productos, comunican mejor y publican más rápido.</p>
+                <p>El dropshipping profesional ayudó a marcas ágiles a crecer rápido en Estados Unidos y Europa. En Sudamérica la ventaja está en moverse antes: validar productos, comunicar con precisión y publicar páginas mejores sin frenar la operación.</p>
               </div>
 
               <div class="crear-hero-metrics" aria-label="Resumen de catálogo">
@@ -783,20 +783,20 @@
                 ${accionesHTML}
               </div>
             </div>
-          </section>
 
-          <aside class="crear-side" aria-label="Preparación de la página">
-            <div class="crear-side__top">
-              <span>Catálogo conectado</span>
-              <b>${totalProductos} productos</b>
-              ${miniaturas ? `<div class="crear-side__thumbs">${miniaturas}</div>` : `<p>Las imágenes del producto se leen al generar la página.</p>`}
+            <div class="crear-ribbon" aria-label="Preparación de la página">
+              <div class="crear-ribbon__catalog">
+                <span>Catálogo conectado</span>
+                <b>${totalProductos} productos</b>
+                ${miniaturas ? `<div class="crear-ribbon__thumbs">${miniaturas}</div>` : `<p>Las imágenes se leen al generar la página.</p>`}
+              </div>
+              <div class="crear-flow crear-flow--inline">
+                <div class="crear-flow__item is-active"><span>1</span><div><b>Producto</b><small>Elegí el ítem de tu catálogo.</small></div></div>
+                <div class="crear-flow__item"><span>2</span><div><b>Estrategia</b><small>Definí idioma, público y ángulo.</small></div></div>
+                <div class="crear-flow__item"><span>3</span><div><b>Plantilla</b><small>Seleccioná estilo antes de generar.</small></div></div>
+              </div>
             </div>
-            <div class="crear-flow">
-              <div class="crear-flow__item is-active"><span>1</span><div><b>Producto</b><small>Elegí el ítem de tu catálogo.</small></div></div>
-              <div class="crear-flow__item"><span>2</span><div><b>Estrategia</b><small>Definí idioma, público y ángulo.</small></div></div>
-              <div class="crear-flow__item"><span>3</span><div><b>Plantilla</b><small>Seleccioná estilo antes de generar.</small></div></div>
-            </div>
-          </aside>
+          </section>
         </div>
       </div>`;
 
