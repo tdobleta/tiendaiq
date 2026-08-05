@@ -5757,7 +5757,8 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     likes: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.3l-1.4-1.3C5.4 14.3 2.5 11.6 2.5 8.4 2.5 6 4.4 4 6.9 4c1.5 0 2.9.7 3.8 1.8l.3.4.3-.4A5 5 0 0 1 15.1 4c2.5 0 4.4 2 4.4 4.4 0 3.2-2.9 5.9-8.1 10.6z"/></svg>`,
     comentarios: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-12.3 7.6L3 21l1.9-5.7A8.5 8.5 0 1 1 21 11.5z"/></svg>`,
     abajo: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M6 13l6 6 6-6"/></svg>`,
-    arriba: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="M6 11l6-6 6 6"/></svg>`
+    arriba: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="M6 11l6-6 6 6"/></svg>`,
+    play: `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>`
   };
 
   // 2.400.000 → "2,4 M"; 46.100 → "46,1 K"; 224 → "224". Coma decimal (es).
@@ -5831,6 +5832,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
            <div class="insp-thumb insp-hero__media" data-src="${esc(top.url)}">
              <span class="insp-rank insp-rank--hero${gana ? " insp-rank--win" : ""}">#1</span>
              ${vid(top)}
+             <span class="insp-play">${ICO_INSP.play}</span>
            </div>
            <div class="insp-hero__panel">
              <s-stack direction="block" gap="base">
@@ -5854,6 +5856,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
           <div class="insp-thumb" data-src="${esc(v.url)}">
             <span class="insp-rank">#${i + 2}</span>
             ${vid(v)}
+            <span class="insp-play">${ICO_INSP.play}</span>
           </div>
           ${fila(v)}
         </div>`
@@ -5927,6 +5930,21 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         .insp-thumb{position:relative;aspect-ratio:9/16;background:#0b0b0b;border-radius:16px;overflow:hidden;cursor:pointer}
         .insp-thumb video{width:100%;height:100%;object-fit:cover;display:block;background:#0b0b0b}
         .insp-thumb::after{content:"";position:absolute;inset:auto 0 0 0;height:42%;background:linear-gradient(180deg,transparent,rgba(0,0,0,.55));pointer-events:none}
+        .insp-thumb:focus-visible{outline:3px solid #005bd3;outline-offset:2px}
+        /* Afordancia de "tocá para ver con sonido". Se oculta en hover (desktop),
+           cuando ya corre el preview mudo; en touch (sin hover) queda visible. */
+        .insp-play{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:2;width:56px;height:56px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:rgba(0,0,0,.5);color:#fff;pointer-events:none;transition:opacity .15s ease}
+        .insp-play svg{width:26px;height:26px;margin-left:3px}
+        .insp-thumb:hover .insp-play{opacity:0}
+        @media(hover:none){.insp-thumb:hover .insp-play{opacity:1}}
+        /* Lightbox: overlay a pantalla completa, video 9:16 con controles+sonido. */
+        .insp-lb{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.85);padding:24px}
+        .insp-lb__marco{position:relative;height:min(88vh,760px);aspect-ratio:9/16;max-width:94vw;background:#000;border-radius:16px;overflow:hidden;box-shadow:0 16px 60px rgba(0,0,0,.55)}
+        .insp-lb__marco video{width:100%;height:100%;object-fit:contain;background:#000;display:block}
+        .insp-lb__cerrar{position:absolute;top:12px;right:12px;z-index:2;width:42px;height:42px;display:inline-flex;align-items:center;justify-content:center;border:none;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;cursor:pointer}
+        .insp-lb__cerrar:hover{background:rgba(0,0,0,.78)}
+        .insp-lb__cerrar:focus-visible{outline:3px solid #fff;outline-offset:2px}
+        .insp-lb__cerrar svg{width:22px;height:22px}
         /* Rank: chip macizo, peso 800, número tabular. Nada endeble. */
         .insp-rank{position:absolute;top:10px;left:10px;z-index:2;background:rgba(0,0,0,.78);color:#fff;font-size:13px;font-weight:800;line-height:1;letter-spacing:-.2px;font-variant-numeric:tabular-nums;padding:6px 10px;border-radius:10px}
         .insp-rank--hero{top:14px;left:14px;font-size:16px;padding:8px 13px}
@@ -5966,14 +5984,56 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     const btnDir = $("insp-dir");
     if (btnDir) btnDir.addEventListener("click", () => reordenar(`${clave}-${dir === "desc" ? "asc" : "desc"}`));
 
+    // Lightbox: clic/Enter en un thumb → abre el video en grande CON sonido.
+    // (El preview del hover es mudo; acá se despliega con volumen y controles.)
+    // El overlay se monta en <body> para escapar del recorte del s-page.
+    const abrirVideo = (url, poster) => {
+      if (!url) return;
+      const lb = document.createElement("div");
+      lb.className = "insp-lb";
+      lb.setAttribute("role", "dialog");
+      lb.setAttribute("aria-modal", "true");
+      lb.setAttribute("aria-label", "Video de venta orgánica");
+      lb.innerHTML = `
+        <div class="insp-lb__marco">
+          <button type="button" class="insp-lb__cerrar" aria-label="Cerrar">${ico("x")}</button>
+          <video src="${esc(url)}"${poster ? ` poster="${esc(poster)}"` : ""} controls autoplay playsinline></video>
+        </div>`;
+      const prevOverflow = document.body.style.overflow;
+      const cerrar = () => {
+        document.removeEventListener("keydown", onKey);
+        document.body.style.overflow = prevOverflow;
+        lb.remove();
+      };
+      const onKey = (e) => { if (e.key === "Escape") cerrar(); };
+      lb.addEventListener("click", (e) => { if (e.target === lb) cerrar(); }); // fondo
+      lb.querySelector(".insp-lb__cerrar").addEventListener("click", cerrar);
+      document.addEventListener("keydown", onKey);
+      document.body.style.overflow = "hidden";
+      document.body.appendChild(lb);
+      const video = lb.querySelector("video");
+      video.muted = false;
+      video.volume = 1;
+      video.play().catch(() => {}); // gesto del usuario → permite sonido
+      lb.querySelector(".insp-lb__cerrar").focus();
+    };
+
     // Thumbnail sin negro: al cargar metadata se hace seek a un frame real.
-    // Hover = reproducir en silencio; salir = pausar y volver al frame. Si el
-    // usuario pidió menos movimiento, dejamos el frame fijo (sin autoplay).
+    // Hover = preview mudo; salir = pausar. Reduced-motion: sin autoplay al hover.
     const menosMovimiento = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
     vista.querySelectorAll(".insp-thumb").forEach((t) => {
       const v = t.querySelector("video");
       const alFrame = () => { try { if (v.currentTime < 0.1) v.currentTime = 0.1; } catch {} };
       v.addEventListener("loadeddata", alFrame, { once: true });
+      // Ahora el thumb ES un control real (abre el video) → focusable + teclado.
+      t.tabIndex = 0;
+      t.setAttribute("role", "button");
+      t.setAttribute("aria-label", "Reproducir video con sonido");
+      const abrir = () => abrirVideo(t.dataset.src, v.getAttribute("poster"));
+      t.addEventListener("click", abrir);
+      t.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); abrir(); }
+      });
       if (menosMovimiento) return;
       t.addEventListener("mouseenter", () => { v.play().catch(() => {}); });
       t.addEventListener("mouseleave", () => { v.pause(); alFrame(); });
