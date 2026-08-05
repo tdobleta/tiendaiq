@@ -1709,6 +1709,15 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     modalSec = id;
     modalDef = def;
 
+    // Panel .pe-prop (look harness): si el form ya trae sus grupos (Encabezado),
+    // se usa tal cual; si no, se envuelve en un grupo con subheader corto para
+    // que todas las secciones se vean consistentes y agrupadas como PagePilot.
+    const _SUBH = { galeria: "Imágenes", bullets: "Beneficios", destacada: "Reseña destacada", acordeones: "Envío y devoluciones", clientes: "Clips (gifs/videos)", iconos: "Íconos", stats: "Estadísticas", faq: "Preguntas frecuentes", resenas: "Reseñas" };
+    const _htmlSec = def.html();
+    const _cuerpoSec = _htmlSec.includes("pe-prop__grupo")
+      ? _htmlSec
+      : `<section class="pe-prop__grupo">${_SUBH[id] ? `<h3 class="pe-prop__subheader">${_SUBH[id]}</h3>` : ""}${_htmlSec}</section>`;
+
     const m = document.createElement("div");
     m.className = "editor-modal";
     m.id = "editor-modal";
@@ -1718,7 +1727,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
           <span id="editor-modal-titulo">${def.titulo}</span>
           <button class="editor-modal__x" type="button" aria-label="Cerrar">${ico("x")}</button>
         </div>
-        <div class="editor-modal__cuerpo" id="editor-modal-cuerpo">${def.html()}</div>
+        <div class="editor-modal__cuerpo" id="editor-modal-cuerpo">${_cuerpoSec}</div>
         <div class="editor-modal__pie">
           <button class="btn btn--acento" id="editor-modal-guardar" type="button">Guardar</button>
         </div>
