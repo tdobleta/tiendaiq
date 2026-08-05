@@ -2881,6 +2881,19 @@ body.sec-panel-abierto .constructor { padding-right: 356px; }
 .be-layout .cod-preview .tarjeta__titulo { font-size: 15px; font-weight: 700; color: #1a1c1e; }
 .be-layout .cod-preview .panel__sub { font-size: 13px; color: #6d7175; }
 
+/* Editor de COMBO: lista de productos del paquete. */
+.be-cmb__prods { display: flex; flex-direction: column; gap: 8px; }
+.be-cmb__prod { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid #e0e2e6; border-radius: 10px; background: #fff; }
+.be-cmb__foto { flex: 0 0 auto; width: 42px; height: 42px; border-radius: 8px; overflow: hidden; background: #f1f2f4; display: grid; place-items: center; }
+.be-cmb__foto img { width: 100%; height: 100%; object-fit: cover; }
+.be-cmb__foto .ico { width: 20px; height: 20px; color: #8c9196; }
+.be-cmb__nombre { flex: 1 1 auto; min-width: 0; font-size: 14px; color: #1a1c1e; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.be-cmb__precio { font-size: 13px; color: #6d7175; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.be-cmb__quitar { flex: 0 0 auto; border: none; background: none; color: #8c9196; cursor: pointer; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 7px; }
+.be-cmb__quitar:hover { background: #f1f2f4; color: #202223; }
+.be-cmb__quitar svg { width: 16px; height: 16px; }
+.be-cmb__vacio { font-size: 13px; color: #6d7175; padding: 10px 2px; }
+
 /* ============================================================
    CHROME MONOCROMO del editor (como el Pumper real). El usuario rechazó el
    teal/oro decorativo del chrome por verse "IA/feo": el color va SOLO en el

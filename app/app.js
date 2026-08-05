@@ -4048,6 +4048,126 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     return b;
   }
 
+  // "Bundle y Ahorrá" (Combo): PAQUETE de varios productos distintos con un
+  // descuento sobre el set. Estructura propia (b.combo.productos), editor propio
+  // (pintarEditorCombo) y branch propio en el widget. NO usa niveles (b.ofertas
+  // queda [] para que nada que itere ofertas rompa). Etapa 1 = editor + preview;
+  // el carrito "agregar todo" + el descuento real van en Etapa 2.
+  function nuevoBundleCombo() {
+    const b = nuevoBundleLocal("volumen");
+    b.tipo = "combo";
+    b.nombre = "Bundle y Ahorrá";
+    b.ofertas = [];
+    b.diseno.titulo = "Comprá el combo y ahorrá";
+    b.diseno.subtitulo = "";
+    b.diseno.etiqueta = "Combo";
+    b.diseno.pie = "Comprar todo en:";
+    b.combo = {
+      productos: [
+        { id: "", nombre: "Producto de ejemplo 1", imagen: "/img/bundle-ejemplo-1.svg", precio: 10 },
+        { id: "", nombre: "Producto de ejemplo 2", imagen: "/img/bundle-ejemplo-3.svg", precio: 20 }
+      ],
+      descuento: { tipo: "porcentaje", valor: 10 }
+    };
+    return b;
+  }
+
+  // Editor del combo (paridad con "Crear Oferta de Paquete" de Pumper). Mismo
+  // chrome monocromo que el editor de niveles; reusa el aside de preview y el
+  // binding delegado de bindEditorBundle para los campos data-b.
+  function pintarEditorCombo(b) {
+    b.combo = b.combo || { productos: [], descuento: { tipo: "porcentaje", valor: 10 } };
+    b.diseno = b.diseno || {};
+    b.diseno.boton = b.diseno.boton || { texto: "Agregar al carrito", color_fondo: "#111111", color_texto: "#ffffff", radio: 8 };
+    const prods = b.combo.productos || [];
+    const TIPOS_DESC = [["porcentaje", "% Descuento"], ["fijo", "Monto fijo"], ["ninguno", "Sin descuento"]];
+    const filas = prods.length
+      ? prods.map((p, i) => `
+        <div class="be-cmb__prod">
+          <span class="be-cmb__foto">${p.imagen ? `<img src="${esc(p.imagen)}" alt="">` : ico("bolsa", "ico--ph")}</span>
+          <span class="be-cmb__nombre">${esc(p.nombre || "Producto")}</span>
+          <span class="be-cmb__precio">${p.precio != null && p.precio !== "" ? "$" + esc(p.precio) : ""}</span>
+          <button type="button" class="be-cmb__quitar" data-cmb-quitar="${i}" aria-label="Quitar producto">${ico("x")}</button>
+        </div>`).join("")
+      : `<div class="be-cmb__vacio">Todavía no agregaste productos al paquete.</div>`;
+
+    vista.innerHTML = `
+      <div class="be-top">
+        <button class="volver-flecha" id="bdl-volver"></button>
+        <h1>Crear oferta de paquete</h1>
+        <div class="be-top__act">
+          <s-button variant="secondary" id="bdl-borrador">Guardar como borrador</s-button>
+          <s-button variant="primary" id="bdl-guardar">Publicar</s-button>
+        </div>
+      </div>
+      <div class="be-layout">
+        <div class="be-left" id="be-left">
+          <div class="be-guinda be-guinda--top"><div class="be-guinda__t">General</div><div class="be-guinda__s">Elegí los productos que se venden juntos en el paquete.</div></div>
+          <section class="be-sec be-sec--plain">
+            <div class="be-block">
+              ${campoBdl("nombre", "Nombre de la oferta")}
+              ${campoBdl("diseno.titulo", "Título del paquete")}
+            </div>
+            <div class="be-block">
+              <div class="be-block__t">Productos del paquete</div>
+              <div class="be-cmb__prods">${filas}</div>
+              <button class="be-add" type="button" data-cmb-add>${ico("mas")} Agregar productos</button>
+            </div>
+          </section>
+          <div class="be-guinda"><div class="be-guinda__t">Descuento</div><div class="be-guinda__s">Se aplica al total del paquete.</div></div>
+          <section class="be-sec be-sec--plain">
+            <div class="be-block">
+              <div class="be-grid2">
+                <div class="campo campo--editor"><label>Tipo de descuento</label><s-select data-b="combo.descuento.tipo">${TIPOS_DESC.map(([v, t]) => `<s-option value="${v}">${t}</s-option>`).join("")}</s-select></div>
+                <div class="campo campo--editor"><label>Valor del descuento</label><s-text-field type="number" min="0" data-b="combo.descuento.valor" data-tipo="numero" value="${esc(b.combo.descuento?.valor ?? 0)}"></s-text-field></div>
+              </div>
+            </div>
+          </section>
+          <div class="be-guinda"><div class="be-guinda__t">Personalización</div><div class="be-guinda__s">Etiqueta, pie y botón del paquete.</div></div>
+          <section class="be-sec be-sec--plain">
+            <div class="be-block">
+              ${campoBdl("diseno.etiqueta", "Etiqueta destacada")}
+              ${campoBdl("diseno.pie", "Texto del pie de página")}
+              ${campoBdl("diseno.boton.texto", "Botón (llamada a la acción)")}
+            </div>
+          </section>
+        </div>
+        ${previewAsideBundle()}
+      </div>`;
+
+    $("bdl-volver").onclick = () => salirBundles();
+    $("bdl-guardar").onclick = async () => { b.activo = true; await guardarBundles(); };
+    $("bdl-borrador").onclick = async () => { b.activo = false; await guardarBundles(); };
+
+    // Agregar / quitar productos del paquete.
+    const add = vista.querySelector("[data-cmb-add]");
+    if (add) add.onclick = () => abrirPickerTodos((p) => {
+      b.combo.productos = b.combo.productos || [];
+      b.combo.productos.push({ id: p.id, nombre: p.titulo, imagen: p.imagen || "", precio: p.precio != null ? p.precio : 10 });
+      marcarSucioBundles(); pintarEditorCombo(b);
+    });
+    vista.querySelectorAll("[data-cmb-quitar]").forEach((btn) => btn.onclick = () => {
+      b.combo.productos.splice(+btn.dataset.cmbQuitar, 1); marcarSucioBundles(); pintarEditorCombo(b);
+    });
+
+    bindEditorBundle(b, estado.bundles); // binding delegado de los campos data-b
+    pintarPreviewBundle();
+
+    vista.querySelectorAll("s-select[data-b]").forEach((sel) => { const v = leer(b, sel.dataset.b); if (v != null && v !== "") sel.value = String(v); });
+
+    const selProd = $("bdl-preview-prod");
+    if (selProd) selProd.onchange = (e) => { estado.bundles.previewProd = e.target.value || null; pintarEditorCombo(b); };
+    vista.querySelectorAll("[data-pv]").forEach((btn) => {
+      btn.onclick = () => {
+        const mob = btn.dataset.pv === "mobile";
+        estado.bundles.previewMobile = mob;
+        const marco = vista.querySelector(".bdl-preview__marco");
+        if (marco) { marco.classList.toggle("is-mobile", mob); marco.classList.toggle("is-desktop", !mob); }
+        vista.querySelectorAll("[data-pv]").forEach((x) => x.classList.toggle("is-sel", x === btn));
+      };
+    });
+  }
+
   // Toast reutilizable: feedback de acciones, con "Deshacer" opcional.
   function toast(msg, opts = {}) {
     // App Bridge nativo cuando estamos embebidos (look "Built for Shopify").
@@ -4138,7 +4258,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
 
   // Crea un bundle del tipo elegido y salta al editor.
   function crearDesdeTema(tipo) {
-    const nb = tipo === "bxgy" ? nuevoBundleBogo() : tipo === "gift" ? nuevoBundleRegalo() : nuevoBundleLocal(tipo);
+    const nb = tipo === "bxgy" ? nuevoBundleBogo() : tipo === "gift" ? nuevoBundleRegalo() : tipo === "combo" ? nuevoBundleCombo() : nuevoBundleLocal(tipo);
     // El color elegido en la galería pasa a ser el acento del bundle.
     const ac = estado.bundles.temaColor;
     if (ac) { nb.diseno.color_borde = ac; nb.diseno.color_badge = ac; nb.diseno.color_etiqueta = ac; nb.diseno.boton.color_fondo = ac; }
@@ -4226,7 +4346,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
           ${card("Comprá más, ahorrá más", cardVolumen, "Personalizar ahora", "volumen", true)}
           ${card("Comprá y llevá gratis", cardBogo, "Personalizar ahora", "bxgy", true)}
           ${card("Regalos gratis", cardGift, "Personalizar ahora", "gift", true)}
-          ${card("Bundle y Ahorrá", cardCombo, "Crear un Paquete", "combo", false)}
+          ${card("Bundle y Ahorrá", cardCombo, "Crear un paquete", "combo", true)}
         </div>
       </div>`;
 
@@ -4562,6 +4682,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   function pintarEditorBundle() {
     const b = bundleActual();
     if (!b) { estado.bundles.vista = "lista"; return pintarDashboardBundles(); }
+    if (b.tipo === "combo") return pintarEditorCombo(b); // combo = editor propio (paquete de varios productos)
     const s = estado.bundles;
     if (s.setupOpen === undefined) s.setupOpen = false;
     if (s.nivelOpen === undefined) s.nivelOpen = null;
@@ -5671,6 +5792,35 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     const d = b.diseno || {};
     const bot = d.boton || {};
     const vars = disenoAVars(d);
+
+    // Combo: productos apilados con "+" y "Comprar todo en: $total". Botón propio
+    // (el combo agrega varios productos → no depende del botón de la página).
+    if (b.tipo === "combo") {
+      const cprods = (b.combo && b.combo.productos) || [];
+      const bruto = cprods.reduce((s, p) => s + Math.round((parseFloat(p.precio) || 0) * 100), 0);
+      const dd = (b.combo && b.combo.descuento) || {};
+      let total = bruto;
+      if (dd.tipo === "porcentaje") total = Math.round(bruto * (1 - (Number(dd.valor) || 0) / 100));
+      else if (dd.tipo === "fijo") total = Math.max(0, bruto - Math.round((Number(dd.valor) || 0) * 100));
+      const items = cprods.length
+        ? cprods.map((p, i) => `
+          <div class="tiq-bdl__citem">
+            <span class="tiq-bdl__cfoto">${p.imagen ? `<img src="${esc(p.imagen)}" alt="" loading="lazy">` : ""}</span>
+            <span class="tiq-bdl__cmain"><span class="tiq-bdl__cname">${esc(p.nombre || "Producto")}</span></span>
+            <span class="tiq-bdl__cprice">${fmtBdl(Math.round((parseFloat(p.precio) || 0) * 100))}</span>
+          </div>${i < cprods.length - 1 ? `<div class="tiq-bdl__cplus">+</div>` : ""}`).join("")
+        : `<div class="tiq-bdl__cempty">Agregá productos para ver la vista previa</div>`;
+      return `<div class="tiq-bdl tiq-bdl--combo" style="${vars}">
+        ${d.mostrar_encabezado !== false && d.titulo ? `<div class="tiq-bdl__head"><div class="tiq-bdl__h1">${esc(d.titulo)}</div></div>` : ""}
+        <div class="tiq-bdl__cwrap">${items}</div>
+        <div class="tiq-bdl__ctotal">
+          ${d.etiqueta ? `<span class="tiq-bdl__cbadge">${esc(d.etiqueta)}</span>` : ""}
+          <span class="tiq-bdl__cpie">${esc(d.pie || "Comprar todo en:")}</span>
+          <span class="tiq-bdl__ctot">${fmtBdl(total)}</span>
+        </div>
+        <button class="tiq-bdl__cbtn" type="button" style="background:${esc(bot.color_fondo || "#111")};color:${esc(bot.color_texto || "#fff")};border-radius:${bot.radio != null ? bot.radio : 8}px">${esc((bot.texto || "Agregar al carrito").replace("{total}", fmtBdl(total)))}</button>
+      </div>`;
+    }
 
     let cards, totalSel;
     if (b.tipo === "bxgy") {
