@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Harness — Editor 3 paneles (PagePilot)</title>
+<link rel="stylesheet" href="editor-pagepilot.css">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:#303030;background:#f6f6f7}
+  .h-top{height:56px;display:flex;align-items:center;gap:12px;padding:0 16px;background:#fff;border-bottom:1px solid #e6e6ea}
+  .h-top__t{font-size:14px;font-weight:700;color:#1a1c1e}
+  .h-top__sp{flex:1}
+  .h-btn{height:32px;padding:0 14px;border-radius:8px;border:1px solid #d9dce0;background:#fff;font-size:13px;font-weight:600;color:#202223;cursor:pointer}
+  .h-btn--pri{background:#202223;color:#fff;border-color:#202223}
+  .h-body{display:flex;height:calc(100% - 56px)}
+  .h-center{flex:1 1 auto;min-width:0;overflow:auto;background:#f0f1f3;display:flex;align-items:flex-start;justify-content:center;padding:28px}
+  .h-page{width:100%;max-width:760px;background:#fff;border:1px solid #e6e6ea;border-radius:12px;padding:24px;box-shadow:0 1px 2px rgba(0,0,0,.05)}
+  .h-page h1{font-size:30px;font-weight:800;color:#1a1c1e;letter-spacing:-.5px;margin:8px 0}
+  .h-sel{outline:2px solid #005bd3;border-radius:8px;position:relative}
+  .h-tag{position:absolute;top:-11px;left:8px;background:#eaf2fe;color:#005bd3;font-size:11px;font-weight:600;padding:2px 8px;border-radius:5px}
+  .h-benef{display:flex;flex-direction:column;gap:12px;margin:16px 0}
+  .h-benef__i{display:flex;align-items:center;gap:12px;font-size:15px}
+  .h-benef__d{width:40px;height:40px;border-radius:50%;background:#eef0f2;flex:none}
+  .h-cart{height:56px;border-radius:10px;background:#1e3a2a;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;margin:16px 0}
+  .h-tool{display:inline-flex;align-items:center;gap:2px;background:#fff;border:1px solid #e6e6ea;border-radius:10px;box-shadow:0 4px 14px rgba(0,0,0,.12);padding:4px;margin-top:10px}
+  .h-tool button{width:30px;height:30px;border:none;background:none;border-radius:7px;color:#4a4d51;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
+  .h-tool button:hover{background:#f1f2f4;color:#1a1c1e}
+  .h-tool__sep{width:1px;height:18px;background:#e6e6ea;margin:0 3px}
+  .h-tool svg{width:16px;height:16px}
+</style>
+</head>
+<body>
+  <div class="h-top">
+    <span class="h-top__t">Editor de página</span>
+    <span class="h-top__sp"></span>
+    <button class="h-btn">Guardar</button>
+    <button class="h-btn h-btn--pri">Publicar</button>
+  </div>
+
+  <div class="h-body">
+
+    <!-- ÁRBOL IZQUIERDO -->
+    <nav class="pe-tree" aria-label="Bloques de la página">
+      <header class="pe-tree__head">Página de producto</header>
+      <div class="pe-tree__body">
+        <section class="pe-tree__group">
+          <div class="pe-tree__row pe-tree__row--group" tabindex="0">
+            <button class="pe-tree__lead pe-tree__chevron" aria-label="Colapsar"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></button>
+            <span class="pe-tree__ico pe-tree__ico--group"><svg viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg></span>
+            <span class="pe-tree__label">Información del producto</span>
+          </div>
+          <div class="pe-tree__children">
+            <div class="pe-tree__row" tabindex="0"><span class="pe-tree__lead pe-tree__drag"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="9" cy="6" r="1.3"/><circle cx="15" cy="6" r="1.3"/><circle cx="9" cy="12" r="1.3"/><circle cx="15" cy="12" r="1.3"/><circle cx="9" cy="18" r="1.3"/><circle cx="15" cy="18" r="1.3"/></svg></span><span class="pe-tree__ico"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.6"/><polyline points="21 15 16 10 5 21"/></svg></span><span class="pe-tree__label">Galería de producto</span></div>
+            <a class="pe-tree__add" href="#"><span class="pe-tree__lead"></span><span class="pe-tree__ico pe-tree__ico--add"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span><span class="pe-tree__label">Agregar bloque</span></a>
+            <div class="pe-tree__row" tabindex="0"><span class="pe-tree__lead pe-tree__drag"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="9" cy="6" r="1.3"/><circle cx="15" cy="6" r="1.3"/><circle cx="9" cy="12" r="1.3"/><circle cx="15" cy="12" r="1.3"/><circle cx="9" cy="18" r="1.3"/><circle cx="15" cy="18" r="1.3"/></svg></span><span class="pe-tree__ico"><svg viewBox="0 0 24 24"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg></span><span class="pe-tree__label">Título del producto</span></div>
+            <div class="pe-tree__row" tabindex="0"><span class="pe-tree__lead pe-tree__drag"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="9" cy="6" r="1.3"/><circle cx="15" cy="6" r="1.3"/><circle cx="9" cy="12" r="1.3"/><circle cx="15" cy="12" r="1.3"/><circle cx="9" cy="18" r="1.3"/><circle cx="15" cy="18" r="1.3"/></svg></span><span class="pe-tree__ico"><svg viewBox="0 0 24 24"><polygon points="12 3 14.6 8.3 20.5 9.2 16.2 13.3 17.2 19.1 12 16.4 6.8 19.1 7.8 13.3 3.5 9.2 9.4 8.3 12 3"/></svg></span><span class="pe-tree__label">Reseñas / estrellas</span></div>
+            <div class="pe-tree__row" tabindex="0"><span class="pe-tree__lead pe-tree__drag"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="9" cy="6" r="1.3"/><circle cx="15" cy="6" r="1.3"/><circle cx="9" cy="12" r="1.3"/><circle cx="15" cy="12" r="1.3"/><circle cx="9" cy="18" r="1.3"/><circle cx="15" cy="18" r="1.3"/></svg></span><span class="pe-tree__ico"><svg viewBox="0 0 24 24"><line x1="12" y1="2" x2="12" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span><span class="pe-tree__label">Precio</span></div>
+          </div>
+        </section>
+        <section class="pe-tree__group">
+          <div class="pe-tree__row pe-tree__row--group" tabindex="0">
+            <button class="pe-tree__lead pe-tree__chevron"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></button>
+            <span class="pe-tree__ico pe-tree__ico--group"><svg viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg></span>
+            <span class="pe-tree__label">Detalles del producto</span>
+          </div>
+          <div class="pe-tree__children">
+            <div class="pe-tree__row is-sel" tabindex="0"><span class="pe-tree__lead pe-tree__drag"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="9" cy="6" r="1.3"/><circle cx="15" cy="6" r="1.3"/><circle cx="9" cy="12" r="1.3"/><circle cx="15" cy="12" r="1.3"/><circle cx="9" cy="18" r="1.3"/><circle cx="15" cy="18" r="1.3"/></svg></span><span class="pe-tree__ico"><svg viewBox="0 0 24 24"><polyline points="3 6 4.4 7.4 6.8 5"/><line x1="10" y1="6" x2="21" y2="6"/><polyline points="3 12 4.4 13.4 6.8 11"/><line x1="10" y1="12" x2="21" y2="12"/><polyline points="3 18 4.4 19.4 6.8 17"/><line x1="10" y1="18" x2="21" y2="18"/></svg></span><span class="pe-tree__label">Lista de beneficios</span></div>
+            <div class="pe-tree__row" tabindex="0"><span class="pe-tree__lead pe-tree__drag"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="9" cy="6" r="1.3"/><circle cx="15" cy="6" r="1.3"/><circle cx="9" cy="12" r="1.3"/><circle cx="15" cy="12" r="1.3"/><circle cx="9" cy="18" r="1.3"/><circle cx="15" cy="18" r="1.3"/></svg></span><span class="pe-tree__ico"><svg viewBox="0 0 24 24"><circle cx="9" cy="21" r="1.2"/><circle cx="19" cy="21" r="1.2"/><path d="M2 3h3l2.4 12.1a1.6 1.6 0 0 0 1.6 1.3h9a1.6 1.6 0 0 0 1.6-1.3L21 7H6"/></svg></span><span class="pe-tree__label">Botón agregar al carrito</span></div>
+            <div class="pe-tree__row" tabindex="0"><span class="pe-tree__lead pe-tree__drag"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="9" cy="6" r="1.3"/><circle cx="15" cy="6" r="1.3"/><circle cx="9" cy="12" r="1.3"/><circle cx="15" cy="12" r="1.3"/><circle cx="9" cy="18" r="1.3"/><circle cx="15" cy="18" r="1.3"/></svg></span><span class="pe-tree__ico"><svg viewBox="0 0 24 24"><rect x="7" y="6" width="10" height="12" rx="1.5"/><path d="M4 8.5v7"/><path d="M20 8.5v7"/></svg></span><span class="pe-tree__label">Carrusel de reseñas</span></div>
+            <a class="pe-tree__add" href="#"><span class="pe-tree__lead"></span><span class="pe-tree__ico pe-tree__ico--add"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span><span class="pe-tree__label">Agregar bloque</span></a>
+          </div>
+        </section>
+      </div>
+    </nav>
+
+    <!-- PREVIEW CENTRO -->
+    <div class="h-center">
+      <div class="h-page">
+        <span class="h-tag" style="position:static;display:inline-block;margin-bottom:6px">Detalles del producto</span>
+        <h1>Mejorador Labial Eléctrico</h1>
+        <div class="h-sel">
+          <span class="h-tag">Lista de beneficios</span>
+          <div class="h-benef">
+            <div class="h-benef__i"><span class="h-benef__d"></span> Siente una textura suave.</div>
+            <div class="h-benef__i"><span class="h-benef__d"></span> Agiliza tu rutina matutina.</div>
+            <div class="h-benef__i"><span class="h-benef__d"></span> Uso diario muy sencillo.</div>
+          </div>
+        </div>
+        <div class="h-tool">
+          <button aria-label="Ocultar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button>
+          <button aria-label="Duplicar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
+          <button aria-label="Subir"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg></button>
+          <button aria-label="Bajar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
+          <span class="h-tool__sep"></span>
+          <button aria-label="Agregar bloque"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+          <button aria-label="Borrar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M6 6l1 14h10l1-14"/></svg></button>
+        </div>
+        <div class="h-cart">Añadir al carrito</div>
+      </div>
+    </div>
+
+    <!-- PANEL DERECHO -->
+    <aside class="pe-prop">
+      <header class="pe-prop__cab">
+        <span class="pe-prop__cab-nombre">Lista de beneficios</span>
+        <button class="pe-prop__lapiz" aria-label="Renombrar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+      </header>
+      <div class="pe-prop__cuerpo">
+        <section class="pe-prop__grupo">
+          <h3 class="pe-prop__subheader">Contenido</h3>
+          <div class="pe-prop__fila pe-prop__fila--stack"><label class="pe-prop__label">Título</label><div class="pe-prop__control"><input class="pe-input" type="text" value="Beneficios"></div></div>
+          <div class="pe-prop__fila"><span class="pe-prop__label">Mostrar viñetas</span><div class="pe-prop__control"><button class="pe-switch is-on" role="switch" aria-checked="true"></button></div></div>
+          <div class="pe-prop__fila"><span class="pe-prop__label">Tipo</span><div class="pe-prop__control"><div class="pe-seg"><button class="pe-seg__opt is-on">Ícono</button><button class="pe-seg__opt">Emoji</button></div></div></div>
+        </section>
+        <section class="pe-prop__grupo">
+          <h3 class="pe-prop__subheader">Estilo</h3>
+          <div class="pe-prop__fila"><label class="pe-prop__label">Tipografía</label><div class="pe-prop__control"><div class="pe-select"><select><option>Heading — Bold</option><option>Body</option></select><svg class="pe-select__chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></div></div></div>
+          <div class="pe-prop__fila pe-prop__fila--stack"><label class="pe-prop__label">Tamaño de fuente</label><div class="pe-prop__control"><div class="pe-num"><input class="pe-num__range" type="range" min="10" max="48" value="16"><span class="pe-num__box"><input class="pe-num__input" type="number" value="16"><span class="pe-num__unidad">px</span></span></div></div></div>
+          <div class="pe-prop__fila"><span class="pe-prop__label">Color del texto</span><div class="pe-prop__control"><button class="pe-color"><span class="pe-color__swatch" style="background:#303030"></span><span class="pe-color__hex">#303030</span></button></div></div>
+          <div class="pe-prop__fila"><span class="pe-prop__label">Interlínea</span><div class="pe-prop__control"><div class="pe-seg"><button class="pe-seg__opt">Tight</button><button class="pe-seg__opt is-on">Normal</button><button class="pe-seg__opt">Loose</button></div></div></div>
+        </section>
+        <section class="pe-prop__grupo">
+          <h3 class="pe-prop__subheader">Descripción</h3>
+          <div class="pe-prop__fila pe-prop__fila--stack"><label class="pe-prop__label">Texto</label><div class="pe-prop__control"><div class="pe-rt"><div class="pe-rt__toolbar"><button class="pe-rt__btn is-on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h8a4 4 0 0 1 0 8H6z"/><path d="M6 12h9a4 4 0 0 1 0 8H6z"/></svg></button><button class="pe-rt__btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="4" x2="10" y2="4"/><line x1="14" y1="20" x2="5" y2="20"/><line x1="15" y1="4" x2="9" y2="20"/></svg></button><button class="pe-rt__btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v7a6 6 0 0 0 12 0V3"/><line x1="4" y1="21" x2="20" y2="21"/></svg></button><span class="pe-rt__sep"></span><button class="pe-rt__btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 14 4 9 9 4"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg></button></div><div class="pe-rt__area" contenteditable="true">Siente una textura suave.</div><div class="pe-rt__pie"><button class="pe-ia"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 4.2L18 9l-4.2 1.8L12 15l-1.8-4.2L6 9l4.2-1.8z"/></svg>Editar con IA</button></div></div></div></div>
+        </section>
+        <section class="pe-prop__grupo">
+          <h3 class="pe-prop__subheader">Imagen</h3>
+          <div class="pe-drop"><span class="pe-drop__icono"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.6"/><path d="M21 15l-5-5L5 21"/></svg></span><span class="pe-drop__t">Arrastrá o hacé clic para subir</span><span class="pe-drop__hint">PNG, JPG o WEBP · hasta 5 MB</span><div class="pe-drop__acciones"><button class="pe-btn pe-btn--outline">Elegir archivo</button><button class="pe-btn pe-btn--ia"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 4.2L18 9l-4.2 1.8L12 15l-1.8-4.2L6 9l4.2-1.8z"/></svg>Crear con IA</button></div></div>
+        </section>
+      </div>
+    </aside>
+
+  </div>
+</body>
+</html>
