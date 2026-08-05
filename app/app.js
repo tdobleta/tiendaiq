@@ -3992,10 +3992,13 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       tipo,
       activo: true,
       activador: { tipo: "todos", ids: [] },
+      // Los niveles vienen con una FOTO DE EJEMPLO por nivel (como Pumper) para
+      // que el bundle se vea armado de una. El merchant las reemplaza con las
+      // suyas desde "Subir Imagen" en cada nivel. Placeholders en /app/img.
       ofertas: [
-        { cantidad: 1, descuento: 0,  titulo: "Comprá 1", subtitulo: "Precio normal", etiqueta: "",        badge: "",            popular: false, predeterminada: false },
-        { cantidad: 2, descuento: 10, titulo: "Comprá 2", subtitulo: "",              etiqueta: "10% OFF", badge: "Más elegido", popular: true,  predeterminada: true },
-        { cantidad: 3, descuento: 15, titulo: "Comprá 3", subtitulo: "",              etiqueta: "15% OFF", badge: "Mejor valor", popular: false, predeterminada: false }
+        { cantidad: 1, descuento: 0,  titulo: "Comprá 1", subtitulo: "Precio normal", etiqueta: "",        badge: "",            popular: false, predeterminada: false, addons: { imagen: { on: true, url: "/img/bundle-ejemplo-1.svg", tamano: "mediano", radio: 12 } } },
+        { cantidad: 2, descuento: 10, titulo: "Comprá 2", subtitulo: "",              etiqueta: "10% OFF", badge: "Más elegido", popular: true,  predeterminada: true,  addons: { imagen: { on: true, url: "/img/bundle-ejemplo-2.svg", tamano: "mediano", radio: 12 } } },
+        { cantidad: 3, descuento: 15, titulo: "Comprá 3", subtitulo: "",              etiqueta: "15% OFF", badge: "Mejor valor", popular: false, predeterminada: false, addons: { imagen: { on: true, url: "/img/bundle-ejemplo-3.svg", tamano: "mediano", radio: 12 } } }
       ],
       bxgy: { compra_cantidad: 2, regalo_cantidad: 1, regalo_descuento: 100 },
       diseno: {
