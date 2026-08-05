@@ -4028,6 +4028,26 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     return b;
   }
 
+  // "Regalos gratis" (Unlock Free Gifts de Pumper) pre-armado: niveles por
+  // volumen donde el nivel popular DESBLOQUEA un regalo (addon regalo → fila con
+  // "GRATIS" + precio tachado). Fotos de ejemplo + regalo de ejemplo. El merchant
+  // reemplaza el producto de regalo y las fotos.
+  function nuevoBundleRegalo() {
+    const b = nuevoBundleLocal("volumen");
+    b.nombre = "Regalos gratis";
+    b.diseno.titulo = "Desbloqueá tu regalo";
+    b.diseno.subtitulo = "Comprá 2 y llevate un regalo gratis";
+    b.ofertas = [
+      { cantidad: 1, descuento: 0,  titulo: "Comprá 1", subtitulo: "Precio normal", etiqueta: "",        badge: "",            popular: false, predeterminada: false, addons: { imagen: { on: true, url: "/img/bundle-ejemplo-1.svg", tamano: "mediano", radio: 12 } } },
+      { cantidad: 2, descuento: 20, titulo: "Comprá 2", subtitulo: "",              etiqueta: "20% OFF", badge: "Más elegido", popular: true,  predeterminada: true,
+        addons: {
+          imagen: { on: true, url: "/img/bundle-ejemplo-2.svg", tamano: "mediano", radio: 12 },
+          regalo: { on: true, items: [{ nombre: "Regalo de ejemplo", imagen: "/img/bundle-regalo.svg", cantidad: 1, textoGratis: "GRATIS", mostrarPrecio: true, precio: 20 }] }
+        } }
+    ];
+    return b;
+  }
+
   // Toast reutilizable: feedback de acciones, con "Deshacer" opcional.
   function toast(msg, opts = {}) {
     // App Bridge nativo cuando estamos embebidos (look "Built for Shopify").
@@ -4118,7 +4138,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
 
   // Crea un bundle del tipo elegido y salta al editor.
   function crearDesdeTema(tipo) {
-    const nb = tipo === "bxgy" ? nuevoBundleBogo() : nuevoBundleLocal(tipo);
+    const nb = tipo === "bxgy" ? nuevoBundleBogo() : tipo === "gift" ? nuevoBundleRegalo() : nuevoBundleLocal(tipo);
     // El color elegido en la galería pasa a ser el acento del bundle.
     const ac = estado.bundles.temaColor;
     if (ac) { nb.diseno.color_borde = ac; nb.diseno.color_badge = ac; nb.diseno.color_etiqueta = ac; nb.diseno.boton.color_fondo = ac; }
@@ -4205,7 +4225,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         <div class="bt-grid">
           ${card("Comprá más, ahorrá más", cardVolumen, "Personalizar ahora", "volumen", true)}
           ${card("Comprá y llevá gratis", cardBogo, "Personalizar ahora", "bxgy", true)}
-          ${card("Regalos gratis", cardGift, "Personalizar ahora", "gift", false)}
+          ${card("Regalos gratis", cardGift, "Personalizar ahora", "gift", true)}
           ${card("Bundle y Ahorrá", cardCombo, "Crear un Paquete", "combo", false)}
         </div>
       </div>`;
