@@ -4118,9 +4118,9 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     // --- Card 1: Buy More Save More (volumen) ---
     const rowVol = (n, pill, price, old, sel, bv) => `
       <div class="bt-row ${sel ? "is-sel" : ""}">
-        ${bv ? `<span class="bt-bv">Best Value</span>` : ""}
+        ${bv ? `<span class="bt-bv">Mejor valor</span>` : ""}
         <span class="bt-radio"></span>
-        <span class="bt-row__main"><b>Buy ${n}</b> ${pill ? `<span class="bt-pill">${pill}</span>` : `<span class="bt-std">Standard Price</span>`}</span>
+        <span class="bt-row__main"><b>Comprá ${n}</b> ${pill ? `<span class="bt-pill">${pill}</span>` : `<span class="bt-std">Precio normal</span>`}</span>
         <span class="bt-price">${price}${old ? ` <s>${old}</s>` : ""}</span>
       </div>`;
     const cardVolumen = `
@@ -4137,25 +4137,25 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         <span class="bt-price">${price}${old ? ` <s>${old}</s>` : ""}</span>
       </div>`;
     const cardBogo = `
-      ${rowBogo("Buy 1", "Standard Price", "$10.00", "", true)}
-      ${rowBogo("Buy 2 Get 1 Free!", "33% OFF", "$20.00", "$30.00", false)}
-      ${rowBogo("Buy 3 Get 2 Free!", "40% OFF", "$30.00", "$50.00", false)}`;
+      ${rowBogo("Comprá 1", "Precio normal", "$10.00", "", true)}
+      ${rowBogo("Comprá 2, 1 gratis", "33% OFF", "$20.00", "$30.00", false)}
+      ${rowBogo("Comprá 3, 2 gratis", "40% OFF", "$30.00", "$50.00", false)}`;
 
     // --- Card 3: Unlock Free Gifts ---
     const cardGift = `
       <div class="bt-row is-sel">
         <span class="bt-radio"></span>
-        <span class="bt-row__main"><b>Single</b> <span class="bt-std">Standard Price</span>
-          <span class="bt-size">Size <select disabled><option>S</option></select></span></span>
+        <span class="bt-row__main"><b>Individual</b> <span class="bt-std">Precio normal</span>
+          <span class="bt-size">Talle <select disabled><option>S</option></select></span></span>
         <span class="bt-price">$10.00</span>
       </div>
       <div class="bt-row">
-        <span class="bt-bv bt-bv--pop">Most Popular</span>
+        <span class="bt-bv bt-bv--pop">Más elegido</span>
         <span class="bt-radio"></span>
-        <span class="bt-row__main"><b>Duo</b> <span class="bt-sub">You Save $4.00</span></span>
+        <span class="bt-row__main"><b>Dúo</b> <span class="bt-sub">Ahorrás $4.00</span></span>
         <span class="bt-price">$16.00 <s>$20.00</s></span>
       </div>
-      <div class="bt-row bt-gift"><span class="bt-gift__ico">${GIFT}</span><span class="bt-row__main"><b>+1 FREE GIFT</b></span><span class="bt-price"><s>$100.00</s></span></div>`;
+      <div class="bt-row bt-gift"><span class="bt-gift__ico">${GIFT}</span><span class="bt-row__main"><b>+1 REGALO GRATIS</b></span><span class="bt-price"><s>$100.00</s></span></div>`;
 
     // --- Card 4: Bundle & Save (combo) ---
     const cardCombo = `
@@ -4183,9 +4183,9 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
           <div class="bt-sws">${BT_COLORES.map((c) => `<button class="bt-sw ${c === ac ? "is-sel" : ""}" data-color="${c}" style="--sw:${c}" aria-label="Color ${c}"></button>`).join("")}</div>
         </div>
         <div class="bt-grid">
-          ${card("Buy More Save More", cardVolumen, "Personalizar ahora", "volumen", true)}
-          ${card("BOGO Offers", cardBogo, "Personalizar ahora", "bxgy", false)}
-          ${card("Unlock Free Gifts", cardGift, "Personalizar ahora", "gift", false)}
+          ${card("Comprá más, ahorrá más", cardVolumen, "Personalizar ahora", "volumen", true)}
+          ${card("Comprá y llevá gratis", cardBogo, "Personalizar ahora", "bxgy", false)}
+          ${card("Regalos gratis", cardGift, "Personalizar ahora", "gift", false)}
           ${card("Bundle y Ahorrá", cardCombo, "Crear un Paquete", "combo", false)}
         </div>
       </div>`;
@@ -4728,9 +4728,9 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         </div>
         <div class="be-block">
           ${campoOjo(`ofertas.${i}.titulo`, "Título (ej. Buy 2)")}
-          ${campoOjo(`ofertas.${i}.etiqueta`, "Etiqueta (ej. 20% OFF / Standard Price)", "etiqueta")}
-          ${campoOjo(`ofertas.${i}.subtitulo`, "Subtítulo (ej. You Save $4.00)", "subtitulo")}
-          ${campoOjo(`ofertas.${i}.badge`, "Insignia (ej. Most Popular / Best Value)", "badge")}
+          ${campoOjo(`ofertas.${i}.etiqueta`, "Etiqueta (ej. 20% OFF / Precio normal)", "etiqueta")}
+          ${campoOjo(`ofertas.${i}.subtitulo`, "Subtítulo (ej. Ahorrás $4.00)", "subtitulo")}
+          ${campoOjo(`ofertas.${i}.badge`, "Insignia (ej. Más elegido / Mejor valor)", "badge")}
         </div>
         <div class="be-block">${beToggleRow("Marcar como agotado", `data-lv-bool="${i}:agotado"`, !!o.agotado, "Muestra el nivel como sin stock")}</div>
         ${(() => {
@@ -5246,7 +5246,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       // siempre hay exactamente una, así que setea esta y apaga el resto.
       const st = t.closest("[data-lv-star]"); if (st) { const idx = +st.dataset.lvStar; b.ofertas.forEach((x, k) => { x.predeterminada = k === idx; }); marcarSucioBundles(); pintarPreviewBundle(); return pintarEditorBundle(); }
       const dup = t.closest("[data-lv-dup]"); if (dup) { const i = +dup.dataset.lvDup; const copia = JSON.parse(JSON.stringify(b.ofertas[i])); copia.predeterminada = false; /* la default sigue siendo la original */ b.ofertas.splice(i + 1, 0, copia); s.nivelOpen = i + 1; marcarSucioBundles(); return pintarEditorBundle(); }
-      const del = t.closest("[data-lv-del]"); if (del) { b.ofertas.splice(+del.dataset.lvDel, 1); if (!b.ofertas.length) b.ofertas.push({ cantidad: 1, descuento: 0, titulo: "Buy 1", ver: {}, activo: true }); s.nivelOpen = null; marcarSucioBundles(); return pintarEditorBundle(); }
+      const del = t.closest("[data-lv-del]"); if (del) { b.ofertas.splice(+del.dataset.lvDel, 1); if (!b.ofertas.length) b.ofertas.push({ cantidad: 1, descuento: 0, titulo: "Comprá 1", ver: {}, activo: true }); s.nivelOpen = null; marcarSucioBundles(); return pintarEditorBundle(); }
       const tp = t.closest("[data-lv-tipo]"); if (tp) { const [i, k] = tp.dataset.lvTipo.split(":"); const o = b.ofertas[+i]; o.tipo_desc = k; if (k === "ninguno") o.descuento = 0; marcarSucioBundles(); return pintarEditorBundle(); }
       const ver = t.closest("[data-lv-ver]"); if (ver) { const [i, key] = ver.dataset.lvVer.split(":"); const o = b.ofertas[+i]; o.ver = o.ver || {}; o.ver[key] = o.ver[key] === false ? true : false; marcarSucioBundles(); return pintarEditorBundle(); }
       const tb = t.closest("[data-toggle-b]"); if (tb) { const ruta = tb.dataset.toggleB; fijar(b, ruta, !leer(b, ruta)); marcarSucioBundles(); return pintarEditorBundle(); }
@@ -5259,7 +5259,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       const gpick = t.closest("[data-gift-pick]"); if (gpick) { const [i, gi] = gpick.dataset.giftPick.split(":").map(Number); abrirPickerTodos((p) => { const it = b.ofertas[i].addons.regalo.items[gi]; asignarRegalo(it, p); marcarSucioBundles(); pintarPreviewBundle(); pintarEditorBundle(); }); return; }
       const gbool = t.closest("[data-gift-bool]"); if (gbool) { const [i, gi, f] = gbool.dataset.giftBool.split(":"); const it = b.ofertas[+i].addons.regalo.items[+gi]; it[f] = it[f] === false ? true : it[f] === undefined ? false : !it[f]; marcarSucioBundles(); pintarPreviewBundle(); return pintarEditorBundle(); }
       const gvar = t.closest("[data-gift-var]"); if (gvar) { const [i, gi, vi] = gvar.dataset.giftVar.split(":").map(Number); const it = b.ofertas[i].addons.regalo.items[gi]; const vid = it.variantes[vi].id; it.varSel = it.varSel || []; const k = it.varSel.indexOf(vid); if (k >= 0) { if (it.varSel.length > 1) it.varSel.splice(k, 1); } else it.varSel.push(vid); marcarSucioBundles(); pintarPreviewBundle(); return pintarEditorBundle(); }
-      const add = t.closest("[data-add-nivel]"); if (add) { const n = b.ofertas.length + 1; b.ofertas.push({ cantidad: n, descuento: 0, titulo: "Buy " + n, subtitulo: "", etiqueta: "", badge: "", popular: false, activo: true, ver: {} }); s.nivelOpen = b.ofertas.length - 1; marcarSucioBundles(); return pintarEditorBundle(); }
+      const add = t.closest("[data-add-nivel]"); if (add) { const n = b.ofertas.length + 1; b.ofertas.push({ cantidad: n, descuento: 0, titulo: "Comprá " + n, subtitulo: "", etiqueta: "", badge: "", popular: false, activo: true, ver: {} }); s.nivelOpen = b.ofertas.length - 1; marcarSucioBundles(); return pintarEditorBundle(); }
     });
 
     if (b.activador?.tipo === "productos" && !(estado.productos || []).length) {
