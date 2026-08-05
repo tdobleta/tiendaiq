@@ -4284,25 +4284,61 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       `<div class="bdl-paso ${hecho ? "is-ok" : ""}"><span class="bdl-paso__c">${hecho ? ico("check") : ""}</span><span class="bdl-paso__t">${texto}</span><span class="bdl-paso__a">${hecho ? "Listo" : accion}</span></div>`;
     const nHechos = inst ? 1 : 0;
     const onboarding = `
-      <div class="tarjeta bdl-onboard">
-        <div class="bdl-onboard__cab"><strong>Primeros pasos</strong><span class="panel__sub">${nHechos} de 3 completado${nHechos === 1 ? "" : "s"}</span></div>
-        <div class="bdl-onboard__bar"><i style="width:${Math.round((nHechos / 3) * 100)}%"></i></div>
-        ${pasoOnb(!!inst, "Activá el widget en tu tema", `<s-button id="bdl-instalar">Activá el widget</s-button>`)}
-        ${pasoOnb(false, "Creá tu primer bundle", `<s-button class="bdl-onb-crear">Crear</s-button>`)}
-        ${pasoOnb(false, "Previsualizá en tu tienda", `<span class="panel__sub">tras crear</span>`)}
-      </div>
-      <div class="tarjeta bdl-vacio">
-        <div class="bdl-vacio__ico">${ICO_BOX}</div>
-        <div class="bdl-vacio__t">Creá tu primer bundle</div>
-        <div class="bdl-vacio__s">Subí el ticket promedio con descuentos por volumen (comprá más, pagá menos) o "comprá X y obtené Y".</div>
-        <div class="bdl-plantillas">
-          <button class="bdl-plant" data-plant="volumen">${ICO_BOX}<strong>Descuento por volumen</strong><span>Comprá más, pagá menos</span></button>
-          <button class="bdl-plant" data-plant="bxgy">${ICO_GIFT}<strong>Comprá X y obtené Y</strong><span>Llevá una cantidad de regalo</span></button>
+      <div class="bdl-onb-wrap">
+        <div class="tarjeta bdl-onboard">
+          <div class="bdl-onboard__cab"><strong>Primeros pasos</strong><span class="panel__sub">${nHechos} de 3 completado${nHechos === 1 ? "" : "s"}</span></div>
+          <div class="bdl-onboard__bar"><i style="width:${Math.round((nHechos / 3) * 100)}%"></i></div>
+          ${pasoOnb(!!inst, "Activá el widget en tu tema", `<s-button id="bdl-instalar">Activá el widget</s-button>`)}
+          ${pasoOnb(false, "Creá tu primer bundle", `<s-button class="bdl-onb-crear">Crear</s-button>`)}
+          ${pasoOnb(false, "Previsualizá en tu tienda", `<span class="panel__sub">tras crear</span>`)}
+        </div>
+        <div class="bdl-hero">
+          <div class="bdl-hero__intro">
+            <div class="bdl-hero__ico">${ICO_BOX}</div>
+            <div class="bdl-hero__t">Creá tu primer bundle</div>
+            <p class="bdl-hero__s">Subí el ticket promedio ofreciendo descuentos por volumen (comprá más, pagá menos) o regalos con "comprá X y obtené Y".</p>
+            <ul class="bdl-hero__ben">
+              <li>${ico("check")} Descuentos automáticos, sin códigos</li>
+              <li>${ico("check")} Se activan solo con el widget en tu tema</li>
+              <li>${ico("check")} Listo en un par de minutos</li>
+            </ul>
+          </div>
+          <div class="bdl-hero__opciones">
+            <button class="bdl-plant" data-plant="volumen">${ICO_BOX}<strong>Descuento por volumen</strong><span>Comprá más, pagá menos con precios escalonados</span></button>
+            <button class="bdl-plant" data-plant="bxgy">${ICO_GIFT}<strong>Comprá X y obtené Y</strong><span>Llevá una cantidad gratis o con descuento</span></button>
+          </div>
         </div>
       </div>`;
 
     vista.innerHTML = `
-      <s-page heading="Bundles, upsells y regalos">
+      <style>
+        /* Más ancho (pedido del usuario, como en Inspírate): sube el tope de
+           #vista SOLO en esta pantalla (default global 1240 en app.css). Se
+           revierte al navegar porque el <style> vive en el innerHTML. */
+        #vista{max-width:1600px}
+        /* Onboarding en columna centrada y con más presencia. Valores literales:
+           robustos aunque los tokens no crucen algún shadow boundary. */
+        .bdl-onb-wrap{max-width:1320px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+        .bdl-hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:36px;align-items:center;padding:40px;border-radius:16px;background:#fff;border:1px solid #e6e6ea}
+        .bdl-hero__ico{width:66px;height:66px;border-radius:16px;background:#eef0f2;display:flex;align-items:center;justify-content:center;margin-bottom:18px}
+        .bdl-hero__ico svg{width:32px;height:32px;color:#202223}
+        .bdl-hero__t{font-size:24px;font-weight:800;letter-spacing:-.4px;color:#202223;line-height:1.15}
+        .bdl-hero__s{font-size:15px;color:#6d7175;margin:10px 0 20px;max-width:460px;line-height:1.5}
+        .bdl-hero__ben{list-style:none;display:flex;flex-direction:column;gap:11px;padding:0;margin:0}
+        .bdl-hero__ben li{display:flex;align-items:center;gap:10px;font-size:14px;color:#303030;font-weight:600}
+        .bdl-hero__ben li svg{width:19px;height:19px;color:#2f9e58;flex:none}
+        .bdl-hero__opciones{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+        .bdl-hero .bdl-plant{padding:24px;border-radius:14px;border:1px solid #e6e6ea;background:#fff;gap:6px;max-width:none}
+        .bdl-hero .bdl-plant svg{width:32px;height:32px;margin-bottom:10px;color:#202223}
+        .bdl-hero .bdl-plant strong{font-size:16px;color:#202223}
+        .bdl-hero .bdl-plant span{font-size:13px;color:#6d7175;line-height:1.4}
+        .bdl-hero .bdl-plant:hover{border-color:#c9ccd0;background:#fafbfb;box-shadow:0 4px 14px rgba(0,0,0,.06)}
+        @media(max-width:900px){
+          .bdl-hero{grid-template-columns:1fr;padding:28px 22px;gap:24px}
+          .bdl-hero__opciones{grid-template-columns:1fr}
+        }
+      </style>
+      <s-page heading="Bundles, upsells y regalos" inlineSize="large">
         <s-button slot="primary-action" variant="primary" id="bdl-nuevo">Crear bundle</s-button>
         ${widgetEstado}
         ${lista.length ? bloqueMetricas() + tabsHTML + bulkBar + cuerpoTabla : onboarding}
