@@ -1315,21 +1315,29 @@
             ["hogar", "Hogar / cocina"], ["mascotas", "Mascotas"], ["tech", "Tecnología"],
             ["fitness", "Fitness / deporte"], ["bebes", "Bebés / niños"], ["moda", "Moda / joyas / perfume"]
           ];
+          // Piloto de conversión al panel .pe-prop (estilo harness/PagePilot):
+          // grupos + controles nativos. Los binding van por data-ruta (no por
+          // clase), así que el markup nuevo se guarda igual que el viejo.
+          const _v = (r, d = "") => esc(leer(estado.pagina.data, r) ?? d);
+          const _pt = leer(estado.pagina.data, "facetas.hero.puntaje") ?? 4.9;
+          const filaStack = (label, inputHTML) =>
+            `<div class="pe-prop__fila pe-prop__fila--stack"><label class="pe-prop__label">${label}</label><div class="pe-prop__control">${inputHTML}</div></div>`;
           return (
-            campo("facetas.hero.urgencia", "Barra de urgencia (arriba de todo)") +
-            campo("facetas.hero.titulo", "Título") +
-            campoNumero("facetas.hero.resenas_count", "Cantidad de reseñas (junto a las estrellas)") +
-            `<div class="campo campo--editor"><label>Puntaje (de 5, ej: 4.9)</label>
-              <input type="number" min="0" max="5" step="0.1" data-ruta="facetas.hero.puntaje" data-tipo="numero" value="${esc(leer(estado.pagina.data, "facetas.hero.puntaje") ?? 4.9)}"></div>` +
-            campo("global.cta", "Texto del botón de compra") +
-            `<div class="campo campo--editor">
-              <label>Color de la página</label>
-              ${swatchesTema(leer(estado.pagina.data, "global.tema"))}
-              <div class="ayuda">Cambia el color del botón, los círculos de % y los detalles. Todo lo demás queda igual.</div>
-            </div>` +
-            `<s-select label="Rubro (define el color si elegís “Automático”)" data-ruta="global.nicho" value="${esc(nichoActual)}">${NICHOS.map(
-                ([k, t]) => `<s-option value="${k}">${t}</s-option>`
-              ).join("")}</s-select>`
+            `<section class="pe-prop__grupo"><h3 class="pe-prop__subheader">Contenido</h3>` +
+              filaStack("Barra de urgencia (arriba de todo)", `<input class="pe-input" type="text" data-ruta="facetas.hero.urgencia" value="${_v("facetas.hero.urgencia")}">`) +
+              filaStack("Título", `<input class="pe-input" type="text" data-ruta="facetas.hero.titulo" value="${_v("facetas.hero.titulo")}">`) +
+              filaStack("Texto del botón de compra", `<input class="pe-input" type="text" data-ruta="global.cta" value="${_v("global.cta")}">`) +
+            `</section>` +
+            `<section class="pe-prop__grupo"><h3 class="pe-prop__subheader">Reseñas y puntaje</h3>` +
+              `<div class="pe-prop__fila"><label class="pe-prop__label">Cantidad de reseñas</label><div class="pe-prop__control"><span class="pe-num__box"><input class="pe-num__input" style="width:56px" type="number" min="0" data-ruta="facetas.hero.resenas_count" data-tipo="numero" value="${_v("facetas.hero.resenas_count", 0)}"></span></div></div>` +
+              filaStack("Puntaje (de 5, ej. 4.9)",
+                `<div class="pe-num"><input class="pe-num__range" type="range" min="0" max="5" step="0.1" data-ruta="facetas.hero.puntaje" data-tipo="numero" value="${esc(_pt)}"><span class="pe-num__box"><input class="pe-num__input" type="number" min="0" max="5" step="0.1" data-ruta="facetas.hero.puntaje" data-tipo="numero" value="${esc(_pt)}"></span></div>`) +
+            `</section>` +
+            `<section class="pe-prop__grupo"><h3 class="pe-prop__subheader">Estilo</h3>` +
+              filaStack("Color de la página", swatchesTema(leer(estado.pagina.data, "global.tema"))) +
+              filaStack("Rubro (define el color si elegís “Automático”)",
+                `<div class="pe-select pe-select--full"><s-select data-ruta="global.nicho" value="${esc(nichoActual)}" labelAccessibilityVisibility="exclusive" label="Rubro">${NICHOS.map(([k, t]) => `<s-option value="${k}">${t}</s-option>`).join("")}</s-select></div>`) +
+            `</section>`
           );
         }
       },
@@ -1726,7 +1734,13 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     (primero || m.querySelector(".editor-modal__x"))?.focus();
 
     m.addEventListener("input", (e) => {
-      if (e.target.dataset.ruta) actualizarDato(e.target);
+      if (e.target.dataset.ruta) {
+        actualizarDato(e.target);
+        // Espeja controles hermanos con la misma ruta (ej. slider ↔ input del puntaje).
+        m.querySelectorAll(`[data-ruta="${e.target.dataset.ruta}"]`).forEach((o) => {
+          if (o !== e.target && o.value !== e.target.value) o.value = e.target.value;
+        });
+      }
       // Feedback en vivo del clip del muro (sin re-render, no pierde foco).
       if (/^facetas\.clientes\.items\.\d+\.url$/.test(e.target.dataset.ruta || "")) {
         const st = e.target.closest(".clip-drop")?.querySelector(".clip-estado");
