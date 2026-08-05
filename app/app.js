@@ -1322,6 +1322,12 @@
           const _pt = leer(estado.pagina.data, "facetas.hero.puntaje") ?? 4.9;
           const filaStack = (label, inputHTML) =>
             `<div class="pe-prop__fila pe-prop__fila--stack"><label class="pe-prop__label">${label}</label><div class="pe-prop__control">${inputHTML}</div></div>`;
+          const filaSwitch = (label, ruta, on) =>
+            `<div class="pe-prop__fila"><label class="pe-prop__label">${label}</label><div class="pe-prop__control"><input type="checkbox" class="pe-switch-input" data-ruta="${ruta}" data-tipo="bool"${on ? " checked" : ""}></div></div>`;
+          const _chev = `<svg class="pe-select__chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>`;
+          const _forma = leer(estado.pagina.data, "global.boton_estilo") || "redondeado";
+          const _formaOpts = [["redondeado", "Redondeado"], ["pildora", "Píldora"], ["recto", "Recto"]]
+            .map(([k, t]) => `<option value="${k}"${_forma === k ? " selected" : ""}>${t}</option>`).join("");
           return (
             `<section class="pe-prop__grupo"><h3 class="pe-prop__subheader">Contenido</h3>` +
               filaStack("Barra de urgencia (arriba de todo)", `<input class="pe-input" type="text" data-ruta="facetas.hero.urgencia" value="${_v("facetas.hero.urgencia")}">`) +
@@ -1337,6 +1343,12 @@
               filaStack("Color de la página", swatchesTema(leer(estado.pagina.data, "global.tema"))) +
               filaStack("Rubro (define el color si elegís “Automático”)",
                 `<div class="pe-select pe-select--full"><s-select data-ruta="global.nicho" value="${esc(nichoActual)}" labelAccessibilityVisibility="exclusive" label="Rubro">${NICHOS.map(([k, t]) => `<s-option value="${k}">${t}</s-option>`).join("")}</s-select></div>`) +
+            `</section>` +
+            `<section class="pe-prop__grupo"><h3 class="pe-prop__subheader">Botón de compra</h3>` +
+              `<div class="pe-prop__fila"><label class="pe-prop__label">Forma</label><div class="pe-prop__control"><div class="pe-select"><select data-ruta="global.boton_estilo">${_formaOpts}</select>${_chev}</div></div></div>` +
+              filaSwitch("Borde", "global.boton_borde", !!leer(estado.pagina.data, "global.boton_borde")) +
+              filaSwitch("Mayúsculas", "global.boton_mayus", !!leer(estado.pagina.data, "global.boton_mayus")) +
+              filaSwitch("Ícono de carrito", "global.boton_icono", leer(estado.pagina.data, "global.boton_icono") !== false) +
             `</section>`
           );
         }
@@ -2211,7 +2223,8 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   function actualizarDato(el) {
     let v = el.value;
     if (el.dataset.tipo === "numero") v = Number(v) || 0;
-    if (el.dataset.nulo === "1" && v.trim() === "") v = null;
+    if (el.dataset.tipo === "bool") v = el.checked;
+    if (el.dataset.nulo === "1" && typeof v === "string" && v.trim() === "") v = null;
     fijar(estado.pagina.data, el.dataset.ruta, v);
 
     if (el.dataset.ruta === "facetas.hero.titulo") {

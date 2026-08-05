@@ -132,8 +132,20 @@
     check: _sv(`<circle cx="12" cy="12" r="9"/><path d="M8.4 12.4l2.5 2.5 4.7-5.4"/>`)
   };
 
+  // Estilo del botón de compra (presets elegibles en el editor): forma, borde,
+  // mayúsculas e ícono de carrito. El color lo sigue dando el tema (--acento).
+  const CART_ICO = '<svg class="cta__ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="20" r="1.4"/><circle cx="19" cy="20" r="1.4"/><path d="M2.5 3h2.2l2.2 11.2a1.6 1.6 0 0 0 1.6 1.3h8.5a1.6 1.6 0 0 0 1.6-1.3L21 6.5H6"/></svg>';
+  const ctaClase = (g, extra) => {
+    const c = ["cta", extra];
+    if (g.boton_estilo === "pildora") c.push("cta--pildora");
+    else if (g.boton_estilo === "recto") c.push("cta--recto");
+    if (g.boton_borde) c.push("cta--borde");
+    if (g.boton_mayus) c.push("cta--mayus");
+    return c.filter(Boolean).join(" ");
+  };
+  const ctaContenido = (g) => `${g.boton_icono !== false ? CART_ICO : ""}<span>${esc(g.cta)}</span>`;
   const cta = (global, extra = "") =>
-    `<button class="cta ${extra}">${esc(global.cta)}</button>`;
+    `<button class="${ctaClase(global || {}, extra)}">${ctaContenido(global || {})}</button>`;
 
   // Símbolo y lado por divisa. Lo que no figure cae a "$" adelante, que es
   // lo correcto en casi toda LatAm. El código (ARS, MXN…) no se muestra.
@@ -160,7 +172,7 @@
       <form method="post" action="/cart/add" onsubmit="return tiendaiqAgregar(event)">
         <input type="hidden" name="id" value="${esc(variante)}">
         <input type="hidden" name="quantity" value="1" id="tiendaiq-cantidad-form">
-        <button type="submit" class="cta cta--full">${esc(global.cta)}</button>
+        <button type="submit" class="${ctaClase(global, "cta--full")}">${ctaContenido(global)}</button>
       </form>`;
   };
 
