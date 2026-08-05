@@ -2865,8 +2865,39 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     panelSecId = null;
   }
 
+  // Árbol de bloques del editor (panel izquierdo estilo PagePilot). Lista las
+  // secciones editables (clásicas de seccionesPagina + las v2 dinámicas); cada
+  // fila abre el editor de esa sección (Etapa A: reusa abrirModalEdicion).
+  function arbolPaginaHTML() {
+    const I = {
+      encabezado: '<svg viewBox="0 0 24 24"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>',
+      galeria: '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.6"/><polyline points="21 15 16 10 5 21"/></svg>',
+      beneficios: '<svg viewBox="0 0 24 24"><polyline points="3 6 4.4 7.4 6.8 5"/><line x1="10" y1="6" x2="21" y2="6"/><polyline points="3 12 4.4 13.4 6.8 11"/><line x1="10" y1="12" x2="21" y2="12"/><polyline points="3 18 4.4 19.4 6.8 17"/><line x1="10" y1="18" x2="21" y2="18"/></svg>',
+      estrella: '<svg viewBox="0 0 24 24"><polygon points="12 3 14.6 8.3 20.5 9.2 16.2 13.3 17.2 19.1 12 16.4 6.8 19.1 7.8 13.3 3.5 9.2 9.4 8.3 12 3"/></svg>',
+      video: '<svg viewBox="0 0 24 24"><rect x="7" y="6" width="10" height="12" rx="1.5"/><path d="M4 8.5v7"/><path d="M20 8.5v7"/></svg>',
+      lista: '<svg viewBox="0 0 24 24"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="10" x2="20" y2="10"/><line x1="4" y1="14" x2="20" y2="14"/><line x1="4" y1="18" x2="14" y2="18"/></svg>',
+      grupo: '<svg viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>',
+      chev: '<svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>',
+      drag: '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="9" cy="6" r="1.3"/><circle cx="15" cy="6" r="1.3"/><circle cx="9" cy="12" r="1.3"/><circle cx="15" cy="12" r="1.3"/><circle cx="9" cy="18" r="1.3"/><circle cx="15" cy="18" r="1.3"/></svg>'
+    };
+    const row = (id, label, ico) =>
+      `<div class="pe-tree__row" tabindex="0" data-tree="${esc(id)}"><span class="pe-tree__lead pe-tree__drag">${I.drag}</span><span class="pe-tree__ico">${ico}</span><span class="pe-tree__label">${esc(label)}</span></div>`;
+    const grupo = (nombre, filas) =>
+      `<section class="pe-tree__group"><div class="pe-tree__row pe-tree__row--group" tabindex="0"><span class="pe-tree__lead pe-tree__chevron">${I.chev}</span><span class="pe-tree__ico pe-tree__ico--group">${I.grupo}</span><span class="pe-tree__label">${esc(nombre)}</span></div><div class="pe-tree__children">${filas}</div></section>`;
+    const info = row("encabezado", "Encabezado", I.encabezado) + row("galeria", "Galería de producto", I.galeria) +
+      row("bullets", "Beneficios", I.beneficios) + row("destacada", "Reseña destacada", I.estrella) +
+      row("resenas", "Reseñas", I.estrella);
+    const v2 = (estado.pagina.data.secciones || []).map((s) => row("sec:" + s.id, catSeccion(s.tipo)?.nombre || "Sección", I.lista)).join("");
+    const extra = row("clientes", "Muro de clientes", I.video) + row("acordeones", "Preguntas frecuentes", I.lista) + v2;
+    return `<nav class="pe-tree" aria-label="Bloques de la página">
+      <div class="pe-tree__head">Página de producto</div>
+      <div class="pe-tree__body">${grupo("Información del producto", info)}${grupo("Secciones extra", extra)}</div>
+    </nav>`;
+  }
+
   function pantallaPreview() {
     const pg = estado.pagina;
+    cargarWidget("/editor-pagepilot.css", "css"); // estilos del editor 3 paneles
     sucio = false;
     if (!Array.isArray(pg.data.secciones)) pg.data.secciones = [];
     // Bullets viejos (string plano) → objeto {emoji, fuerte, resto} editable.
@@ -2928,8 +2959,13 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
           : ""
       }
 
-      <div class="marco marco--full">
-        <iframe id="marco" src="/preview/index.html?app=1&t=${Date.now()}"></iframe>
+      <div class="pe-editor">
+        ${arbolPaginaHTML()}
+        <div class="pe-editor__centro">
+          <div class="marco marco--full">
+            <iframe id="marco" src="/preview/index.html?app=1&t=${Date.now()}"></iframe>
+          </div>
+        </div>
       </div>`;
 
     // El iframe no lee ningún archivo global: recibe LOS DATOS DE ESTA página
@@ -2940,6 +2976,19 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       repintarPreview();
       montarEdicionEnIframe(marco);
     };
+
+    // Árbol de bloques (Etapa A): click en una fila abre el editor de esa sección;
+    // el chevron colapsa el grupo. Reusa la edición existente (abrirModalEdicion).
+    vista.querySelectorAll(".pe-tree__row[data-tree]").forEach((el) => {
+      el.onclick = () => {
+        vista.querySelectorAll(".pe-tree__row.is-sel").forEach((r) => r.classList.remove("is-sel"));
+        el.classList.add("is-sel");
+        abrirModalEdicion(el.dataset.tree);
+      };
+    });
+    vista.querySelectorAll(".pe-tree__row--group .pe-tree__chevron").forEach((ch) => {
+      ch.onclick = (e) => { e.stopPropagation(); ch.closest(".pe-tree__group").classList.toggle("is-collapsed"); };
+    });
 
     $("volver").onclick = () => {
       if (sucio && !confirm("Hay cambios sin guardar. ¿Salir igual?")) return;

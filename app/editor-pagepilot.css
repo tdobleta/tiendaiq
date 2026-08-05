@@ -118,3 +118,13 @@
 .pe-lista__add{ display:inline-flex; align-items:center; gap:6px; align-self:flex-start; border:none; background:transparent; padding:2px 0; color:var(--pe-acento); font-size:12.5px; font-weight:600; cursor:pointer; }
 .pe-lista__add svg{ width:14px; height:14px; }
 @media (prefers-reduced-motion: reduce){ .pe-tree *, .pe-prop *{ transition:none !important; } }
+
+/* ---- Layout del editor (3 columnas): árbol + preview (+ panel der en Etapa B) ---- */
+.pe-editor{ display:flex; gap:16px; align-items:stretch; }
+.pe-editor .pe-tree{ flex:0 0 300px; height:auto; align-self:stretch; border:1px solid #e6e6ea; border-radius:8px; }
+.pe-editor__centro{ flex:1 1 auto; min-width:0; display:flex; }
+.pe-editor__centro .marco{ flex:1 1 auto; margin:0; }
+@media (max-width:900px){
+  .pe-editor{ flex-direction:column; }
+  .pe-editor .pe-tree{ flex:0 0 auto; width:100%; height:280px; }
+}
