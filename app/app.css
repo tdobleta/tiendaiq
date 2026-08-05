@@ -1605,40 +1605,45 @@ ui-save-bar { display: none; }
 }
 
 /* modal de edición por bloque, como el "Editar" de PagePilot */
+/* Editor de sección: panel DERECHO acoplado (estilo page-builder / PagePilot),
+   NO un modal centrado. Mismo formato que .sec-panel. Solo CSS: la lógica de
+   edición (handlers de input/click/change) queda intacta. */
 .editor-modal {
   position: fixed;
-  inset: 0;
+  top: 0; right: 0; bottom: 0; left: auto;
+  width: 360px; max-width: 92vw;
   z-index: 4000;
-  background: rgba(15, 17, 20, .45);
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding: 6vh 16px;
-  overflow-y: auto;
+  background: none;
+  display: block;
+  padding: 0;
+  overflow: visible;
 }
 .editor-modal__caja {
   width: 100%;
-  max-width: 860px;
+  max-width: none;
+  height: 100%;
+  max-height: none;
   background: var(--superficie);
-  border-radius: var(--radio-l);
-  box-shadow: var(--sombra-l);
-  animation: modal-entrada .16s ease;
+  border-radius: 0;
+  border-left: 1px solid var(--borde);
+  box-shadow: -6px 0 24px rgba(0, 0, 0, .08);
+  animation: panel-entrada .18s ease;
   display: flex;
   flex-direction: column;
-  max-height: 86vh;
 }
-@keyframes modal-entrada { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: none; } }
+@keyframes panel-entrada { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: none; } }
 .editor-modal__cab {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 22px;
-  border-bottom: 1px solid var(--borde-suave);
-  font-size: 14.5px;
+  padding: 15px 16px;
+  border-bottom: 1px solid var(--borde);
+  font-size: 14px;
   font-weight: 600;
   color: var(--negro);
-  background: var(--fondo);
-  border-radius: var(--radio-l) var(--radio-l) 0 0;
+  background: var(--superficie);
+  border-radius: 0;
+  flex: 0 0 auto;
 }
 .editor-modal__x {
   background: none; border: 0;
@@ -1647,12 +1652,13 @@ ui-save-bar { display: none; }
   padding: 2px 6px;
 }
 .editor-modal__x:hover { color: var(--negro); }
-.editor-modal__cuerpo { padding: 20px 22px; overflow-y: auto; }
+.editor-modal__cuerpo { padding: 16px; overflow-y: auto; flex: 1 1 auto; min-height: 0; }
 .editor-modal__pie {
   display: flex;
   justify-content: flex-end;
-  padding: 14px 22px;
-  border-top: 1px solid var(--borde-suave);
+  padding: 12px 16px;
+  border-top: 1px solid var(--borde);
+  flex: 0 0 auto;
 }
 
 /* selector de imágenes del pool */
@@ -1752,9 +1758,9 @@ ui-save-bar { display: none; }
   .preview-barra__acciones .btn { flex: 1 1 auto; }
   .marco--full iframe { height: 68vh; }
 
-  /* modal de edición: hoja completa */
-  .editor-modal { padding: 0; }
-  .editor-modal__caja { max-height: 100vh; min-height: 100vh; border-radius: 0; }
+  /* panel de edición: full width en mobile */
+  .editor-modal { width: 100%; max-width: 100%; padding: 0; }
+  .editor-modal__caja { border-radius: 0; }
   .editor-modal__cab { border-radius: 0; position: sticky; top: 0; z-index: 2; }
   .editor-modal__pie { position: sticky; bottom: 0; background: var(--superficie); }
   .galeria-picker { grid-template-columns: repeat(3, 1fr); gap: 9px; }
