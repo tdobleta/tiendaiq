@@ -5487,7 +5487,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     const foto = sel && sel.imagen ? `<img src="${esc(sel.imagen)}" alt="">` : ico("bolsa", "ico--ph");
     const mobile = !!estado.bundles.previewMobile;
     return `<aside class="tarjeta cod-preview">
-      <div class="tarjeta__titulo">Vista previa</div>
+      <div class="tarjeta__titulo">Vista previa en vivo</div>
       <div class="panel__sub">Elegí un producto de tu tienda para verlo real</div>
       ${
         prods.length

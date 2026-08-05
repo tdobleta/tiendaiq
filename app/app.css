@@ -2833,3 +2833,50 @@ body.sec-panel-abierto .constructor { padding-right: 356px; }
 .modelo-card.is-sel .modelo-card__nom .ico { opacity: 1; }
 .modelo-card__desc { font-size: 12px; color: var(--suave); line-height: 1.4; }
 .modelo-card__badge { font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; color: #fff; background: var(--ia); border-radius: 20px; padding: 2px 7px; }
+
+/* ============================================================
+   ESCALA PUMPER — editor de bundles (tipografía + espacios).
+   El usuario pidió igualar tamaños/pesos/espacios de Pumper y NADA de letra
+   fina. Va al FINAL del archivo → gana sobre las 4 capas .be-* anteriores.
+   Calibrado desde las capturas de Pumper; se afina con captura del usuario.
+   ============================================================ */
+/* Header del editor */
+.be-top h1 { font-size: 21px; font-weight: 680; letter-spacing: -.3px; color: #1a1c1e; }
+
+/* Títulos de grupo ("Configuración de la oferta", "Editar ofertas de nivel",
+   "Personalización"): mismo tamaño/peso, con aire generoso. */
+.be-sec__title, .be-guinda__t { font-size: 15px; font-weight: 700; letter-spacing: -.2px; color: #1a1c1e; margin: 26px 2px 12px; }
+.be-sec__title--top, .be-guinda--top { margin-top: 2px; }
+.be-guinda { margin: 26px 0 12px; }
+.be-guinda--top { margin: 2px 0 12px; }
+.be-guinda__s { font-size: 13px; font-weight: 450; color: #6d7175; margin-top: 3px; letter-spacing: 0; }
+
+/* Acordeones (cabecera): 15/600, alto y padding cómodos como Pumper. */
+.be-sec__head { font-size: 15px; font-weight: 600; min-height: 56px; padding: 17px 18px; color: #1a1c1e; }
+.be-sec__body { padding: 2px 18px 20px; gap: 18px; }
+
+/* Bloques internos del setup. */
+.be-block { padding: 18px; gap: 16px; border-radius: 12px; }
+.be-block__t { font-size: 14px; font-weight: 700; color: #1a1c1e; }
+
+/* Campos de formulario: label 13.5/600, input 14px, con aire. */
+.be-left .campo--editor label { font-size: 13.5px; font-weight: 600; color: #1a1c1e; margin-bottom: 8px; }
+.be-left .campo--editor input, .be-left .campo--editor select, .be-left .campo--editor textarea { font-size: 14px; padding: 11px 13px; }
+
+/* Radios y toggles: 14px con peso medio (no fino). */
+.be-radio { font-size: 14px; font-weight: 500; color: #1a1c1e; gap: 9px; }
+.be-tgl-row { font-size: 13.5px; font-weight: 500; }
+
+/* Filas de nivel. */
+.be-left .be-lv__head { padding: 15px 16px; gap: 12px; }
+.be-left .be-lv__name { font-size: 14.5px; }
+
+/* Tabs de tipo de descuento. */
+.be-left .be-dt { font-size: 13px; padding: 8px 13px; }
+
+/* Separación entre secciones de la columna izquierda. */
+.be-layout .be-left { gap: 18px; }
+
+/* Panel de vista previa: título 15/700, sub 13. */
+.be-layout .cod-preview .tarjeta__titulo { font-size: 15px; font-weight: 700; color: #1a1c1e; }
+.be-layout .cod-preview .panel__sub { font-size: 13px; color: #6d7175; }
