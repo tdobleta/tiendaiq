@@ -62,6 +62,22 @@
   --sombra-l: 0 2px 6px rgba(0, 0, 0, .10);
 }
 
+/* GOTCHA: los tokens de :root NO cruzan el shadow boundary de s-section/s-stack
+   (Polaris web components) → var(--token) resuelve VACÍO dentro de esos subtrees
+   y cae al color del body. Fix: se re-declaran los tokens sobre los wrappers que
+   renderizamos DENTRO del boundary. Como estos elementos ya están adentro, sus
+   descendientes heredan y var(--token) vuelve a funcionar — una sola fuente en
+   vez de HEX literales dispersos. Mantener sincronizado con :root de arriba. */
+.be-layout, .insp-wrap, .bdl-onb-wrap {
+  --negro: #202223; --texto: #303030; --suave: #6d7175;
+  --fondo: #f6f6f7; --superficie: #ffffff; --borde: #e6e6ea; --borde-suave: #f0f0f2;
+  --marca-verde: #45c26a; --marca-azul: #1e8fd5;
+  --ia: #005bd3; --ia-fondo: #ebf3fe; --ia-borde: #cfe1f9; --acento: #005bd3;
+  --ok: #157f3d; --ok-fondo: #e7f8ee; --aviso: #92400e; --aviso-fondo: #fdf1dc;
+  --peligro: #b91c1c; --peligro-fondo: #fdeaea; --info: #1e8fd5;
+  --radio-s: 6px; --radio: 8px; --radio-l: 8px; --radio-ui: 6px;
+}
+
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
@@ -2444,10 +2460,10 @@ body.sec-panel-abierto .constructor { padding-right: 356px; }
 .bdl-histbtn { width: 30px; height: 30px; border: 1px solid #c9cccf; background: #fff; border-radius: 8px; cursor: pointer; color: #202223; font-size: 15px; line-height: 1; }
 .bdl-histbtn:hover:not(:disabled) { background: #f6f6f7; }
 .bdl-histbtn:disabled { opacity: .4; cursor: default; }
-.bdl-histbtn:focus-visible { outline: 2px solid #2c6ecb; outline-offset: 1px; }
+.bdl-histbtn:focus-visible { outline: 2px solid #005bd3; outline-offset: 1px; }
 .bdl-fixc { margin-left: auto; font-size: 12px; border: 1px solid #d2d5d8; background: #fff; border-radius: 6px; padding: 3px 9px; cursor: pointer; color: #202223; }
 .bdl-fixc:hover { background: #f6f6f7; }
-.bdl-fixc:focus-visible { outline: 2px solid #2c6ecb; outline-offset: 1px; }
+.bdl-fixc:focus-visible { outline: 2px solid #005bd3; outline-offset: 1px; }
 .perso-sw { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
 .perso-col--r .perso-sw { flex-direction: row-reverse; }
 .perso-sw input[type="color"] { width: 26px; height: 26px; padding: 0; border: 1px solid #d2d5d8; border-radius: 6px; background: none; cursor: pointer; flex-shrink: 0; }
@@ -2459,7 +2475,7 @@ body.sec-panel-abierto .constructor { padding-right: 356px; }
 .be-aviso__ico { flex-shrink: 0; font-size: 14px; line-height: 1.35; }
 .be-aviso__txt { flex: 1; margin: 0; }
 .be-aviso--info { color: #1c5eae; background: #eef4fb; border: 1px solid #cfe0f5; }
-.be-aviso--info .be-aviso__ico { color: #2c6ecb; }
+.be-aviso--info .be-aviso__ico { color: #1e8fd5; }
 .be-aviso--info b { color: #16457f; }
 /* Swatch de color al lado de un input (título compra única / suscripción). */
 .be-field-sw__col { flex-shrink: 0; width: 34px; height: 34px; padding: 0; border: 1px solid var(--borde); border-radius: 8px; background: none; cursor: pointer; margin-bottom: 1px; transition: border-color .12s, transform .08s; }
