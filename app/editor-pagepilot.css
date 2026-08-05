@@ -150,3 +150,13 @@
 .pe-switch-input:checked{ background:#1a1c1e; }
 .pe-switch-input:checked::after{ left:18px; }
 .pe-switch-input:focus-visible{ outline:2px solid #005bd3; outline-offset:2px; }
+
+/* Presets de un toque del botón: cada chip refleja su propia forma (mini del botón). */
+.pe-preset-row{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
+.pe-preset{ padding:7px 12px; border:1.5px solid #d9dce0; background:#fff; color:#1a1c1e; font-size:12px; font-weight:600; font-family:inherit; cursor:pointer; line-height:1; transition:border-color .12s ease, background .12s ease; }
+.pe-preset:hover{ border-color:#8c9196; }
+.pe-preset.is-on{ background:#1a1c1e; color:#fff; border-color:#1a1c1e; }
+.pe-preset--clasico, .pe-preset--minimal{ border-radius:8px; }
+.pe-preset--pildora, .pe-preset--pildoraBorde{ border-radius:999px; text-transform:uppercase; letter-spacing:.02em; }
+.pe-preset--bloque{ border-radius:3px; }
+.pe-preset--pildoraBorde{ border-width:2px; border-color:#1a1c1e; }

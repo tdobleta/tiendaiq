@@ -1281,6 +1281,17 @@
   }
 
   // Cada bloque editable de la página: título del modal + sus campos.
+  // Presets de un toque del botón de compra: setean forma/borde/mayúsculas/ícono
+  // juntos. El chip refleja su propia forma (mini del botón). Combinan los looks
+  // que pidió el usuario (amarillo = píldora+borde, azul = píldora, verde = bloque).
+  const PRESETS_BOTON = [
+    ["clasico", "Clásico", { boton_estilo: "redondeado", boton_borde: false, boton_mayus: false, boton_icono: true }],
+    ["pildora", "Píldora", { boton_estilo: "pildora", boton_borde: false, boton_mayus: true, boton_icono: true }],
+    ["pildoraBorde", "Píldora + borde", { boton_estilo: "pildora", boton_borde: true, boton_mayus: true, boton_icono: true }],
+    ["bloque", "Bloque", { boton_estilo: "recto", boton_borde: false, boton_mayus: false, boton_icono: true }],
+    ["minimal", "Minimal", { boton_estilo: "redondeado", boton_borde: false, boton_mayus: false, boton_icono: false }]
+  ];
+
   function seccionesPagina() {
     const f = estado.pagina.data.facetas;
 
@@ -1328,6 +1339,9 @@
           const _forma = leer(estado.pagina.data, "global.boton_estilo") || "redondeado";
           const _formaOpts = [["redondeado", "Redondeado"], ["pildora", "Píldora"], ["recto", "Recto"]]
             .map(([k, t]) => `<option value="${k}"${_forma === k ? " selected" : ""}>${t}</option>`).join("");
+          const _gB = { boton_estilo: _forma, boton_borde: !!leer(estado.pagina.data, "global.boton_borde"), boton_mayus: !!leer(estado.pagina.data, "global.boton_mayus"), boton_icono: leer(estado.pagina.data, "global.boton_icono") !== false };
+          const _presetAct = (PRESETS_BOTON.find(([, , v]) => v.boton_estilo === _gB.boton_estilo && v.boton_borde === _gB.boton_borde && v.boton_mayus === _gB.boton_mayus && v.boton_icono === _gB.boton_icono) || [])[0];
+          const _presetRow = `<div class="pe-preset-row">${PRESETS_BOTON.map(([k, t]) => `<button type="button" class="pe-preset pe-preset--${k}${_presetAct === k ? " is-on" : ""}" data-boton-preset="${k}">${esc(t)}</button>`).join("")}</div>`;
           return (
             `<section class="pe-prop__grupo"><h3 class="pe-prop__subheader">Contenido</h3>` +
               filaStack("Barra de urgencia (arriba de todo)", `<input class="pe-input" type="text" data-ruta="facetas.hero.urgencia" value="${_v("facetas.hero.urgencia")}">`) +
@@ -1345,6 +1359,7 @@
                 `<div class="pe-select pe-select--full"><s-select data-ruta="global.nicho" value="${esc(nichoActual)}" labelAccessibilityVisibility="exclusive" label="Rubro">${NICHOS.map(([k, t]) => `<s-option value="${k}">${t}</s-option>`).join("")}</s-select></div>`) +
             `</section>` +
             `<section class="pe-prop__grupo"><h3 class="pe-prop__subheader">Botón de compra</h3>` +
+              _presetRow +
               `<div class="pe-prop__fila"><label class="pe-prop__label">Forma</label><div class="pe-prop__control"><div class="pe-select"><select data-ruta="global.boton_estilo">${_formaOpts}</select>${_chev}</div></div></div>` +
               filaSwitch("Borde", "global.boton_borde", !!leer(estado.pagina.data, "global.boton_borde")) +
               filaSwitch("Mayúsculas", "global.boton_mayus", !!leer(estado.pagina.data, "global.boton_mayus")) +
@@ -1776,6 +1791,13 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         return;
       }
       if (e.target.id === "btn-lote") return cargarLote();
+      // preset de un toque del botón de compra: setea forma/borde/mayús/ícono juntos
+      const bp = e.target.closest("[data-boton-preset]");
+      if (bp) {
+        const p = (PRESETS_BOTON.find(([k]) => k === bp.dataset.botonPreset) || [])[2];
+        if (p) { Object.entries(p).forEach(([k, v]) => fijar(estado.pagina.data, "global." + k, v)); marcarSucio(); repintarPreview(); refrescarModal(); }
+        return;
+      }
       // elegir variante de color (swatch)
       const sw = e.target.closest("[data-tema-pick]");
       if (sw) {
