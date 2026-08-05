@@ -29,7 +29,6 @@ const { guardarPaginaDB, leerPaginaDB, listarPaginasDB } = require("./db");
 const { iniciarInstalacion, terminarInstalacion, tiendaDelPase } = require("./auth");
 const { nubeServible, urlVideo, urlPoster } = require("./inspiracion-nube");
 const { estadoPlan, consumirCupo, revertirCupo, crearSuscripcion } = require("./facturacion");
-const { leerConfigCod, guardarConfigCod, crearPedidoCod, validarDescuentoCod } = require("./cod");
 const { reportarError, metrica } = require("./monitoreo");
 const {
   leerConfigBundles,
@@ -568,41 +567,13 @@ async function api(req, res, url) {
     return p ? json(res, 200, p) : json(res, 404, { error: "No existe esa página" });
   }
 
-  // GET /api/cod — la config del formulario contra reembolso
-  if (req.method === "GET" && ruta === "/api/cod") {
-    return json(res, 200, await leerConfigCod(sesion.tienda));
-  }
-
-  // PUT /api/cod — guardar la config. Si ya está inyectado en el tema,
-  // re-sube el snippet (la config viaja adentro) para que la tienda la vea.
-  if (req.method === "PUT" && ruta === "/api/cod") {
-    const { config } = await leerCuerpo(req);
-    if (!config) return json(res, 400, { error: "Falta config" });
-    config.instalado = (await leerConfigCod(sesion.tienda)).instalado; // no se pisa desde el browser
-    await guardarConfigCod(sesion.tienda, config);
-    // Ya NO re-escribimos el snippet en el tema: la config viaja EN VIVO por
-    // /publico/cod (app embed). Compliance App Store: cero escritura directa al tema.
-    return json(res, 200, config);
-  }
-
-  // POST /api/cod/imagen — imagen para un elemento del formulario COD
-  // (va a Files de la tienda; devuelve la URL del CDN de Shopify)
-  if (req.method === "POST" && ruta === "/api/cod/imagen") {
+  // POST /api/imagen — sube una imagen a Files de la tienda (genérico). Lo usa
+  // el editor de bundles para las imágenes de add-on/regalo. Devuelve la URL del CDN.
+  if (req.method === "POST" && ruta === "/api/imagen") {
     const { nombre, mime, base64 } = await leerCuerpo(req, 15_000_000);
     if (!base64) return json(res, 400, { error: "Falta la imagen" });
     const { subirImagenTienda } = require("./imagenes");
     return json(res, 200, await subirImagenTienda(sesion, nombre, mime || "image/jpeg", base64));
-  }
-
-  // POST /api/cod/instalar — YA NO inyecta código en el tema (compliance: Shopify
-  // exige app embed). Marca "publicado" y devuelve el link para activar el app
-  // embed en el editor de temas. La config ya viaja en vivo por /publico/cod.
-  if (req.method === "POST" && ruta === "/api/cod/instalar") {
-    const config = await leerConfigCod(sesion.tienda);
-    config.instalado = { fecha: new Date().toISOString() };
-    await guardarConfigCod(sesion.tienda, config);
-    config.activarUrl = linkActivarEmbed(sesion.tienda, "cod");
-    return json(res, 200, config);
   }
 
   // ---------- bundles ----------
@@ -810,88 +781,6 @@ async function api(req, res, url) {
   return json(res, 404, { error: "Ruta desconocida" });
 }
 
-// ---------- pedido COD (público, viene de la tienda del merchant) ----------
-
-// Rate limit mínimo: por IP+tienda, 10 pedidos cada 10 minutos. Suficiente
-// para frenar un script tonto sin molestar a una tienda real.
-const ventanaCod = new Map();
-function pasaRateLimit(clave) {
-  const ahora = Date.now();
-  const marcas = (ventanaCod.get(clave) || []).filter((t) => ahora - t < 10 * 60 * 1000);
-  if (marcas.length >= 10) return false;
-  marcas.push(ahora);
-  ventanaCod.set(clave, marcas);
-  // No crecer infinito: poda SOLO los vencidos (clear() total lo podría disparar
-  // un atacante rotando IPs para resetear el contador de todos).
-  if (ventanaCod.size > 5000) {
-    for (const [k, ts] of ventanaCod) {
-      const vivas = ts.filter((t) => ahora - t < 10 * 60 * 1000);
-      if (vivas.length) ventanaCod.set(k, vivas); else ventanaCod.delete(k);
-    }
-  }
-  return true;
-}
-
-const CORS_COD = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type"
-};
-
-async function pedidoCod(req, res) {
-  if (req.method === "OPTIONS") {
-    return void res.writeHead(204, CORS_COD).end();
-  }
-  const responder = (codigo, cuerpo) => {
-    res.writeHead(codigo, { "Content-Type": "application/json; charset=utf-8", ...CORS_COD });
-    res.end(JSON.stringify(cuerpo));
-  };
-  try {
-    const pedido = await leerCuerpo(req);
-    const tienda = String(pedido.tienda || "");
-    const sesion = await sesionDe(tienda); // tira si la tienda no está instalada
-
-    const ip = req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || req.socket.remoteAddress || "?";
-    if (!pasaRateLimit(`${sesion.tienda}|${ip}`)) {
-      return responder(429, { ok: false, error: "Demasiados intentos. Probá de nuevo en unos minutos." });
-    }
-
-    const { orden } = await crearPedidoCod(sesion, pedido);
-    console.log(`  🛵 pedido COD ${orden} · ${sesion.tienda}`);
-    return responder(200, { ok: true, orden });
-  } catch (e) {
-    // El detalle va al log; al cliente (endpoint público) solo un mensaje genérico
-    // — no filtramos internals (App Store 2.1: sin errores crudos visibles).
-    console.error("✖ pedido COD:", e.message);
-    return responder(400, { ok: false, error: "No pudimos registrar tu pedido. Probá de nuevo en un momento." });
-  }
-}
-
-// POST /cod/descuento — el botón "Aplicar" del formulario valida un código
-// contra la tienda (read-only) y devuelve tipo+valor para reflejarlo en el
-// total. La aplicación REAL al pedido la hace crearPedidoCod re-validando; esto
-// es solo para el preview del cliente. Fail-safe: cualquier problema → inválido.
-async function descuentoCod(req, res) {
-  if (req.method === "OPTIONS") return void res.writeHead(204, CORS_COD).end();
-  const responder = (codigo, cuerpo) => {
-    res.writeHead(codigo, { "Content-Type": "application/json; charset=utf-8", ...CORS_COD });
-    res.end(JSON.stringify(cuerpo));
-  };
-  try {
-    const body = await leerCuerpo(req);
-    const sesion = await sesionDe(String(body.tienda || ""));
-    const ip = req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || req.socket.remoteAddress || "?";
-    if (!pasaRateLimit(`desc|${sesion.tienda}|${ip}`)) {
-      return responder(429, { ok: false, valido: false });
-    }
-    const dc = await validarDescuentoCod(sesion, body.code);
-    return responder(200, { ok: true, ...dc });
-  } catch (e) {
-    console.error("✖ descuento COD:", e.message);
-    return responder(200, { ok: true, valido: false });
-  }
-}
-
 const CORS_PUB = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, OPTIONS",
@@ -929,31 +818,6 @@ async function bundlesPublico(req, res, url) {
   }
 }
 
-// GET /publico/cod?shop=xxx.myshopify.com — config pública del formulario COD
-// para el app embed. Es lo mismo que hoy va embebido en el snippet: la config
-// sin `instalado`, más tienda y app_url (para que el form sepa a dónde postear
-// el pedido). Sin secretos (el token no viaja acá).
-async function codPublico(req, res, url) {
-  if (req.method === "OPTIONS") return void res.writeHead(204, CORS_PUB).end();
-  const responder = (codigo, cuerpo) => {
-    res.writeHead(codigo, {
-      "Content-Type": "application/json; charset=utf-8",
-      "Cache-Control": "public, max-age=60",
-      ...CORS_PUB
-    });
-    res.end(JSON.stringify(cuerpo));
-  };
-  try {
-    const tienda = String(url.searchParams.get("shop") || "").toLowerCase().replace(/[^a-z0-9.\-]/g, "");
-    if (!/^[a-z0-9-]+\.myshopify\.com$/.test(tienda)) return responder(400, { activo: false });
-    const cfg = await leerConfigCod(tienda);
-    const { instalado, ...publica } = cfg;
-    return responder(200, { ...publica, tienda, app_url: URL_APP });
-  } catch (e) {
-    return responder(200, { activo: false });
-  }
-}
-
 // ---------- servidor ----------
 
 const servidor = http.createServer(async (req, res) => {
@@ -974,13 +838,8 @@ const servidor = http.createServer(async (req, res) => {
     // --- webhooks de Shopify (desinstalación + privacidad) ---
     if (req.method === "POST" && url.pathname === "/webhooks") return await webhooks(req, res);
 
-    // --- pedido COD desde la tienda del merchant (público, con CORS) ---
-    if (url.pathname === "/cod/pedido") return await pedidoCod(req, res);
-    if (url.pathname === "/cod/descuento") return await descuentoCod(req, res);
-
-    // --- config pública de bundles/COD (la trae el app embed del storefront) ---
+    // --- config pública de bundles (la trae el app embed del storefront) ---
     if (url.pathname === "/publico/bundles") return await bundlesPublico(req, res, url);
-    if (url.pathname === "/publico/cod") return await codPublico(req, res, url);
 
     // --- legales (públicas: van en la ficha del App Store) ---
     if (url.pathname === "/privacidad") return servirLegal(res, "privacidad.html");
@@ -989,7 +848,7 @@ const servidor = http.createServer(async (req, res) => {
     // --- app ---
     if (url.pathname.startsWith("/api/")) return await api(req, res, url);
 
-    // Código del storefront (widget de bundles + formulario COD). Lo usa el
+    // Código del storefront (widget de bundles). Lo usa el
     // preview del admin, y es EL MISMO archivo que publica el extension.
     if (url.pathname.startsWith("/widgets/")) {
       return servirEstatico(req, res, DIR_WIDGETS, url.pathname.replace(/^\/widgets\/?/, ""));
@@ -1017,7 +876,7 @@ const servidor = http.createServer(async (req, res) => {
 
     // /paginas y /crear son rutas del frontend (el menú lateral del admin
     // navega por URL): sirven la misma app, que rutea por pathname.
-    if (["/", "/index.html", "/paginas", "/crear", "/cod", "/bundles", "/inspiracion"].includes(url.pathname))
+    if (["/", "/index.html", "/paginas", "/crear", "/bundles", "/inspiracion"].includes(url.pathname))
       return servirIndex(res);
 
     return servirEstatico(req, res, DIR_APP, url.pathname);
