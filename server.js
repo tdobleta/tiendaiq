@@ -62,8 +62,8 @@ const VERSION_ASSETS = (() => {
     return Date.now().toString(36);
   }
 })();
-// Único hogar del código que corre en el storefront (widget de bundles y
-// formulario COD). El theme app extension lo publica en el CDN de Shopify, y
+// Único hogar del código que corre en el storefront (widget de bundles). El
+// theme app extension lo publica en el CDN de Shopify, y
 // el server sirve LOS MISMOS archivos para el preview del admin y para la
 // inyección directa. Una sola copia: no hay nada que sincronizar.
 const DIR_WIDGETS = path.join(__dirname, "extensions", "tiendaiq-widgets", "assets");
@@ -93,7 +93,7 @@ const CLIENT_ID = env.SHOPIFY_CLIENT_ID || "";
 const linkEditorPagina = (tienda) =>
   `https://${tienda}/admin/themes/current/editor?template=product`;
 
-// Preactiva un app embed (COD/Bundles) en el editor: además de abrir el panel
+// Preactiva un app embed en el editor: además de abrir el panel
 // de "Incrustaciones de apps", deja el toggle del bloque listo para prender.
 const linkActivarEmbed = (tienda, handle) =>
   `https://${tienda}/admin/themes/current/editor?context=apps&activateAppId=${CLIENT_ID}/${handle}`;
@@ -229,7 +229,7 @@ function leerCuerpo(req, limite = 1_000_000) {
   return new Promise((resolve, reject) => {
     const trozos = [];
     let bytes = 0;
-    // Tope de 1 MB por defecto: /cod/pedido es público y sin esto cualquiera
+    // Tope de 1 MB por defecto: sin esto cualquiera
     // nos infla la memoria. La subida de imágenes pasa un límite mayor.
     // Se mide por BYTES reales (Buffer.length), no por largo de string: con
     // multibyte el corte en .length no coincide con los bytes recibidos, y

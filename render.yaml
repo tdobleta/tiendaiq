@@ -44,6 +44,6 @@ services:
       # Plan gratis: páginas por mes antes de exigir suscripción.
       - key: PAGINAS_GRATIS
         value: "3"
-      # Cargos de PRUEBA mientras no lances en serio. Cambiar a "0" para cobrar.
+      # Cargos reales en produccion. Usar "1" solo en entornos de prueba.
       - key: PLAN_TEST
-        value: "1"
+        value: "0"

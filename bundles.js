@@ -10,10 +10,9 @@
 //   EL DESCUENTO → la plata de verdad. Vive como DESCUENTO AUTOMÁTICO
 //                nativo de Shopify (uno por peldaño con descuento > 0).
 //                Shopify lo hace cumplir en el checkout: imposible de
-//                falsear desde el navegador. Igual que el recálculo
-//                server-side de COD, la fuente de verdad es Shopify.
+//                falsear desde el navegador. La fuente de verdad es Shopify.
 //
-// Responsabilidades del módulo (espeja cod.js):
+// Responsabilidades del módulo:
 //   1. CONFIG    por tienda (lista de bundles). Clave `bundles` en la DB.
 //   2. DESCUENTOS crea/borra los descuentos automáticos que respaldan cada
 //                bundle. Se re-sincronizan al guardar.

@@ -93,7 +93,7 @@ const CASOS = [
   },
   {
     nombre: "los assets del storefront se sirven desde el extension",
-    ruta: "/widgets/tiendaiq-cod.js",
+    ruta: "/widgets/tiendaiq-bundle.js",
     espera: 200
   }
 ];

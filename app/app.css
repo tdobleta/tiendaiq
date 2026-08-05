@@ -225,8 +225,8 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
 /* Botones de ícono cuadrados (reordenar / engranaje): centrar el SVG. */
 .sec-item__manijas button { display: inline-grid; place-items: center; }
 .sec-item__manijas button .ico { width: 14px; height: 14px; }
-.cod-engranaje { display: grid; place-items: center; }
-.cod-engranaje .ico { width: 15px; height: 15px; }
+.ui-engranaje { display: grid; place-items: center; }
+.ui-engranaje .ico { width: 15px; height: 15px; }
 .exito__titulo .ico { width: 15px; height: 15px; vertical-align: -3px; margin-right: 3px; }
 .ayuda-strip__link .ico { width: 13px; height: 13px; vertical-align: -2px; }
 /* Placeholder de imagen: SVG muteado, reemplaza el emoji 🖼/🛍 de fallback. */
@@ -513,7 +513,7 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
    (fondo + color de borde + color de texto) y su estructura (flex, listas).
    Así se ven como una sola familia sin reescribir cada punto de render. */
 .error, .avisos, .exito, .verif-ok, .banner-tema, .aviso-republicar,
-.editor-hint, .setup-pagina, .cod-banner {
+.editor-hint, .setup-pagina, .ui-banner {
   border-radius: var(--radio);
   margin-bottom: 16px;
   padding: 12px 16px;
@@ -603,6 +603,194 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
 .crear__eyebrow svg { width: 15px; height: 15px; display: block; }
 .crear__hero h1 { font-size: 42px; font-weight: 700; letter-spacing: -.8px; color: var(--negro); line-height: 1.06; }
 .crear__hero p { font-size: 16.5px; color: var(--suave); margin-top: 12px; }
+
+/* Crear pagina IA: entrada sobria de producto, pensada para app embebida. */
+.crear::before { display: none; }
+.crear-shell {
+  max-width: 1040px;
+  margin: 26px auto 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 20px;
+  align-items: stretch;
+}
+.crear-hero-panel {
+  background: var(--superficie);
+  border: 1px solid #d2d5d8;
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(0,0,0,.06);
+  padding: 28px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(340px, 430px);
+  gap: 28px;
+  align-items: center;
+}
+.crear-hero-panel__copy { min-width: 0; }
+.crear-hero-panel__copy .crear__eyebrow { margin-bottom: 14px; }
+.crear-hero-panel__copy h1 {
+  color: #202223;
+  font-size: 30px;
+  line-height: 1.15;
+  font-weight: 700;
+  margin: 0;
+}
+.crear-hero-panel__copy p {
+  color: #6d7175;
+  font-size: 14px;
+  line-height: 1.55;
+  margin-top: 10px;
+  max-width: 560px;
+}
+.crear-card {
+  border: 1px solid #d9d9d9;
+  border-radius: 10px;
+  background: #fff;
+  padding: 18px;
+}
+.crear-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.crear-card__kicker {
+  color: #6d7175;
+  font-size: 12px;
+  font-weight: 650;
+  margin-bottom: 3px;
+}
+.crear-card h2 {
+  color: #202223;
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0;
+}
+.crear-prod {
+  min-height: 86px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px dashed #c9cccf;
+  border-radius: 9px;
+  background: #fafafa;
+  padding: 12px;
+}
+.crear-prod.is-ready {
+  border-style: solid;
+  background: #fff;
+}
+.crear-prod__thumb {
+  width: 54px;
+  height: 54px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid #e1e3e5;
+  border-radius: 8px;
+  background: #f6f6f7;
+  color: #6d7175;
+}
+.crear-prod__thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.crear-prod__thumb .ico { width: 22px; height: 22px; }
+.crear-prod__txt {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.crear-prod__txt strong {
+  color: #202223;
+  font-size: 14px;
+  font-weight: 650;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.crear-prod__txt span:last-child {
+  color: #6d7175;
+  font-size: 13px;
+  line-height: 1.35;
+}
+.crear-prod__label {
+  color: #6d7175;
+  font-size: 11px;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.crear-card__acciones {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+}
+.crear-flow {
+  background: var(--superficie);
+  border: 1px solid #d2d5d8;
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(0,0,0,.06);
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 14px;
+}
+.crear-flow__item {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  color: #6d7175;
+}
+.crear-flow__item span {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid #d2d5d8;
+  background: #fff;
+  color: #6d7175;
+  font-size: 12px;
+  font-weight: 650;
+}
+.crear-flow__item.is-active span {
+  border-color: #005bd3;
+  background: #005bd3;
+  color: #fff;
+}
+.crear-flow__item b {
+  display: block;
+  color: #202223;
+  font-size: 13px;
+  font-weight: 650;
+  margin-bottom: 2px;
+}
+.crear-flow__item small {
+  display: block;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+@media (max-width: 980px) {
+  .crear-shell,
+  .crear-hero-panel { grid-template-columns: 1fr; }
+  .crear-flow { justify-content: flex-start; }
+}
+@media (max-width: 640px) {
+  .crear-shell { margin-top: 14px; gap: 14px; }
+  .crear-hero-panel { padding: 18px; gap: 18px; }
+  .crear-hero-panel__copy h1 { font-size: 24px; }
+  .crear-card__acciones { flex-direction: column; align-items: stretch; }
+}
 
 /* Swatches de variante de color (editor + paso previo). */
 .temas { display: flex; gap: 10px; flex-wrap: wrap; margin: 6px 0 2px; }
@@ -900,14 +1088,14 @@ ui-save-bar { display: none; }
 
 /* Preview: UNA sola caja (padding 16). El marco deja de ser caja para no
    duplicar padding → el widget queda más ancho (panel ~330, widget ~298). */
-.be-layout .cod-preview.tarjeta { padding: 16px; border-radius: 12px; border: 1px solid #d2d5d8; box-shadow: 0 1px 2px rgba(0, 0, 0, .05); margin: 0; }
+.be-layout .bdl-preview-card.tarjeta { padding: 16px; border-radius: 12px; border: 1px solid #d2d5d8; box-shadow: 0 1px 2px rgba(0, 0, 0, .05); margin: 0; }
 /* Panel de vista previa: ritmo Polaris (8/16), selector nativo, divisor antes
    del widget. Specs derivadas del análisis vs Pumper. */
-.be-layout .cod-preview .tarjeta__titulo { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
-.be-layout .cod-preview .panel__sub { font-size: 13px; color: #6d7175; margin: 0 0 16px; }
-.be-layout .cod-preview .campo--editor { margin: 0; }
-.be-layout .cod-preview .campo--editor label { font-size: 13px; font-weight: 500; color: #202223; margin-bottom: 8px; display: block; }
-.be-layout .cod-preview .campo--editor select { width: 100%; height: 44px; border-radius: 8px; padding: 0 12px; font-size: 14px; border: 1px solid #c9cccf; background: #fff; color: #202223; }
+.be-layout .bdl-preview-card .tarjeta__titulo { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+.be-layout .bdl-preview-card .panel__sub { font-size: 13px; color: #6d7175; margin: 0 0 16px; }
+.be-layout .bdl-preview-card .campo--editor { margin: 0; }
+.be-layout .bdl-preview-card .campo--editor label { font-size: 13px; font-weight: 500; color: #202223; margin-bottom: 8px; display: block; }
+.be-layout .bdl-preview-card .campo--editor select { width: 100%; height: 44px; border-radius: 8px; padding: 0 12px; font-size: 14px; border: 1px solid #c9cccf; background: #fff; color: #202223; }
 .be-layout #bdl-preview { border-top: 1px solid #e3e3e3; padding-top: 16px; }
 .be-layout .bdl-preview__marco { padding: 0; border: none; background: none; margin-top: 16px; }
 
@@ -928,6 +1116,30 @@ ui-save-bar { display: none; }
 .picker__buscar input { flex: 1; min-width: 0; border: none; outline: none; background: none; font-family: inherit; font-size: 14px; color: var(--negro); }
 .picker__lista { flex: 1; overflow-y: auto; }
 .picker__pie { padding: 10px 16px; border-top: 1px solid var(--borde); font-size: 12px; color: var(--suave); }
+.picker__pie--acciones {
+  min-height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.picker__acciones {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+.picker__fila.is-selected {
+  background: #f1f7ff;
+  box-shadow: inset 3px 0 0 #005bd3;
+}
+.picker__fila.is-selected .fila__tit { color: #005bd3; }
+@media (max-width: 560px) {
+  .picker-modal { padding: 12px; align-items: end; }
+  .picker { max-height: 88vh; border-radius: 12px 12px 0 0; }
+  .picker__pie--acciones { align-items: stretch; flex-direction: column; }
+  .picker__acciones { width: 100%; justify-content: flex-end; }
+}
 
 /* ---------- 0. inicio (panel principal) ---------- */
 
@@ -982,7 +1194,7 @@ ui-save-bar { display: none; }
   padding: 18px; display: flex; flex-direction: column; align-items: flex-start; gap: 0;
 }
 /* Tile de tinte SUAVE por tarjeta: el color identifica la función (violeta =
-   IA, verde = publicar, naranja = COD, azul = bundles) sin gritar. El estado
+   IA, verde = publicar, azul = bundles) sin gritar. El estado
    "hecho" lo comunica un check verde posado sobre el ícono, como PagePilot. */
 .paso-card__icono {
   position: relative;
@@ -1365,32 +1577,16 @@ ui-save-bar { display: none; }
 .embebida .editor { height: 78vh; }
 
 /* ============================================================
-   Pantalla COD — configuración del formulario contra reembolso
+   Utilidades compartidas de editores
    ============================================================ */
 
-.cod-banner {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  border-radius: var(--radio);
-  padding: 12px 16px;
-  font-size: 13.5px;
-  margin-bottom: 18px;
-}
-.cod-banner__cuerpo { flex: 1; }
-.cod-banner__cuerpo .ico { vertical-align: -3px; margin-right: 4px; }
-.cod-banner .btn { margin-left: auto; flex: 0 0 auto; }
-.cod-banner--ok { background: var(--ok-fondo); color: var(--ok); border-color: #c4ecd2; }
-.cod-banner--ok strong { color: inherit; }
-.cod-banner--aviso { background: var(--aviso-fondo); color: var(--aviso); border-color: #f3dfb9; }
-
-.cod-tabs {
+.ui-tabs {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
   margin-bottom: 18px;
 }
-.cod-tab {
+.ui-tab {
   height: 34px;
   padding: 0 14px;
   border: 1px solid var(--borde);
@@ -1402,25 +1598,15 @@ ui-save-bar { display: none; }
   font-family: inherit;
   cursor: pointer;
 }
-.cod-tab:hover { background: var(--fondo); }
-.cod-tab--activa {
+.ui-tab:hover { background: var(--fondo); }
+.ui-tab--activa {
   background: var(--negro);
   border-color: var(--negro);
   color: #fff;
 }
 
-.cod-layout {
-  display: grid;
-  grid-template-columns: 1fr 360px;
-  gap: 18px;
-  align-items: start;
-}
-@media (max-width: 900px) { .cod-layout { grid-template-columns: 1fr; } }
-
-.fila-doble-cod { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
-
-.cod-color__fila { display: flex; align-items: center; gap: 10px; }
-.cod-color__fila input[type="color"] {
+.ui-color__fila { display: flex; align-items: center; gap: 10px; }
+.ui-color__fila input[type="color"] {
   width: 44px; height: 32px;
   padding: 2px;
   border: 1px solid var(--borde);
@@ -1428,9 +1614,9 @@ ui-save-bar { display: none; }
   background: var(--superficie);
   cursor: pointer;
 }
-.cod-color__fila code { font-size: 12px; color: var(--suave); }
+.ui-color__fila code { font-size: 12px; color: var(--suave); }
 
-.cod-check {
+.ui-check {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -1439,117 +1625,11 @@ ui-save-bar { display: none; }
   cursor: pointer;
   margin: 10px 0;
 }
-.cod-check input { width: 16px; height: 16px; accent-color: var(--acento); }
-.cod-check--activo {
-  margin: 0;
-  border: 1px solid var(--borde);
-  border-radius: var(--radio-s);
-  padding: 0 14px;
-  height: 36px;
-  background: var(--superficie);
-  font-weight: 500;
-}
+.ui-check input { width: 16px; height: 16px; accent-color: var(--acento); }
 
-.cod-separador { border-top: 1px solid var(--borde-suave); margin: 16px 0; }
+.ui-separador { border-top: 1px solid var(--borde-suave); margin: 16px 0; }
 
-.cod-campo-fila {
-  display: grid;
-  grid-template-columns: 1fr auto auto;
-  gap: 12px;
-  align-items: center;
-  padding: 7px 0;
-  border-bottom: 1px solid var(--borde-suave);
-  font-size: 13px;
-}
-.cod-campo-fila input[type="text"] {
-  height: 34px;
-  padding: 0 10px;
-  border: 1px solid var(--borde);
-  border-radius: var(--radio-s);
-  font-size: 13px;
-  font-family: inherit;
-}
-.cod-campo-fila label { display: flex; align-items: center; gap: 6px; color: var(--suave); cursor: pointer; }
-.cod-campo-fila input[type="checkbox"] { accent-color: var(--acento); }
-
-.cod-tarifa-fila, .cod-tier-fila {
-  display: grid;
-  gap: 10px;
-  align-items: center;
-  margin-bottom: 10px;
-}
-.cod-tarifa-fila { grid-template-columns: 1fr 130px auto; }
-.cod-tier-fila { grid-template-columns: 74px 74px 1fr auto; }
-.cod-tarifa-fila input, .cod-tier-fila input {
-  height: 36px;
-  padding: 0 10px;
-  border: 1px solid var(--borde);
-  border-radius: var(--radio-s);
-  font-size: 13px;
-  font-family: inherit;
-}
-
-/* preview */
-.cod-preview { position: sticky; top: 20px; }
-.cod-preview__marco {
-  border: 1px solid var(--borde);
-  border-radius: var(--radio);
-  padding: 18px;
-  background: #fff;
-}
-.cod-preview__prod { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
-.cod-preview__foto {
-  width: 52px; height: 52px;
-  border-radius: 10px;
-  background: var(--fondo);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 22px;
-}
-.cod-preview__nombre { font-size: 14px; font-weight: 600; color: var(--negro); }
-.cod-preview__precio { font-size: 13px; color: var(--suave); }
-.cod-preview__addto {
-  height: 42px;
-  border: 1px solid var(--negro);
-  border-radius: 6px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 14px; font-weight: 600; color: var(--negro);
-}
-
-/* mini-preview de la herramienta COD en el inicio */
-.herramienta__preview--cod { background: linear-gradient(135deg, #ecfdf3 0%, #e0f2fe 100%); }
-.mini-cta--cod { background: var(--negro); }
-
-/* vista previa inline editable (pestaña "Vista previa" del COD) */
-.cod-layout--vista { grid-template-columns: 1fr; }
-.cod-vista-inline #tiq-cod-modal {
-  position: static;
-  inset: auto;
-  padding: 0;
-  background: transparent;
-  overflow: visible;
-  display: block;
-}
-.cod-vista-inline .tiq-cod-caja {
-  max-width: 100%;
-  box-shadow: none;
-  border: 1px solid var(--borde);
-  animation: none;
-}
-.cod-editable { cursor: text; border-radius: 4px; transition: box-shadow .1s; }
-.cod-editable:hover { box-shadow: 0 0 0 1.5px var(--acento); }
-.cod-editable:focus { outline: none; box-shadow: 0 0 0 2px var(--acento); background: var(--ia-fondo); }
-
-/* responsive de la pantalla COD */
-@media (max-width: 700px) {
-  .cod-banner { flex-wrap: wrap; }
-  .cod-banner .btn { margin-left: 0; }
-  .cod-campo-fila { grid-template-columns: 1fr; gap: 6px; }
-  .cod-tarifa-fila { grid-template-columns: 1fr 90px auto; }
-  .cod-tier-fila { grid-template-columns: 60px 60px 1fr auto; }
-  .fila-doble-cod { grid-template-columns: 1fr; }
-}
-.cod-layout > * { min-width: 0; }
-.fila-doble-cod > * { min-width: 0; }
+.bdl-preview-card { position: sticky; top: 20px; }
 
 /* ============================================================
    Inicio radiante — chips de color e íconos con gradiente
@@ -1560,24 +1640,6 @@ ui-save-bar { display: none; }
 .paso-card { transition: box-shadow .15s ease, transform .15s ease; }
 .paso-card:hover { box-shadow: var(--sombra-m); transform: translateY(-1px); }
 
-
-/* interruptor maestro del COD */
-.cod-switch { display: inline-flex; align-items: center; gap: 10px; cursor: pointer; user-select: none; }
-.cod-switch input { position: absolute; opacity: 0; pointer-events: none; }
-.cod-switch__pista {
-  width: 40px; height: 22px; border-radius: 999px;
-  background: #d3d3d9; position: relative; flex-shrink: 0;
-  transition: background .15s ease;
-}
-.cod-switch__pista::after {
-  content: ""; position: absolute; top: 2px; left: 2px;
-  width: 18px; height: 18px; border-radius: 50%;
-  background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.25);
-  transition: left .15s ease;
-}
-.cod-switch input:checked + .cod-switch__pista { background: var(--ok); }
-.cod-switch input:checked + .cod-switch__pista::after { left: 20px; }
-.cod-switch__texto { font-size: 13.5px; font-weight: 600; color: var(--negro); }
 
 /* ============================================================
    Editor sobre el preview (estilo PagePilot): preview a pantalla
@@ -1812,111 +1874,6 @@ summary:focus-visible, label:focus-visible {
 .metrica--verde   .metrica__valor { color: #1a8a48; }
 .metrica--violeta .metrica__icono { color: var(--ia); }
 .metrica--verde   .metrica__icono { color: #1a8a48; }
-
-/* ============================================================
-   COD: agregar elementos + modo edición + ofertas rediseñadas
-   ============================================================ */
-
-.cod-vista-barra { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
-.cod-agregar { position: relative; flex: 0 0 auto; }
-.cod-agregar__menu {
-  position: absolute;
-  right: 0; top: calc(100% + 6px);
-  z-index: 50;
-  width: 240px;
-  background: var(--superficie);
-  border: 1px solid var(--borde);
-  border-radius: var(--radio);
-  box-shadow: var(--sombra-l);
-  padding: 6px;
-}
-.cod-agregar__grupo {
-  font-size: 11px; font-weight: 600;
-  text-transform: uppercase; letter-spacing: .04em;
-  color: var(--suave);
-  padding: 8px 10px 4px;
-}
-.cod-agregar__menu button {
-  display: flex; align-items: center; gap: 8px;
-  width: 100%;
-  border: 0; background: none;
-  padding: 8px 10px;
-  font-size: 13px; font-family: inherit;
-  color: var(--negro);
-  border-radius: var(--radio-s);
-  cursor: pointer;
-  text-align: left;
-}
-.cod-agregar__menu button:hover { background: var(--fondo); }
-.cod-agregar__menu button .ico { width: 17px; height: 17px; color: var(--suave); flex-shrink: 0; }
-.cod-agregar__menu button:hover .ico { color: var(--negro); }
-
-/* modo edición: preview + panel de propiedades */
-.cod-modo-layout {
-  display: grid;
-  grid-template-columns: 1fr 280px;
-  gap: 16px;
-  align-items: start;
-}
-@media (max-width: 900px) { .cod-modo-layout { grid-template-columns: 1fr; } }
-.cod-modo-layout > * { min-width: 0; }
-
-.cod-mov { cursor: pointer; border-radius: 6px; transition: box-shadow .1s ease; }
-.cod-mov:hover { box-shadow: 0 0 0 1.5px #b9b9c2; }
-.cod-mov--sel { box-shadow: 0 0 0 2px var(--ia) !important; }
-
-.cod-props {
-  position: sticky; top: 16px;
-  border: 1px solid var(--borde);
-  border-radius: var(--radio);
-  background: var(--fondo);
-  padding: 14px;
-}
-.cod-props__cab { font-size: 13.5px; font-weight: 600; color: var(--negro); margin-bottom: 10px; }
-.cod-props__acciones { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
-.cod-props__borrar { color: var(--peligro); }
-.cod-props__vacio { font-size: 13px; color: var(--suave); padding: 10px 4px; }
-
-.cod-engranaje {
-  position: absolute;
-  top: 4px; right: 4px;
-  width: 26px; height: 26px;
-  border: 1px solid var(--borde);
-  border-radius: 7px;
-  background: #fff;
-  cursor: pointer;
-  font-size: 13px;
-  line-height: 1;
-  box-shadow: var(--sombra-s);
-}
-.cod-engranaje:hover { background: var(--fondo); }
-
-/* diseñador de ofertas con cabeceras */
-.cod-tier-cab, .cod-tier-fila { grid-template-columns: 72px 72px 1fr 56px 150px auto; }
-.cod-tier-cab {
-  display: grid;
-  gap: 10px;
-  font-size: 11.5px; font-weight: 600;
-  text-transform: uppercase; letter-spacing: .03em;
-  color: var(--suave);
-  padding: 0 0 6px;
-}
-.cod-tier-pop { display: flex; align-items: center; justify-content: center; }
-.cod-tier-pop input { width: 16px; height: 16px; accent-color: var(--negro); cursor: pointer; }
-.cod-tier-calc { font-size: 12px; color: var(--suave); white-space: nowrap; }
-.cod-tier-calc strong { color: var(--negro); }
-@media (max-width: 700px) {
-  .cod-tier-cab { display: none; }
-  .cod-tier-fila { grid-template-columns: 60px 60px 1fr auto; }
-  .cod-tier-calc, .cod-tier-pop { display: none; }
-  .cod-vista-barra { flex-direction: column; align-items: stretch; }
-}
-@media (max-width: 700px) {
-  .cod-tier-fila, .cod-tarifa-fila { gap: 8px; }
-  .cod-tier-fila { grid-template-columns: 52px 52px 1fr auto; }
-  .cod-tier-fila > *, .cod-tarifa-fila > * { min-width: 0; }
-  .cod-tier-fila input, .cod-tarifa-fila input { width: 100%; padding: 0 8px; }
-}
 
 /* ============================================================
    Constructor de página: panel de Sections + drag & drop
@@ -2219,8 +2176,7 @@ body.sec-panel-abierto .constructor { padding-right: 356px; }
 }
 
 /* ============================================================
-   BUNDLES — dashboard + editor. Reusa cod-tabs, cod-layout, cod-preview,
-   cod-switch, campo--editor, cod-check, cod-banner (ya definidos arriba).
+   BUNDLES — dashboard + editor.
    ============================================================ */
 
 /* --- métricas --- */
@@ -2612,17 +2568,8 @@ body.sec-panel-abierto .constructor { padding-right: 356px; }
   border-radius: var(--radio-s); padding: 10px 12px; font-size: 13px; line-height: 1.45; margin-top: 6px;
 }
 
-/* --- barra "producto de prueba" en el preview de COD --- */
-.cod-prodbar {
-  display: flex; align-items: center; gap: 12px;
-  background: var(--superficie); border: 1px solid var(--borde);
-  border-radius: var(--radio); padding: 10px 14px; margin-bottom: 16px;
-}
-.cod-prodbar label { font-size: 13px; font-weight: 600; color: var(--negro); white-space: nowrap; }
-.cod-prodbar select { flex: 1 1 auto; max-width: 360px; }
-
 /* imagen real en la tarjeta del preview */
-.cod-preview__foto img, .bdl-preview__foto img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
+.bdl-preview__foto img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
 
 /* --- preview del widget real de bundles dentro de la tarjeta de Herramientas.
        El widget usa medidas en em, así que alcanza con bajar el font-size. --- */
@@ -2647,7 +2594,7 @@ body.sec-panel-abierto .constructor { padding-right: 356px; }
 /* -- 1. Anillo de foco de teclado unificado (misma declaración en todos) -- */
 .be-top .btn:focus-visible,
 .be-left .campo--editor select:focus-visible,
-.be-layout .cod-preview .campo--editor select:focus-visible,
+.be-layout .bdl-preview-card .campo--editor select:focus-visible,
 .perso-sw input[type="color"]:focus-visible,
 .bdl-pal:focus-visible,
 .bdl-pal-undo:focus-visible,
@@ -2665,15 +2612,15 @@ body.sec-panel-abierto .constructor { padding-right: 356px; }
 .be-toggle:focus-visible,
 .be-toggle:focus-within { outline: 2px solid #005bd3; outline-offset: 2px; }
 
-/* -- 2. Selects (Personalizar y preview COD): hover + foco con borde acento + disabled -- */
+/* -- 2. Selects (Personalizar y preview): hover + foco con borde acento + disabled -- */
 .be-left .campo--editor select,
-.be-layout .cod-preview .campo--editor select { transition: border-color .12s, box-shadow .12s; }
+.be-layout .bdl-preview-card .campo--editor select { transition: border-color .12s, box-shadow .12s; }
 .be-left .campo--editor select:hover:not(:disabled),
-.be-layout .cod-preview .campo--editor select:hover:not(:disabled) { border-color: #8c9196; }
+.be-layout .bdl-preview-card .campo--editor select:hover:not(:disabled) { border-color: #8c9196; }
 .be-left .campo--editor select:focus-visible,
-.be-layout .cod-preview .campo--editor select:focus-visible { border-color: #005bd3; }
+.be-layout .bdl-preview-card .campo--editor select:focus-visible { border-color: #005bd3; }
 .be-left .campo--editor select:disabled,
-.be-layout .cod-preview .campo--editor select:disabled { opacity: .45; cursor: not-allowed; }
+.be-layout .bdl-preview-card .campo--editor select:disabled { opacity: .45; cursor: not-allowed; }
 
 /* -- 3. Inputs de color (swatches del mapa Personalizar): hover borde -- */
 .perso-sw input[type="color"] { transition: border-color .12s, box-shadow .12s; }
@@ -2900,8 +2847,8 @@ body.sec-panel-abierto .constructor { padding-right: 356px; }
 .be-layout .be-left { gap: 18px; }
 
 /* Panel de vista previa: título 15/700, sub 13. */
-.be-layout .cod-preview .tarjeta__titulo { font-size: 15px; font-weight: 700; color: #1a1c1e; }
-.be-layout .cod-preview .panel__sub { font-size: 13px; color: #6d7175; }
+.be-layout .bdl-preview-card .tarjeta__titulo { font-size: 15px; font-weight: 700; color: #1a1c1e; }
+.be-layout .bdl-preview-card .panel__sub { font-size: 13px; color: #6d7175; }
 
 /* Editor de COMBO: lista de productos del paquete. */
 .be-cmb__prods { display: flex; flex-direction: column; gap: 8px; }

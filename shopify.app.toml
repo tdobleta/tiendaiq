@@ -69,12 +69,12 @@ api_version = "2026-07"
 # App Store mira lo declarado, así que se alinean.
 #
 #   read/write_products   páginas de producto con IA
-#   write_orders          crea el pedido real contra reembolso
 #   read/write_files      imágenes que sube el merchant (Files API)
 #   read/write_content    páginas About/Contact del módulo de contenido
 #   write_discounts       descuentos automáticos de los bundles
+#   read_orders           métricas agregadas de bundles en los últimos 30 días
 #   write_online_store_navigation   menú principal en español
-scopes = "read_products,write_products,write_orders,read_files,write_files,read_content,write_content,write_discounts,write_online_store_navigation"
+scopes = "read_products,write_products,read_files,write_files,read_content,write_content,write_discounts,read_orders,write_online_store_navigation"
 
 # ⚠ EN true A PROPÓSITO, POR AHORA.
 #

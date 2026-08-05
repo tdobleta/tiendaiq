@@ -1,10 +1,10 @@
 // ============================================================
 // DOBLES — reemplazos de mentira para Shopify y la base.
 //
-// Los módulos de negocio (facturacion, cod, bundles) hablan con dos cosas que
+// Los módulos de negocio (facturacion, bundles) hablan con dos cosas que
 // no queremos en una prueba: la Admin API de Shopify y el almacén de tiendas.
 // Sin poder sustituirlas, probar la lógica de plata significaría crear cargos
-// y pedidos de verdad.
+// y descuentos de verdad.
 //
 // Node resuelve cada `require` una sola vez y guarda el resultado en
 // `require.cache`, con la ruta absoluta del archivo como clave. Si metemos ahí
@@ -22,7 +22,7 @@ const ruta = (m) => require.resolve(path.join(RAIZ, m));
 
 // Módulos que se cargan de verdad y hay que sacar del cache para que la
 // próxima prueba los vuelva a construir con sus dobles nuevos.
-const A_LIMPIAR = ["shopify.js", "tiendas.js", "db.js", "facturacion.js", "cod.js", "bundles.js"];
+const A_LIMPIAR = ["shopify.js", "tiendas.js", "db.js", "facturacion.js", "bundles.js"];
 
 function limpiarCache() {
   for (const m of A_LIMPIAR) {

@@ -140,7 +140,7 @@
     // bundles) no va. Y una vez PUBLICADA, el asistente terminó: la
     // pantalla pasa a modo editor, sin stepper (patrón page-builder).
     const previewPublicada = estado.pantalla === "preview" && estado.pagina?.estado === "publicada";
-    if (previewPublicada || !["lista", "informacion", "generando", "preview"].includes(estado.pantalla)) {
+    if (previewPublicada || estado.pantalla === "lista" || !["informacion", "generando", "preview"].includes(estado.pantalla)) {
       cont.innerHTML = "";
       return;
     }
@@ -693,18 +693,15 @@
     return `<div class="clip-ok">${ico("check")} ${t === "yt" ? "Video de YouTube" : "Video"}</div>`;
   }
 
-  // ---------- 1. elegir producto (lanzador tipo command-palette) ----------
+  // ---------- 1. elegir producto ----------
   //
-  // Nada de grilla: una sola decisión. Un input que busca sobre los productos
-  // que ya cargamos (sin backend), operable 100% por teclado. Con el input
-  // vacío mostramos atajos: retomar borradores + productos sin página. La
-  // selección reusa el flujo existente: estado.producto → ir("informacion").
+  // Primera pantalla del asistente: una entrada sobria con un CTA que abre el
+  // selector de productos. Elegir producto no avanza solo; el merchant confirma
+  // con Continuar.
   function pantallaLista() {
-    const IC_LUPA = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>`;
-    const IC_CHISPA = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.8 4.9 4.9 1.8-4.9 1.8L12 15.9l-1.8-4.9L5.3 9.2l4.9-1.8zM19 14l.9 2.4 2.4.9-2.4.9L19 20.6l-.9-2.4-2.4-.9 2.4-.9z"/></svg>`;
-    const IC_GRID = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>`;
+    const HERO_CHISPA = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.8 4.9 4.9 1.8-4.9 1.8L12 15.9l-1.8-4.9L5.3 9.2l4.9-1.8zM19 14l.9 2.4 2.4.9-2.4.9L19 20.6l-.9-2.4-2.4-.9 2.4-.9z"/></svg>`;
+    const seleccionado = estado.producto;
 
-    // Tienda sin productos: estado honesto, no una grilla vacía.
     if (!estado.productos.length) {
       vista.innerHTML = `
         <button class="volver-flecha" id="volver-inicio"></button>
@@ -718,105 +715,69 @@
       return;
     }
 
+    const productoHTML = seleccionado
+      ? `<div class="crear-prod is-ready">
+          <span class="crear-prod__thumb">${seleccionado.imagen ? `<img src="${esc(seleccionado.imagen)}" alt="" loading="lazy">` : ico("bolsa")}</span>
+          <span class="crear-prod__txt">
+            <span class="crear-prod__label">Producto seleccionado</span>
+            <strong>${esc(seleccionado.titulo)}</strong>
+            <span>${seleccionado.precio != null ? esc(precioLindo(seleccionado.precio, seleccionado.moneda)) : "Precio no disponible"}${seleccionado.estado ? ` · ${ESTADO_ETQ[seleccionado.estado] || esc(seleccionado.estado)}` : ""}</span>
+          </span>
+          ${seleccionado.estado ? `<s-badge tone="${TONO_ESTADO[seleccionado.estado] || "neutral"}">${ESTADO_ETQ[seleccionado.estado] || esc(seleccionado.estado)}</s-badge>` : ""}
+        </div>`
+      : `<div class="crear-prod">
+          <span class="crear-prod__thumb">${ico("bolsa")}</span>
+          <span class="crear-prod__txt">
+            <span class="crear-prod__label">Producto de Shopify</span>
+            <strong>Elegí el producto que querés convertir en landing</strong>
+            <span>Usamos sus fotos, precio, variantes y descripción como base.</span>
+          </span>
+        </div>`;
+
     vista.innerHTML = `
       <div class="crear">
         <button class="volver-flecha" id="volver-inicio"></button>
-        <div class="crear__hero">
-          <span class="crear__eyebrow">${IC_CHISPA} Generador con IA</span>
-          <h1>Creá tu página de producto</h1>
-          <p>Elegí un producto y la IA arma la landing completa en segundos.</p>
-        </div>
-        <div class="consola">
-          <div class="consola__buscar">
-            <span class="consola__lupa">${IC_LUPA}</span>
-            <input class="consola__input" id="q" type="text" autocomplete="off" spellcheck="false"
-                   placeholder="Buscá un producto…" value="${esc(estado.filtro || "")}">
-            <span class="cmd__kbd">↑↓ · Enter</span>
-          </div>
-          <div class="consola__res" id="res" role="listbox" aria-label="Productos"></div>
-          <button class="consola__pie" id="ver-todos">${IC_GRID} Ver los ${estado.productos.length} productos de tu tienda</button>
+        <div class="crear-shell">
+          <section class="crear-hero-panel">
+            <div class="crear-hero-panel__copy">
+              <span class="crear__eyebrow">${HERO_CHISPA} Generador con IA</span>
+              <h1>Crear página de producto con IA</h1>
+              <p>Elegí un producto de tu tienda y TiendaIQ prepara una landing editable con copy, imágenes y secciones de venta.</p>
+            </div>
+
+            <div class="crear-card">
+              <div class="crear-card__head">
+                <div>
+                  <div class="crear-card__kicker">Paso 1</div>
+                  <h2>Seleccionar producto</h2>
+                </div>
+                <s-badge tone="info">Shopify</s-badge>
+              </div>
+              ${productoHTML}
+              <div class="crear-card__acciones">
+                <s-button id="elegir-shopify">${seleccionado ? "Cambiar producto" : "Elegir producto de Shopify"}</s-button>
+                <s-button variant="primary" id="continuar-producto" ${seleccionado ? "" : "disabled"}>Continuar</s-button>
+              </div>
+            </div>
+          </section>
+
+          <aside class="crear-flow" aria-label="Flujo de creación">
+            <div class="crear-flow__item is-active"><span>1</span><div><b>Producto</b><small>Elegí el ítem de tu catálogo.</small></div></div>
+            <div class="crear-flow__item"><span>2</span><div><b>Estrategia</b><small>Definí idioma, público y ángulo.</small></div></div>
+            <div class="crear-flow__item"><span>3</span><div><b>Plantilla</b><small>Seleccioná estilo antes de generar.</small></div></div>
+          </aside>
         </div>
       </div>`;
 
     $("volver-inicio").onclick = () => ir("inicio");
-    $("ver-todos").onclick = abrirPickerTodos;
-    const q0 = $("q");
-    let navIdx = 0;      // fila activa
-    let navLista = [];   // ids en orden de navegación
+    $("elegir-shopify").onclick = () => abrirPickerTodos();
+    $("continuar-producto").onclick = () => { if (estado.producto) ir("informacion"); };
 
-    const fila = (p) => `
-      <button class="fila" role="option" data-id="${esc(p.id)}">
-        <span class="fila__thumb">${p.imagen ? `<img src="${esc(p.imagen)}" alt="" loading="lazy">` : `<span class="fila__ph">${ico("bolsa")}</span>`}</span>
-        <span class="fila__txt">
-          <span class="fila__tit">${esc(p.titulo)}</span>
-          ${p.precio != null ? `<span class="fila__precio">${esc(precioLindo(p.precio, p.moneda))}</span>` : ""}
-        </span>
-        ${
-          p.estado
-            ? `<s-badge tone="${TONO_ESTADO[p.estado] || "neutral"}">${ESTADO_ETQ[p.estado] || esc(p.estado)}</s-badge>`
-            : `<span class="fila__cta">Crear página ${ico("flecha")}</span>`
-        }
-      </button>`;
-
-    function marcarActiva(scroll = true) {
-      $("res").querySelectorAll(".fila").forEach((b, i) => {
-        const on = i === navIdx;
-        b.classList.toggle("is-activa", on);
-        b.setAttribute("aria-selected", on ? "true" : "false");
-        if (on && scroll) b.scrollIntoView({ block: "nearest" });
-      });
-    }
-
-    function renderResultados() {
-      const q = (estado.filtro || "").trim().toLowerCase();
-      let html = "";
-      let planos = [];
-
-      if (!q) {
-        const borradores = estado.productos.filter((p) => p.estado === "borrador").slice(0, 3);
-        const sinPagina = estado.productos.filter((p) => !p.estado).slice(0, 4);
-        planos = [...borradores, ...sinPagina];
-        if (borradores.length) html += `<div class="consola__grupo">Seguí donde dejaste</div>` + borradores.map(fila).join("");
-        if (sinPagina.length) html += `<div class="consola__grupo">Empezá una nueva</div>` + sinPagina.map(fila).join("");
-      } else {
-        planos = estado.productos.filter((p) => p.titulo.toLowerCase().includes(q)).slice(0, 50);
-        html = planos.length
-          ? planos.map(fila).join("")
-          : `<div class="vacio">Ningún producto coincide con “${esc(estado.filtro)}”.</div>`;
-      }
-
-      navLista = planos.map((p) => p.id);
-      if (navIdx >= navLista.length) navIdx = Math.max(0, navLista.length - 1);
-
-      const cont = $("res");
-      cont.innerHTML = html;
-      cont.querySelectorAll(".fila").forEach((b) => {
-        b.onclick = () => elegirProducto(b.dataset.id);
-        b.onmouseenter = () => {
-          const i = navLista.indexOf(b.dataset.id);
-          if (i >= 0 && i !== navIdx) { navIdx = i; marcarActiva(false); }
-        };
-      });
-      marcarActiva(false);
-    }
-
-    renderResultados();
-    q0.focus();
-    q0.setSelectionRange(q0.value.length, q0.value.length);
-
-    q0.oninput = () => { estado.filtro = q0.value; navIdx = 0; renderResultados(); };
-    q0.onkeydown = (e) => {
-      const n = navLista.length;
-      if (e.key === "ArrowDown") { e.preventDefault(); if (n) { navIdx = (navIdx + 1) % n; marcarActiva(); } }
-      else if (e.key === "ArrowUp") { e.preventDefault(); if (n) { navIdx = (navIdx - 1 + n) % n; marcarActiva(); } }
-      else if (e.key === "Enter") { e.preventDefault(); if (navLista[navIdx]) elegirProducto(navLista[navIdx]); }
-      else if (e.key === "Escape" && q0.value) { q0.value = ""; estado.filtro = ""; navIdx = 0; renderResultados(); }
-    };
   }
 
   function elegirProducto(id) {
     estado.producto = estado.productos.find((p) => p.id === id);
-    if (estado.producto) ir("informacion");
+    if (estado.producto && estado.pantalla === "lista") pantallaLista();
   }
 
   // Sube una imagen (add-on del bundle) a Shopify Files y guarda su URL en la
@@ -851,19 +812,26 @@
       <div class="picker" role="dialog" aria-modal="true" aria-label="Todos los productos">
         <div class="picker__cab">
           <h2>Todos los productos</h2>
-          <button class="picker__x" type="button" aria-label="Cerrar">${ico("x")}</button>
+          <s-button id="pk-x">Cerrar</s-button>
         </div>
         <div class="picker__buscar">
           <span class="picker__lupa">${IC_LUPA}</span>
           <input id="pk-q" type="text" autocomplete="off" spellcheck="false" placeholder="Buscar productos…">
         </div>
         <div class="picker__lista" id="pk-lista"></div>
-        <div class="picker__pie" id="pk-conteo"></div>
+        <div class="picker__pie picker__pie--acciones">
+          <span id="pk-conteo"></span>
+          <span class="picker__acciones">
+            <s-button id="pk-cancelar">Cancelar</s-button>
+            <s-button variant="primary" id="pk-seleccionar" disabled>Seleccionar producto</s-button>
+          </span>
+        </div>
       </div>`;
     document.body.appendChild(cont);
+    let seleccionadoId = onPick ? null : estado.producto?.id || null;
 
     const filaP = (p) => `
-      <button class="fila" type="button" data-id="${esc(p.id)}">
+      <button class="fila picker__fila ${p.id === seleccionadoId ? "is-selected" : ""}" type="button" data-id="${esc(p.id)}">
         <span class="fila__thumb">${p.imagen ? `<img src="${esc(p.imagen)}" alt="" loading="lazy">` : `<span class="fila__ph">${ico("bolsa")}</span>`}</span>
         <span class="fila__txt">
           <span class="fila__tit">${esc(p.titulo)}</span>
@@ -878,6 +846,10 @@
 
     const lista = cont.querySelector("#pk-lista");
     const conteo = cont.querySelector("#pk-conteo");
+    const confirmar = cont.querySelector("#pk-seleccionar");
+    const refrescarConfirmar = () => {
+      if (confirmar) confirmar.toggleAttribute("disabled", !seleccionadoId);
+    };
     const pintar = (q = "") => {
       const t = q.trim().toLowerCase();
       const arr = t ? estado.productos.filter((p) => p.titulo.toLowerCase().includes(t)) : estado.productos;
@@ -885,18 +857,31 @@
       conteo.textContent = `${arr.length} producto${arr.length === 1 ? "" : "s"}`;
       lista.querySelectorAll(".fila").forEach((b) => {
         b.onclick = () => {
-          cerrar();
-          if (onPick) onPick((estado.productos || []).find((p) => p.id === b.dataset.id) || { id: b.dataset.id });
-          else elegirProducto(b.dataset.id);
+          if (onPick) {
+            cerrar();
+            onPick((estado.productos || []).find((p) => p.id === b.dataset.id) || { id: b.dataset.id });
+            return;
+          }
+          seleccionadoId = b.dataset.id;
+          lista.querySelectorAll(".fila").forEach((x) => x.classList.toggle("is-selected", x === b));
+          refrescarConfirmar();
         };
       });
+      refrescarConfirmar();
     };
     const onKey = (e) => { if (e.key === "Escape") cerrar(); };
     function cerrar() { cont.remove(); document.removeEventListener("keydown", onKey); }
 
     cont.addEventListener("click", (e) => {
-      if (e.target === cont || e.target.closest(".picker__x")) cerrar();
+      if (e.target === cont || e.target.closest("#pk-x")) cerrar();
     });
+    cont.querySelector("#pk-cancelar").onclick = cerrar;
+    confirmar.onclick = () => {
+      if (!seleccionadoId) return;
+      cerrar();
+      if (onPick) onPick((estado.productos || []).find((p) => p.id === seleccionadoId) || { id: seleccionadoId });
+      else elegirProducto(seleccionadoId);
+    };
     document.addEventListener("keydown", onKey);
     const pkq = cont.querySelector("#pk-q");
     pkq.oninput = () => pintar(pkq.value);
