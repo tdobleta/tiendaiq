@@ -4319,7 +4319,10 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         /* Onboarding en columna centrada y con más presencia. Valores literales:
            robustos aunque los tokens no crucen algún shadow boundary. */
         .bdl-onb-wrap{max-width:1320px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
-        .bdl-hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:36px;align-items:center;padding:40px;border-radius:16px;background:#fff;border:1px solid #e6e6ea}
+        /* Marco negro (negro de la app, no #000 puro) en las dos cards
+           contenedoras: la de "Primeros pasos" y la del hero. */
+        .bdl-onboard{border:1.5px solid #202223}
+        .bdl-hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:36px;align-items:center;padding:40px;border-radius:16px;background:#fff;border:1.5px solid #202223}
         .bdl-hero__ico{width:66px;height:66px;border-radius:16px;background:#eef0f2;display:flex;align-items:center;justify-content:center;margin-bottom:18px}
         .bdl-hero__ico svg{width:32px;height:32px;color:#202223}
         .bdl-hero__t{font-size:24px;font-weight:800;letter-spacing:-.4px;color:#202223;line-height:1.15}
