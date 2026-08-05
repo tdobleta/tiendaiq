@@ -137,7 +137,7 @@
   function pintarPasos() {
     const cont = $("pasos");
     // El stepper es SOLO del flujo de CREACIÓN. En el resto (inicio, tabla,
-    // COD, bundles) no va. Y una vez PUBLICADA, el asistente terminó: la
+    // bundles) no va. Y una vez PUBLICADA, el asistente terminó: la
     // pantalla pasa a modo editor, sin stepper (patrón page-builder).
     const previewPublicada = estado.pantalla === "preview" && estado.pagina?.estado === "publicada";
     if (previewPublicada || !["lista", "informacion", "generando", "preview"].includes(estado.pantalla)) {
@@ -178,7 +178,7 @@
   async function pantallaInicio() {
     vista.innerHTML = `<div class="generando"><div class="giro"></div><h2>Leyendo tu tienda…</h2></div>`;
     try {
-      // COD y bundles son para los "primeros pasos": si fallan, la home igual
+      // Bundles es para los "primeros pasos": si falla, la home igual
       // se dibuja (por eso el catch por separado, no dentro del Promise.all).
       const [plan, paginas, bundles] = await Promise.all([
         api("/plan"),
@@ -1602,9 +1602,9 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
 
     return (
       cabecera +
-      `<div class="cod-separador"></div>` +
+      `<div class="ui-separador"></div>` +
       items +
-      `<div class="cod-separador"></div>
+      `<div class="ui-separador"></div>
        <button class="btn btn--fantasma sec-borrar" type="button" data-sec-borrar="${s.id}">${ico("basura")} Eliminar esta sección</button>`
     );
   }
@@ -1931,8 +1931,10 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
 
     const st = doc.createElement("style");
     st.textContent = `
-      #tiq-edit-bar { position: absolute; z-index: 99999; display: none; gap: 6px;
+      #tiq-edit-bar { position: absolute; z-index: 99999; display: none; gap: 6px; align-items: center;
         font: 600 13px/1 Inter, -apple-system, sans-serif; }
+      #tiq-edit-bar .tiq-nom { background: #005bd3; color: #fff; border-radius: 8px; padding: 6px 11px;
+        box-shadow: 0 4px 14px rgba(0,0,0,.16); white-space: nowrap; letter-spacing: -.1px; }
       #tiq-edit-bar button { display: flex; align-items: center; gap: 6px;
         background: #fff; border: 1px solid #d9d9de; border-radius: 9px; box-shadow: 0 4px 14px rgba(0,0,0,.16);
         padding: 8px 12px; color: #1a1a1a; cursor: pointer; font: inherit; }
@@ -1940,12 +1942,13 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       #tiq-edit-bar .tiq-del { color: #dc2626; }
       #tiq-edit-bar .tiq-del:hover { background: #fdeaea; }
       #tiq-edit-bar .ico { width: 15px; height: 15px; flex-shrink: 0; }
-      .tiq-zona-hover { outline: 2px dashed #005bd3; outline-offset: 5px; border-radius: 4px; }`;
+      .tiq-zona-hover { outline: 2px solid #005bd3; outline-offset: 3px; border-radius: 6px; }`;
     doc.head.appendChild(st);
 
     const bar = doc.createElement("div");
     bar.id = "tiq-edit-bar";
-    bar.innerHTML = `<button class="tiq-editar" type="button">${ico("lapiz")} Editar</button><button class="tiq-del" type="button" title="Eliminar sección" aria-label="Eliminar sección" style="display:none">${ico("basura")}</button>`;
+    bar.innerHTML = `<span class="tiq-nom"></span><button class="tiq-editar" type="button">${ico("lapiz")} Editar</button><button class="tiq-del" type="button" title="Eliminar sección" aria-label="Eliminar sección" style="display:none">${ico("basura")}</button>`;
+    const barNom = bar.querySelector(".tiq-nom");
     doc.body.appendChild(bar);
     const btn = bar; // el contenedor hace de "botón" posicionable
     const btnEditar = bar.querySelector(".tiq-editar");
@@ -1957,6 +1960,18 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       btn.style.display = "none";
       if (zonaEl) zonaEl.classList.remove("tiq-zona-hover");
       zonaEl = null;
+    };
+
+    // Nombre legible de la zona (para el chip) + sync con la fila del árbol.
+    const NOMBRE_ZONA = { encabezado: "Encabezado", galeria: "Galería", bullets: "Beneficios", destacada: "Reseña destacada", acordeones: "Envío y devoluciones", iconos: "Íconos", stats: "Estadísticas", faq: "Preguntas frecuentes", resenas: "Reseñas", clientes: "Muro de clientes" };
+    const nombreZona = (zid) => {
+      if (zid.startsWith("sec:")) { const s = (estado.pagina.data.secciones || []).find((x) => x.id === zid.slice(4)); return s ? (catSeccion(s.tipo)?.nombre || "Sección") : "Sección"; }
+      return NOMBRE_ZONA[zid] || zid;
+    };
+    const marcarArbol = (zid) => {
+      vista.querySelectorAll(".pe-tree__row.is-sel").forEach((r) => r.classList.remove("is-sel"));
+      const row = vista.querySelector(`.pe-tree__row[data-tree="${zid}"]`);
+      if (row) row.classList.add("is-sel");
     };
 
     doc.addEventListener("mouseover", (e) => {
@@ -1986,6 +2001,8 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       const r = zonaEl.getBoundingClientRect();
       const scrollY = doc.defaultView.scrollY;
       btn.dataset.sec = hit.id;
+      barNom.textContent = nombreZona(hit.id); // chip con el nombre de la sección
+      marcarArbol(hit.id);                       // resalta la fila en el árbol
       // Se puede borrar: las sections incrustadas (sec:) y los bloques fijos
       // "opcionales" (no el hero, que es el corazón de la página).
       btnDel.style.display = (hit.id.startsWith("sec:") || ZONAS_BORRABLES.has(hit.id)) ? "flex" : "none";
@@ -2911,7 +2928,9 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       row("bullets", "Beneficios", I.beneficios) + row("destacada", "Reseña destacada", I.estrella) +
       row("resenas", "Reseñas", I.estrella);
     const v2 = (estado.pagina.data.secciones || []).map((s) => row("sec:" + s.id, catSeccion(s.tipo)?.nombre || "Sección", I.lista)).join("");
-    const extra = row("clientes", "Muro de clientes", I.video) + row("acordeones", "Preguntas frecuentes", I.lista) + v2;
+    const extra = row("clientes", "Muro de clientes", I.video) + row("acordeones", "Envío y devoluciones", I.lista) +
+      row("faq", "Preguntas frecuentes", I.lista) + row("iconos", "Garantías / íconos", I.beneficios) +
+      row("stats", "Estadísticas", I.lista) + v2;
     return `<nav class="pe-tree" aria-label="Bloques de la página">
       <div class="pe-tree__head">Página de producto</div>
       <div class="pe-tree__body">${grupo("Información del producto", info)}${grupo("Secciones extra", extra)}</div>
@@ -3654,10 +3673,10 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       </div>`;
     };
 
-    const tabsHTML = `<div class="cod-tabs bdl-filtros">
-      <button class="cod-tab ${filtro === "todas" ? "cod-tab--activa" : ""}" data-filtro="todas">Todas <span class="bdl-filtros__n">${lista.length}</span></button>
-      <button class="cod-tab ${filtro === "activas" ? "cod-tab--activa" : ""}" data-filtro="activas">Activas <span class="bdl-filtros__n">${nAct}</span></button>
-      <button class="cod-tab ${filtro === "pausadas" ? "cod-tab--activa" : ""}" data-filtro="pausadas">Pausadas <span class="bdl-filtros__n">${nPaus}</span></button>
+    const tabsHTML = `<div class="ui-tabs bdl-filtros">
+      <button class="ui-tab ${filtro === "todas" ? "ui-tab--activa" : ""}" data-filtro="todas">Todas <span class="bdl-filtros__n">${lista.length}</span></button>
+      <button class="ui-tab ${filtro === "activas" ? "ui-tab--activa" : ""}" data-filtro="activas">Activas <span class="bdl-filtros__n">${nAct}</span></button>
+      <button class="ui-tab ${filtro === "pausadas" ? "ui-tab--activa" : ""}" data-filtro="pausadas">Pausadas <span class="bdl-filtros__n">${nPaus}</span></button>
     </div>`;
 
     const cuerpoTabla = visibles.length
@@ -4722,7 +4741,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
           ${campoBdl(`ofertas.${i}.badge`, "Insignia (ej. Más elegido)")}
           <div class="bdl-checks">
             ${campoBdl(`ofertas.${i}.popular`, "Destacar (borde marcado)", "bool")}
-            <label class="cod-check"><input type="radio" name="bdl-pred" data-pred="${i}" ${o.predeterminada ? "checked" : ""}> Seleccionada por defecto</label>
+            <label class="ui-check"><input type="radio" name="bdl-pred" data-pred="${i}" ${o.predeterminada ? "checked" : ""}> Seleccionada por defecto</label>
           </div>
         </div>`)
       .join("");
@@ -4785,7 +4804,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     const v = leer(bundleActual(), ruta);
     if (tipo === "color") {
       return `<div class="campo campo--editor bdl-color"><label>${etiqueta}</label>
-        <span class="cod-color__fila"><input type="color" data-b="${ruta}" value="${esc(v || "#000000")}">
+        <span class="ui-color__fila"><input type="color" data-b="${ruta}" value="${esc(v || "#000000")}">
         <code>${esc(v || "#000000")}</code></span></div>`;
     }
     if (tipo === "bool") {
@@ -4892,7 +4911,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     const nombre = sel ? sel.titulo : "Producto de ejemplo";
     const foto = sel && sel.imagen ? `<img src="${esc(sel.imagen)}" alt="">` : ico("bolsa", "ico--ph");
     const mobile = !!estado.bundles.previewMobile;
-    return `<aside class="tarjeta cod-preview">
+    return `<aside class="tarjeta bdl-preview-card">
       <div class="tarjeta__titulo">Vista previa en vivo</div>
       <div class="panel__sub">Elegí un producto de tu tienda para verlo real</div>
       ${
