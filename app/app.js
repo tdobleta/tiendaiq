@@ -701,6 +701,9 @@
   function pantallaLista() {
     const HERO_CHISPA = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.8 4.9 4.9 1.8-4.9 1.8L12 15.9l-1.8-4.9L5.3 9.2l4.9-1.8zM19 14l.9 2.4 2.4.9-2.4.9L19 20.6l-.9-2.4-2.4-.9 2.4-.9z"/></svg>`;
     const seleccionado = estado.producto;
+    const totalProductos = estado.productos.length;
+    const productosConPagina = estado.productos.filter((p) => p.estado).length;
+    const productosSinPagina = Math.max(0, totalProductos - productosConPagina);
 
     if (!estado.productos.length) {
       vista.innerHTML = `
@@ -714,6 +717,12 @@
       $("volver-inicio").onclick = () => ir("inicio");
       return;
     }
+
+    const miniaturas = estado.productos
+      .filter((p) => p.imagen)
+      .slice(0, 5)
+      .map((p) => `<span title="${esc(p.titulo)}"><img src="${esc(p.imagen)}" alt="" loading="lazy"></span>`)
+      .join("");
 
     const productoHTML = seleccionado
       ? `<div class="crear-prod is-ready">
@@ -729,49 +738,72 @@
           <span class="crear-prod__thumb">${ico("bolsa")}</span>
           <span class="crear-prod__txt">
             <span class="crear-prod__label">Producto de Shopify</span>
-            <strong>Elegí el producto que querés convertir en landing</strong>
-            <span>Usamos sus fotos, precio, variantes y descripción como base.</span>
+            <strong>Elegí el producto que querés convertir en una página de venta</strong>
+            <span>TiendaIQ toma sus fotos, precio, variantes y descripción como punto de partida.</span>
           </span>
         </div>`;
+
+    const accionesHTML = seleccionado
+      ? `<s-button id="elegir-shopify">Cambiar producto</s-button>
+         <s-button variant="primary" id="continuar-producto">Continuar</s-button>`
+      : `<s-button variant="primary" id="elegir-shopify">Elegir producto de Shopify</s-button>`;
 
     vista.innerHTML = `
       <div class="crear">
         <button class="volver-flecha" id="volver-inicio"></button>
-        <div class="crear-shell">
+        <div class="crear-stage">
           <section class="crear-hero-panel">
             <div class="crear-hero-panel__copy">
-              <span class="crear__eyebrow">${HERO_CHISPA} Generador con IA</span>
-              <h1>Crear página de producto con IA</h1>
-              <p>Elegí un producto de tu tienda y TiendaIQ prepara una landing editable con copy, imágenes y secciones de venta.</p>
+              <span class="crear__eyebrow">${HERO_CHISPA} Generador de páginas con IA</span>
+              <h1>Convertí un producto de Shopify en una página lista para vender</h1>
+              <p>Seleccioná un producto de tu catálogo y TiendaIQ prepara una landing editable con estructura comercial, copy, imágenes y secciones pensadas para aumentar claridad antes del clic de compra.</p>
+
+              <div class="crear-market-note">
+                <span>Nota de mercado</span>
+                <p>El comercio directo al consumidor ya probó su fuerza en Estados Unidos y Europa. En Sudamérica todavía hay espacio para marcas ágiles que eligen buenos productos, comunican mejor y publican más rápido.</p>
+              </div>
+
+              <div class="crear-hero-metrics" aria-label="Resumen de catálogo">
+                <div><b>${totalProductos}</b><span>productos disponibles</span></div>
+                <div><b>${productosSinPagina}</b><span>sin página generada</span></div>
+                <div><b>3</b><span>pasos antes de publicar</span></div>
+              </div>
             </div>
 
             <div class="crear-card">
               <div class="crear-card__head">
                 <div>
-                  <div class="crear-card__kicker">Paso 1</div>
-                  <h2>Seleccionar producto</h2>
+                  <div class="crear-card__kicker">Primer paso</div>
+                  <h2>Elegí el producto base</h2>
                 </div>
                 <s-badge tone="info">Shopify</s-badge>
               </div>
               ${productoHTML}
               <div class="crear-card__acciones">
-                <s-button id="elegir-shopify">${seleccionado ? "Cambiar producto" : "Elegir producto de Shopify"}</s-button>
-                <s-button variant="primary" id="continuar-producto" ${seleccionado ? "" : "disabled"}>Continuar</s-button>
+                ${accionesHTML}
               </div>
             </div>
           </section>
 
-          <aside class="crear-flow" aria-label="Flujo de creación">
-            <div class="crear-flow__item is-active"><span>1</span><div><b>Producto</b><small>Elegí el ítem de tu catálogo.</small></div></div>
-            <div class="crear-flow__item"><span>2</span><div><b>Estrategia</b><small>Definí idioma, público y ángulo.</small></div></div>
-            <div class="crear-flow__item"><span>3</span><div><b>Plantilla</b><small>Seleccioná estilo antes de generar.</small></div></div>
+          <aside class="crear-side" aria-label="Preparación de la página">
+            <div class="crear-side__top">
+              <span>Catálogo conectado</span>
+              <b>${totalProductos} productos</b>
+              ${miniaturas ? `<div class="crear-side__thumbs">${miniaturas}</div>` : `<p>Las imágenes del producto se leen al generar la página.</p>`}
+            </div>
+            <div class="crear-flow">
+              <div class="crear-flow__item is-active"><span>1</span><div><b>Producto</b><small>Elegí el ítem de tu catálogo.</small></div></div>
+              <div class="crear-flow__item"><span>2</span><div><b>Estrategia</b><small>Definí idioma, público y ángulo.</small></div></div>
+              <div class="crear-flow__item"><span>3</span><div><b>Plantilla</b><small>Seleccioná estilo antes de generar.</small></div></div>
+            </div>
           </aside>
         </div>
       </div>`;
 
     $("volver-inicio").onclick = () => ir("inicio");
     $("elegir-shopify").onclick = () => abrirPickerTodos();
-    $("continuar-producto").onclick = () => { if (estado.producto) ir("informacion"); };
+    const continuar = $("continuar-producto");
+    if (continuar) continuar.onclick = () => { if (estado.producto) ir("informacion"); };
 
   }
 
