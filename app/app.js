@@ -4011,6 +4011,23 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     };
   }
 
+  // BOGO "Comprá y llevá gratis" pre-armado como Pumper: mismo editor de
+  // NIVELES (backend por volumen, ya probado) con títulos BOGO y el % que
+  // equivale a "llevás N gratis" (comprá 2 llevás 1 = 3 uds, pagás 2 = 33%;
+  // comprá 3 llevás 2 = 5 uds, pagás 3 = 40%). Fotos de ejemplo por nivel.
+  function nuevoBundleBogo() {
+    const b = nuevoBundleLocal("volumen");
+    b.nombre = "Comprá y llevá gratis";
+    b.diseno.titulo = "Comprá y llevá gratis";
+    b.diseno.subtitulo = "Cuanto más llevás, más regalás";
+    b.ofertas = [
+      { cantidad: 1, descuento: 0,  titulo: "Comprá 1",                 subtitulo: "Precio normal", etiqueta: "",        badge: "",            popular: false, predeterminada: false, addons: { imagen: { on: true, url: "/img/bundle-ejemplo-1.svg", tamano: "mediano", radio: 12 } } },
+      { cantidad: 3, descuento: 33, titulo: "Comprá 2, llevás 1 gratis", subtitulo: "",              etiqueta: "33% OFF", badge: "Más elegido", popular: true,  predeterminada: true,  addons: { imagen: { on: true, url: "/img/bundle-ejemplo-2.svg", tamano: "mediano", radio: 12 } } },
+      { cantidad: 5, descuento: 40, titulo: "Comprá 3, llevás 2 gratis", subtitulo: "",              etiqueta: "40% OFF", badge: "Mejor valor", popular: false, predeterminada: false, addons: { imagen: { on: true, url: "/img/bundle-ejemplo-3.svg", tamano: "mediano", radio: 12 } } }
+    ];
+    return b;
+  }
+
   // Toast reutilizable: feedback de acciones, con "Deshacer" opcional.
   function toast(msg, opts = {}) {
     // App Bridge nativo cuando estamos embebidos (look "Built for Shopify").
@@ -4101,7 +4118,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
 
   // Crea un bundle del tipo elegido y salta al editor.
   function crearDesdeTema(tipo) {
-    const nb = nuevoBundleLocal(tipo);
+    const nb = tipo === "bxgy" ? nuevoBundleBogo() : nuevoBundleLocal(tipo);
     // El color elegido en la galería pasa a ser el acento del bundle.
     const ac = estado.bundles.temaColor;
     if (ac) { nb.diseno.color_borde = ac; nb.diseno.color_badge = ac; nb.diseno.color_etiqueta = ac; nb.diseno.boton.color_fondo = ac; }
@@ -4187,7 +4204,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         </div>
         <div class="bt-grid">
           ${card("Comprá más, ahorrá más", cardVolumen, "Personalizar ahora", "volumen", true)}
-          ${card("Comprá y llevá gratis", cardBogo, "Personalizar ahora", "bxgy", false)}
+          ${card("Comprá y llevá gratis", cardBogo, "Personalizar ahora", "bxgy", true)}
           ${card("Regalos gratis", cardGift, "Personalizar ahora", "gift", false)}
           ${card("Bundle y Ahorrá", cardCombo, "Crear un Paquete", "combo", false)}
         </div>
