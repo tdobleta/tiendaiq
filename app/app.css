@@ -2404,12 +2404,42 @@ body.sec-panel-abierto .constructor { padding-right: 356px; }
 .bdl-bform__prev { display: grid; place-items: center; height: 22px; }
 .bdl-bform .tiq-bdl__badge { position: static; top: auto; right: auto; background: #a90c4e; color: #fff; }
 .bdl-bform__n { font-size: 11px; color: var(--suave); }
-.bdl-pvtoggle { display: inline-flex; margin: 2px 0 12px; border: 1px solid #c9cccf; border-radius: 8px; overflow: hidden; }
-.bdl-pvbtn { font-size: 12px; padding: 5px 14px; border: 0; background: #fff; cursor: pointer; color: #6d7175; }
-.bdl-pvbtn + .bdl-pvbtn { border-left: 1px solid #c9cccf; }
-.bdl-pvbtn.is-sel { background: #f1f1f2; color: #202223; font-weight: 600; }
-.bdl-pvbtn:focus-visible { outline: 2px solid #2c6ecb; outline-offset: -2px; }
-.bdl-preview__marco.is-mobile #bdl-preview { max-width: 380px; margin: 0 auto; }
+.bdl-pvtoggle { display: inline-flex; margin: 6px 0 2px; border: 1px solid #d2d5d8; border-radius: 9px; overflow: hidden; background: #fff; }
+.bdl-pvbtn { font-size: 13px; padding: 7px 18px; border: 0; background: #fff; cursor: pointer; color: #6d7175; font-weight: 500; transition: background .12s, color .12s; }
+.bdl-pvbtn + .bdl-pvbtn { border-left: 1px solid #d2d5d8; }
+.bdl-pvbtn.is-sel { background: #202223; color: #fff; font-weight: 600; }
+.bdl-pvbtn:focus-visible { outline: 2px solid #005bd3; outline-offset: -2px; }
+
+/* Vista previa como DISPOSITIVOS reales — hace visible el toggle y da contexto
+   de tienda. Prefijo .be-layout para ganar al reset de arriba (.be-layout
+   .bdl-preview__marco { border:none; padding:0 }). */
+.be-layout .bdl-preview__marco { margin-top: 14px; transition: max-width .18s ease; }
+/* Escritorio: tarjeta con barra de navegador sutil (3 puntos). */
+.be-layout .bdl-preview__marco.is-desktop {
+  border: 1px solid #d9dce0; border-radius: 12px; background: #fff; overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,.06);
+}
+.be-layout .bdl-preview__marco.is-desktop::before {
+  content: ""; display: block; height: 32px; background: #f3f4f6; border-bottom: 1px solid #e6e6ea;
+  background-image:
+    radial-gradient(circle at 16px 16px, #cdd1d6 3px, transparent 3.5px),
+    radial-gradient(circle at 30px 16px, #cdd1d6 3px, transparent 3.5px),
+    radial-gradient(circle at 44px 16px, #cdd1d6 3px, transparent 3.5px);
+  background-repeat: no-repeat;
+}
+.be-layout .bdl-preview__marco.is-desktop #bdl-preview { padding: 18px; }
+/* Móvil: marco de teléfono con bisel oscuro y "speaker". */
+.be-layout .bdl-preview__marco.is-mobile {
+  max-width: 322px; margin: 14px auto 0; background: #14171b; border-radius: 34px;
+  padding: 12px; box-shadow: 0 10px 34px rgba(0,0,0,.22);
+}
+.be-layout .bdl-preview__marco.is-mobile::before {
+  content: ""; display: block; width: 46px; height: 5px; border-radius: 3px;
+  background: #3a3f45; margin: 3px auto 9px;
+}
+.be-layout .bdl-preview__marco.is-mobile #bdl-preview {
+  background: #fff; border-radius: 24px; padding: 16px 14px; overflow: hidden;
+}
 .bdl-hist { display: flex; justify-content: flex-end; gap: 6px; margin-bottom: 6px; }
 .bdl-histbtn { width: 30px; height: 30px; border: 1px solid #c9cccf; background: #fff; border-radius: 8px; cursor: pointer; color: #202223; font-size: 15px; line-height: 1; }
 .bdl-histbtn:hover:not(:disabled) { background: #f6f6f7; }

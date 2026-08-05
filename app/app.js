@@ -4603,6 +4603,19 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     const selProd = $("bdl-preview-prod");
     if (selProd) selProd.onchange = (e) => { estado.bundles.previewProd = e.target.value || null; pintarEditorBundle(); };
 
+    // Toggle Escritorio/Móvil: se cablea ACÁ (directo), no por el listener
+    // delegado de bindEditorBundle — ese cuelga de #be-left y estos botones
+    // viven en el aside (hermano), así que nunca recibía el click (bug).
+    vista.querySelectorAll("[data-pv]").forEach((btn) => {
+      btn.onclick = () => {
+        const mob = btn.dataset.pv === "mobile";
+        estado.bundles.previewMobile = mob;
+        const marco = vista.querySelector(".bdl-preview__marco");
+        if (marco) { marco.classList.toggle("is-mobile", mob); marco.classList.toggle("is-desktop", !mob); }
+        vista.querySelectorAll("[data-pv]").forEach((x) => x.classList.toggle("is-sel", x === btn));
+      };
+    });
+
     bindEditorBundle(b, s);
     pintarPreviewBundle();
 
@@ -5482,7 +5495,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         <button type="button" class="bdl-pvbtn ${mobile ? "" : "is-sel"}" data-pv="desktop">Escritorio</button>
         <button type="button" class="bdl-pvbtn ${mobile ? "is-sel" : ""}" data-pv="mobile">Móvil</button>
       </div>
-      <div class="bdl-preview__marco ${mobile ? "is-mobile" : ""}">
+      <div class="bdl-preview__marco ${mobile ? "is-mobile" : "is-desktop"}">
         <div id="bdl-preview"></div>
       </div>
     </aside>`;
