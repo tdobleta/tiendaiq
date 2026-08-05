@@ -4582,11 +4582,14 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       </div>
       <div class="be-layout">
         <div class="be-left" id="be-left">
-          <div class="be-sec__title be-sec__title--top">Las ofertas ganadoras comienzan aquí</div>
+          <div class="be-guinda be-guinda--top">
+            <div class="be-guinda__t">Configuración de la oferta</div>
+            <div class="be-guinda__s">Elegí el producto y definí los niveles de descuento.</div>
+          </div>
           ${bdlSeccionSetup(b, s)}
           ${bdlSeccionNiveles(b, s)}
           <div class="be-guinda">
-            <div class="be-guinda__t">La guinda del pastel</div>
+            <div class="be-guinda__t">Personalización</div>
             <div class="be-guinda__s">Ajustá colores, encabezado y botón sin salir de acá.</div>
           </div>
           ${bdlSeccionesExtra(b, s)}
@@ -4644,7 +4647,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         </div>
       </div>`;
     return `<section class="be-sec">
-      <button class="be-sec__head" data-sec="setup"><span>Select Product & Basic Setup</span><span class="be-chev ${s.setupOpen ? "is-open" : ""}">${ico("chevron")}</span></button>
+      <button class="be-sec__head" data-sec="setup"><span>Producto y configuración básica</span><span class="be-chev ${s.setupOpen ? "is-open" : ""}">${ico("chevron")}</span></button>
       ${cuerpo}
     </section>`;
   }
@@ -4665,9 +4668,9 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     const tipo = o.tipo_desc || (Number(o.descuento) > 0 ? "porcentaje" : "ninguno");
     const head = `
       <div class="be-lv__head">
-        <span class="be-lv__drag">⠿</span>
+        <span class="be-lv__drag" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg></span>
         <button class="be-toggle ${activo ? "is-on" : ""}" data-lv-toggle="${i}" title="Prender/apagar nivel"><span></span></button>
-        <span class="be-lv__name"><span class="be-lv__n">Nivel ${i + 1}:</span> <b>${esc(o.titulo || "Buy " + (Number(o.cantidad) || 1))}</b>${o.predeterminada ? '<span class="be-lv__chip">' + ico("estrella") + ' Por defecto</span>' : ""}</span>
+        <span class="be-lv__name"><span class="be-lv__n">Nivel ${i + 1}:</span> <b>${esc(o.titulo || "Comprá " + (Number(o.cantidad) || 1))}</b>${o.predeterminada ? '<span class="be-lv__chip">' + ico("estrella") + ' Por defecto</span>' : ""}</span>
         <button class="be-lv__icn" data-lv-dup="${i}" data-tip="Duplicar este nivel" aria-label="Duplicar nivel ${i + 1}">${BE_DUP}</button>
         <button class="be-lv__star ${o.predeterminada ? "is-star" : ""}" data-lv-star="${i}" data-tip="Oferta predeterminada: es la que los clientes ven pre-seleccionada al entrar a la página." aria-label="Marcar como oferta predeterminada" aria-pressed="${o.predeterminada ? "true" : "false"}">${BE_STAR}</button>
         <button class="be-lv__chev ${open ? "is-open" : ""}" data-lv-open="${i}" title="Abrir/cerrar">${BE_CHEV}</button>
