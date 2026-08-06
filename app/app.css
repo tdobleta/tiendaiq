@@ -2432,6 +2432,10 @@ body.sec-panel-abierto .constructor { padding-right: 394px; }
 .sec-panel .campo--editor input:focus, .sec-panel .campo--editor textarea:focus, .sec-panel .campo--editor select:focus,
 .sec-panel .fila-doble input:focus, .sec-panel .fila-triple input:focus { border-color: #005bd3; outline: 2px solid rgba(0,91,211,.14); outline-offset: 0; }
 .sec-panel .editor__nota { margin: 0 0 14px; padding: 10px 11px; color: #5c6268; background: #f6f6f7; border: 1px solid #e3e5e7; }
+.sec-panel .sp-item-card { margin: 0 0 14px; padding: 12px; border: 1px solid #e1e4e8; border-radius: 8px; background: #fff; }
+.sec-panel .sp-item-card__head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 0 12px; padding-bottom: 9px; border-bottom: 1px solid #e8eaec; color: #202223; font-size: 12px; }
+.sec-panel .sp-item-card__head span { color: #6d7175; font-size: 10px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+.sec-panel .sp-item-card .sp-field:last-child { margin-bottom: 0; }
 .sec-panel .pe-prop__grupo { padding: 0 0 4px; border: 0; }
 .sec-panel .pe-prop__subheader { padding: 17px 0 8px; margin: 0; border-top: 1px solid #e1e4e8; font-size: 13px; font-weight: 650; color: #202223; }
 .sec-panel .pe-prop__grupo:first-child .pe-prop__subheader { border-top: 0; padding-top: 5px; }

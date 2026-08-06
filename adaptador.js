@@ -494,6 +494,14 @@ async function generar(fuente, medios, { idioma = "es", angulo = "" } = {}) {
 // devuelve solo una versión lista para pegar en ese mismo campo.
 async function editarTexto({ texto = "", instrucciones = "", modo = "rewrite", idioma = "es", contexto = "" } = {}) {
   const cliente = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
+  let contextoEditor = contexto;
+  try {
+    const objeto = JSON.parse(String(contexto));
+    contextoEditor = Object.entries(objeto)
+      .filter(([, valor]) => valor !== undefined && valor !== null && valor !== "")
+      .map(([clave, valor]) => `${clave}: ${valor}`)
+      .join("\n");
+  } catch {}
   const modos = {
     rewrite: "reescribí el texto manteniendo su intención y mejorando claridad, ritmo y conversión",
     shorter: "hacé el texto más breve, directo y fácil de escanear sin perder la idea principal",
@@ -505,11 +513,15 @@ async function editarTexto({ texto = "", instrucciones = "", modo = "rewrite", i
     `Escribí en ${idiomaSalida}.`,
     "Trabajá sobre el texto entregado: no inventes características, resultados, reseñas, precios, garantías ni datos que no aparezcan en el original.",
     "Usá lenguaje humano, preciso y comercial; evitá frases vacías, tono de IA, superlativos sin respaldo y signos innecesarios.",
-    "Conservá el formato simple del campo. No agregues introducciones, comillas, markdown ni explicaciones: devolvé solamente el texto final."
+    "Conservá el formato simple del campo. No agregues introducciones, comillas, markdown ni explicaciones: devolvé solamente el texto final.",
+    "Antes de escribir, interpretá el contexto completo: sección, tipo de campo, pregunta asociada y hechos disponibles del producto.",
+    "Si el campo es una respuesta de FAQ, respondé exactamente la pregunta asociada. Nunca devuelvas la pregunta, aunque el texto actual esté vacío, incompleto o contenga la pregunta por error.",
+    "Si la respuesta actual coincide con la pregunta asociada, tratala como un borrador inválido e ignorala: redactá una respuesta nueva basada en los hechos disponibles.",
+    "En modo más largo, ampliá una respuesta válida con una o dos ideas útiles relacionadas; no repitas la pregunta ni agregues información no respaldada."
   ].join(" ");
   const prompt = [
     `Modo: ${modos[modo] || modos.rewrite}.`,
-    `Sección o campo: ${contexto || "copy de producto"}.`,
+    `Contexto del editor (usalo para interpretar antes de escribir):\n${contextoEditor || "copy de producto"}.`,
     `Texto actual:\n${String(texto).trim() || "(vacío)"}`,
     instrucciones.trim() ? `Indicaciones del comerciante:\n${instrucciones.trim()}` : ""
   ].filter(Boolean).join("\n\n");

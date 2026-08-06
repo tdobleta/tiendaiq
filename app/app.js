@@ -1706,8 +1706,10 @@
           f.faq.items
             .map(
               (_, i) =>
+                `<div class="sp-item-card"><div class="sp-item-card__head"><strong>Pregunta ${i + 1}</strong><span>FAQ</span></div>` +
                 campo(`facetas.faq.items.${i}.pregunta`, `Pregunta ${i + 1}`) +
-                campo(`facetas.faq.items.${i}.respuesta`, `Respuesta ${i + 1}`, 2)
+                campo(`facetas.faq.items.${i}.respuesta`, `Respuesta ${i + 1}`, 2) +
+                `</div>`
             )
             .join("")
       },
@@ -3123,6 +3125,39 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     p.querySelector("#sp-ai-instructions")?.focus();
   }
 
+  function contextoAi(ruta) {
+    const data = estado.pagina.data || {};
+    const fuente = data.fuente || {};
+    const faq = ruta.match(/^facetas\.faq\.items\.(\d+)\.(pregunta|respuesta)$/);
+    const base = {
+      producto: fuente.titulo_crudo || data.facetas?.hero?.titulo || "Producto de la tienda",
+      descripcion_base: String(fuente.descripcion_cruda || "").slice(0, 4500),
+      seccion: panelTitulo(panelEditorId || ""),
+      campo: ruta.split(".").pop()
+    };
+    if (faq) {
+      const item = data.facetas?.faq?.items?.[Number(faq[1])] || {};
+      return {
+        ...base,
+        tipo: faq[2] === "respuesta" ? "respuesta a una pregunta" : "pregunta frecuente",
+        pregunta_asociada: item.pregunta || "",
+        respuesta_asociada: item.respuesta || "",
+        regla: faq[2] === "respuesta"
+          ? "Respondé la pregunta asociada. No devuelvas la pregunta, no la reformules y no la uses como respuesta."
+          : "Escribí una pregunta clara que una persona real haría antes de comprar."
+      };
+    }
+    return base;
+  }
+
+  function salidaAiValida(ruta, texto) {
+    const faq = ruta.match(/^facetas\.faq\.items\.(\d+)\.respuesta$/);
+    if (!faq) return true;
+    const pregunta = leer(estado.pagina.data, `facetas.faq.items.${faq[1]}.pregunta`) || "";
+    const normalizar = (s) => String(s).toLowerCase().replace(/[\u00bf?!.:,;\s]+/g, " ").trim();
+    return normalizar(texto) !== normalizar(pregunta);
+  }
+
   async function enviarAiText(ruta) {
     const p = document.getElementById("sec-panel");
     const send = p?.querySelector("#sp-ai-send");
@@ -3141,9 +3176,12 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
           instrucciones,
           modo: mode,
           idioma: estado.idiomaPagina || "es",
-          contexto: `${panelTitulo(panelEditorId || "")} / ${ruta.split(".").pop()}`
+          contexto: JSON.stringify(contextoAi(ruta))
         }
       });
+      if (!salidaAiValida(ruta, r.texto)) {
+        throw new Error("La IA devolvió la pregunta en lugar de responderla. No se aplicó el cambio.");
+      }
       fijar(estado.pagina.data, ruta, r.texto);
       marcarSucio();
       repintarPreview();
@@ -3298,8 +3336,8 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     };
     const row = (id, label, ico) =>
       `<div class="pe-tree__row" tabindex="0" data-tree="${esc(id)}"><span class="pe-tree__lead pe-tree__drag">${I.drag}</span><span class="pe-tree__ico">${ico}</span><span class="pe-tree__label">${esc(label)}</span></div>`;
-    const grupo = (nombre, filas) =>
-      `<section class="pe-tree__group"><div class="pe-tree__row pe-tree__row--group" tabindex="0"><span class="pe-tree__lead pe-tree__chevron">${I.chev}</span><span class="pe-tree__ico pe-tree__ico--group">${I.grupo}</span><span class="pe-tree__label">${esc(nombre)}</span></div><div class="pe-tree__children">${filas}</div></section>`;
+    const grupo = (nombre, filas, meta) =>
+      `<section class="pe-tree__group"><div class="pe-tree__row pe-tree__row--group" tabindex="0"><span class="pe-tree__lead pe-tree__chevron">${I.chev}</span><span class="pe-tree__ico pe-tree__ico--group">${I.grupo}</span><span class="pe-tree__label">${esc(nombre)}</span>${meta ? `<span class="pe-tree__group-meta">${esc(meta)}</span>` : ""}</div><div class="pe-tree__children">${filas}</div></section>`;
     const info = row("encabezado", "Encabezado", I.encabezado) + row("galeria", "Galería de producto", I.galeria) +
       row("bullets", "Beneficios", I.beneficios) + row("destacada", "Reseña destacada", I.estrella) +
       row("resenas", "Reseñas", I.estrella);
@@ -3308,8 +3346,8 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       row("faq", "Preguntas frecuentes", I.lista) + row("iconos", "Garantías / íconos", I.beneficios) +
       row("stats", "Estadísticas", I.lista) + v2;
     return `<nav class="pe-tree" aria-label="Bloques de la página">
-      <div class="pe-tree__head">Página de producto</div>
-      <div class="pe-tree__body">${grupo("Información del producto", info)}${grupo("Secciones extra", extra)}</div>
+      <div class="pe-tree__head"><span class="pe-tree__head-title">Página de producto</span><span class="pe-tree__head-sub">Estructura y contenido</span></div>
+      <div class="pe-tree__body">${grupo("Información del producto", info, "5 bloques")}${grupo("Secciones extra", extra, `${(estado.pagina.data.secciones || []).length + 6} bloques`)}</div>
     </nav>`;
   }
 
