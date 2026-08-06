@@ -876,6 +876,14 @@ const servidor = http.createServer(async (req, res) => {
       return servirEstatico(req, res, DIR_PLANTILLA, rel);
     }
 
+    // Prototipos independientes de plantillas: se diseñan y validan antes de
+    // conectarlos al renderer, editor y publicación de TiendaIQ.
+    if (url.pathname.startsWith("/prototipos/")) {
+      const solicitado = url.pathname.replace(/^\/prototipos\/?/, "");
+      const rel = solicitado ? (solicitado.endsWith("/") ? `${solicitado}index.html` : solicitado) : "plantilla-01/index.html";
+      return servirEstatico(req, res, path.join(__dirname, "prototipos"), rel);
+    }
+
     // Videos de "Inspírate de los mejores" (con Range, sin pase: los <video>
     // no pueden mandar Authorization). Van desde DIR_INSPIRACION.
     if (url.pathname.startsWith("/inspiracion-media/")) {
