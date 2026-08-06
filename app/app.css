@@ -3336,84 +3336,11 @@ body.sec-panel-abierto .constructor { padding-right: 356px; }
   text-align: center;
   margin: 0;
 }
-.plantillas__top p {
-  color: #6d7175;
-  font-size: 13px;
-  line-height: 1.4;
-  text-align: center;
-  margin: 2px 0 0;
-}
-.plantillas__contexto {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 18px;
-  border-bottom: 1px solid #edf0f2;
-  background: #fbfcfb;
-  padding: 16px;
-}
-.tpl-prod {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-  gap: 12px;
-}
-.tpl-prod__img {
-  width: 46px;
-  height: 46px;
-  flex: 0 0 auto;
-  display: grid;
-  place-items: center;
-  overflow: hidden;
-  border: 1px solid #dfe3e2;
-  border-radius: 8px;
-  background: #fff;
-  color: #6d7175;
-}
-.tpl-prod__img img {
-  width: 100%;
-  height: 100%;
-  display: block;
-  object-fit: cover;
-}
-.tpl-prod small {
-  display: block;
-  color: #6d7175;
-  font-size: 12px;
-  line-height: 1.3;
-}
-.tpl-prod strong {
-  display: block;
-  overflow: hidden;
-  color: #202223;
-  font-size: 14px;
-  line-height: 1.35;
-  font-weight: 700;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 520px;
-}
-.tpl-context-chips {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 8px;
-}
-.tpl-context-chips span {
-  border: 1px solid #d9e7df;
-  border-radius: 999px;
-  background: #f5fbf8;
-  color: #202223;
-  font-size: 12px;
-  line-height: 1;
-  font-weight: 650;
-  padding: 7px 10px;
-}
 .plantillas__grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 24px;
-  padding: 24px 16px 16px;
+  padding: 16px;
 }
 .plantilla-card {
   display: flex;
@@ -3600,18 +3527,13 @@ body.sec-panel-abierto .constructor { padding-right: 356px; }
 }
 @media (max-width: 720px) {
   .plantillas { margin-top: 14px; }
-  .plantillas__top,
-  .plantillas__contexto {
+  .plantillas__top {
     display: flex;
     flex-direction: column;
     align-items: stretch;
   }
-  .plantillas__top h1,
-  .plantillas__top p {
+  .plantillas__top h1 {
     text-align: left;
-  }
-  .tpl-context-chips {
-    justify-content: flex-start;
   }
   .plantillas__grid {
     grid-template-columns: 1fr;

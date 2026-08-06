@@ -140,7 +140,7 @@
     // bundles) no va. Y una vez PUBLICADA, el asistente terminó: la
     // pantalla pasa a modo editor, sin stepper (patrón page-builder).
     const previewPublicada = estado.pantalla === "preview" && estado.pagina?.estado === "publicada";
-    if (previewPublicada || estado.pantalla === "lista" || !["informacion", "plantillas", "generando", "preview"].includes(estado.pantalla)) {
+    if (previewPublicada || estado.pantalla === "lista" || estado.pantalla === "plantillas" || !["informacion", "generando", "preview"].includes(estado.pantalla)) {
       cont.innerHTML = "";
       return;
     }
@@ -1152,7 +1152,6 @@
   }
 
   function pantallaPlantillas() {
-    const p = estado.producto || {};
     estado.modeloPagina ||= "clasico";
     const nombres = { clasico: "Clásico", premium: "Premium" };
     const plantillas = [
@@ -1192,24 +1191,8 @@
             <s-button id="tpl-volver">Atrás</s-button>
             <div>
               <h1>Plantillas</h1>
-              <p>Seleccioná la estructura visual que va a usar la página generada.</p>
             </div>
             <s-button variant="primary" id="tpl-generar">Generar página</s-button>
-          </div>
-
-          <div class="plantillas__contexto">
-            <div class="tpl-prod">
-              <span class="tpl-prod__img">${p.imagen ? `<img src="${esc(p.imagen)}" alt="${esc(p.titulo || "Producto")}" loading="lazy">` : ico("bolsa")}</span>
-              <div>
-                <small>Producto seleccionado</small>
-                <strong>${esc(p.titulo || "Producto de Shopify")}</strong>
-              </div>
-            </div>
-            <div class="tpl-context-chips">
-              <span>${esc(estado.idiomaPagina === "en" ? "English" : estado.idiomaPagina === "pt" ? "Português" : "Español")}</span>
-              <span>${esc(estado.audienciaPagina === "mujer" ? "Mujer" : estado.audienciaPagina === "hombre" ? "Hombre" : "Unisex")}</span>
-              <span>Estrategia definida</span>
-            </div>
           </div>
 
           <div class="plantillas__grid" id="plantillas-grid">
