@@ -699,7 +699,6 @@
   // selector de productos. Elegir producto no avanza solo; el merchant confirma
   // con Continuar.
   function pantallaLista() {
-    const HERO_CHISPA = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.8 4.9 4.9 1.8-4.9 1.8L12 15.9l-1.8-4.9L5.3 9.2l4.9-1.8zM19 14l.9 2.4 2.4.9-2.4.9L19 20.6l-.9-2.4-2.4-.9 2.4-.9z"/></svg>`;
     const seleccionado = estado.producto;
     const totalProductos = estado.productos.length;
     const productosConPagina = estado.productos.filter((p) => p.estado).length;
@@ -718,10 +717,13 @@
       return;
     }
 
-    const miniaturas = estado.productos
+    const galeria = estado.productos
       .filter((p) => p.imagen)
-      .slice(0, 5)
-      .map((p) => `<span title="${esc(p.titulo)}"><img src="${esc(p.imagen)}" alt="" loading="lazy"></span>`)
+      .slice(0, 6)
+      .map((p, i) => `
+        <figure class="crear-shot crear-shot--${i + 1}" title="${esc(p.titulo)}">
+          <img src="${esc(p.imagen)}" alt="${esc(p.titulo)}" loading="lazy">
+        </figure>`)
       .join("");
 
     const productoHTML = seleccionado
@@ -754,29 +756,23 @@
         <div class="crear-stage">
           <section class="crear-hero-panel">
             <div class="crear-hero-panel__copy">
-              <span class="crear__eyebrow">${HERO_CHISPA} Generador de páginas con IA</span>
-              <h1>Convertí un producto de Shopify en una página lista para vender</h1>
-              <p>Seleccioná un producto de tu catálogo y TiendaIQ prepara una landing editable con estructura comercial, copy, imágenes y secciones pensadas para aumentar claridad antes del clic de compra.</p>
+              <span class="crear__eyebrow">Páginas con IA para Shopify</span>
+              <h1>Una página mejor para cada producto</h1>
+              <p>Elegí un producto. TiendaIQ prepara copy, estructura e imágenes listas para editar.</p>
+            </div>
 
-              <div class="crear-market-note">
-                <span>Nota de mercado</span>
-                <p>El dropshipping profesional ayudó a marcas ágiles a crecer rápido en Estados Unidos y Europa. En Sudamérica la ventaja está en moverse antes: validar productos, comunicar con precisión y publicar páginas mejores sin frenar la operación.</p>
-              </div>
-
-              <div class="crear-hero-metrics" aria-label="Resumen de catálogo">
-                <div><b>${totalProductos}</b><span>productos disponibles</span></div>
-                <div><b>${productosSinPagina}</b><span>sin página generada</span></div>
-                <div><b>3</b><span>pasos antes de publicar</span></div>
-              </div>
+            <div class="crear-visual" aria-label="Productos del catálogo">
+              ${galeria || `<div class="crear-visual__empty">${ico("bolsa")} Las imágenes se leen al generar la página.</div>`}
+              <div class="crear-visual__count"><b>${totalProductos}</b><span>productos conectados</span></div>
             </div>
 
             <div class="crear-card">
               <div class="crear-card__head">
                 <div>
-                  <div class="crear-card__kicker">Primer paso</div>
+                  <div class="crear-card__kicker">Catálogo conectado</div>
                   <h2>Elegí el producto base</h2>
                 </div>
-                <s-badge tone="info">Shopify</s-badge>
+                <span class="crear-card__meta">${productosSinPagina} sin página</span>
               </div>
               ${productoHTML}
               <div class="crear-card__acciones">
@@ -784,16 +780,23 @@
               </div>
             </div>
 
-            <div class="crear-ribbon" aria-label="Preparación de la página">
-              <div class="crear-ribbon__catalog">
-                <span>Catálogo conectado</span>
-                <b>${totalProductos} productos</b>
-                ${miniaturas ? `<div class="crear-ribbon__thumbs">${miniaturas}</div>` : `<p>Las imágenes se leen al generar la página.</p>`}
+            <div class="crear-market-note">
+              <b>Dropshipping, con mejor ejecución</b>
+              <p>El modelo creció fuerte en Estados Unidos y Europa. En Sudamérica todavía hay espacio para marcas que validan rápido, comunican claro y publican páginas mejores antes que el resto.</p>
+            </div>
+
+            <div class="crear-flow crear-flow--rail" aria-label="Preparación de la página">
+              <div class="crear-flow__item is-active">
+                <span></span>
+                <div><b>Producto</b><small>Elegí el ítem correcto del catálogo.</small></div>
               </div>
-              <div class="crear-flow crear-flow--inline">
-                <div class="crear-flow__item is-active"><span>1</span><div><b>Producto</b><small>Elegí el ítem de tu catálogo.</small></div></div>
-                <div class="crear-flow__item"><span>2</span><div><b>Estrategia</b><small>Definí idioma, público y ángulo.</small></div></div>
-                <div class="crear-flow__item"><span>3</span><div><b>Plantilla</b><small>Seleccioná estilo antes de generar.</small></div></div>
+              <div class="crear-flow__item">
+                <span></span>
+                <div><b>Estrategia</b><small>Definí idioma, público y ángulo.</small></div>
+              </div>
+              <div class="crear-flow__item">
+                <span></span>
+                <div><b>Plantilla</b><small>Seleccioná el estilo antes de generar.</small></div>
               </div>
             </div>
           </section>
