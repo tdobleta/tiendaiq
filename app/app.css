@@ -639,20 +639,20 @@ main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 80px; }
   z-index: -1;
   height: 52%;
   pointer-events: none;
-  opacity: .42;
+  opacity: .7;
   background:
-    radial-gradient(75% 120% at 18% 50%, rgba(0,91,211,.16) 0 18%, transparent 54%),
-    radial-gradient(78% 130% at 62% 52%, rgba(0,128,96,.12) 0 20%, transparent 58%),
-    radial-gradient(70% 120% at 92% 46%, rgba(85,112,138,.12) 0 18%, transparent 56%);
-  filter: blur(26px);
+    radial-gradient(75% 120% at 18% 50%, rgba(0,91,211,.34) 0 20%, transparent 56%),
+    radial-gradient(78% 130% at 62% 52%, rgba(0,128,96,.28) 0 22%, transparent 60%),
+    radial-gradient(70% 120% at 92% 46%, rgba(219,39,119,.22) 0 18%, transparent 56%);
+  filter: blur(24px);
   transform: translate3d(-4%, 0, 0) rotate(-2deg);
   animation: crear-olas 18s ease-in-out infinite alternate;
 }
 .crear-hero-panel::after {
   inset: -22% -22% auto -22%;
   height: 48%;
-  opacity: .28;
-  filter: blur(34px);
+  opacity: .58;
+  filter: blur(30px);
   transform: translate3d(5%, 0, 0) rotate(3deg);
   animation-duration: 24s;
   animation-direction: alternate-reverse;
