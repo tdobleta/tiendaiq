@@ -1271,6 +1271,7 @@
     const app = document.getElementById("app");
     // El nicho define el color de acento (skin por rubro). Sin dato → general.
     app.dataset.nicho = datos?.global?.nicho || "general";
+    app.dataset.plantilla = datos?.global?.plantilla_id || datos?.global?.estilo || "clasico";
     // Variante de color elegida por el merchant: pisa el acento del nicho. Sin
     // variante → queda el color del rubro (comportamiento de siempre).
     if (datos?.global?.tema) app.dataset.tema = datos.global.tema;

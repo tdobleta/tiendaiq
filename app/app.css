@@ -3588,6 +3588,22 @@ body.sec-panel-abierto .constructor { padding-right: 394px; }
 .tpl-preview--proof .tpl-preview__hero i:nth-child(3) { background: #9c6ade; }
 .tpl-preview--minimal .tpl-preview__hero i:nth-child(3),
 .tpl-preview--clean .tpl-preview__hero i:nth-child(3) { background: #6d7175; }
+.tpl-preview--theme-greens .tpl-preview__hero i:nth-child(3) { background: #286044; }
+.tpl-preview--theme-bloom .tpl-preview__hero i:nth-child(3) { background: #d83a79; }
+.tpl-preview--theme-honey .tpl-preview__hero i:nth-child(3) { background: #c88712; }
+.tpl-preview--theme-clarity .tpl-preview__hero i:nth-child(3) { background: #2857c7; }
+.tpl-preview--theme-aura .tpl-preview__hero i:nth-child(3) { background: #7147a5; }
+.tpl-preview--theme-legacy .tpl-preview__hero i:nth-child(3) { background: #343434; }
+.tpl-preview--theme-stone .tpl-preview__hero i:nth-child(3) { background: #a6573d; }
+.tpl-preview--theme-cotton .tpl-preview__hero i:nth-child(3) { background: #20999b; }
+.tpl-preview--theme-greens .tpl-preview__cols span:nth-child(1) { background: #edf7ef; }
+.tpl-preview--theme-bloom .tpl-preview__cols span:nth-child(2) { background: #fff0f6; }
+.tpl-preview--theme-honey .tpl-preview__cols span:nth-child(3) { background: #fff8df; }
+.tpl-preview--theme-clarity .tpl-preview__cols span:nth-child(1) { background: #eef4ff; }
+.tpl-preview--theme-aura .tpl-preview__cols span:nth-child(2) { background: #f6efff; }
+.tpl-preview--theme-legacy .tpl-preview__body { background: #f3f3f3; }
+.tpl-preview--theme-stone .tpl-preview__cols span:nth-child(2) { background: #fff2ed; }
+.tpl-preview--theme-cotton .tpl-preview__cols span:nth-child(1) { background: #edfafa; }
 .plantilla-card__foot {
   display: flex;
   flex-direction: column;

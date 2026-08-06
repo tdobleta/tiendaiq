@@ -1135,9 +1135,9 @@
 
   // ---------- 3. plantillas ----------
 
-  function previewPlantilla(tipo = "clasico") {
+  function previewPlantilla(tipo = "clasico", id = tipo) {
     return `
-      <div class="tpl-preview tpl-preview--${esc(tipo)}" aria-hidden="true">
+      <div class="tpl-preview tpl-preview--${esc(tipo)} tpl-preview--theme-${esc(id)}" aria-hidden="true">
         <div class="tpl-preview__hero">
           <i></i><i></i><i></i>
         </div>
@@ -1150,9 +1150,8 @@
       </div>`;
   }
 
-  function pantallaPlantillas() {
-    const nombres = { clasico: "Clásico", premium: "Premium" };
-    const plantillas = [
+  async function pantallaPlantillas() {
+    let plantillas = [
       {
         id: "clasico",
         nombre: "Clásico",
@@ -1168,16 +1167,17 @@
         tags: ["Oferta", "Comparación", "Reviews"],
         activa: true,
         tipo: "premium"
-      },
-      ...Array.from({ length: 6 }, (_, i) => ({
-        id: `slot-${i + 3}`,
-        nombre: `Espacio ${i + 3}`,
-        subtitulo: "Reservado para una plantilla nueva.",
-        tags: ["Preview", "Copy", "Secciones"],
-        activa: false,
-        tipo: ["social", "clean", "editorial", "bundle", "minimal", "proof"][i]
-      }))
+      }
     ];
+
+    // El selector se alimenta del mismo registro que usa el backend. Si la
+    // app esta offline, conserva el fallback para no bloquear el flujo local.
+    try {
+      const remotas = await api("/plantillas");
+      if (Array.isArray(remotas) && remotas.length) {
+        plantillas = remotas.map((tpl) => ({ ...tpl, activa: true }));
+      }
+    } catch {}
 
     vista.innerHTML = `
       <div class="plantillas">
@@ -1206,7 +1206,7 @@
                 <span class="plantilla-card__head">
                   <b>${esc(tpl.nombre)}</b>
                 </span>
-                ${previewPlantilla(tpl.tipo)}
+                ${previewPlantilla(tpl.tipo, tpl.id)}
                 <span class="plantilla-card__foot">
                   <span>${esc(tpl.subtitulo)}</span>
                   <span class="tpl-tags">${tpl.tags.map((tag) => `<i>${esc(tag)}</i>`).join("")}</span>
@@ -1222,7 +1222,8 @@
       const listo = !!estado.modeloPagina;
       const notice = $("tpl-notice");
       if (btn) {
-        btn.textContent = listo ? `Generar página con ${nombres[estado.modeloPagina] || "plantilla"}` : "Seleccionar plantilla";
+        const seleccionada = plantillas.find((tpl) => tpl.id === estado.modeloPagina);
+        btn.textContent = listo ? `Generar página con ${seleccionada?.nombre || "plantilla"}` : "Seleccionar plantilla";
         btn.toggleAttribute("disabled", !listo);
       }
       if (notice) notice.hidden = listo;
@@ -3120,7 +3121,12 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       producto: fuente.titulo_crudo || data.facetas?.hero?.titulo || "Producto de la tienda",
       descripcion_base: String(fuente.descripcion_cruda || "").slice(0, 4500),
       seccion: panelTitulo(panelEditorId || ""),
-      campo: ruta.split(".").pop()
+      campo: ruta.split(".").pop(),
+      plantilla: data.global?.plantilla_id || data.global?.estilo || "clasico",
+      version_plantilla: data.global?.plantilla_version || 1,
+      intencion: data.global?.plantilla_id === "premium"
+        ? "Mantener una lectura editorial, sobria y orientada a confianza."
+        : "Mantener una lectura clara, directa y facil de escanear."
     };
     if (faq) {
       const item = data.facetas?.faq?.items?.[Number(faq[1])] || {};
@@ -3162,7 +3168,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
           texto: original,
           instrucciones,
           modo: mode,
-          idioma: estado.idiomaPagina || "es",
+          idioma: estado.idiomaPagina || estado.pagina.data.global?.idioma || "es",
           contexto: JSON.stringify(contextoAi(ruta))
         }
       });

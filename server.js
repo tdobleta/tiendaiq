@@ -22,6 +22,7 @@ const http = require("http");
 const fs = require("fs");
 const path = require("path");
 const { listarProductos, crearPagina, editarTexto, escribirPreview } = require("./adaptador");
+const { PLANTILLAS_PRODUCTO } = require("./plantillas-producto");
 const { publicarPagina, despublicarPagina } = require("./publicar");
 const { env, sesionDeEnv } = require("./shopify");
 const { sesionDe, borrarTienda, listarTiendas } = require("./tiendas");
@@ -505,6 +506,29 @@ async function resolverSesion(req) {
 async function api(req, res, url) {
   const ruta = url.pathname;
   const sesion = await resolverSesion(req);
+
+  // GET /api/plantillas — contrato visible para el selector de creación.
+  // El navegador recibe solo metadatos de presentación; las reglas y campos
+  // completos permanecen en el backend y acompañan a la generación.
+  if (req.method === "GET" && ruta === "/api/plantillas") {
+    return json(
+      res,
+      200,
+      Object.values(PLANTILLAS_PRODUCTO).map(({ id, version, nombre, descripcion, subtitulo, tags, tipo, layout, tema, intencion, orden }) => ({
+        id,
+        version,
+        nombre,
+        descripcion,
+        subtitulo,
+        tags,
+        tipo,
+        layout,
+        tema,
+        intencion,
+        orden
+      }))
+    );
+  }
 
   // GET /api/productos
   if (req.method === "GET" && ruta === "/api/productos") {

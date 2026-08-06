@@ -3,123 +3,48 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Vista previa de una plantilla de página de producto de TiendaIQ.">
-  <title>Plantilla 01 | TiendaIQ</title>
+  <meta name="description" content="Noir Atelier. Fibras de seda para una mirada definida, ligera y precisa.">
+  <title>Noir Atelier | Lash Architecture</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div class="announcement">Envío rastreado a todo el país <span>·</span> 30 días para devolver tu compra</div>
-  <header class="store-header">
-    <a class="store-brand" href="#inicio" aria-label="Volver al inicio">LUMINA</a>
-    <nav class="store-nav" aria-label="Navegación principal">
-      <a href="#beneficios">Beneficios</a>
-      <a href="#como-funciona">Cómo funciona</a>
-      <a href="#preguntas">Preguntas</a>
-    </nav>
-    <button class="header-bag" type="button" data-scroll-buy aria-label="Ir al producto">
-      <span>Comprar</span><span class="bag-count">0</span>
-    </button>
-  </header>
-
-  <main id="inicio">
-    <section class="hero section-shell" aria-labelledby="product-title">
-      <div class="hero-gallery">
-        <div class="gallery-stage">
-          <button class="gallery-arrow gallery-arrow--prev" type="button" data-gallery-prev aria-label="Imagen anterior">&#8592;</button>
-          <img id="main-image" class="gallery-main" src="https://cdn.shopify.com/s/files/1/0983/3906/2127/files/Sdd02b8ceb4a4455bb744c725421da3cfs.webp?v=1783726442" alt="Lifter facial y cuello">
-          <button class="gallery-arrow gallery-arrow--next" type="button" data-gallery-next aria-label="Imagen siguiente">&#8594;</button>
-          <span class="gallery-label">Producto real</span>
+  <main>
+    <section class="noir-hero" aria-labelledby="product-title">
+      <header class="nav-line page-width"><a href="#inicio" class="wordmark">NOIR <i>ATELIER</i></a><span class="nav-center">LASH ARCHITECTURE / 04</span><a href="#comprar" class="nav-link">Ver pieza <span>&rarr;</span></a></header>
+      <div class="page-width hero-layout" id="inicio">
+        <div class="orbit-stage" aria-label="Vista 3D del producto">
+          <div class="stage-top"><span>OBJETO 04</span><span>Girar para explorar</span></div>
+          <div class="canvas-shell"><div class="orbit-fallback"><img src="https://service.pagepilot.ai/storage/v1/object/public/builder/7f0e5ffb-fba5-4055-ae2f-818e455fa2f2/gallery-images/25627a22-38a7-4e90-88ac-bb785a68d0b7/1785944528407-sto6zivwkf.webp" alt="Mascara de fibras de seda"></div><canvas id="product-orbit" aria-label="Objeto de producto en tres dimensiones"></canvas><span class="orbit-caption">SILK FIBER<br><small>NO. 04 / DAILY FORMULA</small></span></div>
+          <div class="orbit-controls"><button type="button" data-orbit-prev aria-label="Objeto anterior">&#8592;</button><div><span class="orbit-progress"><b></b></span><span>01 — 05</span></div><button type="button" data-orbit-next aria-label="Siguiente objeto">&#8594;</button></div>
         </div>
-        <div class="gallery-thumbs" role="list" aria-label="Galería del producto">
-          <button class="thumb is-active" type="button" data-gallery="0" aria-label="Ver imagen 1"><img src="https://cdn.shopify.com/s/files/1/0983/3906/2127/files/Sdd02b8ceb4a4455bb744c725421da3cfs.webp?v=1783726442" alt=""></button>
-          <button class="thumb" type="button" data-gallery="1" aria-label="Ver imagen 2"><img src="https://cdn.shopify.com/s/files/1/0983/3906/2127/files/S2090cd9021a8461db131c5b80d4e5b6bj.webp?v=1783726443" alt=""></button>
-          <button class="thumb" type="button" data-gallery="2" aria-label="Ver imagen 3"><img src="https://cdn.shopify.com/s/files/1/0983/3906/2127/files/S4ac92627db4e42b8adcf5dd6f2ea6db9J.webp?v=1783726442" alt=""></button>
-          <button class="thumb" type="button" data-gallery="3" aria-label="Ver imagen 4"><img src="https://cdn.shopify.com/s/files/1/0983/3906/2127/files/Sec95ad5d45b54d5ea4a10511607e2c92g.webp?v=1783726442" alt=""></button>
-          <button class="thumb" type="button" data-gallery="4" aria-label="Ver imagen 5"><img src="https://cdn.shopify.com/s/files/1/0983/3906/2127/files/Sa1ff52b1009f4ac8af933fc449c614fa7.webp?v=1783726442" alt=""></button>
-        </div>
-      </div>
-
-      <div class="purchase" id="comprar">
-        <div class="rating-line"><span class="stars" aria-label="5 de 5 estrellas">★★★★★</span><span>Calificado con <strong>4.9/5</strong> por <strong>907 clientes</strong></span></div>
-        <p class="eyebrow">Cuidado diario, sin complicaciones</p>
-        <h1 id="product-title">Lifter Facial<br>y Cuello</h1>
-        <p class="promise">Reafirmá cuello y rostro con microcorriente, calor y vibración en un solo gesto.</p>
-        <div class="benefit-grid" id="beneficios">
-          <div class="benefit"><span class="benefit-icon">✦</span><span>Ayuda a suavizar la apariencia de líneas</span></div>
-          <div class="benefit"><span class="benefit-icon">◌</span><span>Se adapta a rostro y cuello</span></div>
-          <div class="benefit"><span class="benefit-icon">↗</span><span>Potencia tu rutina de cuidado</span></div>
-          <div class="benefit"><span class="benefit-icon">◷</span><span>Solo 5 minutos por día</span></div>
-        </div>
-        <div class="price-row"><span class="price-old">$24.990</span><strong class="price">$17.950</strong><span class="discount">AHORRÁ 28%</span></div>
-        <div class="purchase-rule"></div>
-        <div class="option-row"><span>Color</span><button class="option is-selected" type="button">Negro</button><button class="option" type="button">Blanco</button></div>
-        <button class="buy-button" type="button" data-add-cart><span class="buy-icon">⌑</span> Agregar al carrito</button>
-        <div class="purchase-assurances"><span>◉ Compra protegida</span><span>↺ 30 días de devolución</span><span>▣ Envío rastreado</span></div>
-        <div class="payments" aria-label="Medios de pago"><span>AMEX</span><span>Apple Pay</span><span>VISA</span><span>MC</span><span>G Pay</span><span>SHOP</span></div>
-        <div class="hero-review">
-          <button type="button" class="review-arrow" aria-label="Reseña anterior">‹</button>
-          <img src="https://cdn.shopify.com/s/files/1/0983/3906/2127/files/S2090cd9021a8461db131c5b80d4e5b6bj.webp?v=1783726443" alt="Cliente usando el producto">
-          <div><div class="review-stars">★★★★★</div><p>“Lo uso todas las noches antes de dormir. La piel se siente más firme y descansada.”</p><strong>Mariana</strong></div>
-          <button type="button" class="review-arrow" aria-label="Siguiente reseña">›</button>
-        </div>
-        <a class="hero-link" href="#resenas">Ver todas las reseñas <span>→</span></a>
+        <div class="hero-copy" id="comprar"><p class="eyebrow">NOIR ATELIER / EDICI&Oacute;N LIMITADA</p><h1 id="product-title">La mirada<br><em>en su forma m&aacute;s pura.</em></h1><p class="hero-lead">Fibras de seda, arquitectura precisa y una textura que se siente tan liviana como se ve.</p><div class="rating"><span class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</span><strong>4.9</strong><span>basado en 1.422 rese&ntilde;as</span></div><div class="price-line"><strong>$18.95 USD</strong><del>$24.99 USD</del><span>-24%</span></div><div class="hero-options"><span class="option-dot"></span><span>Black silk</span><span class="availability">En stock / despacho en 24 h</span></div><button class="main-cta" type="button" data-add-cart>A&Ntilde;ADIR AL CARRITO <span>&rarr;</span></button><div class="trust-row"><span>Pago protegido</span><span>Seguimiento incluido</span><span>30 d&iacute;as de devoluci&oacute;n</span></div><div class="payment-row"><img src="https://app.pagepilot.ai/assets/images/payments/american-express.svg" alt="American Express"><img src="https://app.pagepilot.ai/assets/images/payments/apple-pay.svg" alt="Apple Pay"><img src="https://app.pagepilot.ai/assets/images/payments/visa.svg" alt="Visa"><img src="https://app.pagepilot.ai/assets/images/payments/mastercard.svg" alt="Mastercard"><img src="https://app.pagepilot.ai/assets/images/payments/paypal.svg" alt="PayPal"><img src="https://app.pagepilot.ai/assets/images/payments/shop-pay.svg" alt="Shop Pay"></div><article class="signature-review"><img src="https://bcdn.pagepilot.ai/avatars/woman/5EC93CF9-AC9A-4A02-8A54-EE87C5E05B10.webp" alt="Valentina"><div><span class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</span><p>&quot;No se siente como maquillaje. Se siente como el detalle que termina de ordenar mi cara.&quot;</p><strong>Valentina R.</strong></div></article></div>
       </div>
     </section>
 
-    <section class="ugc-band section-shell" aria-labelledby="ugc-title">
-      <div class="section-heading section-heading--compact"><span class="section-kicker">Visto en uso</span><h2 id="ugc-title">Una rutina que entra en tu día</h2><p>Personas reales incorporándolo a sus minutos de cuidado.</p></div>
-      <div class="ugc-grid">
-        <figure><img src="https://cdn.shopify.com/s/files/1/0983/3906/2127/files/S2090cd9021a8461db131c5b80d4e5b6bj.webp?v=1783726443" alt="Uso del producto en casa"><figcaption>@sofi.cuida</figcaption></figure>
-        <figure><img src="https://cdn.shopify.com/s/files/1/0983/3906/2127/files/Sa1ff52b1009f4ac8af933fc449c614fa7.webp?v=1783726442" alt="Producto durante una rutina"><figcaption>@clarapiel</figcaption></figure>
-        <figure><img src="https://cdn.shopify.com/s/files/1/0983/3906/2127/files/S4ac92627db4e42b8adcf5dd6f2ea6db9J.webp?v=1783726442" alt="Detalle de la rutina"><figcaption>@maria.ritual</figcaption></figure>
-        <figure><img src="https://cdn.shopify.com/s/files/1/0983/3906/2127/files/Sec95ad5d45b54d5ea4a10511607e2c92g.webp?v=1783726442" alt="Resultado de la rutina"><figcaption>@luz.diaria</figcaption></figure>
-      </div>
-    </section>
+    <section class="moving-ribbon" aria-label="Beneficios del producto"><div class="ribbon-track"><span>FIBRAS DE SEDA</span><i>&middot;</i><span>DEFINICI&Oacute;N LIMPIA</span><i>&middot;</i><span>TEXTURA LIGERA</span><i>&middot;</i><span>24 H DE MIRADA</span><i>&middot;</i><span>FIBRAS DE SEDA</span><i>&middot;</i><span>DEFINICI&Oacute;N LIMPIA</span><i>&middot;</i><span>TEXTURA LIGERA</span><i>&middot;</i><span>24 H DE MIRADA</span></div></section>
 
-    <section class="how section-tint" id="como-funciona" aria-labelledby="how-title">
-      <div class="section-shell">
-        <div class="section-heading"><span class="section-kicker">Cómo funciona</span><h2 id="how-title">Cinco minutos para volver a sentir tu piel</h2><p>Un gesto breve, una rutina fácil de sostener.</p></div>
-        <div class="how-layout">
-          <div class="how-media"><img src="https://cdn.shopify.com/s/files/1/0983/3906/2127/files/Sa1ff52b1009f4ac8af933fc449c614fa7.webp?v=1783726442" alt="Lifter facial en uso"><span class="media-note">Rutina recomendada · 5 min</span></div>
-          <div class="steps">
-            <article class="step"><span class="step-number">01</span><div><h3>Prepará la piel</h3><p>Limpiá el rostro y aplicá tu crema o sérum habitual.</p></div></article>
-            <article class="step"><span class="step-number">02</span><div><h3>Elegí tu intensidad</h3><p>Comenzá suave y aumentá de forma gradual según tu comodidad.</p></div></article>
-            <article class="step"><span class="step-number">03</span><div><h3>Deslizá sin apuro</h3><p>Recorré cuello y rostro con movimientos lentos y ascendentes.</p></div></article>
-            <article class="step"><span class="step-number">04</span><div><h3>Repetí cuando quieras</h3><p>Convertí esos minutos en un momento simple para vos.</p></div></article>
-          </div>
-        </div>
-      </div>
-    </section>
+    <section class="manifesto-section"><div class="page-width manifesto-grid"><div><p class="eyebrow">EL NUEVO CL&Aacute;SICO</p><h2>La belleza de<br><em>hacer menos.</em></h2></div><div class="manifesto-copy"><p>Noir Atelier no busca cambiar tu mirada. La encuadra. La f&oacute;rmula se desliza, separa y alarga para que el resultado se sienta propio, nunca impuesto.</p><div class="manifesto-details"><span>01 / Fibras ultraligeras</span><span>02 / Cepillo de precisi&oacute;n</span><span>03 / Acabado graduable</span></div></div></div></section>
 
-    <section class="reviews section-shell" id="resenas" aria-labelledby="reviews-title">
-      <div class="section-heading"><span class="section-kicker">La experiencia</span><h2 id="reviews-title">Lo que cuentan quienes ya lo usan</h2><div class="rating-summary"><span class="stars">★★★★★</span><strong>4.9</strong><span>Basado en 907 reseñas</span></div></div>
-      <div class="review-grid">
-        <article class="review-card"><div class="review-card__top"><span class="stars">★★★★★</span><span class="verified">Compra verificada</span></div><p>“Lo sumé a mi rutina de noche y es muy fácil de usar. Me gusta que no ocupa nada de lugar.”</p><footer><strong>Lucía M.</strong><span>Hace 2 días</span></footer></article>
-        <article class="review-card review-card--featured"><div class="review-card__top"><span class="stars">★★★★★</span><span class="verified">Compra verificada</span></div><p>“Después de unas semanas noto el cuello más suave y la rutina se volvió mi momento de pausa.”</p><footer><strong>Carolina R.</strong><span>Hace 5 días</span></footer></article>
-        <article class="review-card"><div class="review-card__top"><span class="stars">★★★★★</span><span class="verified">Compra verificada</span></div><p>“Es liviano, se entiende rápido y la batería dura lo suficiente para olvidarme del cargador.”</p><footer><strong>Agustina P.</strong><span>Hace 1 semana</span></footer></article>
-      </div>
-      <button class="outline-button" type="button" data-scroll-buy>Quiero probarlo</button>
-    </section>
+    <section class="editorial-carousel"><div class="page-width editorial-head"><div><p class="eyebrow">EL RITUAL EN MOVIMIENTO</p><h2>Una textura que<br><em>se descubre de cerca.</em></h2></div><div class="carousel-arrows"><button type="button" data-editorial-prev aria-label="Imagen anterior">&#8592;</button><button type="button" data-editorial-next aria-label="Siguiente imagen">&#8594;</button></div></div><div class="editorial-track-wrap"><div class="editorial-track" data-editorial-track><article><img src="https://service.pagepilot.ai/storage/v1/object/public/builder/7f0e5ffb-fba5-4055-ae2f-818e455fa2f2/gallery-images/25627a22-38a7-4e90-88ac-bb785a68d0b7/1785944528418-97huqwwzinj.webp" alt="Fibras sobre la mirada"><span>01 / Precisi&oacute;n</span><h3>La ra&iacute;z,<br><em>en foco.</em></h3></article><article><img src="https://service.pagepilot.ai/storage/v1/object/public/builder/7f0e5ffb-fba5-4055-ae2f-818e455fa2f2/gallery-images/25627a22-38a7-4e90-88ac-bb785a68d0b7/1785944528359-2jmt14cqqyo.webp" alt="Mascara de fibras"><span>02 / Volumen</span><h3>Una capa.<br><em>M&aacute;s mirada.</em></h3></article><article><img src="https://service.pagepilot.ai/storage/v1/object/public/builder/7f0e5ffb-fba5-4055-ae2f-818e455fa2f2/gallery-images/25627a22-38a7-4e90-88ac-bb785a68d0b7/1785944528300-tjyeincsami.webp" alt="Aplicador de mascara"><span>03 / Movimiento</span><h3>El gesto<br><em>correcto.</em></h3></article><article><img src="https://service.pagepilot.ai/storage/v1/object/public/builder/7f0e5ffb-fba5-4055-ae2f-818e455fa2f2/gallery-images/25627a22-38a7-4e90-88ac-bb785a68d0b7/1785944528847-jlteb40fktf.webp" alt="Detalle de mascara"><span>04 / Resultado</span><h3>Natural,<br><em>pero notorio.</em></h3></article></div></div></section>
 
-    <section class="feature section-tint" aria-labelledby="feature-title">
-      <div class="section-shell feature-layout"><div class="feature-media"><img src="https://cdn.shopify.com/s/files/1/0983/3906/2127/files/S4ac92627db4e42b8adcf5dd6f2ea6db9J.webp?v=1783726442" alt="Detalle del Lifter Facial y Cuello"></div><div class="feature-copy"><span class="section-kicker">Diseño pensado para usarlo</span><h2 id="feature-title">Tu rutina, pero más fácil de sostener</h2><p>El formato ergonómico acompaña el contorno del cuello y el rostro para que puedas usarlo sin cambiar todo tu día.</p><div class="feature-list"><div><span>01</span><strong>Suave al contacto</strong><p>Un cabezal diseñado para deslizarse con comodidad.</p></div><div><span>02</span><strong>Fácil de guardar</strong><p>Compacto para tenerlo cerca y usarlo cuando quieras.</p></div><div><span>03</span><strong>Sin pasos extra</strong><p>Se integra con los productos que ya forman parte de tu rutina.</p></div></div><button class="buy-button buy-button--small" type="button" data-add-cart>Agregar al carrito</button></div></div>
-    </section>
+    <section class="material-section"><div class="page-width material-grid"><div class="material-image"><img src="https://service.pagepilot.ai/storage/v1/object/public/builder/7f0e5ffb-fba5-4055-ae2f-818e455fa2f2/gallery-images/25627a22-38a7-4e90-88ac-bb785a68d0b7/1785944528847-jlteb40fktf.webp" alt="Mascara de fibras de seda"><span>THE DAILY FORMULA / 04</span></div><div class="material-copy"><p class="eyebrow">POR DENTRO DE LA PIEZA</p><h2>Un objeto pensado<br><em>para usarlo mucho.</em></h2><p>El aplicador combina dos lecturas: una pasada fina para el d&iacute;a y una segunda capa para cuando quieres que la mirada tome el centro.</p><div class="material-list"><div><b>01</b><span><strong>Fibras de seda</strong><br>Se integran sin tironear ni cargar.</span></div><div><b>02</b><span><strong>Forma c&oacute;nica</strong><br>Llega a las pesta&ntilde;as peque&ntilde;as.</span></div><div><b>03</b><span><strong>Secado limpio</strong><br>Deja tiempo para construir el resultado.</span></div></div><button class="outline-cta" type="button" data-add-cart>Elegir la pieza <span>&rarr;</span></button></div></div></section>
 
-    <section class="stats-section" aria-labelledby="stats-title"><div class="section-shell stats-layout"><div><span class="section-kicker section-kicker--light">Una diferencia que se siente</span><h2 id="stats-title">Menos pasos.<br><em>Más constancia.</em></h2><p>La mejor rutina es la que podés repetir. Por eso diseñamos un producto que se entiende desde el primer uso.</p></div><div class="stat-list"><div class="stat"><span class="stat-circle">5<small>min</small></span><span><strong>Una rutina breve</strong><small>para cuidar tu piel todos los días.</small></span></div><div class="stat"><span class="stat-circle">4</span><span><strong>Funciones en uno</strong><small>para acompañar distintos momentos.</small></span></div><div class="stat"><span class="stat-circle">1</span><span><strong>Gesto simple</strong><small>que no necesita experiencia previa.</small></span></div></div></div></section>
+    <section class="numbers-section"><div class="page-width"><div class="numbers-head"><p class="eyebrow">LO QUE CAMBIA EN EL ESPEJO</p><h2>Peque&ntilde;os n&uacute;meros.<br><em>Una gran diferencia.</em></h2></div><div class="numbers-grid"><article><strong>98<span>%</span></strong><p>not&oacute; una mirada m&aacute;s abierta despu&eacute;s de la primera aplicaci&oacute;n</p></article><article><strong>24<span>h</span></strong><p>de definici&oacute;n ligera para acompa&ntilde;ar todo el d&iacute;a</p></article><article><strong>1<span>x</span></strong><p>pasada precisa para conseguir un acabado natural</p></article><article><strong>0<span>%</span></strong><p>grumos visibles cuando se aplica desde la ra&iacute;z</p></article></div></div></section>
 
-    <section class="feature-grid section-shell" id="por-que"><div class="section-heading"><span class="section-kicker">Por qué elegirlo</span><h2>Todo lo importante, en un solo gesto</h2></div><div class="icon-grid"><article><span>◒</span><h3>Microcorriente</h3><p>Acompaña tu rutina con una sensación suave y controlada.</p></article><article><span>◌</span><h3>Calor agradable</h3><p>Un momento cálido para convertir el cuidado en una pausa.</p></article><article><span>↗</span><h3>Formato ergonómico</h3><p>Se adapta al contorno para trabajar con movimientos cómodos.</p></article><article><span>◷</span><h3>Uso cotidiano</h3><p>Pequeño, liviano y listo para tenerlo siempre a mano.</p></article></div></section>
+    <section class="comparison-section"><div class="page-width comparison-grid"><div class="comparison-copy"><p class="eyebrow">LA ELECCI&Oacute;N CLARA</p><h2>Menos peso.<br><em>M&aacute;s intenci&oacute;n.</em></h2><p>Una m&aacute;scara que entiende que el lujo no est&aacute; en sumar capas, sino en que cada gesto tenga un motivo.</p><button class="main-cta" type="button" data-add-cart>COMPRAR NOIR ATELIER <span>&rarr;</span></button></div><div class="table-box"><table><thead><tr><th></th><th>NOIR<br>ATELIER</th><th>OTRAS<br>OPCIONES</th></tr></thead><tbody><tr><th>Fibras livianas</th><td>&#10003;</td><td>&#10005;</td></tr><tr><th>Separaci&oacute;n precisa</th><td>&#10003;</td><td>&#10005;</td></tr><tr><th>Acabado graduable</th><td>&#10003;</td><td>&#10005;</td></tr><tr><th>Sin sensaci&oacute;n r&iacute;gida</th><td>&#10003;</td><td>&#10005;</td></tr><tr><th>Dise&ntilde;ada para diario</th><td>&#10003;</td><td>&#10005;</td></tr></tbody></table></div></div></section>
 
-    <section class="compare section-tint" aria-labelledby="compare-title"><div class="section-shell compare-layout"><div><span class="section-kicker">Una rutina posible</span><h2 id="compare-title">Lo simple también puede sentirse especial</h2><p>Cuando el producto acompaña el hábito, es más fácil mantenerlo.</p></div><div class="compare-table"><div class="compare-head"><span></span><strong>Con el Lifter</strong><span>Rutina improvisada</span></div><div><span>Tiempo necesario</span><strong>5 minutos</strong><span>Depende del día</span></div><div><span>Pasos de uso</span><strong>Una secuencia clara</strong><span>Difícil de sostener</span></div><div><span>Espacio</span><strong>Compacto</strong><span>Varios productos</span></div></div></div></section>
+    <section class="quote-section"><div class="page-width quote-inner"><span class="quote-sign">&ldquo;</span><h2>La mirada que quieres<br>no necesita <em>m&aacute;s ruido.</em></h2><p>Solo una f&oacute;rmula precisa, un minuto y ese gesto que ya sabes hacer.</p><div><span class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</span> <b>4.9 / 5</b> &nbsp; por 1.422 clientas</div></div></section>
 
-    <section class="faq section-shell" id="preguntas" aria-labelledby="faq-title"><div class="section-heading"><span class="section-kicker">Antes de comprar</span><h2 id="faq-title">Preguntas frecuentes</h2></div><div class="faq-list"><details><summary>¿Cuánto tiempo dura cada sesión?<span>+</span></summary><p>La rutina recomendada dura aproximadamente cinco minutos. Podés adaptarla a tu comodidad.</p></details><details><summary>¿Puedo usarlo con mis productos habituales?<span>+</span></summary><p>Sí. Usalo sobre la piel limpia junto con tu crema o sérum de uso diario.</p></details><details><summary>¿Cómo se limpia?<span>+</span></summary><p>Pasá un paño suave y apenas húmedo por la superficie después de usarlo. No lo sumerjas en agua.</p></details><details><summary>¿Qué incluye la compra?<span>+</span></summary><p>Incluye el Lifter Facial y Cuello, cable de carga y guía de uso.</p></details></div></section>
+    <section class="reviews-section"><div class="page-width"><div class="reviews-head"><div><p class="eyebrow">NOTAS REALES</p><h2>Lo que dicen<br><em>despu&eacute;s de usarla.</em></h2></div><div class="review-controls"><button type="button" data-reviews-prev aria-label="Rese&ntilde;a anterior">&#8592;</button><button type="button" data-reviews-next aria-label="Siguiente rese&ntilde;a">&#8594;</button></div></div><div class="review-carousel" data-review-track><article><span class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</span><p>&quot;La segunda capa queda impecable. Parece que mis pesta&ntilde;as son as&iacute;, solo un poco m&aacute;s bonitas.&quot;</p><strong>— Sof&iacute;a M.</strong></article><article><span class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</span><p>&quot;Me encanta el control que da. Puedo usarla para trabajar y hacerla m&aacute;s intensa para salir.&quot;</p><strong>— Mariana L.</strong></article><article><span class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</span><p>&quot;No se cae en el d&iacute;a y se siente muy c&oacute;moda. Es una compra que repetir&iacute;a.&quot;</p><strong>— Valentina P.</strong></article><article><span class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</span><p>&quot;La textura es la diferencia. No se apelmaza y el cepillo llega a todas.&quot;</p><strong>— Camila R.</strong></article></div></div></section>
 
-    <section class="guarantee section-tint" aria-labelledby="guarantee-title"><div class="section-shell guarantee-layout"><div class="guarantee-mosaic"><img src="https://cdn.shopify.com/s/files/1/0983/3906/2127/files/S2090cd9021a8461db131c5b80d4e5b6bj.webp?v=1783726443" alt="Rutina de cuidado"><img src="https://cdn.shopify.com/s/files/1/0983/3906/2127/files/Sa1ff52b1009f4ac8af933fc449c614fa7.webp?v=1783726442" alt="Uso diario"><img src="https://cdn.shopify.com/s/files/1/0983/3906/2127/files/Scc88f77f856f4d2282fc222da7f1bae9g.webp?v=1783726442" alt="Detalle del producto"><img src="https://cdn.shopify.com/s/files/1/0983/3906/2127/files/S4ac92627db4e42b8adcf5dd6f2ea6db9J.webp?v=1783726442" alt="Cuidado en casa"></div><div class="guarantee-copy"><span class="guarantee-mark">✓</span><span class="section-kicker">Compra tranquila</span><h2 id="guarantee-title">Probalo en tu rutina</h2><p>Tenés 30 días para conocerlo en casa. Si no es para vos, escribinos y te ayudamos con la devolución.</p><button class="buy-button" type="button" data-add-cart>Comprar ahora</button></div></div></section>
+    <section class="faq-section"><div class="page-width faq-grid"><div><p class="eyebrow">ANTES DE ELEGIR</p><h2>Preguntas<br><em>frecuentes.</em></h2><p class="faq-lead">La informaci&oacute;n justa para tomar una decisi&oacute;n segura.</p></div><div class="faq-list"><details open><summary>&iquest;Se siente pesada?</summary><p>No. Las fibras est&aacute;n pensadas para sumar longitud y definici&oacute;n sin una capa r&iacute;gida.</p></details><details><summary>&iquest;Puedo graduar el resultado?</summary><p>S&iacute;. Una pasada da un acabado natural y la segunda construye m&aacute;s presencia.</p></details><details><summary>&iquest;Es apta para todos los d&iacute;as?</summary><p>La f&oacute;rmula est&aacute; pensada para acompa&ntilde;ar una rutina diaria sin complicarla.</p></details><details><summary>&iquest;Cu&aacute;l es la pol&iacute;tica de devoluci&oacute;n?</summary><p>Tienes 30 d&iacute;as para solicitar una devoluci&oacute;n si la pieza no es para ti.</p></details></div></div></section>
 
-    <section class="recommendations section-shell" aria-labelledby="recommend-title"><div class="section-heading"><span class="section-kicker">También puede interesarte</span><h2 id="recommend-title">Completá tu ritual</h2></div><div class="recommend-grid"><article><div class="recommend-image"></div><h3>Producto recomendado</h3><p>$19.990</p></article><article><div class="recommend-image"></div><h3>Producto recomendado</h3><p>$24.990</p></article><article><div class="recommend-image"></div><h3>Producto recomendado</h3><p>$29.990</p></article></div></section>
+    <section class="last-call"><div class="page-width last-call-inner"><div><p class="eyebrow">NOIR ATELIER / 04</p><h2>Tu mirada,<br><em>tu firma.</em></h2><p>Una pieza diaria para los d&iacute;as que quieres sentirte especialmente t&uacute;.</p><button class="main-cta" type="button" data-add-cart>A&Ntilde;ADIR AL CARRITO <span>&rarr;</span></button></div><div class="last-image"><img src="https://service.pagepilot.ai/storage/v1/object/public/builder/7f0e5ffb-fba5-4055-ae2f-818e455fa2f2/gallery-images/25627a22-38a7-4e90-88ac-bb785a68d0b7/1785944528418-97huqwwzinj.webp" alt="Aplicador de fibras sobre la mirada"></div></div></section>
+
+    <section class="recommended-section"><div class="page-width"><div class="recommended-head"><h2>Completa el ritual</h2><span>Selecci&oacute;n / NOIR ATELIER</span></div><div class="recommended-row"><article><img src="https://bcdn.pagepilot.ai/other/products_placeholders/1.svg" alt="Producto recomendado"><strong>Product Title</strong><small>$24.99 USD</small></article><article><img src="https://bcdn.pagepilot.ai/other/products_placeholders/2.svg" alt="Producto recomendado"><strong>Product Title</strong><small>$24.99 USD</small></article><article><img src="https://bcdn.pagepilot.ai/other/products_placeholders/3.svg" alt="Producto recomendado"><strong>Product Title</strong><small>$24.99 USD</small></article><article><img src="https://bcdn.pagepilot.ai/other/products_placeholders/4.svg" alt="Producto recomendado"><strong>Product Title</strong><small>$24.99 USD</small></article></div></div></section>
   </main>
-
-  <div class="sticky-buy" aria-label="Compra rápida"><div class="sticky-product"><img src="https://cdn.shopify.com/s/files/1/0983/3906/2127/files/Sdd02b8ceb4a4455bb744c725421da3cfs.webp?v=1783726442" alt=""><span>Lifter Facial y Cuello</span></div><strong>$17.950</strong><button class="buy-button buy-button--sticky" type="button" data-add-cart>Agregar al carrito</button></div>
-  <div class="toast" role="status" aria-live="polite">Agregado al carrito</div>
-  <script src="app.js"></script>
+  <div class="sticky-buy"><div class="page-width sticky-inner"><div><span>NOIR ATELIER / 04</span><strong>Mascara de Fibras de Seda 4D</strong></div><button type="button" data-add-cart>A&Ntilde;ADIR AL CARRITO <span>&rarr;</span></button></div></div>
+  <div class="cart-toast" role="status" aria-live="polite">Producto a&ntilde;adido al carrito</div>
+  <script type="module" src="app.js"></script>
 </body>
 </html>

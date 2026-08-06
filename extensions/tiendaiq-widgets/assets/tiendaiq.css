@@ -58,6 +58,23 @@
 #app[data-tema="azul"]   { --acento: #2563eb; --acento-suave: #eff6ff; --acento-texto: #1d4ed8; }
 #app[data-tema="verde"]  { --acento: #16a34a; --acento-suave: #f0fdf4; --acento-texto: #15803d; }
 
+/* Cada tema de la galeria conserva el layout de la plantilla base, pero tiene
+   una piel propia. El color manual elegido por el comerciante sigue ganando
+   porque las reglas data-tema estan declaradas antes en la cascada final. */
+#app[data-plantilla="greens"] { --acento: #286044; --acento-suave: #eef7ef; --acento-texto: #205037; }
+#app[data-plantilla="bloom"]  { --acento: #d83a79; --acento-suave: #fff0f6; --acento-texto: #a9275c; }
+#app[data-plantilla="honey"]  { --acento: #c88712; --acento-suave: #fff8df; --acento-texto: #8b5b08; }
+#app[data-plantilla="clarity"] { --acento: #2857c7; --acento-suave: #eef4ff; --acento-texto: #2046a1; }
+#app[data-plantilla="aura"]   { --acento: #7147a5; --acento-suave: #f6efff; --acento-texto: #593782; }
+#app[data-plantilla="legacy"] { --acento: #343434; --acento-suave: #f3f3f3; --acento-texto: #242424; }
+#app[data-plantilla="stone"]  { --acento: #a6573d; --acento-suave: #fff2ed; --acento-texto: #7e3f2d; }
+#app[data-plantilla="cotton"] { --acento: #20999b; --acento-suave: #edfafa; --acento-texto: #167477; }
+#app[data-plantilla][data-tema="rosa"]   { --acento: #db2777; --acento-suave: #fdf2f8; --acento-texto: #9d174d; }
+#app[data-plantilla][data-tema="negro"]  { --acento: #1a1a1a; --acento-suave: #f4f4f5; --acento-texto: #27272a; }
+#app[data-plantilla][data-tema="marron"] { --acento: #7a4a24; --acento-suave: #f7f1ea; --acento-texto: #5c3718; }
+#app[data-plantilla][data-tema="azul"]   { --acento: #2563eb; --acento-suave: #eff6ff; --acento-texto: #1d4ed8; }
+#app[data-plantilla][data-tema="verde"]  { --acento: #16a34a; --acento-suave: #f0fdf4; --acento-texto: #15803d; }
+
 /* Todo lo genérico va encerrado en #app: en la tienda esta hoja convive con
    el CSS del tema, y un reset global le rompería el header y el footer. */
 :where(#app, #app *) { margin: 0; padding: 0; box-sizing: border-box; }
