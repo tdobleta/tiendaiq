@@ -932,7 +932,6 @@
     estado.audienciaPagina ||= "unisex";
     estado.anguloPreset ||= "problema";
     estado.idiomaPagina ||= "es";
-    estado.modeloPagina ||= "clasico";
 
     const audiencia = estado.audienciaPagina;
     const preset = estado.anguloPreset;
@@ -1152,7 +1151,6 @@
   }
 
   function pantallaPlantillas() {
-    estado.modeloPagina ||= "clasico";
     const nombres = { clasico: "Clásico", premium: "Premium" };
     const plantillas = [
       {
@@ -1161,7 +1159,6 @@
         subtitulo: "Estructura limpia para validar rápido.",
         tags: ["Hero", "Beneficios", "FAQ"],
         activa: true,
-        recomendada: true,
         tipo: "clasico"
       },
       {
@@ -1170,7 +1167,6 @@
         subtitulo: "Más secciones para productos con más explicación.",
         tags: ["Oferta", "Comparación", "Reviews"],
         activa: true,
-        recomendada: false,
         tipo: "premium"
       },
       ...Array.from({ length: 6 }, (_, i) => ({
@@ -1179,7 +1175,6 @@
         subtitulo: "Reservado para una plantilla nueva.",
         tags: ["Preview", "Copy", "Secciones"],
         activa: false,
-        recomendada: false,
         tipo: ["social", "clean", "editorial", "bundle", "minimal", "proof"][i]
       }))
     ];
@@ -1190,9 +1185,14 @@
           <div class="plantillas__top">
             <s-button id="tpl-volver">Atrás</s-button>
             <div>
-              <h1>Plantillas</h1>
+              <h1>Elegir plantilla</h1>
             </div>
-            <s-button variant="primary" id="tpl-generar">Generar página</s-button>
+            <s-button variant="primary" id="tpl-generar" disabled>Generar página</s-button>
+          </div>
+
+          <div class="plantillas__notice" id="tpl-notice">
+            <span>${ico("info")}</span>
+            <p>Seleccioná una plantilla para continuar.</p>
           </div>
 
           <div class="plantillas__grid" id="plantillas-grid">
@@ -1204,11 +1204,7 @@
                 aria-pressed="${estado.modeloPagina === tpl.id ? "true" : "false"}"
               >
                 <span class="plantilla-card__head">
-                  <span>
-                    <b>${esc(tpl.nombre)}</b>
-                    ${tpl.recomendada ? `<em>Recomendada</em>` : tpl.activa ? `` : `<em>Reservada</em>`}
-                  </span>
-                  <span class="plantilla-card__check">${ico("check")}</span>
+                  <b>${esc(tpl.nombre)}</b>
                 </span>
                 ${previewPlantilla(tpl.tipo)}
                 <span class="plantilla-card__foot">
@@ -1223,10 +1219,19 @@
 
     const refrescarCta = () => {
       const btn = $("tpl-generar");
-      if (btn) btn.textContent = `Generar página con ${nombres[estado.modeloPagina] || "plantilla"}`;
+      const listo = !!estado.modeloPagina;
+      const notice = $("tpl-notice");
+      if (btn) {
+        btn.textContent = listo ? `Generar página con ${nombres[estado.modeloPagina] || "plantilla"}` : "Seleccionar plantilla";
+        btn.toggleAttribute("disabled", !listo);
+      }
+      if (notice) notice.hidden = listo;
     };
     $("tpl-volver").onclick = () => ir("informacion");
-    $("tpl-generar").onclick = generar;
+    $("tpl-generar").onclick = () => {
+      if (!estado.modeloPagina) return;
+      generar();
+    };
     const grid = $("plantillas-grid");
     if (grid) grid.onclick = (e) => {
       const b = e.target.closest("[data-modelo]");
