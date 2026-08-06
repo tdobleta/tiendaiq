@@ -489,6 +489,41 @@ async function generar(fuente, medios, { idioma = "es", angulo = "" } = {}) {
   return { salida, uso: r.usage };
 }
 
+// Edición puntual desde el constructor. A diferencia de generar(), esta
+// llamada nunca inventa una página completa: recibe un texto existente y
+// devuelve solo una versión lista para pegar en ese mismo campo.
+async function editarTexto({ texto = "", instrucciones = "", modo = "rewrite", idioma = "es", contexto = "" } = {}) {
+  const cliente = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
+  const modos = {
+    rewrite: "reescribí el texto manteniendo su intención y mejorando claridad, ritmo y conversión",
+    shorter: "hacé el texto más breve, directo y fácil de escanear sin perder la idea principal",
+    longer: "ampliá el texto con información útil y concreta, sin rellenar ni repetir ideas"
+  };
+  const idiomaSalida = idioma === "es" ? "español rioplatense natural, profesional y sin exageraciones" : idioma;
+  const sistema = [
+    "Sos un especialista senior en ecommerce, CRO y copywriting para páginas de producto.",
+    `Escribí en ${idiomaSalida}.`,
+    "Trabajá sobre el texto entregado: no inventes características, resultados, reseñas, precios, garantías ni datos que no aparezcan en el original.",
+    "Usá lenguaje humano, preciso y comercial; evitá frases vacías, tono de IA, superlativos sin respaldo y signos innecesarios.",
+    "Conservá el formato simple del campo. No agregues introducciones, comillas, markdown ni explicaciones: devolvé solamente el texto final."
+  ].join(" ");
+  const prompt = [
+    `Modo: ${modos[modo] || modos.rewrite}.`,
+    `Sección o campo: ${contexto || "copy de producto"}.`,
+    `Texto actual:\n${String(texto).trim() || "(vacío)"}`,
+    instrucciones.trim() ? `Indicaciones del comerciante:\n${instrucciones.trim()}` : ""
+  ].filter(Boolean).join("\n\n");
+  const r = await cliente.messages.create({
+    model: MODELO,
+    max_tokens: 900,
+    system: sistema,
+    messages: [{ role: "user", content: prompt }]
+  });
+  const salida = r.content?.find((b) => b.type === "text")?.text?.trim();
+  if (!salida) throw new Error("La IA no devolvió un texto para este campo.");
+  return salida.replace(/^```(?:text|markdown)?\s*/i, "").replace(/\s*```$/i, "").trim();
+}
+
 // ============================================================
 // 3. ENSAMBLADO — constantes de plantilla + salida del modelo
 // ============================================================
@@ -665,7 +700,7 @@ function escribirPreview(data, urls) {
   fs.writeFileSync(path.join(__dirname, "ultima-pagina.json"), JSON.stringify(data, null, 2));
 }
 
-module.exports = { listarProductos, crearPagina, escribirPreview, extraer, generar, ensamblar, validar };
+module.exports = { listarProductos, crearPagina, escribirPreview, extraer, generar, editarTexto, ensamblar, validar };
 
 // ============================================================
 // CLI

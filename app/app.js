@@ -1385,9 +1385,11 @@
   function campo(ruta, etiqueta, filas, nulo) {
     const v = leer(estado.pagina.data, ruta) ?? "";
     const atributos = `data-ruta="${ruta}"${nulo ? ` data-nulo="1"` : ""}`;
-    return filas
+    const campoHTML = filas
       ? `<s-text-area label="${esc(etiqueta)}" rows="${filas}" ${atributos} value="${esc(v)}"></s-text-area>`
       : `<s-text-field label="${esc(etiqueta)}" ${atributos} value="${esc(v)}"></s-text-field>`;
+    const admiteIA = Boolean(filas) || /título|texto|nombre|beneficio|titular|subtítulo|contenido|llamada|botón|caption/i.test(etiqueta);
+    return `<div class="sp-field">${campoHTML}${admiteIA ? `<button type="button" class="sp-ai-trigger" data-ai-text="${esc(ruta)}">${ico("chispa")} Editar con IA</button>` : ""}</div>`;
   }
 
   function campoNumero(ruta, etiqueta) {
@@ -1929,7 +1931,8 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     if (borrar) {
       const idx = secs.findIndex((s) => s.id === borrar.dataset.secBorrar);
       if (idx > -1) secs.splice(idx, 1);
-      cerrarModalEdicion();
+      if (panelEditorId) cerrarPanelSeccion();
+      else cerrarModalEdicion();
       marcarSucio();
       repintarPreview();
       return "cerrado";
@@ -1948,6 +1951,10 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   }
 
   function abrirModalEdicion(id) {
+    // Todas las piezas del editor usan ahora el inspector lateral. Se conserva
+    // el modal debajo durante la migración para no perder sus helpers antiguos.
+    return abrirPanelEditor(id);
+
     // Las secciones v2 (schema-driven, ej. Video slider) usan el PANEL LATERAL
     // estilo Section Store, no el modal. Las clásicas (videos/carrusel) siguen
     // con el modal viejo.
@@ -2920,6 +2927,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   // imagen). Cada cambio escribe en s.settings y repinta en vivo.
   // ============================================================
   let panelSecId = null;      // id de la sección abierta en el panel
+  let panelEditorId = null;   // id del bloque abierto, también para facetas clásicas
   const panelOpen = { slider: true }; // acordeones abiertos (primer grupo abierto)
 
   const secActual = () => (estado.pagina.data.secciones || []).find((s) => s.id === panelSecId);
@@ -3040,13 +3048,47 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       <div class="sp-sub">Ajustes</div>
       ${grupos}
       ${cssCustom}
-      <button type="button" class="sp-del" data-panel-del="${s.id}">${ico("basura")} Eliminar sección</button>`;
+      `;
   }
 
+  function panelEditorHTML(id) {
+    if (id.startsWith("sec:")) {
+      const s = (estado.pagina.data.secciones || []).find((x) => x.id === id.slice(4));
+      if (!s) return "";
+      if (catSeccion(s.tipo)?.schema) return panelSeccionHTML(s);
+      const def = defSeccion(s.id);
+      return def ? `<div class="sp-sub">Contenido</div><div class="sp-content">${def.html()}</div>` : "";
+    }
+    const def = seccionesPagina()[id];
+    if (!def) return "";
+    const nota = {
+      encabezado: "Ajustá el contenido que acompaña al producto. Los cambios se reflejan en la vista previa.",
+      galeria: "Elegí el orden de las imágenes y definí cuál se muestra en cada parte de la página.",
+      bullets: "Mantené cada beneficio concreto y fácil de leer en una sola pasada.",
+      destacada: "Usá una reseña real y específica. La claridad genera más confianza que una frase genérica.",
+      clientes: "Agregá pruebas visuales reales de clientes. Los clips vacíos no se muestran en la tienda.",
+      resenas: "Revisá las reseñas antes de publicar para que el contenido sea auténtico y consistente.",
+      acordeones: "Organizá la información que el cliente necesita antes de comprar."
+    }[id];
+    return `<div class="sp-sub">Contenido</div><div class="sp-content">
+      ${nota ? `<div class="sp-note">${ico("info")}<span>${esc(nota)}</span></div>` : ""}
+      ${def.html()}
+    </div>`;
+  }
+
+  function panelTitulo(id) {
+    if (id.startsWith("sec:")) {
+      const s = (estado.pagina.data.secciones || []).find((x) => x.id === id.slice(4));
+      return catSeccion(s?.tipo)?.nombre || "Sección";
+    }
+    return seccionesPagina()[id]?.titulo || "Sección";
+  }
+
+  function panelEsV2(id) { return id.startsWith("sec:"); }
+
   function refrescarPanelSeccion() {
-    const s = secActual();
     const body = document.getElementById("sp-body");
-    if (s && body) { body.innerHTML = panelSeccionHTML(s); sincSelectsPag(); }
+    if (panelEditorId && body) { body.innerHTML = panelEditorHTML(panelEditorId); sincSelectsPag(); }
   }
 
   function setVS(s, k, val) {
@@ -3057,11 +3099,73 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     timerPreview = setTimeout(repintarPreview, 120);
   }
 
-  function abrirPanelSeccion(secId) {
+  function cerrarAiText() { document.getElementById("sp-ai-popover")?.remove(); }
+
+  function abrirAiText(ruta) {
+    const p = document.getElementById("sec-panel");
+    if (!p) return;
+    cerrarAiText();
+    p.insertAdjacentHTML("beforeend", `
+      <div class="sp-ai-popover" id="sp-ai-popover" role="dialog" aria-label="Editar texto con IA">
+        <div class="sp-ai-popover__head">${ico("chispa")}<strong>Editar texto con IA</strong><button type="button" class="sp-ai-popover__close" data-ai-cancel aria-label="Cerrar">${ico("x")}</button></div>
+        <div class="sp-ai-popover__label">Modo</div>
+        <div class="sp-ai-modes" role="group" aria-label="Modo de edición">
+          <button type="button" class="sp-ai-mode is-selected" data-ai-mode="rewrite">Reescribir</button>
+          <button type="button" class="sp-ai-mode" data-ai-mode="shorter">Más corto</button>
+          <button type="button" class="sp-ai-mode" data-ai-mode="longer">Más largo</button>
+        </div>
+        <label class="sp-ai-popover__label" for="sp-ai-instructions">Indicaciones opcionales</label>
+        <textarea id="sp-ai-instructions" class="sp-ai-popover__textarea" rows="3" placeholder="Ej.: enfocá el texto en madres primerizas..."></textarea>
+        <div class="sp-ai-popover__actions"><button type="button" class="sp-ai-cancel" data-ai-cancel>Cancelar</button><s-button variant="primary" id="sp-ai-send">Aplicar</s-button></div>
+      </div>`);
+    const send = p.querySelector("#sp-ai-send");
+    if (send) send.dataset.aiRuta = ruta;
+    p.querySelector("#sp-ai-instructions")?.focus();
+  }
+
+  async function enviarAiText(ruta) {
+    const p = document.getElementById("sec-panel");
+    const send = p?.querySelector("#sp-ai-send");
+    if (!p || !send) return;
+    const mode = p.querySelector(".sp-ai-mode.is-selected")?.dataset.aiMode || "rewrite";
+    const instrucciones = p.querySelector("#sp-ai-instructions")?.value || "";
+    const original = String(leer(estado.pagina.data, ruta) ?? "");
+    const textoOriginal = send.textContent;
+    send.setAttribute("disabled", "");
+    send.textContent = "Procesando…";
+    try {
+      const r = await api("/texto/editar", {
+        method: "POST",
+        body: {
+          texto: original,
+          instrucciones,
+          modo: mode,
+          idioma: estado.idiomaPagina || "es",
+          contexto: `${panelTitulo(panelEditorId || "")} / ${ruta.split(".").pop()}`
+        }
+      });
+      fijar(estado.pagina.data, ruta, r.texto);
+      marcarSucio();
+      repintarPreview();
+      cerrarAiText();
+      refrescarPanelSeccion();
+      toast("Texto actualizado");
+    } catch (e) {
+      send.removeAttribute("disabled");
+      send.textContent = textoOriginal || "Aplicar";
+      p.insertAdjacentHTML("afterbegin", `<div class="sp-ai-error">${ico("x")} ${esc(e.message)}</div>`);
+    }
+  }
+
+  function abrirPanelSeccion(secId) { abrirPanelEditor(`sec:${secId}`); }
+
+  function abrirPanelEditor(editorId) {
     cerrarPanelSeccion();
-    panelSecId = secId;
+    panelEditorId = editorId;
+    panelSecId = editorId.startsWith("sec:") ? editorId.slice(4) : null;
     const s = secActual();
-    if (!s) { panelSecId = null; return; }
+    const def = editorId.startsWith("sec:") ? null : seccionesPagina()[editorId];
+    if (!s && !def) { panelSecId = null; panelEditorId = null; return; }
     document.body.classList.add("sec-panel-abierto");
     const p = document.createElement("aside");
     p.className = "sec-panel";
@@ -3070,10 +3174,11 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     p.setAttribute("aria-labelledby", "sec-panel-tit");
     p.innerHTML = `
       <div class="sec-panel__cab">
-        <span class="sec-panel__tit" id="sec-panel-tit">${ico("video")} ${esc(catSeccion(s.tipo)?.nombre || "Sección")}</span>
+        <div class="sec-panel__heading"><span class="sec-panel__eyebrow">Editor de página</span><span class="sec-panel__tit" id="sec-panel-tit">${esc(panelTitulo(editorId))}</span></div>
         <button class="sec-panel__x" type="button" aria-label="Cerrar">${ico("x")}</button>
       </div>
-      <div class="sec-panel__body" id="sp-body">${panelSeccionHTML(s)}</div>`;
+      <div class="sec-panel__body" id="sp-body">${panelEditorHTML(panelEditorId)}</div>
+      ${editorId.startsWith("sec:") ? `<div class="sec-panel__footer"><s-button variant="tertiary" tone="critical" class="sp-del" data-panel-del="${esc(s.id)}">${ico("basura")} Eliminar sección</s-button></div>` : ""}`;
     document.body.appendChild(p);
     // A11y: Esc cierra el panel.
     p._onKey = (e) => { if (e.key === "Escape") cerrarPanelSeccion(); };
@@ -3110,6 +3215,15 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     p.addEventListener("click", (e) => {
       const t = e.target;
       if (t === p.querySelector(".sec-panel__x") || t.closest(".sec-panel__x")) return cerrarPanelSeccion();
+      const aiTrigger = t.closest("[data-ai-text]");
+      if (aiTrigger) { abrirAiText(aiTrigger.dataset.aiText); return; }
+      if (t.closest("[data-ai-cancel]")) { cerrarAiText(); return; }
+      const aiMode = t.closest("[data-ai-mode]");
+      if (aiMode) {
+        p.querySelectorAll("[data-ai-mode]").forEach((b) => b.classList.toggle("is-selected", b === aiMode));
+        return;
+      }
+      if (t.id === "sp-ai-send") { enviarAiText(t.dataset.aiRuta); return; }
       const acc = t.closest("[data-vacc]");
       if (acc) { const id = acc.dataset.vacc; panelOpen[id] = !panelOpen[id]; refrescarPanelSeccion(); return; }
       const seg = t.closest("[data-vseg]");
@@ -3158,11 +3272,13 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   }
 
   function cerrarPanelSeccion() {
+    cerrarAiText();
     const p = document.getElementById("sec-panel");
     if (p?._onKey) document.removeEventListener("keydown", p._onKey);
     p?.remove();
     document.body.classList.remove("sec-panel-abierto");
     panelSecId = null;
+    panelEditorId = null;
   }
 
   // Árbol de bloques del editor (panel izquierdo estilo PagePilot). Lista las

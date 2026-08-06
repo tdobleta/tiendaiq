@@ -21,7 +21,7 @@
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
-const { listarProductos, crearPagina, escribirPreview } = require("./adaptador");
+const { listarProductos, crearPagina, editarTexto, escribirPreview } = require("./adaptador");
 const { publicarPagina, despublicarPagina } = require("./publicar");
 const { env, sesionDeEnv } = require("./shopify");
 const { sesionDe, borrarTienda, listarTiendas } = require("./tiendas");
@@ -686,6 +686,14 @@ async function api(req, res, url) {
     });
 
     return json(res, 200, { ...registro, segundos: (Date.now() - t0) / 1000, uso });
+  }
+
+  // POST /api/texto/editar — asistente puntual del editor de páginas.
+  if (req.method === "POST" && ruta === "/api/texto/editar") {
+    const { texto = "", instrucciones = "", modo = "rewrite", idioma = "es", contexto = "" } = await leerCuerpo(req);
+    if (String(texto).length > 12000) return json(res, 400, { error: "El texto es demasiado largo para editarlo en una sola vez." });
+    const salida = await editarTexto({ texto, instrucciones, modo, idioma, contexto });
+    return json(res, 200, { texto: salida });
   }
 
   // PUT /api/paginas/:id — el editor
