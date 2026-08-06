@@ -56,7 +56,8 @@ const VERSION_ASSETS = (() => {
     const dirWidgets = path.join(__dirname, "extensions", "tiendaiq-widgets", "assets");
     const archivos = [
       path.join(DIR_APP, "app.js"), path.join(DIR_APP, "app.css"),
-      path.join(dirWidgets, "tiendaiq.js"), path.join(dirWidgets, "tiendaiq.css")
+      path.join(dirWidgets, "tiendaiq.js"), path.join(dirWidgets, "tiendaiq.css"),
+      path.join(dirWidgets, "tiendaiq-atelier.css")
     ];
     return Math.floor(Math.max(...archivos.map((a) => fs.statSync(a).mtimeMs))).toString(36);
   } catch {
@@ -893,7 +894,7 @@ const servidor = http.createServer(async (req, res) => {
       if (rel === "index.html") {
         const html = fs
           .readFileSync(path.join(DIR_PLANTILLA, "index.html"), "utf8")
-          .replace(/(tiendaiq\.css|tiendaiq\.js)\?v=[\w.]+/g, `$1?v=${VERSION_ASSETS}`);
+          .replace(/(tiendaiq\.css|tiendaiq-atelier\.css|tiendaiq\.js)\?v=[\w.]+/g, `$1?v=${VERSION_ASSETS}`);
         res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" });
         return res.end(html);
       }

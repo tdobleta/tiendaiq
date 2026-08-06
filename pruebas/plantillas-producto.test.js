@@ -3,7 +3,7 @@ const assert = require("node:assert/strict");
 const { PLANTILLAS_PRODUCTO, obtenerPlantilla, resumenContrato } = require("../plantillas-producto");
 
 test("las plantillas publicadas tienen un contrato completo", () => {
-  const ids = ["clasico", "premium", "greens", "bloom", "honey", "clarity", "aura", "legacy", "stone", "cotton"];
+  const ids = ["clasico", "premium", "greens", "bloom", "honey", "clarity", "aura", "legacy", "stone", "cotton", "atelier"];
   for (const id of ids) {
     const plantilla = obtenerPlantilla(id);
     assert.equal(plantilla.id, id);
@@ -13,7 +13,7 @@ test("las plantillas publicadas tienen un contrato completo", () => {
     assert.ok(plantilla.reglasCopy.length >= 3);
     assert.ok(plantilla.campos.some((campo) => campo.ruta === "facetas.hero.titulo"));
     assert.ok(plantilla.campos.some((campo) => campo.ruta === "facetas.hero.galeria"));
-    assert.ok(["clasico", "premium"].includes(plantilla.layout));
+    assert.ok(["clasico", "premium", "atelier"].includes(plantilla.layout));
     assert.ok(plantilla.tema);
   }
   assert.equal(Object.keys(PLANTILLAS_PRODUCTO).length, ids.length);

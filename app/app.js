@@ -1167,6 +1167,14 @@
         tags: ["Oferta", "Comparación", "Reviews"],
         activa: true,
         tipo: "premium"
+      },
+      {
+        id: "atelier",
+        nombre: "Atelier",
+        subtitulo: "Una pagina editorial con galeria, detalle y compra directa.",
+        tags: ["Editorial", "Galeria", "Premium"],
+        activa: true,
+        tipo: "premium"
       }
     ];
 

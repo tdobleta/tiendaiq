@@ -143,6 +143,16 @@ const PLANTILLAS_PRODUCTO = Object.freeze({
     orden: ["hero", "iconos", "resenas", "faq", "garantia"],
     reglasCopy: ["Usar un tono cálido y responsable.", "No convertir tranquilidad en una promesa médica.", "Explicar el uso con sencillez."],
     campos: CAMPOS_COMUNES
+  }),
+  atelier: Object.freeze({
+    id: "atelier", version: 1, nombre: "Atelier",
+    descripcion: "Una composicion editorial para productos que necesitan una experiencia de marca mas cuidada.",
+    intencion: "Presentar el producto como una pieza: imagen, argumento y prueba avanzan con ritmo y claridad.",
+    subtitulo: "Una pagina editorial con galeria, detalle y compra directa.",
+    tags: ["Editorial", "Galeria", "Premium"], tipo: "premium", layout: "atelier", tema: "atelier",
+    orden: ["hero", "iconos", "stats", "tabla", "resenas", "faq", "garantia"],
+    reglasCopy: ["Escribir con criterio editorial y frases concretas.", "Dejar que las imagenes expliquen el producto.", "Usar prueba social solo cuando exista.", "No inventar cifras, resultados ni testimonios."],
+    campos: CAMPOS_COMUNES
   })
 });
 
