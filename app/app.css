@@ -3535,6 +3535,24 @@ body.sec-panel-abierto .constructor { padding-right: 394px; }
   background: #f6f6f7;
   padding: 12px;
 }
+.tpl-preview__cover {
+  min-height: 54%;
+  overflow: hidden;
+  border-radius: 7px;
+  background: #f1f2f3;
+}
+.tpl-preview__cover img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 170px;
+  object-fit: cover;
+  object-position: center top;
+}
+.plantillas--single .plantillas__grid {
+  grid-template-columns: minmax(300px, 380px);
+  justify-content: center;
+}
 .tpl-preview__hero {
   min-height: 34%;
   display: grid;

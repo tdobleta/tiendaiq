@@ -1,6 +1,6 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { PLANTILLAS_PRODUCTO, obtenerPlantilla, resumenContrato } = require("../plantillas-producto");
+const { PLANTILLAS_PRODUCTO, PLANTILLAS_DISPONIBLES, obtenerPlantilla, resumenContrato } = require("../plantillas-producto");
 
 test("las plantillas publicadas tienen un contrato completo", () => {
   const ids = ["clasico", "premium", "greens", "bloom", "honey", "clarity", "aura", "legacy", "stone", "cotton", "atelier"];
@@ -22,6 +22,11 @@ test("las plantillas publicadas tienen un contrato completo", () => {
 test("una plantilla desconocida cae de forma segura a clasico", () => {
   assert.equal(obtenerPlantilla("no-existe").id, "clasico");
   assert.equal(obtenerPlantilla().id, "clasico");
+});
+
+test("el selector solo publica las plantillas con HTML integrado", () => {
+  assert.deepEqual(Object.keys(PLANTILLAS_DISPONIBLES), ["atelier"]);
+  assert.equal(PLANTILLAS_DISPONIBLES.atelier.imagen.includes("pagepilot.ai"), true);
 });
 
 test("el resumen que recibe la IA identifica la plantilla y sus campos", () => {

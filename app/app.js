@@ -1135,12 +1135,13 @@
 
   // ---------- 3. plantillas ----------
 
-  function previewPlantilla(tipo = "clasico", id = tipo) {
+  function previewPlantilla(tipo = "clasico", id = tipo, imagen = "") {
+    const portada = imagen
+      ? `<div class="tpl-preview__cover"><img src="${esc(imagen)}" alt="Vista previa de la plantilla" loading="lazy"></div>`
+      : `<div class="tpl-preview__hero"><i></i><i></i><i></i></div>`;
     return `
       <div class="tpl-preview tpl-preview--${esc(tipo)} tpl-preview--theme-${esc(id)}" aria-hidden="true">
-        <div class="tpl-preview__hero">
-          <i></i><i></i><i></i>
-        </div>
+        ${portada}
         <div class="tpl-preview__cols">
           <span></span><span></span><span></span>
         </div>
@@ -1188,7 +1189,7 @@
     } catch {}
 
     vista.innerHTML = `
-      <div class="plantillas">
+      <div class="plantillas ${plantillas.length === 1 ? "plantillas--single" : ""}">
         <div class="plantillas__shell">
           <div class="plantillas__top">
             <s-button id="tpl-volver">Atrás</s-button>
@@ -1214,7 +1215,7 @@
                 <span class="plantilla-card__head">
                   <b>${esc(tpl.nombre)}</b>
                 </span>
-                ${previewPlantilla(tpl.tipo, tpl.id)}
+                ${previewPlantilla(tpl.tipo, tpl.id, tpl.imagen)}
                 <span class="plantilla-card__foot">
                   <span>${esc(tpl.subtitulo)}</span>
                   <span class="tpl-tags">${tpl.tags.map((tag) => `<i>${esc(tag)}</i>`).join("")}</span>

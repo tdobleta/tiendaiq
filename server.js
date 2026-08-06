@@ -22,7 +22,7 @@ const http = require("http");
 const fs = require("fs");
 const path = require("path");
 const { listarProductos, crearPagina, editarTexto, escribirPreview } = require("./adaptador");
-const { PLANTILLAS_PRODUCTO } = require("./plantillas-producto");
+const { PLANTILLAS_DISPONIBLES } = require("./plantillas-producto");
 const { publicarPagina, despublicarPagina } = require("./publicar");
 const { env, sesionDeEnv } = require("./shopify");
 const { sesionDe, borrarTienda, listarTiendas } = require("./tiendas");
@@ -515,7 +515,7 @@ async function api(req, res, url) {
     return json(
       res,
       200,
-      Object.values(PLANTILLAS_PRODUCTO).map(({ id, version, nombre, descripcion, subtitulo, tags, tipo, layout, tema, intencion, orden }) => ({
+      Object.values(PLANTILLAS_DISPONIBLES).map(({ id, version, nombre, descripcion, subtitulo, tags, tipo, layout, tema, intencion, orden, imagen }) => ({
         id,
         version,
         nombre,
@@ -525,6 +525,7 @@ async function api(req, res, url) {
         tipo,
         layout,
         tema,
+        imagen,
         intencion,
         orden
       }))

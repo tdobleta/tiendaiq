@@ -150,11 +150,16 @@ const PLANTILLAS_PRODUCTO = Object.freeze({
     intencion: "Presentar el producto como una pieza: imagen, argumento y prueba avanzan con ritmo y claridad.",
     subtitulo: "Una pagina editorial con galeria, detalle y compra directa.",
     tags: ["Editorial", "Galeria", "Premium"], tipo: "premium", layout: "atelier", tema: "atelier",
+    imagen: "https://service.pagepilot.ai/storage/v1/object/public/builder/7f0e5ffb-fba5-4055-ae2f-818e455fa2f2/gallery-images/25627a22-38a7-4e90-88ac-bb785a68d0b7/1785944528407-sto6zivwkf.webp",
     orden: ["hero", "iconos", "stats", "tabla", "resenas", "faq", "garantia"],
     reglasCopy: ["Escribir con criterio editorial y frases concretas.", "Dejar que las imagenes expliquen el producto.", "Usar prueba social solo cuando exista.", "No inventar cifras, resultados ni testimonios."],
     campos: CAMPOS_COMUNES
   })
 });
+
+// Solo las plantillas con HTML real integrado se muestran al comerciante.
+// Los contratos anteriores se conservan para no romper paginas ya creadas.
+const PLANTILLAS_DISPONIBLES = Object.freeze({ atelier: PLANTILLAS_PRODUCTO.atelier });
 
 function obtenerPlantilla(id) {
   return PLANTILLAS_PRODUCTO[id] || PLANTILLAS_PRODUCTO.clasico;
@@ -181,4 +186,4 @@ function cardinalidadDe(plantilla) {
   );
 }
 
-module.exports = { PLANTILLAS_PRODUCTO, obtenerPlantilla, resumenContrato, cardinalidadDe };
+module.exports = { PLANTILLAS_PRODUCTO, PLANTILLAS_DISPONIBLES, obtenerPlantilla, resumenContrato, cardinalidadDe };
