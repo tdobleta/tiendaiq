@@ -928,70 +928,154 @@
 
   async function pantallaInformacion() {
     const p = estado.producto;
+    estado.audienciaPagina ||= "unisex";
+    estado.anguloPreset ||= "problema";
+
+    const audiencia = estado.audienciaPagina;
+    const preset = estado.anguloPreset;
+    const audienciaTexto = { mujer: "Mujer", hombre: "Hombre", unisex: "Unisex" };
+    const angulos = [
+      ["problema", "Problema concreto", "Para compradores que buscan resolver una molestia puntual."],
+      ["rutina", "Rutina diaria", "Muestra cómo el producto entra en el uso cotidiano."],
+      ["regalo", "Regalo útil", "Enfoca la página en practicidad, deseo y ocasión de compra."],
+      ["confianza", "Confianza primero", "Prioriza claridad, prueba social y reducción de dudas."],
+      ["resultado", "Antes y después", "Contrasta la situación actual con el resultado esperado."],
+      ["oferta", "Oferta directa", "Va al punto con beneficios, precio y decisión rápida."]
+    ];
+    const textoAngulo = (k) => (angulos.find((a) => a[0] === k) || angulos[0])[1];
+    const textoDesc = (k) => (angulos.find((a) => a[0] === k) || angulos[0])[2];
+    const anguloInicial = [
+      `Público: ${audienciaTexto[audiencia] || "Unisex"}.`,
+      `Ángulo: ${textoAngulo(preset)}.`,
+      textoDesc(preset)
+    ].join(" ");
 
     vista.innerHTML = `
-      <s-page heading="Información del producto">
-        <s-button slot="secondary-actions" id="volver">Elegir otro producto</s-button>
+      <div class="estrategia">
+        <div class="estrategia__top">
+          <s-button id="volver">Elegir otro producto</s-button>
+          <div>
+            <h1>Definí la estrategia de venta</h1>
+            <p>Elegí público, enfoque y ajustes básicos antes de generar la página.</p>
+          </div>
+          <s-button variant="primary" id="generar-top">Crear página</s-button>
+        </div>
 
-        <s-paragraph>Revisá esto antes de generar. Cambiarlo después cuesta una regeneración.</s-paragraph>
+        <div class="estrategia__panel">
+          <section class="estrategia__main" aria-label="Estrategia de copywriting">
+            <div class="estrategia__bloque">
+              <h2>Público objetivo</h2>
+              <p>La IA adapta el tono del texto, los beneficios y la forma de presentar el producto.</p>
+              <div class="audiencias" id="audiencias">
+                <button type="button" data-audiencia="mujer" class="${audiencia === "mujer" ? "is-sel" : ""}">Mujer</button>
+                <button type="button" data-audiencia="hombre" class="${audiencia === "hombre" ? "is-sel" : ""}">Hombre</button>
+                <button type="button" data-audiencia="unisex" class="${audiencia === "unisex" ? "is-sel" : ""}">Unisex</button>
+              </div>
+            </div>
 
-        <s-grid gridTemplateColumns="repeat(auto-fit, minmax(320px, 1fr))" gap="base">
-          <s-stack direction="block" gap="base">
-            <s-section heading="Copywriting">
-              <s-stack direction="block" gap="base">
-                <s-text-field label="Ángulo del producto / enfoque (opcional)" id="angulo" placeholder="ejemplo: para escritorios chicos" details="Si lo cargás, todos los textos se inclinan hacia ese ángulo."></s-text-field>
-                <s-select label="Idioma" id="idioma" value="es" details="Aplica solo al texto. Las imágenes se usan como están.">
-                  <s-option value="es">Español (rioplatense)</s-option>
-                  <s-option value="en">English</s-option>
-                  <s-option value="pt">Português</s-option>
-                </s-select>
-              </s-stack>
-            </s-section>
+            <div class="estrategia__bloque">
+              <h2>Ángulo de venta</h2>
+              <p>Seleccioná la lectura comercial que mejor encaja con este producto.</p>
+              <div class="angulos" id="angulos">
+                ${angulos.map(([k, t, d]) => `
+                  <button type="button" data-angulo-preset="${k}" class="angulo-card ${preset === k ? "is-sel" : ""}">
+                    <span></span>
+                    <b>${t}</b>
+                    <small>${d}</small>
+                  </button>`).join("")}
+              </div>
+            </div>
 
-            <s-section heading="Modelo de página">
-              <s-stack direction="block" gap="base">
-                <s-text color="subdued">Elegí el estilo de la landing. Después no se cambia sin regenerar.</s-text>
-                <div class="modelos" id="modelos">
-                  <button type="button" class="modelo-card ${(estado.modeloPagina || "clasico") === "clasico" ? "is-sel" : ""}" data-modelo="clasico">
-                    <span class="modelo-card__mini modelo-card__mini--clasico"><i></i><i></i><i></i></span>
-                    <span class="modelo-card__nom">Clásico ${ico("check")}</span>
-                    <span class="modelo-card__desc">Hero, beneficios, reseñas en grilla y FAQ.</span>
-                  </button>
-                  <button type="button" class="modelo-card ${estado.modeloPagina === "premium" ? "is-sel" : ""}" data-modelo="premium">
-                    <span class="modelo-card__mini modelo-card__mini--premium"><i></i><i></i><i></i></span>
-                    <span class="modelo-card__nom">Premium <span class="modelo-card__badge">Nuevo</span> ${ico("check")}</span>
-                    <span class="modelo-card__desc">Timer de oferta, comparación y reseñas en carrusel infinito.</span>
-                  </button>
+            <div class="estrategia__bloque estrategia__bloque--nota">
+              <label for="angulo-extra">Detalle opcional</label>
+              <textarea id="angulo-extra" rows="3" placeholder="Ejemplo: para madres primerizas, oficinas pequeñas o piel sensible."></textarea>
+              <input type="hidden" id="angulo" value="${esc(anguloInicial)}">
+            </div>
+          </section>
+
+          <aside class="estrategia__side" aria-label="Preparación de generación">
+            <section class="side-card side-card--producto">
+              <span class="side-card__label">Producto</span>
+              <div class="side-prod">
+                <span class="side-prod__img">${p.imagen ? `<img src="${esc(p.imagen)}" alt="${esc(p.titulo)}" loading="lazy">` : ico("bolsa")}</span>
+                <div>
+                  <strong id="f-titulo">${esc(p.titulo)}</strong>
+                  <small id="f-meta">Cargando...</small>
                 </div>
-              </s-stack>
-            </s-section>
+              </div>
+              <p id="f-desc">La descripción del proveedor se lee al generar y no se muestra al cliente.</p>
+            </section>
 
-            <s-section heading="Color de la página">
-              <s-stack direction="block" gap="base">
-                <s-text color="subdued">Elegí el color del botón, los círculos de % y los detalles. Después lo podés cambiar en el editor.</s-text>
-                <div id="tema-previo">${swatchesTema(estado.temaElegido === "auto" ? null : estado.temaElegido)}</div>
-              </s-stack>
-            </s-section>
+            <section class="side-card">
+              <span class="side-card__label">Idioma</span>
+              <s-select id="idioma" value="es">
+                <s-option value="es">Español rioplatense</s-option>
+                <s-option value="en">English</s-option>
+                <s-option value="pt">Português</s-option>
+              </s-select>
+            </section>
 
-            <s-section heading="Medios">
-              <div class="medios" id="medios"><s-text color="subdued">Cargando…</s-text></div>
+            <section class="side-card">
+              <span class="side-card__label">Modelo de página</span>
+              <div class="modelos modelos--compactos" id="modelos">
+                <button type="button" class="modelo-card ${(estado.modeloPagina || "clasico") === "clasico" ? "is-sel" : ""}" data-modelo="clasico">
+                  <span class="modelo-card__nom">Clásico ${ico("check")}</span>
+                  <span class="modelo-card__desc">Hero, beneficios, reseñas y FAQ.</span>
+                </button>
+                <button type="button" class="modelo-card ${estado.modeloPagina === "premium" ? "is-sel" : ""}" data-modelo="premium">
+                  <span class="modelo-card__nom">Premium ${ico("check")}</span>
+                  <span class="modelo-card__desc">Oferta, comparación y carrusel.</span>
+                </button>
+              </div>
+            </section>
+
+            <section class="side-card">
+              <span class="side-card__label">Color de acento</span>
+              <div id="tema-previo">${swatchesTema(estado.temaElegido === "auto" ? null : estado.temaElegido)}</div>
+            </section>
+
+            <section class="side-card">
+              <span class="side-card__label">Medios</span>
+              <div class="medios medios--compactos" id="medios"><span class="ayuda">Cargando...</span></div>
               <div class="nota" id="nota-medios"></div>
-            </s-section>
+            </section>
 
             <s-button variant="primary" id="generar">Crear página de producto con IA</s-button>
             ${p.estado ? `<s-button id="abrir">Editar la página existente</s-button>` : ""}
-          </s-stack>
-
-          <s-section heading="Producto">
-            <div class="ficha__titulo" id="f-titulo">${esc(p.titulo)}</div>
-            <div class="ficha__meta" id="f-meta">Cargando…</div>
-            <div class="ficha__descripcion" id="f-desc"></div>
-          </s-section>
-        </s-grid>
-      </s-page>`;
+          </aside>
+        </div>
+      </div>`;
 
     $("volver").onclick = () => ir("lista");
-    $("generar").onclick = generar;
+    const syncAngulo = () => {
+      const aud = audienciaTexto[estado.audienciaPagina || "unisex"] || "Unisex";
+      const pre = estado.anguloPreset || "problema";
+      const extra = ($("angulo-extra")?.value || "").trim();
+      const partes = [`Público: ${aud}.`, `Ángulo: ${textoAngulo(pre)}.`, textoDesc(pre)];
+      if (extra) partes.push(`Detalle: ${extra}`);
+      $("angulo").value = partes.join(" ");
+    };
+    const generarConSync = () => { syncAngulo(); generar(); };
+    $("generar").onclick = generarConSync;
+    $("generar-top").onclick = generarConSync;
+    const auds = $("audiencias");
+    if (auds) auds.onclick = (e) => {
+      const b = e.target.closest("[data-audiencia]");
+      if (!b) return;
+      estado.audienciaPagina = b.dataset.audiencia;
+      auds.querySelectorAll("button").forEach((x) => x.classList.toggle("is-sel", x === b));
+      syncAngulo();
+    };
+    const angs = $("angulos");
+    if (angs) angs.onclick = (e) => {
+      const b = e.target.closest("[data-angulo-preset]");
+      if (!b) return;
+      estado.anguloPreset = b.dataset.anguloPreset;
+      angs.querySelectorAll(".angulo-card").forEach((x) => x.classList.toggle("is-sel", x === b));
+      syncAngulo();
+    };
+    const extra = $("angulo-extra");
+    if (extra) extra.oninput = syncAngulo;
     // Selector de modelo de página (Clásico / Premium).
     const mods = $("modelos");
     if (mods) mods.onclick = (e) => {
