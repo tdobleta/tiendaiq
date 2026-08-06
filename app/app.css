@@ -1667,10 +1667,6 @@ ui-save-bar { display: none; }
 }
 .editor__titulo { font-size: 14px; font-weight: 600; color: var(--negro); }
 .editor__ayuda { font-size: 12px; color: var(--suave); margin: 3px 0 12px; }
-.editor__nota {
-  font-size: 12px; color: var(--suave); background: var(--fondo);
-  border-radius: 7px; padding: 8px 10px; margin-bottom: 10px;
-}
 
 .seccion { border: 1px solid var(--borde); border-radius: 8px; margin-bottom: 8px; }
 .seccion summary {
@@ -2411,8 +2407,6 @@ body.sec-panel-abierto .constructor { padding-right: 394px; }
 .sp-sub { padding: 18px 18px 8px; color: #5c6268; font-size: 11px; line-height: 1.2; letter-spacing: .04em; text-transform: uppercase; }
 .sp-content { padding: 0 18px 6px; }
 .sp-content > .sp-field:first-child { margin-top: 2px; }
-.sp-note { display: flex; align-items: flex-start; gap: 8px; padding: 10px 11px; margin: 0 0 14px; color: #5c6268; background: #f6f6f7; border: 1px solid #e3e5e7; border-radius: 8px; line-height: 1.42; font-size: 12px; }
-.sp-note .ico { flex: 0 0 auto; width: 15px; height: 15px; color: #6d7175; margin-top: 1px; }
 .sp-field { position: relative; margin: 0 0 14px; }
 .sp-field > s-text-field, .sp-field > s-text-area { display: block; }
 .sp-ai-trigger {
@@ -2431,7 +2425,6 @@ body.sec-panel-abierto .constructor { padding-right: 394px; }
 .sec-panel .campo--editor textarea { min-height: 82px; line-height: 1.45; resize: vertical; }
 .sec-panel .campo--editor input:focus, .sec-panel .campo--editor textarea:focus, .sec-panel .campo--editor select:focus,
 .sec-panel .fila-doble input:focus, .sec-panel .fila-triple input:focus { border-color: #005bd3; outline: 2px solid rgba(0,91,211,.14); outline-offset: 0; }
-.sec-panel .editor__nota { margin: 0 0 14px; padding: 10px 11px; color: #5c6268; background: #f6f6f7; border: 1px solid #e3e5e7; }
 .sec-panel .sp-item-card { margin: 0 0 14px; padding: 12px; border: 1px solid #e1e4e8; border-radius: 8px; background: #fff; }
 .sec-panel .sp-item-card__head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 0 12px; padding-bottom: 9px; border-bottom: 1px solid #e8eaec; color: #202223; font-size: 12px; }
 .sec-panel .sp-item-card__head span { color: #6d7175; font-size: 10px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }

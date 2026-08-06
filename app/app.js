@@ -1599,7 +1599,6 @@
         titulo: "Beneficios del producto",
         html: () => {
           return (
-            `<div class="editor__nota">Cada beneficio: un emoji, el arranque en negrita y el resto de la frase.</div>` +
             f.hero.bullets
               .map(
                 (b, i) => `
@@ -1621,7 +1620,6 @@
       destacada: {
         titulo: "Reseña destacada",
         html: () =>
-          `<div class="editor__nota">Es la reseña grande del hero. Pegá acá una reseña REAL de un cliente; sin texto, en la tienda no se muestra.</div>` +
           campo("facetas.hero.resena_destacada.autor", "Nombre", 0, true) +
           campo("facetas.hero.resena_destacada.texto", "Texto", 3, true) +
           `<div class="campo campo--editor"><label>Estrellas</label>${selectorEstrellas(
@@ -1648,7 +1646,7 @@
           if (!Array.isArray(f.clientes.items)) f.clientes.items = [];
           const items = f.clientes.items;
           return (
-            `<div class="editor__nota">Subí o <strong>arrastrá</strong> el video/GIF desde tu compu (lo más simple), o pegá un enlace <strong>directo</strong>: un .gif o .mp4, un link de Giphy o de YouTube. Ojo: el link de una página web común (por ej. una nota) no sirve, tiene que ser el del archivo. Se reproduce solo, en loop, sin controles. Agregá todos los que quieras; los vacíos no se muestran en la tienda.</div>` +
+            `<div class="editor__ayuda">Admite GIF, MP4 y enlaces de video.</div>` +
             campo("facetas.clientes.titulo", "Título de la sección") +
             (items.length
               ? items
@@ -1665,7 +1663,7 @@
               </fieldset>`
                   )
                   .join("")
-              : `<div class="editor__nota">Todavía no agregaste clips.</div>`) +
+              : "") +
             `<button class="btn btn--fantasma" type="button" data-muro-add="1">${ico("mas")} Agregar clip</button>`
           );
         }
@@ -1692,7 +1690,6 @@
       stats: {
         titulo: "Estadísticas",
         html: () =>
-          `<div class="editor__nota">Los porcentajes son fijos de la plantilla; se editan solo las frases.</div>` +
           campo("facetas.stats.titular", "Titular") +
           f.stats.items
             .map((x, i) => campo(`facetas.stats.items.${i}.frase`, `${x.pct}% — frase (sin números)`, 2))
@@ -3063,17 +3060,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     }
     const def = seccionesPagina()[id];
     if (!def) return "";
-    const nota = {
-      encabezado: "Ajustá el contenido que acompaña al producto. Los cambios se reflejan en la vista previa.",
-      galeria: "Elegí el orden de las imágenes y definí cuál se muestra en cada parte de la página.",
-      bullets: "Mantené cada beneficio concreto y fácil de leer en una sola pasada.",
-      destacada: "Usá una reseña real y específica. La claridad genera más confianza que una frase genérica.",
-      clientes: "Agregá pruebas visuales reales de clientes. Los clips vacíos no se muestran en la tienda.",
-      resenas: "Revisá las reseñas antes de publicar para que el contenido sea auténtico y consistente.",
-      acordeones: "Organizá la información que el cliente necesita antes de comprar."
-    }[id];
     return `<div class="sp-sub">Contenido</div><div class="sp-content">
-      ${nota ? `<div class="sp-note">${ico("info")}<span>${esc(nota)}</span></div>` : ""}
       ${def.html()}
     </div>`;
   }
