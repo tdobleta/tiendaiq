@@ -1191,7 +1191,33 @@
     const accordions = variant === "blue" ? `<div class="pp-accordions"><details open><summary>Descripción <span>⌄</span></summary><p>${esc(h.subtitulo || fuente.descripcion_cruda || "Información del producto")}</p></details><details><summary>Cómo usar <span>⌄</span></summary><p>Seguí las indicaciones de uso incluidas con tu compra.</p></details><details><summary>Envíos y devoluciones <span>⌄</span></summary><p>Consultá las condiciones disponibles para tu tienda.</p></details></div>` : "";
     const hero = !opts.sinHero ? `<section class="pp-hero pp-hero--${variant}" data-bloque="hero" data-fijo="1" aria-labelledby="pp-product-title"><div class="pp-container pp-hero-grid"><div class="pp-gallery-col"><div class="pp-gallery-main"><div class="pp-gallery-stage" data-atelier-gallery>${slides}</div><button class="pp-gallery-arrow pp-gallery-arrow--prev" type="button" data-atelier-prev aria-label="Imagen anterior">&#8249;</button><button class="pp-gallery-arrow pp-gallery-arrow--next" type="button" data-atelier-next aria-label="Siguiente imagen">&#8250;</button></div><div class="pp-thumbs">${thumbs}</div></div><div class="pp-buy"><div class="pp-topline">${heroBadge}<span class="pp-rating"><b>★★★★★</b> ${esc(rating)}/5 basado en ${esc(count)} clientes felices</span></div><h1 id="pp-product-title">${esc(titulo)}</h1>${h.urgencia ? `<span class="pp-urgency">${esc(h.urgencia)}</span>` : ""}<p class="pp-lead">${esc(h.subtitulo || fuente.descripcion_cruda || "Una forma sencilla de sumar este producto a tu rutina.")}</p><div class="pp-benefits">${benefits.map((item, i) => `<div><span class="pp-benefit-icon">${["◉", "◷", "♡", "✓"][i]}</span><span>${esc(item.title)}</span></div>`).join("")}</div><div class="pp-price"><strong>${esc(precioBonito(fuente.moneda, fuente.precio))}</strong>${fuente.precio_comparativo ? `<del>${esc(precioBonito(fuente.moneda, fuente.precio_comparativo))}</del><b>AHORRÁ</b>` : ""}</div>${atelierCta(g)}<div class="pp-assurances"><span>♧ Garantía de devolución de 30 días</span><span>◇ Envío incluido</span></div>${payments}${accordions}${review}${variant === "blue" ? `<div class="pp-stock"><strong>ⓘ Advertencia: Pocas existencias</strong><p>El producto tuvo alta demanda este año. Aprovechá la disponibilidad actual.</p></div>` : ""}</div></div></section>` : "";
     const ribbon = `<section class="pp-ribbon pp-ribbon--${variant}" aria-label="Beneficios"><div class="pp-ribbon-track">${[...ribbonItems, ...ribbonItems].map((item) => `<span>${esc(item)}</span>`).join("")}</div></section>`;
-    return `<div class="tiq-pagepilot pp-theme-${variant}">${hero}${ribbon}${editorial}${comparison}${reviewSection}${faq}${guarantee}<div class="pp-sticky-buy"><div><span>Producto seleccionado</span><strong>${esc(titulo)}</strong></div>${atelierCta(g)}</div></div>`;
+    // La composicion es fija; las secciones del comerciante solo se insertan
+    // en los puntos permitidos por el editor y nunca reemplazan el layout.
+    const extras = Array.isArray(data.secciones) ? data.secciones : [];
+    const ocultas = new Set(Array.isArray(data.ocultas) ? data.ocultas : []);
+    const extrasDespuesDe = (ancla) => extras.filter((s) => (s.ancla || "top") === ancla).map(seccionHTML).filter(Boolean).join("\n");
+    const fijo = (id, html) => {
+      if (!html || ocultas.has(id)) return extrasDespuesDe(id);
+      return [html, extrasDespuesDe(id)].filter(Boolean).join("\n");
+    };
+    const anclasConocidas = new Set(["top", "hero", "clientes", "iconos", "stats", "tabla", "resenas", "faq", "garantia", "recomendados"]);
+    const extrasSinAnclaVisible = extras.filter((s) => !anclasConocidas.has(s.ancla || "top")).map(seccionHTML).filter(Boolean).join("\n");
+    const pagina = [
+      extrasDespuesDe("top"),
+      fijo("hero", hero),
+      ribbon,
+      extrasDespuesDe("clientes"),
+      fijo("iconos", editorial),
+      extrasDespuesDe("stats"),
+      fijo("tabla", comparison),
+      fijo("resenas", reviewSection),
+      fijo("faq", faq),
+      fijo("garantia", guarantee),
+      extrasDespuesDe("recomendados"),
+      extrasSinAnclaVisible,
+      `<div class="pp-sticky-buy"><div><span>Producto seleccionado</span><strong>${esc(titulo)}</strong></div>${atelierCta(g)}</div>`
+    ].filter(Boolean).join("\n");
+    return `<div class="tiq-pagepilot pp-theme-${variant}">${pagina}</div>`;
   }
 
   function renderPremium(data, opts = {}) {

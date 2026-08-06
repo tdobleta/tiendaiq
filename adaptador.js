@@ -682,6 +682,11 @@ function ensamblar(fuente, salida, { idioma, angulo, plantilla = "clasico" }) {
           texto: g
         }))
       },
+      garantia: {
+        titular: "Garantía sin riesgos",
+        parrafo: "Si el producto no cumple con tus expectativas, revisá las condiciones de devolución de la tienda.",
+        imagen: null
+      },
       recomendados: { modo: "placeholder", items: [] }
     },
     global: {

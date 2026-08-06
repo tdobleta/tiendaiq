@@ -19,6 +19,7 @@ const CAMPOS_COMUNES = Object.freeze([
   { ruta: "facetas.stats", tipo: "proof_list", origen: "merchant|integration", editable: true, count: 3 },
   { ruta: "facetas.faq", tipo: "faq_list", origen: "ia|merchant", editable: true, count: 5 },
   { ruta: "facetas.resenas", tipo: "review_guides", origen: "merchant", editable: true },
+  { ruta: "facetas.garantia", tipo: "guarantee", origen: "merchant|default", editable: true },
   { ruta: "facetas.hero.resena_destacada", tipo: "review", origen: "merchant|integration", editable: true },
   { ruta: "global.cta", tipo: "text", origen: "merchant|default", editable: true }
 ]);

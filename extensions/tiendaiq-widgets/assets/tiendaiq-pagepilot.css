@@ -32,7 +32,7 @@
 #app .pp-benefits>div{display:flex;align-items:center;gap:10px;min-height:42px;color:#445047}
 #app .pp-benefit-icon{display:grid;place-items:center;width:28px;height:28px;flex:0 0 28px;border-radius:50%;background:var(--pp-soft);color:var(--pp-accent);font-size:17px}
 #app .pp-price{display:flex;align-items:center;gap:10px;margin:12px 0 14px;font-size:16px}.pp-price strong{font-size:21px}.pp-price del{color:#858787}.pp-price>b{padding:4px 7px;border-radius:5px;background:var(--pp-accent);color:#fff;font-size:11px}
-#app .pp-pagepilot .main-cta{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:53px;padding:12px 18px;border:0;border-radius:6px;background:var(--pp-accent);color:#fff;font:700 14px Arial,Helvetica,sans-serif;cursor:pointer;box-shadow:none;text-transform:none}
+#app .tiq-pagepilot .main-cta{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:53px;padding:12px 18px;border:0;border-radius:6px;background:var(--pp-accent);color:#fff;font:700 14px Arial,Helvetica,sans-serif;cursor:pointer;box-shadow:none;text-transform:none}
 #app .pp-theme-yellow .main-cta{border:2px solid #252525;border-radius:29px;color:#242424;box-shadow:0 3px 0 #252525;text-transform:uppercase;font-size:16px}
 #app .pp-theme-green .main-cta{background:#1d4725}.pp-theme-blue .main-cta{background:#2d2bd8}
 #app .pp-assurances{display:flex;justify-content:center;gap:20px;flex-wrap:wrap;padding:12px 0 3px;color:#59605b;font-size:12px;text-align:center}

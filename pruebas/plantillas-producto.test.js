@@ -13,6 +13,7 @@ test("las plantillas publicadas tienen un contrato completo", () => {
     assert.ok(plantilla.reglasCopy.length >= 3);
     assert.ok(plantilla.campos.some((campo) => campo.ruta === "facetas.hero.titulo"));
     assert.ok(plantilla.campos.some((campo) => campo.ruta === "facetas.hero.galeria"));
+    assert.ok(plantilla.campos.some((campo) => campo.ruta === "facetas.garantia"));
     assert.ok(["clasico", "premium", "atelier", "pinza", "labial", "mascara"].includes(plantilla.layout));
     assert.ok(plantilla.tema);
   }

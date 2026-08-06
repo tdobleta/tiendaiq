@@ -1713,6 +1713,23 @@
             .join("") +
           selectorImagenUno("facetas.stats.imagen", "Imagen del bloque")
       },
+      tabla: {
+        titulo: "Comparacion",
+        html: () =>
+          campo("facetas.tabla.titular", "Titular") +
+          campo("facetas.tabla.parrafo", "Texto introductorio", 2) +
+          campo("facetas.tabla.col_otros", "Nombre de la columna alternativa") +
+          (f.tabla?.filas || [])
+            .map((_, i) => campo(`facetas.tabla.filas.${i}`, `Fila ${i + 1}`))
+            .join("")
+      },
+      garantia: {
+        titulo: "Garantia",
+        html: () =>
+          campo("facetas.garantia.titular", "Titular") +
+          campo("facetas.garantia.parrafo", "Texto", 3) +
+          selectorImagenUno("facetas.garantia.imagen", "Imagen")
+      },
       faq: {
         titulo: "Preguntas frecuentes",
         html: () =>
@@ -1790,7 +1807,9 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     ["faq", "Después de las preguntas"],
     ["iconos", "Después de los beneficios"],
     ["stats", "Después de las estadísticas"],
+    ["tabla", "Después de la comparación"],
     ["resenas", "Después de las reseñas"],
+    ["garantia", "Después de la garantía"],
     ["recomendados", "Al final de la página"]
   ];
 
@@ -2185,15 +2204,17 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   // A qué modal lleva cada bloque de la página. El orden importa: gana el
   // primer selector que matchee con closest().
   const ZONAS_EDICION = [
-    { sel: ".hero__galeria", id: "galeria" },
-    { sel: ".hero__bullets", id: "bullets" },
-    { sel: ".hero__resenas, .hero__titulo, .hero__subtitulo, .hero__precios, .hero__cantidad", id: "encabezado" },
-    { sel: ".acordeon", id: "acordeones" },
-    { sel: ".resena-destacada", id: "destacada" },
-    { sel: ".iconos", id: "iconos" },
-    { sel: ".stats", id: "stats" },
-    { sel: ".faq", id: "faq" },
-    { sel: ".resenas", id: "resenas" },
+    { sel: ".hero__galeria, .pp-gallery-col", id: "galeria" },
+    { sel: ".hero__bullets, .pp-benefits", id: "bullets" },
+    { sel: ".hero__resenas, .hero__titulo, .hero__subtitulo, .hero__precios, .hero__cantidad, .pp-rating, #pp-product-title, .pp-lead, .pp-price", id: "encabezado" },
+    { sel: ".acordeon, .pp-accordions", id: "acordeones" },
+    { sel: ".resena-destacada, .pp-review", id: "destacada" },
+    { sel: ".iconos, .pp-editorial-list", id: "iconos" },
+    { sel: ".stats, .pp-stats", id: "stats" },
+    { sel: ".faq, .pp-faq", id: "faq" },
+    { sel: ".pp-comparison", id: "tabla" },
+    { sel: ".pp-guarantee", id: "garantia" },
+    { sel: ".resenas, .pp-reviews", id: "resenas" },
     { sel: ".muro", id: "clientes" }
   ];
 
@@ -2245,7 +2266,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     };
 
     // Nombre legible de la zona (para el chip) + sync con la fila del árbol.
-    const NOMBRE_ZONA = { encabezado: "Encabezado", galeria: "Galería", bullets: "Beneficios", destacada: "Reseña destacada", acordeones: "Envío y devoluciones", iconos: "Íconos", stats: "Estadísticas", faq: "Preguntas frecuentes", resenas: "Reseñas", clientes: "Muro de clientes" };
+    const NOMBRE_ZONA = { encabezado: "Encabezado", galeria: "Galería", bullets: "Beneficios", destacada: "Reseña destacada", acordeones: "Envío y devoluciones", iconos: "Íconos", stats: "Estadísticas", tabla: "Comparación", garantia: "Garantía", faq: "Preguntas frecuentes", resenas: "Reseñas", clientes: "Muro de clientes" };
     const nombreZona = (zid) => {
       if (zid.startsWith("sec:")) { const s = (estado.pagina.data.secciones || []).find((x) => x.id === zid.slice(4)); return s ? (catSeccion(s.tipo)?.nombre || "Sección") : "Sección"; }
       return NOMBRE_ZONA[zid] || zid;
@@ -2388,7 +2409,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   const NOMBRE_BLOQUE = {
     top: "el principio", hero: "el encabezado", clientes: "el muro de clientes",
     iconos: "los beneficios", stats: "las estadísticas",
-    faq: "las preguntas", resenas: "las reseñas", recomendados: "los recomendados"
+    faq: "las preguntas", tabla: "la comparación", resenas: "las reseñas", garantia: "la garantía", recomendados: "los recomendados"
   };
 
   function montarDragSections(marco) {
@@ -3351,9 +3372,10 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       row("bullets", "Beneficios", I.beneficios) + row("destacada", "Reseña destacada", I.estrella) +
       row("resenas", "Reseñas", I.estrella);
     const v2 = (estado.pagina.data.secciones || []).map((s) => row("sec:" + s.id, catSeccion(s.tipo)?.nombre || "Sección", I.lista)).join("");
-    const extra = row("clientes", "Muro de clientes", I.video) + row("acordeones", "Envío y devoluciones", I.lista) +
+    const extraOriginal = row("clientes", "Muro de clientes", I.video) + row("acordeones", "Envío y devoluciones", I.lista) +
       row("faq", "Preguntas frecuentes", I.lista) + row("iconos", "Garantías / íconos", I.beneficios) +
       row("stats", "Estadísticas", I.lista) + v2;
+    const extra = row("tabla", "Comparación", I.lista) + row("garantia", "Garantía", I.lista) + extraOriginal;
     return `<nav class="pe-tree" aria-label="Bloques de la página">
       <div class="pe-tree__head"><span class="pe-tree__head-title">Página de producto</span><span class="pe-tree__head-sub">Estructura y contenido</span></div>
       <div class="pe-tree__body">${grupo("Información del producto", info, "5 bloques")}${grupo("Secciones extra", extra, `${(estado.pagina.data.secciones || []).length + 6} bloques`)}</div>
