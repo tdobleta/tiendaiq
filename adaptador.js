@@ -449,7 +449,7 @@ async function generar(fuente, medios, { idioma = "es", angulo = "" } = {}) {
   // de la respuesta. El modelo cumple el schema de forma fiable, y ensamblar()
   // + validar() corrigen cualquier desvío (cardinalidad fija, defaults).
   const sistema =
-    SISTEMA.replace(/\{idioma\}/g, idioma === "es" ? "español rioplatense (voseo)" : idioma) +
+    SISTEMA.replace(/\{idioma\}/g, idioma === "es" ? "español" : idioma) +
     "\n\nFORMATO DE SALIDA (CRÍTICO)\n" +
     "Respondé ÚNICAMENTE con un objeto JSON válido: sin texto antes ni después, " +
     "sin markdown, sin ```. Debe cumplir EXACTAMENTE este JSON Schema (mismas " +
@@ -507,7 +507,7 @@ async function editarTexto({ texto = "", instrucciones = "", modo = "rewrite", i
     shorter: "hacé el texto más breve, directo y fácil de escanear sin perder la idea principal",
     longer: "ampliá el texto con información útil y concreta, sin rellenar ni repetir ideas"
   };
-  const idiomaSalida = idioma === "es" ? "español rioplatense natural, profesional y sin exageraciones" : idioma;
+  const idiomaSalida = idioma === "es" ? "español natural, profesional y sin exageraciones" : idioma;
   const sistema = [
     "Sos un especialista senior en ecommerce, CRO y copywriting para páginas de producto.",
     `Escribí en ${idiomaSalida}.`,

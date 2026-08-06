@@ -1023,7 +1023,7 @@
             <section class="side-card">
               <span class="side-card__label">Idioma</span>
               <s-select id="idioma" value="${esc(estado.idiomaPagina || "es")}">
-                <s-option value="es">Español rioplatense</s-option>
+                <s-option value="es">Español</s-option>
                 <s-option value="en">English</s-option>
                 <s-option value="pt">Português</s-option>
               </s-select>
