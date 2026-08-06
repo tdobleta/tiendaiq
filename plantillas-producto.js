@@ -144,6 +144,33 @@ const PLANTILLAS_PRODUCTO = Object.freeze({
     reglasCopy: ["Usar un tono cálido y responsable.", "No convertir tranquilidad en una promesa médica.", "Explicar el uso con sencillez."],
     campos: CAMPOS_COMUNES
   }),
+  pinza: Object.freeze({
+    id: "pinza", version: 1, nombre: "Clásica · Amarillo", tipo: "premium", layout: "pinza", tema: "amarillo",
+    descripcion: "Galería amplia, compra directa y argumentos claros para productos prácticos.",
+    intencion: "Presentar el producto en el momento de uso y reducir dudas antes del carrito.",
+    subtitulo: "Una página directa, cálida y fácil de recorrer.", tags: ["Galería", "Beneficios", "Compra"],
+    imagen: "https://service.pagepilot.ai/storage/v1/object/public/builder/7f0e5ffb-fba5-4055-ae2f-818e455fa2f2/gallery-images/ba0ff97b-0e74-41a0-b07c-22c1aa947def/1785944376859-nur16158w1f.webp",
+    orden: ["hero", "iconos", "stats", "tabla", "resenas", "faq", "garantia"],
+    reglasCopy: ["Priorizar utilidad y claridad.", "Usar beneficios concretos y fáciles de escanear.", "No inventar resultados, cifras ni testimonios."], campos: CAMPOS_COMUNES
+  }),
+  labial: Object.freeze({
+    id: "labial", version: 1, nombre: "Natural · Verde", tipo: "premium", layout: "labial", tema: "verde",
+    descripcion: "Composición verde y crema para belleza, cuidado personal y rutinas diarias.",
+    intencion: "Construir deseo desde la experiencia de uso sin recargar la lectura.",
+    subtitulo: "Una página serena para un producto que se incorpora a la rutina.", tags: ["Belleza", "Rutina", "Confianza"],
+    imagen: "https://service.pagepilot.ai/storage/v1/object/public/builder/7f0e5ffb-fba5-4055-ae2f-818e455fa2f2/gallery-images/93baf0b7-035c-4611-9f96-386f05f4a9d8/1785944651885-ohxitjd6w5.webp",
+    orden: ["hero", "iconos", "stats", "resenas", "tabla", "faq", "garantia"],
+    reglasCopy: ["Escribir con calma y precisión.", "Describir sensaciones sin prometer resultados clínicos.", "Mantener una voz de marca consistente."], campos: CAMPOS_COMUNES
+  }),
+  mascara: Object.freeze({
+    id: "mascara", version: 1, nombre: "Impacto · Azul", tipo: "premium", layout: "mascara", tema: "azul",
+    descripcion: "Una estructura de alto contraste para productos de belleza con demostración y objeciones.",
+    intencion: "Combinar decisión rápida, explicación breve y señales de confianza visibles.",
+    subtitulo: "Información precisa para decidir sin perder el ritmo de compra.", tags: ["Oferta", "Uso", "Confianza"],
+    imagen: "https://service.pagepilot.ai/storage/v1/object/public/builder/7f0e5ffb-fba5-4055-ae2f-818e455fa2f2/gallery-images/25627a22-38a7-4e90-88ac-bb785a68d0b7/1785944528407-sto6zivwkf.webp",
+    orden: ["hero", "iconos", "stats", "resenas", "faq", "tabla", "garantia"],
+    reglasCopy: ["Poner primero lo que cambia la decisión.", "Separar uso, beneficios y prueba social.", "Solo usar urgencia o stock si están respaldados."], campos: CAMPOS_COMUNES
+  }),
   atelier: Object.freeze({
     id: "atelier", version: 1, nombre: "Atelier",
     descripcion: "Una composicion editorial para productos que necesitan una experiencia de marca mas cuidada.",
@@ -159,7 +186,11 @@ const PLANTILLAS_PRODUCTO = Object.freeze({
 
 // Solo las plantillas con HTML real integrado se muestran al comerciante.
 // Los contratos anteriores se conservan para no romper paginas ya creadas.
-const PLANTILLAS_DISPONIBLES = Object.freeze({ atelier: PLANTILLAS_PRODUCTO.atelier });
+const PLANTILLAS_DISPONIBLES = Object.freeze({
+  pinza: PLANTILLAS_PRODUCTO.pinza,
+  labial: PLANTILLAS_PRODUCTO.labial,
+  mascara: PLANTILLAS_PRODUCTO.mascara
+});
 
 function obtenerPlantilla(id) {
   return PLANTILLAS_PRODUCTO[id] || PLANTILLAS_PRODUCTO.clasico;

@@ -1179,6 +1179,13 @@
       }
     ];
 
+    // Fallback local: las tres composiciones PagePilot que ya están integradas.
+    plantillas = [
+      { id: "pinza", nombre: "Clásica · Amarillo", subtitulo: "Galería amplia, beneficios claros y compra directa.", tags: ["Galería", "Beneficios", "Compra"], activa: true, tipo: "premium" },
+      { id: "labial", nombre: "Natural · Verde", subtitulo: "Una composición serena para belleza y cuidado diario.", tags: ["Belleza", "Rutina", "Confianza"], activa: true, tipo: "premium" },
+      { id: "mascara", nombre: "Impacto · Azul", subtitulo: "Oferta, uso y confianza ordenados para decidir rápido.", tags: ["Oferta", "Uso", "Confianza"], activa: true, tipo: "premium" }
+    ];
+
     // El selector se alimenta del mismo registro que usa el backend. Si la
     // app esta offline, conserva el fallback para no bloquear el flujo local.
     try {

@@ -1152,6 +1152,48 @@
     return `<div class="tiq-atelier">${sections.filter(Boolean).join("\n")}</div>`;
   }
 
+  // Composiciones de producto inspiradas en los tres layouts de referencia:
+  // misma jerarquia de compra, distinto ritmo editorial y color de marca.
+  // Los textos, fotos, precio y prueba social siguen llegando desde la pagina.
+  function renderPagePilot(data, variant = "green", opts = {}) {
+    const f = data.facetas || {};
+    const g = data.global || {};
+    const fuente = data.fuente || {};
+    const h = f.hero || {};
+    const galeria = Array.isArray(h.galeria) ? h.galeria.filter(Boolean) : [];
+    const imagenes = galeria.length ? galeria : [null];
+    const titulo = h.titulo || fuente.titulo_crudo || "Tu producto";
+    const bullets = Array.isArray(h.bullets) ? h.bullets : [];
+    const iconItems = Array.isArray(f.iconos?.items) ? f.iconos.items : [];
+    const rating = puntaje1(h.puntaje ?? 4.9);
+    const count = miles(h.resenas_count ?? 0);
+    const rd = h.resena_destacada || {};
+    const textBullet = (b) => typeof b === "string" ? b : [b?.fuerte, b?.resto].filter(Boolean).join(" ");
+    const benefits = (iconItems.length ? iconItems.map((item) => ({ title: item.titulo, text: item.frase })) : bullets.map((item) => ({ title: textBullet(item), text: "Pensado para acompañar tu rutina." }))).filter((item) => item.title).slice(0, 4);
+    while (benefits.length < 4) benefits.push({ title: "Uso diario sencillo", text: "Una experiencia clara desde el primer uso." });
+    const ribbonItems = benefits.map((item) => item.title).slice(0, 4);
+    const photos = (n = 4) => imagenes.slice(0, n).map((id, i) => `<div class="pp-photo">${atelierImagen(id, titulo, i === 0)}</div>`).join("");
+    const slides = imagenes.map((id, i) => `<div class="pp-slide${i === 0 ? " is-active" : ""}" data-atelier-slide="${i}">${atelierImagen(id, titulo, i === 0)}</div>`).join("");
+    const thumbs = imagenes.map((id, i) => `<button class="pp-thumb${i === 0 ? " is-active" : ""}" type="button" data-atelier-thumb="${i}" aria-label="Imagen ${i + 1}">${atelierImagen(id, titulo)}</button>`).join("");
+    const payments = `<div class="pp-payments" aria-label="Medios de pago"><span>AMEX</span><span>Apple Pay</span><span>VISA</span><span>MC</span><span>PayPal</span><span>G Pay</span><span>shop</span></div>`;
+    const review = rd.texto ? `<div class="pp-review"><button type="button" data-reviews-prev aria-label="Reseña anterior">&#8249;</button>${imgAsset(rd.avatar, `<span class="pp-avatar-fallback">Cliente</span>`)}<div><span class="pp-stars">★★★★★</span><p>“${esc(rd.texto)}”</p><strong>${esc(rd.autor || "Cliente")}</strong></div><button type="button" data-reviews-next aria-label="Siguiente reseña">&#8250;</button></div>` : "";
+    const rows = Array.isArray(f.tabla?.filas) ? f.tabla.filas.slice(0, 6) : [];
+    const comparison = rows.length ? `<section class="pp-section pp-comparison" data-bloque="tabla" data-fijo="1"><div class="pp-container"><div class="pp-section-heading"><p class="pp-overline">UNA DECISIÓN MÁS CLARA</p><h2>${esc(f.tabla?.titular || "La diferencia se nota en el uso")}</h2><p>${esc(f.tabla?.parrafo || "Compará lo que importa antes de elegir.")}</p></div><div class="pp-compare-table"><div class="pp-compare-head"><span></span><strong>Nosotros</strong><span>${esc(f.tabla?.col_otros || "Otros")}</span></div>${rows.map((row) => `<div><span>${esc(row)}</span><strong>✓</strong><span>×</span></div>`).join("")}</div></div></section>` : "";
+    const faqs = Array.isArray(f.faq?.items) ? f.faq.items.slice(0, 5) : [];
+    const faq = faqs.length ? `<section class="pp-section pp-faq" data-bloque="faq" data-fijo="1"><div class="pp-container pp-narrow"><div class="pp-section-heading"><p class="pp-overline">ANTES DE COMPRAR</p><h2>${esc(f.faq?.titular || "Preguntas frecuentes")}</h2></div><div class="pp-faq-list">${faqs.map((item, i) => `<details${i === 0 ? " open" : ""}><summary>${esc(item.pregunta)}<span>+</span></summary><p>${esc(item.respuesta)}</p></details>`).join("")}</div></div></section>` : "";
+    const reviews = Array.isArray(f.resenas?.items) ? f.resenas.items.filter((item) => item?.texto).slice(0, 3) : [];
+    const reviewSection = reviews.length ? `<section class="pp-section pp-reviews" data-bloque="resenas" data-fijo="1"><div class="pp-container"><div class="pp-section-heading"><span class="pp-rating-badge"><b>★★★★★</b> Basado en <strong>${esc(count)}+ reseñas confiables</strong></span><h2>${esc(f.resenas?.titular || "Lo que nuestra comunidad dice siempre")}</h2><p>${esc(f.resenas?.subtitulo || "Experiencias reales de clientes que ya lo incorporaron a su rutina.")}</p></div><div class="pp-review-grid">${reviews.map((item) => `<article>${imgAsset(item.imagen, `<div class="pp-review-image"></div>`)}<strong>${esc(item.autor || "Cliente")}</strong><span class="pp-stars">★★★★★</span><p>“${esc(item.texto)}”</p></article>`).join("")}</div></div></section>` : "";
+    const garantia = f.garantia || {};
+    const guarantee = `<section class="pp-section pp-guarantee" data-bloque="garantia" data-fijo="1"><div class="pp-container pp-guarantee-grid"><div class="pp-mosaic">${photos(4)}</div><div class="pp-guarantee-copy"><span class="pp-check">✓</span><h2>${esc(garantia.titular || "Garantía sin riesgos")}</h2><p>${esc(garantia.parrafo || "Probalo en casa. Si no es para vos, devolvelo dentro del plazo indicado por la tienda.")}</p>${atelierCta(g, "Comprar ahora")}</div></div></section>`;
+    const editorialTitle = variant === "blue" ? "Todo lo que necesitás para una mirada definida" : variant === "yellow" ? "La diferencia está en los detalles" : "Una rutina más simple, todos los días";
+    const editorial = `<section class="pp-section pp-editorial pp-editorial--${variant}" data-bloque="texto1" data-fijo="1"><div class="pp-container pp-editorial-grid"><div class="pp-editorial-media">${atelierImagen(imagenes[1] || imagenes[0], titulo)}</div><div><p class="pp-overline">${variant === "blue" ? "MODO DE USO" : "PENSADO PARA EL DÍA A DÍA"}</p><h2>${esc(editorialTitle)}</h2><p>${esc(h.subtitulo || fuente.descripcion_cruda || "Una experiencia pensada para sentirse clara, cómoda y fácil de incorporar.")}</p><div class="pp-editorial-list">${benefits.slice(0, 3).map((item, i) => `<div><b>0${i + 1}</b><span><strong>${esc(item.title)}</strong><small>${esc(item.text)}</small></span></div>`).join("")}</div>${atelierCta(g, "Conocer el producto")}</div></div></section>`;
+    const heroBadge = variant === "blue" ? `<span class="pp-rank-badge">#1 <strong>EL MÁS VENDIDO</strong><small>Elegido por miles de clientes</small></span>` : variant === "yellow" ? `<span class="pp-sale-badge">Oferta especial</span>` : `<span class="pp-sale-badge">Más vendido</span>`;
+    const accordions = variant === "blue" ? `<div class="pp-accordions"><details open><summary>Descripción <span>⌄</span></summary><p>${esc(h.subtitulo || fuente.descripcion_cruda || "Información del producto")}</p></details><details><summary>Cómo usar <span>⌄</span></summary><p>Seguí las indicaciones de uso incluidas con tu compra.</p></details><details><summary>Envíos y devoluciones <span>⌄</span></summary><p>Consultá las condiciones disponibles para tu tienda.</p></details></div>` : "";
+    const hero = !opts.sinHero ? `<section class="pp-hero pp-hero--${variant}" data-bloque="hero" data-fijo="1" aria-labelledby="pp-product-title"><div class="pp-container pp-hero-grid"><div class="pp-gallery-col"><div class="pp-gallery-main"><div class="pp-gallery-stage" data-atelier-gallery>${slides}</div><button class="pp-gallery-arrow pp-gallery-arrow--prev" type="button" data-atelier-prev aria-label="Imagen anterior">&#8249;</button><button class="pp-gallery-arrow pp-gallery-arrow--next" type="button" data-atelier-next aria-label="Siguiente imagen">&#8250;</button></div><div class="pp-thumbs">${thumbs}</div></div><div class="pp-buy"><div class="pp-topline">${heroBadge}<span class="pp-rating"><b>★★★★★</b> ${esc(rating)}/5 basado en ${esc(count)} clientes felices</span></div><h1 id="pp-product-title">${esc(titulo)}</h1>${h.urgencia ? `<span class="pp-urgency">${esc(h.urgencia)}</span>` : ""}<p class="pp-lead">${esc(h.subtitulo || fuente.descripcion_cruda || "Una forma sencilla de sumar este producto a tu rutina.")}</p><div class="pp-benefits">${benefits.map((item, i) => `<div><span class="pp-benefit-icon">${["◉", "◷", "♡", "✓"][i]}</span><span>${esc(item.title)}</span></div>`).join("")}</div><div class="pp-price"><strong>${esc(precioBonito(fuente.moneda, fuente.precio))}</strong>${fuente.precio_comparativo ? `<del>${esc(precioBonito(fuente.moneda, fuente.precio_comparativo))}</del><b>AHORRÁ</b>` : ""}</div>${atelierCta(g)}<div class="pp-assurances"><span>♧ Garantía de devolución de 30 días</span><span>◇ Envío incluido</span></div>${payments}${accordions}${review}${variant === "blue" ? `<div class="pp-stock"><strong>ⓘ Advertencia: Pocas existencias</strong><p>El producto tuvo alta demanda este año. Aprovechá la disponibilidad actual.</p></div>` : ""}</div></div></section>` : "";
+    const ribbon = `<section class="pp-ribbon pp-ribbon--${variant}" aria-label="Beneficios"><div class="pp-ribbon-track">${[...ribbonItems, ...ribbonItems].map((item) => `<span>${esc(item)}</span>`).join("")}</div></section>`;
+    return `<div class="tiq-pagepilot pp-theme-${variant}">${hero}${ribbon}${editorial}${comparison}${reviewSection}${faq}${guarantee}<div class="pp-sticky-buy"><div><span>Producto seleccionado</span><strong>${esc(titulo)}</strong></div>${atelierCta(g)}</div></div>`;
+  }
+
   function renderPremium(data, opts = {}) {
     const f = data.facetas;
     const g = data.global;
@@ -1199,7 +1241,11 @@
   function render(data, opts = {}) {
     const f = data.facetas;
     const g = data.global;
-    if (g && (g.estilo === "atelier" || g.plantilla_id === "atelier")) return renderAtelier(data, opts);
+    const plantilla = g?.plantilla_id || g?.estilo;
+    if (["pinza", "labial", "mascara", "atelier"].includes(plantilla)) {
+      const variant = plantilla === "pinza" ? "yellow" : plantilla === "mascara" ? "blue" : "green";
+      return renderPagePilot(data, variant, opts);
+    }
     // Modelo de página elegido en la creación. "clasico" = comportamiento de
     // siempre; "premium" = armado alternativo (timer + comparación + marquee).
     if (g && g.estilo === "premium") return renderPremium(data, opts);
@@ -1344,7 +1390,7 @@
   };
 
   function iniciarAtelier() {
-    const root = document.querySelector('#app[data-plantilla="atelier"]');
+    const root = document.querySelector('#app[data-plantilla="atelier"], #app[data-plantilla="pinza"], #app[data-plantilla="labial"], #app[data-plantilla="mascara"]');
     if (!root) return;
 
     const slides = [...root.querySelectorAll("[data-atelier-slide]")];
