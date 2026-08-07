@@ -140,16 +140,17 @@
     // bundles) no va. Y una vez PUBLICADA, el asistente terminó: la
     // pantalla pasa a modo editor, sin stepper (patrón page-builder).
     const previewPublicada = estado.pantalla === "preview" && estado.pagina?.estado === "publicada";
-    if (previewPublicada || !["lista", "informacion", "generando", "preview"].includes(estado.pantalla)) {
+    if (previewPublicada || estado.pantalla === "lista" || estado.pantalla === "plantillas" || !["informacion", "generando", "preview"].includes(estado.pantalla)) {
       cont.innerHTML = "";
       return;
     }
     const pasos = [
-      { id: "lista", texto: "Elegir producto" },
-      { id: "informacion", texto: "Información" },
+      { id: "lista", texto: "Producto" },
+      { id: "informacion", texto: "Estrategia" },
+      { id: "plantillas", texto: "Plantillas" },
       { id: "preview", texto: "Publicar" }
     ];
-    const actual = estado.pantalla === "generando" ? "informacion" : estado.pantalla;
+    const actual = estado.pantalla === "generando" ? "plantillas" : estado.pantalla;
     const i = pasos.findIndex((p) => p.id === actual);
     const CHECK = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg>`;
 
@@ -693,18 +694,17 @@
     return `<div class="clip-ok">${ico("check")} ${t === "yt" ? "Video de YouTube" : "Video"}</div>`;
   }
 
-  // ---------- 1. elegir producto (lanzador tipo command-palette) ----------
+  // ---------- 1. elegir producto ----------
   //
-  // Nada de grilla: una sola decisión. Un input que busca sobre los productos
-  // que ya cargamos (sin backend), operable 100% por teclado. Con el input
-  // vacío mostramos atajos: retomar borradores + productos sin página. La
-  // selección reusa el flujo existente: estado.producto → ir("informacion").
+  // Primera pantalla del asistente: una entrada sobria con un CTA que abre el
+  // selector de productos. Elegir producto no avanza solo; el merchant confirma
+  // con Continuar.
   function pantallaLista() {
-    const IC_LUPA = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>`;
-    const IC_CHISPA = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.8 4.9 4.9 1.8-4.9 1.8L12 15.9l-1.8-4.9L5.3 9.2l4.9-1.8zM19 14l.9 2.4 2.4.9-2.4.9L19 20.6l-.9-2.4-2.4-.9 2.4-.9z"/></svg>`;
-    const IC_GRID = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>`;
+    const seleccionado = estado.producto;
+    const totalProductos = estado.productos.length;
+    const productosConPagina = estado.productos.filter((p) => p.estado).length;
+    const productosSinPagina = Math.max(0, totalProductos - productosConPagina);
 
-    // Tienda sin productos: estado honesto, no una grilla vacía.
     if (!estado.productos.length) {
       vista.innerHTML = `
         <button class="volver-flecha" id="volver-inicio"></button>
@@ -718,105 +718,102 @@
       return;
     }
 
+    const galeria = estado.productos
+      .filter((p) => p.imagen)
+      .slice(0, 6)
+      .map((p, i) => `
+        <figure class="crear-shot crear-shot--${i + 1}" title="${esc(p.titulo)}">
+          <img src="${esc(p.imagen)}" alt="${esc(p.titulo)}" loading="lazy">
+        </figure>`)
+      .join("");
+
+    const productoHTML = seleccionado
+      ? `<div class="crear-prod is-ready">
+          <span class="crear-prod__thumb">${seleccionado.imagen ? `<img src="${esc(seleccionado.imagen)}" alt="" loading="lazy">` : ico("bolsa")}</span>
+          <span class="crear-prod__txt">
+            <span class="crear-prod__label">Producto seleccionado</span>
+            <strong>${esc(seleccionado.titulo)}</strong>
+            <span>${seleccionado.precio != null ? esc(precioLindo(seleccionado.precio, seleccionado.moneda)) : "Precio no disponible"}${seleccionado.estado ? ` · ${ESTADO_ETQ[seleccionado.estado] || esc(seleccionado.estado)}` : ""}</span>
+          </span>
+          ${seleccionado.estado ? `<s-badge tone="${TONO_ESTADO[seleccionado.estado] || "neutral"}">${ESTADO_ETQ[seleccionado.estado] || esc(seleccionado.estado)}</s-badge>` : ""}
+        </div>`
+      : `<div class="crear-prod">
+          <span class="crear-prod__thumb">${ico("bolsa")}</span>
+          <span class="crear-prod__txt">
+            <span class="crear-prod__label">Producto de Shopify</span>
+            <strong>Elegí el producto que querés convertir en una página de venta</strong>
+            <span>TiendaIQ toma sus fotos, precio, variantes y descripción como punto de partida.</span>
+          </span>
+        </div>`;
+
+    const accionesHTML = seleccionado
+      ? `<s-button id="elegir-shopify">Cambiar producto</s-button>
+         <s-button variant="primary" id="continuar-producto">Continuar</s-button>`
+      : `<s-button variant="primary" id="elegir-shopify">Elegir producto de Shopify</s-button>`;
+
     vista.innerHTML = `
       <div class="crear">
         <button class="volver-flecha" id="volver-inicio"></button>
-        <div class="crear__hero">
-          <span class="crear__eyebrow">${IC_CHISPA} Generador con IA</span>
-          <h1>Creá tu página de producto</h1>
-          <p>Elegí un producto y la IA arma la landing completa en segundos.</p>
-        </div>
-        <div class="consola">
-          <div class="consola__buscar">
-            <span class="consola__lupa">${IC_LUPA}</span>
-            <input class="consola__input" id="q" type="text" autocomplete="off" spellcheck="false"
-                   placeholder="Buscá un producto…" value="${esc(estado.filtro || "")}">
-            <span class="cmd__kbd">↑↓ · Enter</span>
-          </div>
-          <div class="consola__res" id="res" role="listbox" aria-label="Productos"></div>
-          <button class="consola__pie" id="ver-todos">${IC_GRID} Ver los ${estado.productos.length} productos de tu tienda</button>
+        <div class="crear-stage">
+          <section class="crear-hero-panel">
+            <div class="crear-hero-panel__copy">
+              <span class="crear__eyebrow">Páginas con IA para Shopify</span>
+              <h1>Una página mejor para cada producto</h1>
+              <p>Elegí un producto. TiendaIQ prepara copy, estructura e imágenes listas para editar.</p>
+            </div>
+
+            <div class="crear-visual" aria-label="Productos del catálogo">
+              ${galeria || `<div class="crear-visual__empty">${ico("bolsa")} Las imágenes se leen al generar la página.</div>`}
+              <div class="crear-visual__count"><b>${totalProductos}</b><span>productos conectados</span></div>
+            </div>
+
+            <div class="crear-card">
+              <div class="crear-card__head">
+                <div>
+                  <div class="crear-card__kicker">Catálogo conectado</div>
+                  <h2>Elegí el producto base</h2>
+                </div>
+                <span class="crear-card__meta">${productosSinPagina} sin página</span>
+              </div>
+              ${productoHTML}
+              <div class="crear-card__acciones">
+                ${accionesHTML}
+              </div>
+            </div>
+
+            <div class="crear-market-note">
+              <b>Dropshipping, con mejor ejecución</b>
+              <p>El modelo creció fuerte en Estados Unidos y Europa. En Sudamérica todavía hay espacio para marcas que validan rápido, comunican claro y publican páginas mejores antes que el resto.</p>
+            </div>
+
+            <div class="crear-flow crear-flow--rail" aria-label="Preparación de la página">
+              <div class="crear-flow__item is-active">
+                <span></span>
+                <div><b>Producto</b><small>Elegí el ítem correcto del catálogo.</small></div>
+              </div>
+              <div class="crear-flow__item">
+                <span></span>
+                <div><b>Estrategia</b><small>Definí idioma, público y ángulo.</small></div>
+              </div>
+              <div class="crear-flow__item">
+                <span></span>
+                <div><b>Plantilla</b><small>Seleccioná el estilo antes de generar.</small></div>
+              </div>
+            </div>
+          </section>
         </div>
       </div>`;
 
     $("volver-inicio").onclick = () => ir("inicio");
-    $("ver-todos").onclick = abrirPickerTodos;
-    const q0 = $("q");
-    let navIdx = 0;      // fila activa
-    let navLista = [];   // ids en orden de navegación
+    $("elegir-shopify").onclick = () => abrirPickerTodos();
+    const continuar = $("continuar-producto");
+    if (continuar) continuar.onclick = () => { if (estado.producto) ir("informacion"); };
 
-    const fila = (p) => `
-      <button class="fila" role="option" data-id="${esc(p.id)}">
-        <span class="fila__thumb">${p.imagen ? `<img src="${esc(p.imagen)}" alt="" loading="lazy">` : `<span class="fila__ph">${ico("bolsa")}</span>`}</span>
-        <span class="fila__txt">
-          <span class="fila__tit">${esc(p.titulo)}</span>
-          ${p.precio != null ? `<span class="fila__precio">${esc(precioLindo(p.precio, p.moneda))}</span>` : ""}
-        </span>
-        ${
-          p.estado
-            ? `<s-badge tone="${TONO_ESTADO[p.estado] || "neutral"}">${ESTADO_ETQ[p.estado] || esc(p.estado)}</s-badge>`
-            : `<span class="fila__cta">Crear página ${ico("flecha")}</span>`
-        }
-      </button>`;
-
-    function marcarActiva(scroll = true) {
-      $("res").querySelectorAll(".fila").forEach((b, i) => {
-        const on = i === navIdx;
-        b.classList.toggle("is-activa", on);
-        b.setAttribute("aria-selected", on ? "true" : "false");
-        if (on && scroll) b.scrollIntoView({ block: "nearest" });
-      });
-    }
-
-    function renderResultados() {
-      const q = (estado.filtro || "").trim().toLowerCase();
-      let html = "";
-      let planos = [];
-
-      if (!q) {
-        const borradores = estado.productos.filter((p) => p.estado === "borrador").slice(0, 3);
-        const sinPagina = estado.productos.filter((p) => !p.estado).slice(0, 4);
-        planos = [...borradores, ...sinPagina];
-        if (borradores.length) html += `<div class="consola__grupo">Seguí donde dejaste</div>` + borradores.map(fila).join("");
-        if (sinPagina.length) html += `<div class="consola__grupo">Empezá una nueva</div>` + sinPagina.map(fila).join("");
-      } else {
-        planos = estado.productos.filter((p) => p.titulo.toLowerCase().includes(q)).slice(0, 50);
-        html = planos.length
-          ? planos.map(fila).join("")
-          : `<div class="vacio">Ningún producto coincide con “${esc(estado.filtro)}”.</div>`;
-      }
-
-      navLista = planos.map((p) => p.id);
-      if (navIdx >= navLista.length) navIdx = Math.max(0, navLista.length - 1);
-
-      const cont = $("res");
-      cont.innerHTML = html;
-      cont.querySelectorAll(".fila").forEach((b) => {
-        b.onclick = () => elegirProducto(b.dataset.id);
-        b.onmouseenter = () => {
-          const i = navLista.indexOf(b.dataset.id);
-          if (i >= 0 && i !== navIdx) { navIdx = i; marcarActiva(false); }
-        };
-      });
-      marcarActiva(false);
-    }
-
-    renderResultados();
-    q0.focus();
-    q0.setSelectionRange(q0.value.length, q0.value.length);
-
-    q0.oninput = () => { estado.filtro = q0.value; navIdx = 0; renderResultados(); };
-    q0.onkeydown = (e) => {
-      const n = navLista.length;
-      if (e.key === "ArrowDown") { e.preventDefault(); if (n) { navIdx = (navIdx + 1) % n; marcarActiva(); } }
-      else if (e.key === "ArrowUp") { e.preventDefault(); if (n) { navIdx = (navIdx - 1 + n) % n; marcarActiva(); } }
-      else if (e.key === "Enter") { e.preventDefault(); if (navLista[navIdx]) elegirProducto(navLista[navIdx]); }
-      else if (e.key === "Escape" && q0.value) { q0.value = ""; estado.filtro = ""; navIdx = 0; renderResultados(); }
-    };
   }
 
   function elegirProducto(id) {
     estado.producto = estado.productos.find((p) => p.id === id);
-    if (estado.producto) ir("informacion");
+    if (estado.producto && estado.pantalla === "lista") pantallaLista();
   }
 
   // Sube una imagen (add-on del bundle) a Shopify Files y guarda su URL en la
@@ -851,19 +848,26 @@
       <div class="picker" role="dialog" aria-modal="true" aria-label="Todos los productos">
         <div class="picker__cab">
           <h2>Todos los productos</h2>
-          <button class="picker__x" type="button" aria-label="Cerrar">${ico("x")}</button>
+          <s-button id="pk-x">Cerrar</s-button>
         </div>
         <div class="picker__buscar">
           <span class="picker__lupa">${IC_LUPA}</span>
           <input id="pk-q" type="text" autocomplete="off" spellcheck="false" placeholder="Buscar productos…">
         </div>
         <div class="picker__lista" id="pk-lista"></div>
-        <div class="picker__pie" id="pk-conteo"></div>
+        <div class="picker__pie picker__pie--acciones">
+          <span id="pk-conteo"></span>
+          <span class="picker__acciones">
+            <s-button id="pk-cancelar">Cancelar</s-button>
+            <s-button variant="primary" id="pk-seleccionar" disabled>Seleccionar producto</s-button>
+          </span>
+        </div>
       </div>`;
     document.body.appendChild(cont);
+    let seleccionadoId = onPick ? null : estado.producto?.id || null;
 
     const filaP = (p) => `
-      <button class="fila" type="button" data-id="${esc(p.id)}">
+      <button class="fila picker__fila ${p.id === seleccionadoId ? "is-selected" : ""}" type="button" data-id="${esc(p.id)}">
         <span class="fila__thumb">${p.imagen ? `<img src="${esc(p.imagen)}" alt="" loading="lazy">` : `<span class="fila__ph">${ico("bolsa")}</span>`}</span>
         <span class="fila__txt">
           <span class="fila__tit">${esc(p.titulo)}</span>
@@ -878,6 +882,10 @@
 
     const lista = cont.querySelector("#pk-lista");
     const conteo = cont.querySelector("#pk-conteo");
+    const confirmar = cont.querySelector("#pk-seleccionar");
+    const refrescarConfirmar = () => {
+      if (confirmar) confirmar.toggleAttribute("disabled", !seleccionadoId);
+    };
     const pintar = (q = "") => {
       const t = q.trim().toLowerCase();
       const arr = t ? estado.productos.filter((p) => p.titulo.toLowerCase().includes(t)) : estado.productos;
@@ -885,18 +893,31 @@
       conteo.textContent = `${arr.length} producto${arr.length === 1 ? "" : "s"}`;
       lista.querySelectorAll(".fila").forEach((b) => {
         b.onclick = () => {
-          cerrar();
-          if (onPick) onPick((estado.productos || []).find((p) => p.id === b.dataset.id) || { id: b.dataset.id });
-          else elegirProducto(b.dataset.id);
+          if (onPick) {
+            cerrar();
+            onPick((estado.productos || []).find((p) => p.id === b.dataset.id) || { id: b.dataset.id });
+            return;
+          }
+          seleccionadoId = b.dataset.id;
+          lista.querySelectorAll(".fila").forEach((x) => x.classList.toggle("is-selected", x === b));
+          refrescarConfirmar();
         };
       });
+      refrescarConfirmar();
     };
     const onKey = (e) => { if (e.key === "Escape") cerrar(); };
     function cerrar() { cont.remove(); document.removeEventListener("keydown", onKey); }
 
     cont.addEventListener("click", (e) => {
-      if (e.target === cont || e.target.closest(".picker__x")) cerrar();
+      if (e.target === cont || e.target.closest("#pk-x")) cerrar();
     });
+    cont.querySelector("#pk-cancelar").onclick = cerrar;
+    confirmar.onclick = () => {
+      if (!seleccionadoId) return;
+      cerrar();
+      if (onPick) onPick((estado.productos || []).find((p) => p.id === seleccionadoId) || { id: seleccionadoId });
+      else elegirProducto(seleccionadoId);
+    };
     document.addEventListener("keydown", onKey);
     const pkq = cont.querySelector("#pk-q");
     pkq.oninput = () => pintar(pkq.value);
@@ -908,83 +929,165 @@
 
   async function pantallaInformacion() {
     const p = estado.producto;
+    estado.audienciaPagina ||= "unisex";
+    estado.anguloPreset ||= "problema";
+    estado.idiomaPagina ||= "es";
+
+    const audiencia = estado.audienciaPagina;
+    const preset = estado.anguloPreset;
+    const detalleInicial = estado.anguloExtra || "";
+    const audienciaTexto = { mujer: "Mujer", hombre: "Hombre", unisex: "Unisex" };
+    const angulos = [
+      ["problema", "Problema concreto", "Para compradores que buscan resolver una molestia puntual.", "Dolor-solución"],
+      ["rutina", "Rutina diaria", "Muestra cómo el producto entra en el uso cotidiano.", "Uso real"],
+      ["regalo", "Regalo útil", "Enfoca la página en practicidad, deseo y ocasión de compra.", "Lifestyle"],
+      ["confianza", "Confianza primero", "Prioriza claridad, prueba social y reducción de dudas.", "Prueba social"],
+      ["resultado", "Antes y después", "Contrasta la situación actual con el resultado esperado.", "Resultado"],
+      ["oferta", "Oferta directa", "Va al punto con beneficios, precio y decisión rápida.", "Direct response"]
+    ];
+    const textoAngulo = (k) => (angulos.find((a) => a[0] === k) || angulos[0])[1];
+    const textoDesc = (k) => (angulos.find((a) => a[0] === k) || angulos[0])[2];
+    const anguloInicial = [
+      `Público: ${audienciaTexto[audiencia] || "Unisex"}.`,
+      `Ángulo: ${textoAngulo(preset)}.`,
+      textoDesc(preset)
+    ].join(" ");
 
     vista.innerHTML = `
-      <s-page heading="Información del producto">
-        <s-button slot="secondary-actions" id="volver">Elegir otro producto</s-button>
+      <div class="estrategia">
+        <div class="estrategia__top">
+          <s-button id="volver">Elegir otro producto</s-button>
+          <div>
+            <h1>Definí la estrategia de venta</h1>
+            <p>Elegí público, enfoque y ajustes básicos antes de generar la página.</p>
+          </div>
+          <s-button variant="primary" id="continuar-top">Continuar a plantillas</s-button>
+        </div>
 
-        <s-paragraph>Revisá esto antes de generar. Cambiarlo después cuesta una regeneración.</s-paragraph>
+        <div class="estrategia__panel">
+          <section class="estrategia__main" aria-label="Estrategia de copywriting">
+            <div class="estrategia__bloque">
+              <h2>Público objetivo</h2>
+              <p>La IA adapta el tono del texto, los beneficios y la forma de presentar el producto.</p>
+              <div class="audiencias" id="audiencias">
+                <button type="button" data-audiencia="mujer" class="${audiencia === "mujer" ? "is-sel" : ""}">Mujer</button>
+                <button type="button" data-audiencia="hombre" class="${audiencia === "hombre" ? "is-sel" : ""}">Hombre</button>
+                <button type="button" data-audiencia="unisex" class="${audiencia === "unisex" ? "is-sel" : ""}">Unisex</button>
+              </div>
+            </div>
 
-        <s-grid gridTemplateColumns="repeat(auto-fit, minmax(320px, 1fr))" gap="base">
-          <s-stack direction="block" gap="base">
-            <s-section heading="Copywriting">
-              <s-stack direction="block" gap="base">
-                <s-text-field label="Ángulo del producto / enfoque (opcional)" id="angulo" placeholder="ejemplo: para escritorios chicos" details="Si lo cargás, todos los textos se inclinan hacia ese ángulo."></s-text-field>
-                <s-select label="Idioma" id="idioma" value="es" details="Aplica solo al texto. Las imágenes se usan como están.">
-                  <s-option value="es">Español (rioplatense)</s-option>
-                  <s-option value="en">English</s-option>
-                  <s-option value="pt">Português</s-option>
-                </s-select>
-              </s-stack>
-            </s-section>
+            <div class="estrategia__bloque">
+              <h2>Ángulo de venta</h2>
+              <p>Seleccioná la lectura comercial que mejor encaja con este producto.</p>
+              <div class="angulos" id="angulos">
+                ${angulos.map(([k, t, d, tag]) => `
+                  <button type="button" data-angulo-preset="${k}" class="angulo-card ${preset === k ? "is-sel" : ""}">
+                    <span></span>
+                    <b>${t}</b>
+                    <small>${d}</small>
+                    <em>${tag}</em>
+                  </button>`).join("")}
+              </div>
+            </div>
 
-            <s-section heading="Modelo de página">
-              <s-stack direction="block" gap="base">
-                <s-text color="subdued">Elegí el estilo de la landing. Después no se cambia sin regenerar.</s-text>
-                <div class="modelos" id="modelos">
-                  <button type="button" class="modelo-card ${(estado.modeloPagina || "clasico") === "clasico" ? "is-sel" : ""}" data-modelo="clasico">
-                    <span class="modelo-card__mini modelo-card__mini--clasico"><i></i><i></i><i></i></span>
-                    <span class="modelo-card__nom">Clásico ${ico("check")}</span>
-                    <span class="modelo-card__desc">Hero, beneficios, reseñas en grilla y FAQ.</span>
-                  </button>
-                  <button type="button" class="modelo-card ${estado.modeloPagina === "premium" ? "is-sel" : ""}" data-modelo="premium">
-                    <span class="modelo-card__mini modelo-card__mini--premium"><i></i><i></i><i></i></span>
-                    <span class="modelo-card__nom">Premium <span class="modelo-card__badge">Nuevo</span> ${ico("check")}</span>
-                    <span class="modelo-card__desc">Timer de oferta, comparación y reseñas en carrusel infinito.</span>
-                  </button>
-                  <button type="button" class="modelo-card ${estado.modeloPagina === "pagepilot" ? "is-sel" : ""}" data-modelo="pagepilot">
-                    <span class="modelo-card__mini modelo-card__mini--pagepilot"><i></i><i></i><i></i></span>
-                    <span class="modelo-card__nom">PagePilot <span class="modelo-card__badge">Nuevo</span> ${ico("check")}</span>
-                    <span class="modelo-card__desc">GalerÃ­a editorial, prueba social, beneficios y preguntas frecuentes.</span>
-                  </button>
+            <div class="estrategia__bloque estrategia__bloque--nota">
+              <label for="angulo-extra">Detalle opcional</label>
+              <textarea id="angulo-extra" rows="3" placeholder="Ejemplo: para madres primerizas, oficinas pequeñas o piel sensible.">${esc(detalleInicial)}</textarea>
+              <input type="hidden" id="angulo" value="${esc(anguloInicial)}">
+            </div>
+          </section>
+
+          <aside class="estrategia__side" aria-label="Preparación de generación">
+            <section class="side-card side-card--producto">
+              <span class="side-card__label">Producto</span>
+              <div class="side-prod">
+                <span class="side-prod__img">${p.imagen ? `<img src="${esc(p.imagen)}" alt="${esc(p.titulo)}" loading="lazy">` : ico("bolsa")}</span>
+                <div>
+                  <strong id="f-titulo">${esc(p.titulo)}</strong>
+                  <small id="f-meta">Cargando...</small>
                 </div>
-              </s-stack>
-            </s-section>
+              </div>
+              <p id="f-desc">La descripción del proveedor se lee al generar y no se muestra al cliente.</p>
+            </section>
 
-            <s-section heading="Color de la página">
-              <s-stack direction="block" gap="base">
-                <s-text color="subdued">Elegí el color del botón, los círculos de % y los detalles. Después lo podés cambiar en el editor.</s-text>
-                <div id="tema-previo">${swatchesTema(estado.temaElegido === "auto" ? null : estado.temaElegido)}</div>
-              </s-stack>
-            </s-section>
+            <section class="side-card side-card--resumen">
+              <span class="side-card__label">Tu estrategia</span>
+              <div class="strategy-chips">
+                <span id="chip-audiencia">${esc(audienciaTexto[audiencia] || "Unisex")}</span>
+                <span id="chip-angulo">${esc(textoAngulo(preset))}</span>
+                <span>Copy editable</span>
+              </div>
+              <p>La plantilla del próximo paso toma esta estrategia como guía visual.</p>
+            </section>
 
-            <s-section heading="Medios">
-              <div class="medios" id="medios"><s-text color="subdued">Cargando…</s-text></div>
+            <section class="side-card">
+              <span class="side-card__label">Idioma</span>
+              <s-select id="idioma" value="${esc(estado.idiomaPagina || "es")}">
+                <s-option value="es">Español</s-option>
+                <s-option value="en">English</s-option>
+                <s-option value="pt">Português</s-option>
+              </s-select>
+            </section>
+
+            <section class="side-card">
+              <span class="side-card__label">Color de acento</span>
+              <div id="tema-previo">${swatchesTema(estado.temaElegido === "auto" ? null : estado.temaElegido)}</div>
+            </section>
+
+            <section class="side-card">
+              <span class="side-card__label">Medios</span>
+              <div class="medios medios--compactos" id="medios"><span class="ayuda">Cargando...</span></div>
               <div class="nota" id="nota-medios"></div>
-            </s-section>
+            </section>
 
-            <s-button variant="primary" id="generar">Crear página de producto con IA</s-button>
+            <s-button variant="primary" id="continuar">Continuar a plantillas</s-button>
             ${p.estado ? `<s-button id="abrir">Editar la página existente</s-button>` : ""}
-          </s-stack>
-
-          <s-section heading="Producto">
-            <div class="ficha__titulo" id="f-titulo">${esc(p.titulo)}</div>
-            <div class="ficha__meta" id="f-meta">Cargando…</div>
-            <div class="ficha__descripcion" id="f-desc"></div>
-          </s-section>
-        </s-grid>
-      </s-page>`;
+          </aside>
+        </div>
+      </div>`;
 
     $("volver").onclick = () => ir("lista");
-    $("generar").onclick = generar;
-    // Selector de modelo de página (Clásico / Premium).
-    const mods = $("modelos");
-    if (mods) mods.onclick = (e) => {
-      const b = e.target.closest("[data-modelo]");
-      if (!b) return;
-      estado.modeloPagina = b.dataset.modelo;
-      mods.querySelectorAll(".modelo-card").forEach((c) => c.classList.toggle("is-sel", c === b));
+    const syncAngulo = () => {
+      const aud = audienciaTexto[estado.audienciaPagina || "unisex"] || "Unisex";
+      const pre = estado.anguloPreset || "problema";
+      const extra = ($("angulo-extra")?.value || "").trim();
+      estado.anguloExtra = extra;
+      const partes = [`Público: ${aud}.`, `Ángulo: ${textoAngulo(pre)}.`, textoDesc(pre)];
+      if (extra) partes.push(`Detalle: ${extra}`);
+      $("angulo").value = partes.join(" ");
+      const chipAud = $("chip-audiencia");
+      const chipAng = $("chip-angulo");
+      if (chipAud) chipAud.textContent = aud;
+      if (chipAng) chipAng.textContent = textoAngulo(pre);
     };
+    const continuarPlantillas = () => {
+      syncAngulo();
+      estado.anguloFinal = $("angulo").value.trim();
+      estado.idiomaPagina = $("idioma")?.value || "es";
+      ir("plantillas");
+    };
+    $("continuar").onclick = continuarPlantillas;
+    $("continuar-top").onclick = continuarPlantillas;
+    const auds = $("audiencias");
+    if (auds) auds.onclick = (e) => {
+      const b = e.target.closest("[data-audiencia]");
+      if (!b) return;
+      estado.audienciaPagina = b.dataset.audiencia;
+      auds.querySelectorAll("button").forEach((x) => x.classList.toggle("is-sel", x === b));
+      syncAngulo();
+    };
+    const angs = $("angulos");
+    if (angs) angs.onclick = (e) => {
+      const b = e.target.closest("[data-angulo-preset]");
+      if (!b) return;
+      estado.anguloPreset = b.dataset.anguloPreset;
+      angs.querySelectorAll(".angulo-card").forEach((x) => x.classList.toggle("is-sel", x === b));
+      syncAngulo();
+    };
+    const extra = $("angulo-extra");
+    if (extra) extra.oninput = syncAngulo;
+    const idioma = $("idioma");
+    if (idioma) idioma.onchange = () => { estado.idiomaPagina = idioma.value || "es"; };
     // Swatches de color (opción previa): guarda la elección para el generado.
     const tp = $("tema-previo");
     if (tp) tp.onclick = (e) => {
@@ -995,6 +1098,7 @@
     };
     const abrir = $("abrir");
     if (abrir) abrir.onclick = abrirExistente;
+    syncAngulo();
 
     // La ficha se llena con lo que ya sabemos del producto en Shopify.
     try {
@@ -1029,11 +1133,131 @@
     if (desc) desc.textContent = "La descripción del proveedor se lee al generar y no se muestra al cliente.";
   }
 
+  // ---------- 3. plantillas ----------
+
+  function previewPlantilla(tipo = "clasico", id = tipo, imagen = "") {
+    const portada = imagen
+      ? `<div class="tpl-preview__cover"><img src="${esc(imagen)}" alt="Vista previa de la plantilla" loading="lazy"></div>`
+      : `<div class="tpl-preview__hero"><i></i><i></i><i></i></div>`;
+    return `
+      <div class="tpl-preview tpl-preview--${esc(tipo)} tpl-preview--theme-${esc(id)}" aria-hidden="true">
+        ${portada}
+        <div class="tpl-preview__cols">
+          <span></span><span></span><span></span>
+        </div>
+        <div class="tpl-preview__body">
+          <i></i><i></i><i></i><i></i>
+        </div>
+      </div>`;
+  }
+
+  async function pantallaPlantillas() {
+    // Se mantiene el DISEÑO del selector; ofrece los modelos reales que arma
+    // el pipeline normal (no plantillas fijas). El render branchea por
+    // global.estilo con estos ids (ver adaptador.crearPagina y tiendaiq.js).
+    const plantillas = [
+      {
+        id: "clasico",
+        nombre: "Clásico",
+        subtitulo: "Estructura limpia para validar rápido.",
+        tags: ["Hero", "Beneficios", "FAQ"],
+        activa: true,
+        tipo: "clasico"
+      },
+      {
+        id: "premium",
+        nombre: "Premium",
+        subtitulo: "Más secciones para productos con más explicación.",
+        tags: ["Oferta", "Comparación", "Reviews"],
+        activa: true,
+        tipo: "premium"
+      },
+      {
+        id: "pagepilot",
+        nombre: "PagePilot",
+        subtitulo: "Galería editorial, prueba social, beneficios y preguntas frecuentes.",
+        tags: ["Editorial", "Galería", "Reviews"],
+        activa: true,
+        tipo: "premium"
+      }
+    ];
+
+    vista.innerHTML = `
+      <div class="plantillas ${plantillas.length === 1 ? "plantillas--single" : ""}">
+        <div class="plantillas__shell">
+          <div class="plantillas__top">
+            <s-button id="tpl-volver">Atrás</s-button>
+            <div>
+              <h1>Elegir plantilla</h1>
+            </div>
+            <s-button variant="primary" id="tpl-generar" disabled>Generar página</s-button>
+          </div>
+
+          <div class="plantillas__notice" id="tpl-notice">
+            <span>${ico("info")}</span>
+            <p>Seleccioná una plantilla para continuar.</p>
+          </div>
+
+          <div class="plantillas__grid" id="plantillas-grid">
+            ${plantillas.map((tpl) => `
+              <button
+                type="button"
+                class="plantilla-card ${estado.modeloPagina === tpl.id ? "is-sel" : ""} ${tpl.activa ? "" : "is-reservada"}"
+                ${tpl.activa ? `data-modelo="${esc(tpl.id)}"` : `data-template-slot="${esc(tpl.id)}" disabled`}
+                aria-pressed="${estado.modeloPagina === tpl.id ? "true" : "false"}"
+              >
+                <span class="plantilla-card__head">
+                  <b>${esc(tpl.nombre)}</b>
+                </span>
+                ${previewPlantilla(tpl.tipo, tpl.id, tpl.imagen)}
+                <span class="plantilla-card__foot">
+                  <span>${esc(tpl.subtitulo)}</span>
+                  <span class="tpl-tags">${tpl.tags.map((tag) => `<i>${esc(tag)}</i>`).join("")}</span>
+                </span>
+              </button>
+            `).join("")}
+          </div>
+        </div>
+      </div>`;
+
+    const refrescarCta = () => {
+      const btn = $("tpl-generar");
+      const listo = !!estado.modeloPagina;
+      const notice = $("tpl-notice");
+      if (btn) {
+        const seleccionada = plantillas.find((tpl) => tpl.id === estado.modeloPagina);
+        btn.textContent = listo ? `Generar página con ${seleccionada?.nombre || "plantilla"}` : "Seleccionar plantilla";
+        btn.toggleAttribute("disabled", !listo);
+      }
+      if (notice) notice.hidden = listo;
+    };
+    $("tpl-volver").onclick = () => ir("informacion");
+    $("tpl-generar").onclick = () => {
+      if (!estado.modeloPagina) return;
+      generar();
+    };
+    const grid = $("plantillas-grid");
+    if (grid) grid.onclick = (e) => {
+      const b = e.target.closest("[data-modelo]");
+      if (!b) return;
+      estado.modeloPagina = b.dataset.modelo;
+      grid.querySelectorAll(".plantilla-card").forEach((card) => {
+        const sel = card === b;
+        card.classList.toggle("is-sel", sel);
+        card.setAttribute("aria-pressed", sel ? "true" : "false");
+      });
+      refrescarCta();
+    };
+    refrescarCta();
+  }
+
   // ---------- generando ----------
 
   async function generar() {
-    const angulo = $("angulo").value.trim();
-    const idioma = $("idioma").value;
+    const angulo = ($("angulo")?.value || estado.anguloFinal || "").trim();
+    const idioma = $("idioma")?.value || estado.idiomaPagina || "es";
+    estado.anguloFinal = angulo;
+    estado.idiomaPagina = idioma;
     estado.error = null;
     ir("generando");
 
@@ -1064,7 +1288,7 @@
     } catch (e) {
       clearInterval(reloj);
       estado.error = e.message;
-      ir("informacion");
+      ir("plantillas");
       requestAnimationFrame(() => {
         vista.insertAdjacentHTML(
           "afterbegin",
@@ -1165,9 +1389,11 @@
   function campo(ruta, etiqueta, filas, nulo) {
     const v = leer(estado.pagina.data, ruta) ?? "";
     const atributos = `data-ruta="${ruta}"${nulo ? ` data-nulo="1"` : ""}`;
-    return filas
+    const campoHTML = filas
       ? `<s-text-area label="${esc(etiqueta)}" rows="${filas}" ${atributos} value="${esc(v)}"></s-text-area>`
       : `<s-text-field label="${esc(etiqueta)}" ${atributos} value="${esc(v)}"></s-text-field>`;
+    const admiteIA = Boolean(filas) || /título|texto|nombre|beneficio|titular|subtítulo|contenido|llamada|botón|caption/i.test(etiqueta);
+    return `<div class="sp-field">${campoHTML}${admiteIA ? `<button type="button" class="sp-ai-trigger" data-ai-text="${esc(ruta)}">${ico("chispa")} Editar con IA</button>` : ""}</div>`;
   }
 
   function campoNumero(ruta, etiqueta) {
@@ -1377,7 +1603,6 @@
         titulo: "Beneficios del producto",
         html: () => {
           return (
-            `<div class="editor__nota">Cada beneficio: un emoji, el arranque en negrita y el resto de la frase.</div>` +
             f.hero.bullets
               .map(
                 (b, i) => `
@@ -1399,7 +1624,6 @@
       destacada: {
         titulo: "Reseña destacada",
         html: () =>
-          `<div class="editor__nota">Es la reseña grande del hero. Pegá acá una reseña REAL de un cliente; sin texto, en la tienda no se muestra.</div>` +
           campo("facetas.hero.resena_destacada.autor", "Nombre", 0, true) +
           campo("facetas.hero.resena_destacada.texto", "Texto", 3, true) +
           `<div class="campo campo--editor"><label>Estrellas</label>${selectorEstrellas(
@@ -1426,7 +1650,7 @@
           if (!Array.isArray(f.clientes.items)) f.clientes.items = [];
           const items = f.clientes.items;
           return (
-            `<div class="editor__nota">Subí o <strong>arrastrá</strong> el video/GIF desde tu compu (lo más simple), o pegá un enlace <strong>directo</strong>: un .gif o .mp4, un link de Giphy o de YouTube. Ojo: el link de una página web común (por ej. una nota) no sirve, tiene que ser el del archivo. Se reproduce solo, en loop, sin controles. Agregá todos los que quieras; los vacíos no se muestran en la tienda.</div>` +
+            `<div class="editor__ayuda">Admite GIF, MP4 y enlaces de video.</div>` +
             campo("facetas.clientes.titulo", "Título de la sección") +
             (items.length
               ? items
@@ -1443,7 +1667,7 @@
               </fieldset>`
                   )
                   .join("")
-              : `<div class="editor__nota">Todavía no agregaste clips.</div>`) +
+              : "") +
             `<button class="btn btn--fantasma" type="button" data-muro-add="1">${ico("mas")} Agregar clip</button>`
           );
         }
@@ -1470,12 +1694,28 @@
       stats: {
         titulo: "Estadísticas",
         html: () =>
-          `<div class="editor__nota">Los porcentajes son fijos de la plantilla; se editan solo las frases.</div>` +
           campo("facetas.stats.titular", "Titular") +
           f.stats.items
             .map((x, i) => campo(`facetas.stats.items.${i}.frase`, `${x.pct}% — frase (sin números)`, 2))
             .join("") +
           selectorImagenUno("facetas.stats.imagen", "Imagen del bloque")
+      },
+      tabla: {
+        titulo: "Comparacion",
+        html: () =>
+          campo("facetas.tabla.titular", "Titular") +
+          campo("facetas.tabla.parrafo", "Texto introductorio", 2) +
+          campo("facetas.tabla.col_otros", "Nombre de la columna alternativa") +
+          (f.tabla?.filas || [])
+            .map((_, i) => campo(`facetas.tabla.filas.${i}`, `Fila ${i + 1}`))
+            .join("")
+      },
+      garantia: {
+        titulo: "Garantia",
+        html: () =>
+          campo("facetas.garantia.titular", "Titular") +
+          campo("facetas.garantia.parrafo", "Texto", 3) +
+          selectorImagenUno("facetas.garantia.imagen", "Imagen")
       },
       faq: {
         titulo: "Preguntas frecuentes",
@@ -1484,8 +1724,10 @@
           f.faq.items
             .map(
               (_, i) =>
+                `<div class="sp-item-card"><div class="sp-item-card__head"><strong>Pregunta ${i + 1}</strong><span>FAQ</span></div>` +
                 campo(`facetas.faq.items.${i}.pregunta`, `Pregunta ${i + 1}`) +
-                campo(`facetas.faq.items.${i}.respuesta`, `Respuesta ${i + 1}`, 2)
+                campo(`facetas.faq.items.${i}.respuesta`, `Respuesta ${i + 1}`, 2) +
+                `</div>`
             )
             .join("")
       },
@@ -1552,7 +1794,9 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     ["faq", "Después de las preguntas"],
     ["iconos", "Después de los beneficios"],
     ["stats", "Después de las estadísticas"],
+    ["tabla", "Después de la comparación"],
     ["resenas", "Después de las reseñas"],
+    ["garantia", "Después de la garantía"],
     ["recomendados", "Al final de la página"]
   ];
 
@@ -1709,7 +1953,8 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     if (borrar) {
       const idx = secs.findIndex((s) => s.id === borrar.dataset.secBorrar);
       if (idx > -1) secs.splice(idx, 1);
-      cerrarModalEdicion();
+      if (panelEditorId) cerrarPanelSeccion();
+      else cerrarModalEdicion();
       marcarSucio();
       repintarPreview();
       return "cerrado";
@@ -1728,6 +1973,10 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   }
 
   function abrirModalEdicion(id) {
+    // Todas las piezas del editor usan ahora el inspector lateral. Se conserva
+    // el modal debajo durante la migración para no perder sus helpers antiguos.
+    return abrirPanelEditor(id);
+
     // Las secciones v2 (schema-driven, ej. Video slider) usan el PANEL LATERAL
     // estilo Section Store, no el modal. Las clásicas (videos/carrusel) siguen
     // con el modal viejo.
@@ -1942,15 +2191,17 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   // A qué modal lleva cada bloque de la página. El orden importa: gana el
   // primer selector que matchee con closest().
   const ZONAS_EDICION = [
-    { sel: ".hero__galeria", id: "galeria" },
-    { sel: ".hero__bullets", id: "bullets" },
-    { sel: ".hero__resenas, .hero__titulo, .hero__subtitulo, .hero__precios, .hero__cantidad", id: "encabezado" },
-    { sel: ".acordeon", id: "acordeones" },
-    { sel: ".resena-destacada", id: "destacada" },
-    { sel: ".iconos", id: "iconos" },
-    { sel: ".stats", id: "stats" },
-    { sel: ".faq", id: "faq" },
-    { sel: ".resenas", id: "resenas" },
+    { sel: ".hero__galeria, .pp-gallery-col", id: "galeria" },
+    { sel: ".hero__bullets, .pp-benefits", id: "bullets" },
+    { sel: ".hero__resenas, .hero__titulo, .hero__subtitulo, .hero__precios, .hero__cantidad, .pp-rating, #pp-product-title, .pp-lead, .pp-price", id: "encabezado" },
+    { sel: ".acordeon, .pp-accordions", id: "acordeones" },
+    { sel: ".resena-destacada, .pp-review", id: "destacada" },
+    { sel: ".iconos, .pp-editorial-list", id: "iconos" },
+    { sel: ".stats, .pp-stats", id: "stats" },
+    { sel: ".faq, .pp-faq", id: "faq" },
+    { sel: ".pp-comparison", id: "tabla" },
+    { sel: ".pp-guarantee", id: "garantia" },
+    { sel: ".resenas, .pp-reviews", id: "resenas" },
     { sel: ".muro", id: "clientes" }
   ];
 
@@ -2002,7 +2253,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     };
 
     // Nombre legible de la zona (para el chip) + sync con la fila del árbol.
-    const NOMBRE_ZONA = { encabezado: "Encabezado", galeria: "Galería", bullets: "Beneficios", destacada: "Reseña destacada", acordeones: "Envío y devoluciones", iconos: "Íconos", stats: "Estadísticas", faq: "Preguntas frecuentes", resenas: "Reseñas", clientes: "Muro de clientes" };
+    const NOMBRE_ZONA = { encabezado: "Encabezado", galeria: "Galería", bullets: "Beneficios", destacada: "Reseña destacada", acordeones: "Envío y devoluciones", iconos: "Íconos", stats: "Estadísticas", tabla: "Comparación", garantia: "Garantía", faq: "Preguntas frecuentes", resenas: "Reseñas", clientes: "Muro de clientes" };
     const nombreZona = (zid) => {
       if (zid.startsWith("sec:")) { const s = (estado.pagina.data.secciones || []).find((x) => x.id === zid.slice(4)); return s ? (catSeccion(s.tipo)?.nombre || "Sección") : "Sección"; }
       return NOMBRE_ZONA[zid] || zid;
@@ -2145,7 +2396,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   const NOMBRE_BLOQUE = {
     top: "el principio", hero: "el encabezado", clientes: "el muro de clientes",
     iconos: "los beneficios", stats: "las estadísticas",
-    faq: "las preguntas", resenas: "las reseñas", recomendados: "los recomendados"
+    faq: "las preguntas", tabla: "la comparación", resenas: "las reseñas", garantia: "la garantía", recomendados: "los recomendados"
   };
 
   function montarDragSections(marco) {
@@ -2700,6 +2951,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   // imagen). Cada cambio escribe en s.settings y repinta en vivo.
   // ============================================================
   let panelSecId = null;      // id de la sección abierta en el panel
+  let panelEditorId = null;   // id del bloque abierto, también para facetas clásicas
   const panelOpen = { slider: true }; // acordeones abiertos (primer grupo abierto)
 
   const secActual = () => (estado.pagina.data.secciones || []).find((s) => s.id === panelSecId);
@@ -2820,13 +3072,37 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       <div class="sp-sub">Ajustes</div>
       ${grupos}
       ${cssCustom}
-      <button type="button" class="sp-del" data-panel-del="${s.id}">${ico("basura")} Eliminar sección</button>`;
+      `;
   }
 
+  function panelEditorHTML(id) {
+    if (id.startsWith("sec:")) {
+      const s = (estado.pagina.data.secciones || []).find((x) => x.id === id.slice(4));
+      if (!s) return "";
+      if (catSeccion(s.tipo)?.schema) return panelSeccionHTML(s);
+      const def = defSeccion(s.id);
+      return def ? `<div class="sp-sub">Contenido</div><div class="sp-content">${def.html()}</div>` : "";
+    }
+    const def = seccionesPagina()[id];
+    if (!def) return "";
+    return `<div class="sp-sub">Contenido</div><div class="sp-content">
+      ${def.html()}
+    </div>`;
+  }
+
+  function panelTitulo(id) {
+    if (id.startsWith("sec:")) {
+      const s = (estado.pagina.data.secciones || []).find((x) => x.id === id.slice(4));
+      return catSeccion(s?.tipo)?.nombre || "Sección";
+    }
+    return seccionesPagina()[id]?.titulo || "Sección";
+  }
+
+  function panelEsV2(id) { return id.startsWith("sec:"); }
+
   function refrescarPanelSeccion() {
-    const s = secActual();
     const body = document.getElementById("sp-body");
-    if (s && body) { body.innerHTML = panelSeccionHTML(s); sincSelectsPag(); }
+    if (panelEditorId && body) { body.innerHTML = panelEditorHTML(panelEditorId); sincSelectsPag(); }
   }
 
   function setVS(s, k, val) {
@@ -2837,11 +3113,114 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     timerPreview = setTimeout(repintarPreview, 120);
   }
 
-  function abrirPanelSeccion(secId) {
+  function cerrarAiText() { document.getElementById("sp-ai-popover")?.remove(); }
+
+  function abrirAiText(ruta) {
+    const p = document.getElementById("sec-panel");
+    if (!p) return;
+    cerrarAiText();
+    p.insertAdjacentHTML("beforeend", `
+      <div class="sp-ai-popover" id="sp-ai-popover" role="dialog" aria-label="Editar texto con IA">
+        <div class="sp-ai-popover__head">${ico("chispa")}<strong>Editar texto con IA</strong><button type="button" class="sp-ai-popover__close" data-ai-cancel aria-label="Cerrar">${ico("x")}</button></div>
+        <div class="sp-ai-popover__label">Modo</div>
+        <div class="sp-ai-modes" role="group" aria-label="Modo de edición">
+          <button type="button" class="sp-ai-mode is-selected" data-ai-mode="rewrite">Reescribir</button>
+          <button type="button" class="sp-ai-mode" data-ai-mode="shorter">Más corto</button>
+          <button type="button" class="sp-ai-mode" data-ai-mode="longer">Más largo</button>
+        </div>
+        <label class="sp-ai-popover__label" for="sp-ai-instructions">Indicaciones opcionales</label>
+        <textarea id="sp-ai-instructions" class="sp-ai-popover__textarea" rows="3" placeholder="Ej.: enfocá el texto en madres primerizas..."></textarea>
+        <div class="sp-ai-popover__actions"><button type="button" class="sp-ai-cancel" data-ai-cancel>Cancelar</button><s-button variant="primary" id="sp-ai-send">Aplicar</s-button></div>
+      </div>`);
+    const send = p.querySelector("#sp-ai-send");
+    if (send) send.dataset.aiRuta = ruta;
+    p.querySelector("#sp-ai-instructions")?.focus();
+  }
+
+  function contextoAi(ruta) {
+    const data = estado.pagina.data || {};
+    const fuente = data.fuente || {};
+    const faq = ruta.match(/^facetas\.faq\.items\.(\d+)\.(pregunta|respuesta)$/);
+    const base = {
+      producto: fuente.titulo_crudo || data.facetas?.hero?.titulo || "Producto de la tienda",
+      descripcion_base: String(fuente.descripcion_cruda || "").slice(0, 4500),
+      seccion: panelTitulo(panelEditorId || ""),
+      campo: ruta.split(".").pop(),
+      plantilla: data.global?.plantilla_id || data.global?.estilo || "clasico",
+      version_plantilla: data.global?.plantilla_version || 1,
+      intencion: data.global?.plantilla_id === "premium"
+        ? "Mantener una lectura editorial, sobria y orientada a confianza."
+        : "Mantener una lectura clara, directa y facil de escanear."
+    };
+    if (faq) {
+      const item = data.facetas?.faq?.items?.[Number(faq[1])] || {};
+      return {
+        ...base,
+        tipo: faq[2] === "respuesta" ? "respuesta a una pregunta" : "pregunta frecuente",
+        pregunta_asociada: item.pregunta || "",
+        respuesta_asociada: item.respuesta || "",
+        regla: faq[2] === "respuesta"
+          ? "Respondé la pregunta asociada. No devuelvas la pregunta, no la reformules y no la uses como respuesta."
+          : "Escribí una pregunta clara que una persona real haría antes de comprar."
+      };
+    }
+    return base;
+  }
+
+  function salidaAiValida(ruta, texto) {
+    const faq = ruta.match(/^facetas\.faq\.items\.(\d+)\.respuesta$/);
+    if (!faq) return true;
+    const pregunta = leer(estado.pagina.data, `facetas.faq.items.${faq[1]}.pregunta`) || "";
+    const normalizar = (s) => String(s).toLowerCase().replace(/[\u00bf?!.:,;\s]+/g, " ").trim();
+    return normalizar(texto) !== normalizar(pregunta);
+  }
+
+  async function enviarAiText(ruta) {
+    const p = document.getElementById("sec-panel");
+    const send = p?.querySelector("#sp-ai-send");
+    if (!p || !send) return;
+    const mode = p.querySelector(".sp-ai-mode.is-selected")?.dataset.aiMode || "rewrite";
+    const instrucciones = p.querySelector("#sp-ai-instructions")?.value || "";
+    const original = String(leer(estado.pagina.data, ruta) ?? "");
+    const textoOriginal = send.textContent;
+    send.setAttribute("disabled", "");
+    send.textContent = "Procesando…";
+    try {
+      const r = await api("/texto/editar", {
+        method: "POST",
+        body: {
+          texto: original,
+          instrucciones,
+          modo: mode,
+          idioma: estado.idiomaPagina || estado.pagina.data.global?.idioma || "es",
+          contexto: JSON.stringify(contextoAi(ruta))
+        }
+      });
+      if (!salidaAiValida(ruta, r.texto)) {
+        throw new Error("La IA devolvió la pregunta en lugar de responderla. No se aplicó el cambio.");
+      }
+      fijar(estado.pagina.data, ruta, r.texto);
+      marcarSucio();
+      repintarPreview();
+      cerrarAiText();
+      refrescarPanelSeccion();
+      toast("Texto actualizado");
+    } catch (e) {
+      send.removeAttribute("disabled");
+      send.textContent = textoOriginal || "Aplicar";
+      p.insertAdjacentHTML("afterbegin", `<div class="sp-ai-error">${ico("x")} ${esc(e.message)}</div>`);
+    }
+  }
+
+  function abrirPanelSeccion(secId) { abrirPanelEditor(`sec:${secId}`); }
+
+  function abrirPanelEditor(editorId) {
     cerrarPanelSeccion();
-    panelSecId = secId;
+    panelEditorId = editorId;
+    panelSecId = editorId.startsWith("sec:") ? editorId.slice(4) : null;
     const s = secActual();
-    if (!s) { panelSecId = null; return; }
+    const def = editorId.startsWith("sec:") ? null : seccionesPagina()[editorId];
+    if (!s && !def) { panelSecId = null; panelEditorId = null; return; }
     document.body.classList.add("sec-panel-abierto");
     const p = document.createElement("aside");
     p.className = "sec-panel";
@@ -2850,10 +3229,11 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     p.setAttribute("aria-labelledby", "sec-panel-tit");
     p.innerHTML = `
       <div class="sec-panel__cab">
-        <span class="sec-panel__tit" id="sec-panel-tit">${ico("video")} ${esc(catSeccion(s.tipo)?.nombre || "Sección")}</span>
+        <div class="sec-panel__heading"><span class="sec-panel__eyebrow">Editor de página</span><span class="sec-panel__tit" id="sec-panel-tit">${esc(panelTitulo(editorId))}</span></div>
         <button class="sec-panel__x" type="button" aria-label="Cerrar">${ico("x")}</button>
       </div>
-      <div class="sec-panel__body" id="sp-body">${panelSeccionHTML(s)}</div>`;
+      <div class="sec-panel__body" id="sp-body">${panelEditorHTML(panelEditorId)}</div>
+      ${editorId.startsWith("sec:") ? `<div class="sec-panel__footer"><s-button variant="tertiary" tone="critical" class="sp-del" data-panel-del="${esc(s.id)}">${ico("basura")} Eliminar sección</s-button></div>` : ""}`;
     document.body.appendChild(p);
     // A11y: Esc cierra el panel.
     p._onKey = (e) => { if (e.key === "Escape") cerrarPanelSeccion(); };
@@ -2890,6 +3270,15 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     p.addEventListener("click", (e) => {
       const t = e.target;
       if (t === p.querySelector(".sec-panel__x") || t.closest(".sec-panel__x")) return cerrarPanelSeccion();
+      const aiTrigger = t.closest("[data-ai-text]");
+      if (aiTrigger) { abrirAiText(aiTrigger.dataset.aiText); return; }
+      if (t.closest("[data-ai-cancel]")) { cerrarAiText(); return; }
+      const aiMode = t.closest("[data-ai-mode]");
+      if (aiMode) {
+        p.querySelectorAll("[data-ai-mode]").forEach((b) => b.classList.toggle("is-selected", b === aiMode));
+        return;
+      }
+      if (t.id === "sp-ai-send") { enviarAiText(t.dataset.aiRuta); return; }
       const acc = t.closest("[data-vacc]");
       if (acc) { const id = acc.dataset.vacc; panelOpen[id] = !panelOpen[id]; refrescarPanelSeccion(); return; }
       const seg = t.closest("[data-vseg]");
@@ -2938,11 +3327,13 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   }
 
   function cerrarPanelSeccion() {
+    cerrarAiText();
     const p = document.getElementById("sec-panel");
     if (p?._onKey) document.removeEventListener("keydown", p._onKey);
     p?.remove();
     document.body.classList.remove("sec-panel-abierto");
     panelSecId = null;
+    panelEditorId = null;
   }
 
   // Árbol de bloques del editor (panel izquierdo estilo PagePilot). Lista las
@@ -2962,18 +3353,19 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     };
     const row = (id, label, ico) =>
       `<div class="pe-tree__row" tabindex="0" data-tree="${esc(id)}"><span class="pe-tree__lead pe-tree__drag">${I.drag}</span><span class="pe-tree__ico">${ico}</span><span class="pe-tree__label">${esc(label)}</span></div>`;
-    const grupo = (nombre, filas) =>
-      `<section class="pe-tree__group"><div class="pe-tree__row pe-tree__row--group" tabindex="0"><span class="pe-tree__lead pe-tree__chevron">${I.chev}</span><span class="pe-tree__ico pe-tree__ico--group">${I.grupo}</span><span class="pe-tree__label">${esc(nombre)}</span></div><div class="pe-tree__children">${filas}</div></section>`;
+    const grupo = (nombre, filas, meta) =>
+      `<section class="pe-tree__group"><div class="pe-tree__row pe-tree__row--group" tabindex="0"><span class="pe-tree__lead pe-tree__chevron">${I.chev}</span><span class="pe-tree__ico pe-tree__ico--group">${I.grupo}</span><span class="pe-tree__label">${esc(nombre)}</span>${meta ? `<span class="pe-tree__group-meta">${esc(meta)}</span>` : ""}</div><div class="pe-tree__children">${filas}</div></section>`;
     const info = row("encabezado", "Encabezado", I.encabezado) + row("galeria", "Galería de producto", I.galeria) +
       row("bullets", "Beneficios", I.beneficios) + row("destacada", "Reseña destacada", I.estrella) +
       row("resenas", "Reseñas", I.estrella);
     const v2 = (estado.pagina.data.secciones || []).map((s) => row("sec:" + s.id, catSeccion(s.tipo)?.nombre || "Sección", I.lista)).join("");
-    const extra = row("clientes", "Muro de clientes", I.video) + row("acordeones", "Envío y devoluciones", I.lista) +
+    const extraOriginal = row("clientes", "Muro de clientes", I.video) + row("acordeones", "Envío y devoluciones", I.lista) +
       row("faq", "Preguntas frecuentes", I.lista) + row("iconos", "Garantías / íconos", I.beneficios) +
       row("stats", "Estadísticas", I.lista) + v2;
+    const extra = row("tabla", "Comparación", I.lista) + row("garantia", "Garantía", I.lista) + extraOriginal;
     return `<nav class="pe-tree" aria-label="Bloques de la página">
-      <div class="pe-tree__head">Página de producto</div>
-      <div class="pe-tree__body">${grupo("Información del producto", info)}${grupo("Secciones extra", extra)}</div>
+      <div class="pe-tree__head"><span class="pe-tree__head-title">Página de producto</span><span class="pe-tree__head-sub">Estructura y contenido</span></div>
+      <div class="pe-tree__body">${grupo("Información del producto", info, "5 bloques")}${grupo("Secciones extra", extra, `${(estado.pagina.data.secciones || []).length + 6} bloques`)}</div>
     </nav>`;
   }
 
@@ -5600,6 +5992,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     bundles: pantallaBundles,
     lista: pantallaLista,
     informacion: pantallaInformacion,
+    plantillas: pantallaPlantillas,
     generando: pantallaGenerando,
     preview: pantallaPreview,
     inspiracion: pantallaInspiracion
@@ -5615,6 +6008,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     bundles: "Bundles, upsells y regalos",
     lista: "Elegí un producto",
     informacion: "Información del producto",
+    plantillas: "Plantillas",
     generando: "Creando tu página",
     preview: "Editor de página",
     inspiracion: "Inspírate de los mejores"

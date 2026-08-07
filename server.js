@@ -21,7 +21,7 @@
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
-const { listarProductos, crearPagina, escribirPreview } = require("./adaptador");
+const { listarProductos, crearPagina, editarTexto, escribirPreview } = require("./adaptador");
 const { publicarPagina, despublicarPagina } = require("./publicar");
 const { env, sesionDeEnv } = require("./shopify");
 const { sesionDe, borrarTienda, listarTiendas } = require("./tiendas");
@@ -565,6 +565,14 @@ async function api(req, res, url) {
   if (req.method === "GET" && mGet) {
     const p = await leerPagina(sesion.tienda, mGet[1]);
     return p ? json(res, 200, p) : json(res, 404, { error: "No existe esa página" });
+  }
+
+  // POST /api/texto/editar — asistente puntual del editor de páginas.
+  if (req.method === "POST" && ruta === "/api/texto/editar") {
+    const { texto = "", instrucciones = "", modo = "rewrite", idioma = "es", contexto = "" } = await leerCuerpo(req);
+    if (String(texto).length > 12000) return json(res, 400, { error: "El texto es demasiado largo para editarlo en una sola vez." });
+    const salida = await editarTexto({ texto, instrucciones, modo, idioma, contexto });
+    return json(res, 200, { texto: salida });
   }
 
   // POST /api/imagen — sube una imagen a Files de la tienda (genérico). Lo usa

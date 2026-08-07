@@ -51,30 +51,27 @@
     <tr><td>Dominio de la tienda (<code>*.myshopify.com</code>)</td><td>Identificar a qué tienda pertenece cada configuración</td></tr>
     <tr><td>Token de acceso de Shopify</td><td>Operar sobre tu tienda con los permisos que autorizaste</td></tr>
     <tr><td>Catálogo de productos (título, descripción, imágenes, precios)</td><td>Generar páginas de producto y configurar bundles</td></tr>
-    <tr><td>Configuración de la App (formulario COD, bundles, diseño)</td><td>Guardar tus ajustes entre sesiones</td></tr>
+    <tr><td>Configuración de la App (bundles y diseño)</td><td>Guardar tus ajustes entre sesiones</td></tr>
     <tr><td>Páginas generadas</td><td>Permitirte editarlas y publicarlas</td></tr>
+    <tr><td>Datos limitados de pedidos con descuentos de TiendaIQ</td><td>Calcular métricas agregadas de bundles</td></tr>
     <tr><td>Uso mensual y estado del plan</td><td>Aplicar el cupo gratuito y la facturación</td></tr>
   </table>
 
   <h3 style="font-size:16px;margin:20px 0 6px">2.2. Datos de los clientes finales de tu tienda</h3>
-  <p>Si activás el <strong>formulario de pago contra reembolso (COD)</strong>, los datos que
-     completa el comprador —nombre, apellido, teléfono, dirección de envío, y opcionalmente
-     correo electrónico y notas— <strong>pasan por nuestros servidores</strong> con el único fin
-     de crear el pedido en tu tienda de Shopify.</p>
+  <p>La App no crea ni modifica pedidos, ni recolecta datos de compradores finales mediante
+     formularios propios. Las compras de tus clientes se realizan mediante los flujos nativos de Shopify.</p>
   <div class="nota">
-    <strong>No almacenamos esos datos.</strong> Se procesan en tránsito y se envían directamente
-    a Shopify para crear el pedido. Una vez creado, la información queda únicamente en tu tienda
-    de Shopify, bajo tu control y tus propias políticas.
+    <strong>No almacenamos datos de compradores.</strong> TiendaIQ trabaja con datos de la tienda,
+    productos, páginas generadas, bundles, configuración de la App y métricas agregadas de descuentos.
   </div>
-  <p>No tratamos datos de tarjetas ni de medios de pago: el pago contra reembolso, por
-     definición, se cobra en la entrega y fuera de la App.</p>
+  <p>No tratamos datos de tarjetas ni de medios de pago.</p>
 
   <h2>3. Con quién compartimos datos (subprocesadores)</h2>
   <table>
     <tr><th>Proveedor</th><th>Qué recibe</th><th>Para qué</th></tr>
     <tr>
       <td>Shopify</td>
-      <td>Configuración, pedidos, páginas, descuentos, archivos del tema</td>
+      <td>Configuración, páginas, descuentos, archivos de la tienda y datos limitados de pedidos para métricas</td>
       <td>Es la plataforma sobre la que opera la App</td>
     </tr>
     <tr>

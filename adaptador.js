@@ -652,6 +652,52 @@ async function crearPagina(idProducto, sesion, { idioma = "es", angulo = "", est
   return { data, urls, avisos: validar(data, salida), uso };
 }
 
+// Asistente puntual del editor de páginas: reescribe / acorta / amplía el
+// texto de UN campo, con el contexto de su sección. No inventa hechos.
+async function editarTexto({ texto = "", instrucciones = "", modo = "rewrite", idioma = "es", contexto = "" } = {}) {
+  const cliente = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
+  let contextoEditor = contexto;
+  try {
+    const objeto = JSON.parse(String(contexto));
+    contextoEditor = Object.entries(objeto)
+      .filter(([, valor]) => valor !== undefined && valor !== null && valor !== "")
+      .map(([clave, valor]) => `${clave}: ${valor}`)
+      .join("\n");
+  } catch {}
+  const modos = {
+    rewrite: "reescribí el texto manteniendo su intención y mejorando claridad, ritmo y conversión",
+    shorter: "hacé el texto más breve, directo y fácil de escanear sin perder la idea principal",
+    longer: "ampliá el texto con información útil y concreta, sin rellenar ni repetir ideas"
+  };
+  const idiomaSalida = idioma === "es" ? "español natural, profesional y sin exageraciones" : idioma;
+  const sistema = [
+    "Sos un especialista senior en ecommerce, CRO y copywriting para páginas de producto.",
+    `Escribí en ${idiomaSalida}.`,
+    "Trabajá sobre el texto entregado: no inventes características, resultados, reseñas, precios, garantías ni datos que no aparezcan en el original.",
+    "Usá lenguaje humano, preciso y comercial; evitá frases vacías, tono de IA, superlativos sin respaldo y signos innecesarios.",
+    "Conservá el formato simple del campo. No agregues introducciones, comillas, markdown ni explicaciones: devolvé solamente el texto final.",
+    "Antes de escribir, interpretá el contexto completo: sección, tipo de campo, pregunta asociada y hechos disponibles del producto.",
+    "Si el campo es una respuesta de FAQ, respondé exactamente la pregunta asociada. Nunca devuelvas la pregunta, aunque el texto actual esté vacío, incompleto o contenga la pregunta por error.",
+    "Si la respuesta actual coincide con la pregunta asociada, tratala como un borrador inválido e ignorala: redactá una respuesta nueva basada en los hechos disponibles.",
+    "En modo más largo, ampliá una respuesta válida con una o dos ideas útiles relacionadas; no repitas la pregunta ni agregues información no respaldada."
+  ].join(" ");
+  const prompt = [
+    `Modo: ${modos[modo] || modos.rewrite}.`,
+    `Contexto del editor (usalo para interpretar antes de escribir):\n${contextoEditor || "copy de producto"}.`,
+    `Texto actual:\n${String(texto).trim() || "(vacío)"}`,
+    instrucciones.trim() ? `Indicaciones del comerciante:\n${instrucciones.trim()}` : ""
+  ].filter(Boolean).join("\n\n");
+  const r = await cliente.messages.create({
+    model: MODELO,
+    max_tokens: 900,
+    system: sistema,
+    messages: [{ role: "user", content: prompt }]
+  });
+  const salida = r.content?.find((b) => b.type === "text")?.text?.trim();
+  if (!salida) throw new Error("La IA no devolvió un texto para este campo.");
+  return salida.replace(/^```(?:text|markdown)?\s*/i, "").replace(/\s*```$/i, "").trim();
+}
+
 // data.js es solo para el preview local; el JSON puro es lo que se publica.
 function escribirPreview(data, urls) {
   fs.writeFileSync(
@@ -665,7 +711,7 @@ function escribirPreview(data, urls) {
   fs.writeFileSync(path.join(__dirname, "ultima-pagina.json"), JSON.stringify(data, null, 2));
 }
 
-module.exports = { listarProductos, crearPagina, escribirPreview, extraer, generar, ensamblar, validar };
+module.exports = { listarProductos, crearPagina, escribirPreview, extraer, generar, editarTexto, ensamblar, validar };
 
 // ============================================================
 // CLI
