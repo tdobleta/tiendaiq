@@ -102,8 +102,8 @@ async function subirImagenProducto(sesion, productoGid, nombre, mime, base64) {
 
 // ---------- imágenes sueltas de la tienda (Files API) ----------
 //
-// Para imágenes sin producto de contexto, el archivo se sube a Files de la
-// tienda (fileCreate) y se usa su URL pública del CDN.
+// Para el formulario COD no hay producto de contexto: la imagen se sube a
+// Files de la tienda (fileCreate) y se usa su URL pública del CDN.
 
 const M_FILE = `mutation($files: [FileCreateInput!]!) {
   fileCreate(files: $files) {

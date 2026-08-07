@@ -18,20 +18,19 @@ const { guardarTienda, normalizar, esDominioValido } = require("./tiendas");
 const { metrica } = require("./monitoreo");
 const { guardarEstadoDB, consumirEstadoDB } = require("./db");
 
+// write_orders: lo usa el formulario COD para crear pedidos contra reembolso.
 // OJO: al agregar un alcance, las tiendas ya instaladas tienen que volver a
 // pasar por /auth?shop=... para autorizarlo.
-// write_files: imágenes que el merchant sube para páginas y bundles (Files API).
+// write_files: imágenes que el merchant sube al formulario COD (Files API).
 // write_discounts: los bundles crean descuentos automáticos (por volumen)
 // que Shopify hace cumplir en el checkout.
-// read_orders: métricas agregadas de bundles en los últimos 30 días; no crea
-// ni modifica pedidos.
 // write_online_store_navigation: el menú principal (Inicio/Comprar/Nosotros/
 // Contacto) es contenido de tienda, compartido por todos los themes.
 // Sin read_themes/write_themes: la app NO toca el tema (compliance App Store —
 // escribir archivos al tema no se exenta para este caso de uso). El video
 // slider y demás secciones viven en la landing (metafield + app block), no en
 // el tema. La verificación de "landing viva" se hace fetcheando el storefront.
-const ALCANCES = "read_products,write_products,read_files,write_files,read_content,write_content,write_discounts,read_orders,write_online_store_navigation";
+const ALCANCES = "read_products,write_products,write_orders,read_files,write_files,read_content,write_content,write_discounts,write_online_store_navigation";
 
 // Comparación en tiempo constante: comparar firmas con === filtra el secreto
 // de a un carácter por vez.

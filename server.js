@@ -21,8 +21,7 @@
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
-const { listarProductos, crearPagina, editarTexto, escribirPreview } = require("./adaptador");
-const { PLANTILLAS_DISPONIBLES } = require("./plantillas-producto");
+const { listarProductos, crearPagina, escribirPreview } = require("./adaptador");
 const { publicarPagina, despublicarPagina } = require("./publicar");
 const { env, sesionDeEnv } = require("./shopify");
 const { sesionDe, borrarTienda, listarTiendas } = require("./tiendas");
@@ -56,16 +55,15 @@ const VERSION_ASSETS = (() => {
     const dirWidgets = path.join(__dirname, "extensions", "tiendaiq-widgets", "assets");
     const archivos = [
       path.join(DIR_APP, "app.js"), path.join(DIR_APP, "app.css"),
-      path.join(dirWidgets, "tiendaiq.js"), path.join(dirWidgets, "tiendaiq.css"),
-      path.join(dirWidgets, "tiendaiq-atelier.css"), path.join(dirWidgets, "tiendaiq-pagepilot.css")
+      path.join(dirWidgets, "tiendaiq.js"), path.join(dirWidgets, "tiendaiq.css")
     ];
     return Math.floor(Math.max(...archivos.map((a) => fs.statSync(a).mtimeMs))).toString(36);
   } catch {
     return Date.now().toString(36);
   }
 })();
-// Único hogar del código que corre en el storefront (widget de bundles). El
-// theme app extension lo publica en el CDN de Shopify, y
+// Único hogar del código que corre en el storefront (widget de bundles y
+// formulario COD). El theme app extension lo publica en el CDN de Shopify, y
 // el server sirve LOS MISMOS archivos para el preview del admin y para la
 // inyección directa. Una sola copia: no hay nada que sincronizar.
 const DIR_WIDGETS = path.join(__dirname, "extensions", "tiendaiq-widgets", "assets");
@@ -95,7 +93,7 @@ const CLIENT_ID = env.SHOPIFY_CLIENT_ID || "";
 const linkEditorPagina = (tienda) =>
   `https://${tienda}/admin/themes/current/editor?template=product`;
 
-// Preactiva un app embed en el editor: además de abrir el panel
+// Preactiva un app embed (COD/Bundles) en el editor: además de abrir el panel
 // de "Incrustaciones de apps", deja el toggle del bloque listo para prender.
 const linkActivarEmbed = (tienda, handle) =>
   `https://${tienda}/admin/themes/current/editor?context=apps&activateAppId=${CLIENT_ID}/${handle}`;
@@ -231,7 +229,7 @@ function leerCuerpo(req, limite = 1_000_000) {
   return new Promise((resolve, reject) => {
     const trozos = [];
     let bytes = 0;
-    // Tope de 1 MB por defecto: sin esto cualquiera
+    // Tope de 1 MB por defecto: /cod/pedido es público y sin esto cualquiera
     // nos infla la memoria. La subida de imágenes pasa un límite mayor.
     // Se mide por BYTES reales (Buffer.length), no por largo de string: con
     // multibyte el corte en .length no coincide con los bytes recibidos, y
@@ -508,30 +506,6 @@ async function api(req, res, url) {
   const ruta = url.pathname;
   const sesion = await resolverSesion(req);
 
-  // GET /api/plantillas — contrato visible para el selector de creación.
-  // El navegador recibe solo metadatos de presentación; las reglas y campos
-  // completos permanecen en el backend y acompañan a la generación.
-  if (req.method === "GET" && ruta === "/api/plantillas") {
-    return json(
-      res,
-      200,
-      Object.values(PLANTILLAS_DISPONIBLES).map(({ id, version, nombre, descripcion, subtitulo, tags, tipo, layout, tema, intencion, orden, imagen }) => ({
-        id,
-        version,
-        nombre,
-        descripcion,
-        subtitulo,
-        tags,
-        tipo,
-        layout,
-        tema,
-        imagen,
-        intencion,
-        orden
-      }))
-    );
-  }
-
   // GET /api/productos
   if (req.method === "GET" && ruta === "/api/productos") {
     const productos = await listarProductos(sesion);
@@ -714,14 +688,6 @@ async function api(req, res, url) {
     return json(res, 200, { ...registro, segundos: (Date.now() - t0) / 1000, uso });
   }
 
-  // POST /api/texto/editar — asistente puntual del editor de páginas.
-  if (req.method === "POST" && ruta === "/api/texto/editar") {
-    const { texto = "", instrucciones = "", modo = "rewrite", idioma = "es", contexto = "" } = await leerCuerpo(req);
-    if (String(texto).length > 12000) return json(res, 400, { error: "El texto es demasiado largo para editarlo en una sola vez." });
-    const salida = await editarTexto({ texto, instrucciones, modo, idioma, contexto });
-    return json(res, 200, { texto: salida });
-  }
-
   // PUT /api/paginas/:id — el editor
   if (req.method === "PUT" && mGet) {
     const existente = await leerPagina(sesion.tienda, mGet[1]);
@@ -895,19 +861,11 @@ const servidor = http.createServer(async (req, res) => {
       if (rel === "index.html") {
         const html = fs
           .readFileSync(path.join(DIR_PLANTILLA, "index.html"), "utf8")
-          .replace(/(tiendaiq\.css|tiendaiq-atelier\.css|tiendaiq-pagepilot\.css|tiendaiq\.js)\?v=[\w.]+/g, `$1?v=${VERSION_ASSETS}`);
+          .replace(/(tiendaiq\.css|tiendaiq\.js)\?v=[\w.]+/g, `$1?v=${VERSION_ASSETS}`);
         res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" });
         return res.end(html);
       }
       return servirEstatico(req, res, DIR_PLANTILLA, rel);
-    }
-
-    // Prototipos independientes de plantillas: se diseñan y validan antes de
-    // conectarlos al renderer, editor y publicación de TiendaIQ.
-    if (url.pathname.startsWith("/prototipos/")) {
-      const solicitado = url.pathname.replace(/^\/prototipos\/?/, "");
-      const rel = solicitado ? (solicitado.endsWith("/") ? `${solicitado}index.html` : solicitado) : "plantilla-01/index.html";
-      return servirEstatico(req, res, path.join(__dirname, "prototipos"), rel);
     }
 
     // Videos de "Inspírate de los mejores" (con Range, sin pase: los <video>

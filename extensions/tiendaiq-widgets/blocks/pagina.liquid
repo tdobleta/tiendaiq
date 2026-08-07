@@ -41,8 +41,6 @@
           imagesizes="(max-width: 749px) 100vw, 45vw">
   {%- endif -%}
   {{ 'tiendaiq.css' | asset_url | stylesheet_tag }}
-  {{ 'tiendaiq-atelier.css' | asset_url | stylesheet_tag }}
-  {{ 'tiendaiq-pagepilot.css' | asset_url | stylesheet_tag }}
   <script>
     window.TIENDAIQ_DATA = {{ product.metafields.tiendaiq.pagina.value | json }};
     window.TIENDAIQ_VARIANT = {{ product.selected_or_first_available_variant.id | json }};
@@ -83,10 +81,7 @@
     {%- capture svg_globo %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a13.5 13.5 0 0 1 0 18a13.5 13.5 0 0 1 0-18z"/></svg>{% endcapture -%}
     {%- capture svg_retorno %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg>{% endcapture -%}
     {%- capture svg_reloj %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 2"/></svg>{% endcapture -%}
-    {%- if g.plantilla_id == 'atelier' or g.plantilla_id == 'pinza' or g.plantilla_id == 'labial' or g.plantilla_id == 'mascara' -%}
-      <div id="app" data-nicho="{{ g.nicho | default: 'general' }}" data-plantilla="{{ g.plantilla_id | escape }}"{% if g.tema %} data-tema="{{ g.tema }}"{% endif %} style="min-height:70vh"></div>
-    {%- else -%}
-    <div id="app" data-ssr="1" data-nicho="{{ g.nicho | default: 'general' }}" data-plantilla="{{ g.plantilla_id | default: g.estilo | escape }}"{% if g.tema %} data-tema="{{ g.tema }}"{% endif %} style="min-height:70vh">
+    <div id="app" data-ssr="1" data-nicho="{{ g.nicho | default: 'general' }}"{% if g.tema %} data-tema="{{ g.tema }}"{% endif %} style="min-height:70vh">
       <div id="tiq-hero">
         <section class="hero">
           <div class="contenedor">
@@ -160,7 +155,6 @@
       </div>
       <div id="tiq-resto"></div>
     </div>
-    {%- endif -%}
 
   <script src="{{ 'tiendaiq.js' | asset_url }}" defer></script>
 {%- endif -%}

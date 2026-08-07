@@ -274,12 +274,12 @@ describe("consumirCupo — reserva ATÓMICA de cupo (sin regalar páginas)", () 
   test("no pisa el token ni el resto del registro", async () => {
     const { modulo, tiendas } = montar("facturacion.js", {
       env: { TIENDAS_PRO: TIENDA },
-      tiendas: { [TIENDA]: { token: "shpat_importante", plan: "pro", bundles: { activo: true } } }
+      tiendas: { [TIENDA]: { token: "shpat_importante", plan: "pro", cod: { activo: true } } }
     });
     await modulo.consumirCupo(SESION);
     const t = tiendas._almacen[TIENDA];
     assert.equal(t.token, "shpat_importante", "perder el token deja la tienda muerta");
-    assert.deepEqual(t.bundles, { activo: true });
+    assert.deepEqual(t.cod, { activo: true });
   });
 
   test("revertirCupo devuelve la página reservada (si la generación falla)", async () => {

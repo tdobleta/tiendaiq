@@ -1076,150 +1076,6 @@
     </section>`;
   }
 
-  function atelierTextoFaceta(f, clave, respaldo = {}) {
-    return f?.[clave] || respaldo;
-  }
-
-  function atelierCta(global, etiqueta) {
-    const texto = etiqueta || global?.cta || "Agregar al carrito";
-    const contenido = `${CART_ICO}<span>${esc(texto)}</span><span class="atelier-arrow">&#8594;</span>`;
-    if (EN_TIENDA && window.TIENDAIQ_VARIANT) {
-      return `<form method="post" action="/cart/add" onsubmit="return tiendaiqAgregar(event)">
-        <input type="hidden" name="id" value="${esc(window.TIENDAIQ_VARIANT)}">
-        <input type="hidden" name="quantity" value="1">
-        <button type="submit" class="main-cta">${contenido}</button>
-      </form>`;
-    }
-    return `<button class="main-cta" type="button" data-atelier-cart>${contenido}</button>`;
-  }
-
-  function atelierImagen(id, alt, hero = false) {
-    return img(id, alt, hero ? { hero: true, sizes: "(max-width:800px) 100vw, 54vw" } : { sizes: "(max-width:800px) 100vw, 420px" });
-  }
-
-  function renderAtelier(data, opts = {}) {
-    const f = data.facetas || {};
-    const g = data.global || {};
-    const fuente = data.fuente || {};
-    const h = f.hero || {};
-    const galeria = Array.isArray(h.galeria) ? h.galeria.filter(Boolean) : [];
-    const imagenes = galeria.length ? galeria : [null];
-    const titulo = h.titulo || fuente.titulo_crudo || "Tu producto";
-    const bullets = Array.isArray(h.bullets) ? h.bullets : [];
-    const textoBullet = (b) => typeof b === "string" ? b : [b?.fuerte, b?.resto].filter(Boolean).join(" - ");
-    const iconItems = Array.isArray(f.iconos?.items) ? f.iconos.items : [];
-    const ribbonItems = [...iconItems.map((x) => x.titulo).filter(Boolean), ...bullets.map(textoBullet).filter(Boolean)].slice(0, 6);
-    const ribbon = (ribbonItems.length ? ribbonItems : ["Producto seleccionado", "Uso diario", "Compra protegida"]).concat(ribbonItems.length ? ribbonItems : ["Producto seleccionado", "Uso diario", "Compra protegida"]);
-    const rd = h.resena_destacada || {};
-    const rating = puntaje1(h.puntaje ?? 4.9);
-    const count = miles(h.resenas_count ?? 0);
-    const mainImage = imagenes[0];
-    const gallerySlides = imagenes.map((id, i) => `<div class="atelier-gallery-slide${i === 0 ? " is-active" : ""}" data-atelier-slide="${i}">${atelierImagen(id, titulo, i === 0)}</div>`).join("");
-    const thumbs = imagenes.map((id, i) => `<button class="thumb${i === 0 ? " is-active" : ""}" type="button" data-atelier-thumb="${i}" aria-label="Imagen ${i + 1}">${atelierImagen(id, titulo)}</button>`).join("");
-    const photoFor = (preferred) => preferred || galeria[1] || galeria[0] || null;
-    const text1 = atelierTextoFaceta(f, "texto_img_1", { titular: "Una forma mas simple de usarlo", parrafo: h.subtitulo || "Pensado para integrarse a tu rutina sin agregar pasos innecesarios.", imagen: photoFor(galeria[1]) });
-    const text2 = atelierTextoFaceta(f, "texto_img_2", { titular: "Detalles que se notan en el uso", parrafo: h.subtitulo || "Cada parte esta pensada para que el producto sea claro, comodo y facil de incorporar.", imagen: photoFor(galeria[2]) });
-    const stats = Array.isArray(f.stats?.items) ? f.stats.items : [];
-    const statItems = (stats.length ? stats : [
-      { pct: "", frase: "Uso pensado para todos los dias" },
-      { pct: "", frase: "Una experiencia simple desde el primer uso" },
-      { pct: "", frase: "Detalles visibles en la rutina" },
-      { pct: "", frase: "Compra con informacion clara" }
-    ]).slice(0, 4);
-    const materialItems = (iconItems.length ? iconItems : bullets.map((b) => ({ titulo: textoBullet(b), frase: "Informacion editable de tu producto" }))).slice(0, 3);
-    const comparisonRows = Array.isArray(f.tabla?.filas) ? f.tabla.filas : [];
-    const faqItems = Array.isArray(f.faq?.items) ? f.faq.items : [];
-    const reviewItems = Array.isArray(f.resenas?.items) ? f.resenas.items.filter((r) => r && r.texto) : [];
-    const reviewCards = reviewItems.slice(0, 4).map((r, i) => `<article><span class="stars">${"&#9733;".repeat(r.estrellas || 5)}</span><p>&quot;${esc(r.texto)}&quot;</p><strong>&mdash; ${esc(r.autor || `Cliente ${i + 1}`)}</strong></article>`).join("");
-    const reviewsHtml = reviewCards ? `<section class="reviews-section" data-bloque="resenas" data-fijo="1"><div class="page-width"><div class="reviews-head"><div><p class="eyebrow">NOTAS REALES</p><h2>${esc(f.resenas?.titular || "Lo que dicen despues de usarlo")}</h2></div><div class="review-controls"><button type="button" data-reviews-prev aria-label="Resena anterior">&#8592;</button><button type="button" data-reviews-next aria-label="Siguiente resena">&#8594;</button></div></div><div class="review-carousel" data-review-track>${reviewCards}</div></div></section>` : "";
-    const faqHtml = faqItems.length ? `<section class="faq-section" data-bloque="faq" data-fijo="1"><div class="page-width faq-grid"><div><p class="eyebrow">ANTES DE ELEGIR</p><h2>${esc(f.faq?.titular || "Preguntas frecuentes")}</h2><p class="faq-lead">${esc(f.faq?.subtitulo || "La informacion justa para tomar una decision segura.")}</p></div><div class="faq-list">${faqItems.map((q, i) => `<details${i === 0 ? " open" : ""}><summary>${esc(q.pregunta)}</summary><p>${esc(q.respuesta)}</p></details>`).join("")}</div></div></section>` : "";
-    const compareHtml = comparisonRows.length ? `<section class="comparison-section" data-bloque="tabla" data-fijo="1"><div class="page-width comparison-grid"><div class="comparison-copy"><p class="eyebrow">LA ELECCION CLARA</p><h2>${esc(f.tabla?.titular || "Compara antes de elegir")}</h2><p>${esc(f.tabla?.parrafo || "Informacion ordenada para decidir con seguridad.")}</p>${atelierCta(g)}</div><div class="table-box"><table><thead><tr><th></th><th>${esc(titulo)}</th><th>${esc(f.tabla?.col_otros || "Otros")}</th></tr></thead><tbody>${comparisonRows.map((row) => `<tr><th>${esc(row)}</th><td>&#10003;</td><td>&#10005;</td></tr>`).join("")}</tbody></table></div></div></section>` : "";
-    const sections = [];
-    if (!opts.sinHero) sections.push(`<section class="noir-hero" data-bloque="hero" data-fijo="1" aria-labelledby="atelier-product-title"><header class="nav-line page-width"><span class="wordmark">TIENDA <i>IQ</i></span><span class="nav-center">PRODUCTO / ${esc(String(g.plantilla_id || "ATELIER").toUpperCase())}</span><a href="#atelier-comprar" class="nav-link">Ver producto <span>&rarr;</span></a></header><div class="page-width hero-layout" id="atelier-inicio"><div class="orbit-stage" aria-label="Galeria del producto"><div class="stage-top"><span>SELECCION DEL CATALOGO</span><span>Explorar imagenes</span></div><div class="canvas-shell"><div class="atelier-gallery" data-atelier-gallery>${gallerySlides}</div><span class="orbit-caption">${esc(titulo)}<br><small>GALERIA DEL PRODUCTO</small></span></div><div class="orbit-controls"><button type="button" data-atelier-prev aria-label="Imagen anterior">&#8592;</button><div><span class="orbit-progress"><b></b></span><span data-atelier-counter>01 &mdash; ${String(imagenes.length).padStart(2, "0")}</span></div><button type="button" data-atelier-next aria-label="Siguiente imagen">&#8594;</button></div><div class="thumbnail-row">${thumbs}</div></div><div class="hero-copy" id="atelier-comprar"><p class="eyebrow">TIENDA IQ / EDICION DE PRODUCTO</p><h1 id="atelier-product-title">${esc(titulo)}</h1><p class="hero-lead">${esc(h.subtitulo || fuente.descripcion_cruda || "Una presentacion clara para que el cliente entienda el producto y decida con confianza.")}</p><div class="rating"><span class="stars">${"&#9733;".repeat(5)}</span><strong>${esc(rating)}</strong><span>basado en ${esc(count)} resenas</span></div><div class="price-line"><strong>${esc(precioBonito(fuente.moneda, fuente.precio))}</strong>${fuente.precio_comparativo ? `<del>${esc(precioBonito(fuente.moneda, fuente.precio_comparativo))}</del>` : ""}${fuente.precio_comparativo ? `<span>OFERTA</span>` : ""}</div><div class="hero-options"><span class="option-dot"></span><span>${esc(fuente.variantes?.[0]?.valores?.[0] || "Disponible para tu tienda")}</span><span class="availability">Catalogo conectado</span></div>${atelierCta(g)}<div class="trust-row"><span>Pago protegido</span><span>Seguimiento incluido</span><span>Devolucion clara</span></div><div class="signature-review">${imgAsset(rd.avatar, `<span>Cliente</span>`)}<div><span class="stars">${"&#9733;".repeat(5)}</span><p>${rd.texto ? `&quot;${esc(rd.texto)}&quot;` : "Una experiencia real del producto aparece aqui cuando la tienda agrega su resena."}</p><strong>${esc(rd.autor || "Cliente verificado")}</strong></div></div></div></div></section>`);
-    sections.push(`<section class="moving-ribbon" aria-label="Beneficios del producto"><div class="ribbon-track">${ribbon.map((item, i) => `<span>${esc(item)}</span>${i < ribbon.length - 1 ? "<i>&middot;</i>" : ""}`).join("")}<i>&middot;</i>${ribbon.map((item) => `<span>${esc(item)}</span><i>&middot;</i>`).join("")}</div></section>`);
-    sections.push(`<section class="manifesto-section" data-bloque="texto1" data-fijo="1"><div class="page-width manifesto-grid"><div><p class="eyebrow">EL NUEVO CLASICO</p><h2>${esc(text1.titular || "Una forma mas simple de usarlo")}</h2></div><div class="manifesto-copy"><p>${esc(text1.parrafo || "")}</p><div class="manifesto-details">${materialItems.map((it, i) => `<span>0${i + 1} / ${esc(it.titulo || "Detalle del producto")}</span>`).join("")}</div></div></div></section>`);
-    sections.push(`<section class="editorial-carousel" data-bloque="galeria" data-fijo="1"><div class="page-width editorial-head"><div><p class="eyebrow">EL PRODUCTO EN DETALLE</p><h2>Una lectura que<br><em>se descubre de cerca.</em></h2></div><div class="carousel-arrows"><button type="button" data-editorial-prev aria-label="Imagen anterior">&#8592;</button><button type="button" data-editorial-next aria-label="Siguiente imagen">&#8594;</button></div></div><div class="editorial-track-wrap"><div class="editorial-track" data-editorial-track>${imagenes.slice(0, 6).map((id, i) => `<article><div>${atelierImagen(id, titulo)}</div><span>0${i + 1} / DETALLE</span><h3>${esc(textoBullet(bullets[i % Math.max(1, bullets.length)]) || "Una forma pensada para el uso diario")}</h3></article>`).join("")}</div></div></section>`);
-    sections.push(`<section class="material-section" data-bloque="iconos" data-fijo="1"><div class="page-width material-grid"><div class="material-image">${atelierImagen(photoFor(text2.imagen), titulo)}<span>DETALLES DEL PRODUCTO</span></div><div class="material-copy"><p class="eyebrow">POR DENTRO DE LA PIEZA</p><h2>${esc(text2.titular || "Detalles que se notan en el uso")}</h2><p>${esc(text2.parrafo || "")}</p><div class="material-list">${materialItems.map((it, i) => `<div><b>0${i + 1}</b><span><strong>${esc(it.titulo || "Detalle")}</strong><br>${esc(it.frase || "Informacion editable del producto.")}</span></div>`).join("")}</div>${atelierCta(g, "Elegir el producto")}</div></div></section>`);
-    sections.push(`<section class="numbers-section" data-bloque="stats" data-fijo="1"><div class="page-width"><div class="numbers-head"><p class="eyebrow">LO QUE IMPORTA EN EL USO</p><h2>${esc(f.stats?.titular || "Pequenos detalles. Una gran diferencia.")}</h2></div><div class="numbers-grid">${statItems.map((it) => `<article><strong>${esc(it.pct ?? "")}<span>${it.pct !== "" && it.pct != null ? "%" : ""}</span></strong><p>${esc(it.frase || "Detalle editable del producto")}</p></article>`).join("")}</div></div></section>`);
-    sections.push(compareHtml);
-    sections.push(`<section class="quote-section"><div class="page-width quote-inner"><span class="quote-sign">&ldquo;</span><h2>${esc(h.subtitulo || "Un producto claro no necesita mas ruido.")}</h2><p>${esc(text1.parrafo || "Informacion precisa, una experiencia cuidada y una decision mas simple.")}</p><div><span class="stars">${"&#9733;".repeat(5)}</span> <b>${esc(rating)} / 5</b> &nbsp; por ${esc(count)} clientes</div></div></section>`);
-    sections.push(reviewsHtml);
-    sections.push(faqHtml);
-    const garantia = f.garantia || {};
-    sections.push(`<section class="last-call" data-bloque="garantia" data-fijo="1"><div class="page-width last-call-inner"><div><p class="eyebrow">COMPRA CON TRANQUILIDAD</p><h2>${esc(garantia.titular || "Una decision mas simple.")}</h2><p>${esc(garantia.parrafo || "Toda la informacion del producto, en un recorrido claro y facil de entender.")}</p>${atelierCta(g, "Comprar ahora")}</div><div class="last-image">${atelierImagen(photoFor(garantia.imagen), titulo)}</div></div></section>`);
-    sections.push(`<section class="recommended-section" data-bloque="recomendados" data-fijo="1"><div class="page-width"><div class="recommended-head"><h2>Completa la experiencia</h2><span>SELECCION DE LA TIENDA</span></div><div class="recommended-row recomendados__grid"><article><div class="ph-img"></div><strong>Producto recomendado</strong><small>Disponible en tu tienda</small></article><article><div class="ph-img"></div><strong>Producto recomendado</strong><small>Disponible en tu tienda</small></article><article><div class="ph-img"></div><strong>Producto recomendado</strong><small>Disponible en tu tienda</small></article><article><div class="ph-img"></div><strong>Producto recomendado</strong><small>Disponible en tu tienda</small></article></div></div></section>`);
-    sections.push(`<div class="sticky-buy"><div class="page-width sticky-inner"><div><span>TIENDA IQ / PRODUCTO</span><strong>${esc(titulo)}</strong></div>${atelierCta(g)}</div></div>`);
-    return `<div class="tiq-atelier">${sections.filter(Boolean).join("\n")}</div>`;
-  }
-
-  // Composiciones de producto inspiradas en los tres layouts de referencia:
-  // misma jerarquia de compra, distinto ritmo editorial y color de marca.
-  // Los textos, fotos, precio y prueba social siguen llegando desde la pagina.
-  function renderPagePilot(data, variant = "green", opts = {}) {
-    const f = data.facetas || {};
-    const g = data.global || {};
-    const fuente = data.fuente || {};
-    const h = f.hero || {};
-    const galeria = Array.isArray(h.galeria) ? h.galeria.filter(Boolean) : [];
-    const imagenes = galeria.length ? galeria : [null];
-    const titulo = h.titulo || fuente.titulo_crudo || "Tu producto";
-    const bullets = Array.isArray(h.bullets) ? h.bullets : [];
-    const iconItems = Array.isArray(f.iconos?.items) ? f.iconos.items : [];
-    const rating = puntaje1(h.puntaje ?? 4.9);
-    const count = miles(h.resenas_count ?? 0);
-    const rd = h.resena_destacada || {};
-    const textBullet = (b) => typeof b === "string" ? b : [b?.fuerte, b?.resto].filter(Boolean).join(" ");
-    const benefits = (iconItems.length ? iconItems.map((item) => ({ title: item.titulo, text: item.frase })) : bullets.map((item) => ({ title: textBullet(item), text: "Pensado para acompañar tu rutina." }))).filter((item) => item.title).slice(0, 4);
-    while (benefits.length < 4) benefits.push({ title: "Uso diario sencillo", text: "Una experiencia clara desde el primer uso." });
-    const ribbonItems = benefits.map((item) => item.title).slice(0, 4);
-    const photos = (n = 4) => imagenes.slice(0, n).map((id, i) => `<div class="pp-photo">${atelierImagen(id, titulo, i === 0)}</div>`).join("");
-    const slides = imagenes.map((id, i) => `<div class="pp-slide${i === 0 ? " is-active" : ""}" data-atelier-slide="${i}">${atelierImagen(id, titulo, i === 0)}</div>`).join("");
-    const thumbs = imagenes.map((id, i) => `<button class="pp-thumb${i === 0 ? " is-active" : ""}" type="button" data-atelier-thumb="${i}" aria-label="Imagen ${i + 1}">${atelierImagen(id, titulo)}</button>`).join("");
-    const payments = `<div class="pp-payments" aria-label="Medios de pago"><span>AMEX</span><span>Apple Pay</span><span>VISA</span><span>MC</span><span>PayPal</span><span>G Pay</span><span>shop</span></div>`;
-    const review = rd.texto ? `<div class="pp-review"><button type="button" data-reviews-prev aria-label="Reseña anterior">&#8249;</button>${imgAsset(rd.avatar, `<span class="pp-avatar-fallback">Cliente</span>`)}<div><span class="pp-stars">★★★★★</span><p>“${esc(rd.texto)}”</p><strong>${esc(rd.autor || "Cliente")}</strong></div><button type="button" data-reviews-next aria-label="Siguiente reseña">&#8250;</button></div>` : "";
-    const rows = Array.isArray(f.tabla?.filas) ? f.tabla.filas.slice(0, 6) : [];
-    const comparison = rows.length ? `<section class="pp-section pp-comparison" data-bloque="tabla" data-fijo="1"><div class="pp-container"><div class="pp-section-heading"><p class="pp-overline">UNA DECISIÓN MÁS CLARA</p><h2>${esc(f.tabla?.titular || "La diferencia se nota en el uso")}</h2><p>${esc(f.tabla?.parrafo || "Compará lo que importa antes de elegir.")}</p></div><div class="pp-compare-table"><div class="pp-compare-head"><span></span><strong>Nosotros</strong><span>${esc(f.tabla?.col_otros || "Otros")}</span></div>${rows.map((row) => `<div><span>${esc(row)}</span><strong>✓</strong><span>×</span></div>`).join("")}</div></div></section>` : "";
-    const faqs = Array.isArray(f.faq?.items) ? f.faq.items.slice(0, 5) : [];
-    const faq = faqs.length ? `<section class="pp-section pp-faq" data-bloque="faq" data-fijo="1"><div class="pp-container pp-narrow"><div class="pp-section-heading"><p class="pp-overline">ANTES DE COMPRAR</p><h2>${esc(f.faq?.titular || "Preguntas frecuentes")}</h2></div><div class="pp-faq-list">${faqs.map((item, i) => `<details${i === 0 ? " open" : ""}><summary>${esc(item.pregunta)}<span>+</span></summary><p>${esc(item.respuesta)}</p></details>`).join("")}</div></div></section>` : "";
-    const reviews = Array.isArray(f.resenas?.items) ? f.resenas.items.filter((item) => item?.texto).slice(0, 3) : [];
-    const reviewSection = reviews.length ? `<section class="pp-section pp-reviews" data-bloque="resenas" data-fijo="1"><div class="pp-container"><div class="pp-section-heading"><span class="pp-rating-badge"><b>★★★★★</b> Basado en <strong>${esc(count)}+ reseñas confiables</strong></span><h2>${esc(f.resenas?.titular || "Lo que nuestra comunidad dice siempre")}</h2><p>${esc(f.resenas?.subtitulo || "Experiencias reales de clientes que ya lo incorporaron a su rutina.")}</p></div><div class="pp-review-grid">${reviews.map((item) => `<article>${imgAsset(item.imagen, `<div class="pp-review-image"></div>`)}<strong>${esc(item.autor || "Cliente")}</strong><span class="pp-stars">★★★★★</span><p>“${esc(item.texto)}”</p></article>`).join("")}</div></div></section>` : "";
-    const garantia = f.garantia || {};
-    const guarantee = `<section class="pp-section pp-guarantee" data-bloque="garantia" data-fijo="1"><div class="pp-container pp-guarantee-grid"><div class="pp-mosaic">${photos(4)}</div><div class="pp-guarantee-copy"><span class="pp-check">✓</span><h2>${esc(garantia.titular || "Garantía sin riesgos")}</h2><p>${esc(garantia.parrafo || "Probalo en casa. Si no es para vos, devolvelo dentro del plazo indicado por la tienda.")}</p>${atelierCta(g, "Comprar ahora")}</div></div></section>`;
-    const editorialTitle = variant === "blue" ? "Todo lo que necesitás para una mirada definida" : variant === "yellow" ? "La diferencia está en los detalles" : "Una rutina más simple, todos los días";
-    const editorial = `<section class="pp-section pp-editorial pp-editorial--${variant}" data-bloque="texto1" data-fijo="1"><div class="pp-container pp-editorial-grid"><div class="pp-editorial-media">${atelierImagen(imagenes[1] || imagenes[0], titulo)}</div><div><p class="pp-overline">${variant === "blue" ? "MODO DE USO" : "PENSADO PARA EL DÍA A DÍA"}</p><h2>${esc(editorialTitle)}</h2><p>${esc(h.subtitulo || fuente.descripcion_cruda || "Una experiencia pensada para sentirse clara, cómoda y fácil de incorporar.")}</p><div class="pp-editorial-list">${benefits.slice(0, 3).map((item, i) => `<div><b>0${i + 1}</b><span><strong>${esc(item.title)}</strong><small>${esc(item.text)}</small></span></div>`).join("")}</div>${atelierCta(g, "Conocer el producto")}</div></div></section>`;
-    const heroBadge = variant === "blue" ? `<span class="pp-rank-badge">#1 <strong>EL MÁS VENDIDO</strong><small>Elegido por miles de clientes</small></span>` : variant === "yellow" ? `<span class="pp-sale-badge">Oferta especial</span>` : `<span class="pp-sale-badge">Más vendido</span>`;
-    const accordions = variant === "blue" ? `<div class="pp-accordions"><details open><summary>Descripción <span>⌄</span></summary><p>${esc(h.subtitulo || fuente.descripcion_cruda || "Información del producto")}</p></details><details><summary>Cómo usar <span>⌄</span></summary><p>Seguí las indicaciones de uso incluidas con tu compra.</p></details><details><summary>Envíos y devoluciones <span>⌄</span></summary><p>Consultá las condiciones disponibles para tu tienda.</p></details></div>` : "";
-    const hero = !opts.sinHero ? `<section class="pp-hero pp-hero--${variant}" data-bloque="hero" data-fijo="1" aria-labelledby="pp-product-title"><div class="pp-container pp-hero-grid"><div class="pp-gallery-col"><div class="pp-gallery-main"><div class="pp-gallery-stage" data-atelier-gallery>${slides}</div><button class="pp-gallery-arrow pp-gallery-arrow--prev" type="button" data-atelier-prev aria-label="Imagen anterior">&#8249;</button><button class="pp-gallery-arrow pp-gallery-arrow--next" type="button" data-atelier-next aria-label="Siguiente imagen">&#8250;</button></div><div class="pp-thumbs">${thumbs}</div></div><div class="pp-buy"><div class="pp-topline">${heroBadge}<span class="pp-rating"><b>★★★★★</b> ${esc(rating)}/5 basado en ${esc(count)} clientes felices</span></div><h1 id="pp-product-title">${esc(titulo)}</h1>${h.urgencia ? `<span class="pp-urgency">${esc(h.urgencia)}</span>` : ""}<p class="pp-lead">${esc(h.subtitulo || fuente.descripcion_cruda || "Una forma sencilla de sumar este producto a tu rutina.")}</p><div class="pp-benefits">${benefits.map((item, i) => `<div><span class="pp-benefit-icon">${["◉", "◷", "♡", "✓"][i]}</span><span>${esc(item.title)}</span></div>`).join("")}</div><div class="pp-price"><strong>${esc(precioBonito(fuente.moneda, fuente.precio))}</strong>${fuente.precio_comparativo ? `<del>${esc(precioBonito(fuente.moneda, fuente.precio_comparativo))}</del><b>AHORRÁ</b>` : ""}</div>${atelierCta(g)}<div class="pp-assurances"><span>♧ Garantía de devolución de 30 días</span><span>◇ Envío incluido</span></div>${payments}${accordions}${review}${variant === "blue" ? `<div class="pp-stock"><strong>ⓘ Advertencia: Pocas existencias</strong><p>El producto tuvo alta demanda este año. Aprovechá la disponibilidad actual.</p></div>` : ""}</div></div></section>` : "";
-    const ribbon = `<section class="pp-ribbon pp-ribbon--${variant}" aria-label="Beneficios"><div class="pp-ribbon-track">${[...ribbonItems, ...ribbonItems].map((item) => `<span>${esc(item)}</span>`).join("")}</div></section>`;
-    // La composicion es fija; las secciones del comerciante solo se insertan
-    // en los puntos permitidos por el editor y nunca reemplazan el layout.
-    const extras = Array.isArray(data.secciones) ? data.secciones : [];
-    const ocultas = new Set(Array.isArray(data.ocultas) ? data.ocultas : []);
-    const extrasDespuesDe = (ancla) => extras.filter((s) => (s.ancla || "top") === ancla).map(seccionHTML).filter(Boolean).join("\n");
-    const fijo = (id, html) => {
-      if (!html || ocultas.has(id)) return extrasDespuesDe(id);
-      return [html, extrasDespuesDe(id)].filter(Boolean).join("\n");
-    };
-    const anclasConocidas = new Set(["top", "hero", "clientes", "iconos", "stats", "tabla", "resenas", "faq", "garantia", "recomendados"]);
-    const extrasSinAnclaVisible = extras.filter((s) => !anclasConocidas.has(s.ancla || "top")).map(seccionHTML).filter(Boolean).join("\n");
-    const pagina = [
-      extrasDespuesDe("top"),
-      fijo("hero", hero),
-      ribbon,
-      extrasDespuesDe("clientes"),
-      fijo("iconos", editorial),
-      extrasDespuesDe("stats"),
-      fijo("tabla", comparison),
-      fijo("resenas", reviewSection),
-      fijo("faq", faq),
-      fijo("garantia", guarantee),
-      extrasDespuesDe("recomendados"),
-      extrasSinAnclaVisible,
-      `<div class="pp-sticky-buy"><div><span>Producto seleccionado</span><strong>${esc(titulo)}</strong></div>${atelierCta(g)}</div>`
-    ].filter(Boolean).join("\n");
-    return `<div class="tiq-pagepilot pp-theme-${variant}">${pagina}</div>`;
-  }
-
   function renderPremium(data, opts = {}) {
     const f = data.facetas;
     const g = data.global;
@@ -1267,11 +1123,6 @@
   function render(data, opts = {}) {
     const f = data.facetas;
     const g = data.global;
-    const plantilla = g?.plantilla_id || g?.estilo;
-    if (["pinza", "labial", "mascara", "atelier"].includes(plantilla)) {
-      const variant = plantilla === "pinza" ? "yellow" : plantilla === "mascara" ? "blue" : "green";
-      return renderPagePilot(data, variant, opts);
-    }
     // Modelo de página elegido en la creación. "clasico" = comportamiento de
     // siempre; "premium" = armado alternativo (timer + comparación + marquee).
     if (g && g.estilo === "premium") return renderPremium(data, opts);
@@ -1319,7 +1170,7 @@
   // el catálogo real, sin congelar nada en la generación. Si no devuelve
   // nada útil cae a /products.json; si tampoco, quedan los placeholders.
   async function cargarRecomendados(moneda) {
-    const grid = document.querySelector(".recomendados__grid, .recommended-row");
+    const grid = document.querySelector(".recomendados__grid");
     const idProducto = window.TIENDAIQ_PRODUCT_ID;
     if (!grid || !idProducto) return;
 
@@ -1415,67 +1266,11 @@
     return false;
   };
 
-  function iniciarAtelier() {
-    const root = document.querySelector('#app[data-plantilla="atelier"], #app[data-plantilla="pinza"], #app[data-plantilla="labial"], #app[data-plantilla="mascara"]');
-    if (!root) return;
-
-    const slides = [...root.querySelectorAll("[data-atelier-slide]")];
-    const thumbs = [...root.querySelectorAll("[data-atelier-thumb]")];
-    const progress = root.querySelector(".orbit-progress b");
-    const counter = root.querySelector("[data-atelier-counter]");
-    let active = 0;
-    const show = (next) => {
-      if (!slides.length) return;
-      active = (next + slides.length) % slides.length;
-      slides.forEach((slide, i) => slide.classList.toggle("is-active", i === active));
-      thumbs.forEach((thumb, i) => thumb.classList.toggle("is-active", i === active));
-      if (progress) progress.style.width = `${((active + 1) / slides.length) * 100}%`;
-      if (counter) counter.textContent = `${String(active + 1).padStart(2, "0")} - ${String(slides.length).padStart(2, "0")}`;
-    };
-    root.querySelector("[data-atelier-prev]")?.addEventListener("click", () => show(active - 1));
-    root.querySelector("[data-atelier-next]")?.addEventListener("click", () => show(active + 1));
-    thumbs.forEach((thumb, i) => thumb.addEventListener("click", () => show(i)));
-    let timer = null;
-    const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
-    if (slides.length > 1 && !reduced) {
-      timer = window.setInterval(() => show(active + 1), 5600);
-      root.querySelector(".canvas-shell")?.addEventListener("mouseenter", () => window.clearInterval(timer));
-      root.querySelector(".canvas-shell")?.addEventListener("mouseleave", () => { timer = window.setInterval(() => show(active + 1), 5600); });
-    }
-
-    const bindCarousel = (trackSelector, previousSelector, nextSelector) => {
-      const track = root.querySelector(trackSelector);
-      if (!track) return;
-      const cards = [...track.children];
-      let index = 0;
-      const move = (delta) => {
-        if (cards.length < 2) return;
-        index = (index + delta + cards.length) % cards.length;
-        const gap = parseFloat(getComputedStyle(track).gap) || 16;
-        track.style.transform = `translate3d(${-Math.max(0, cards[index].offsetLeft - gap)}px, 0, 0)`;
-      };
-      root.querySelector(previousSelector)?.addEventListener("click", () => move(-1));
-      root.querySelector(nextSelector)?.addEventListener("click", () => move(1));
-    };
-    bindCarousel("[data-editorial-track]", "[data-editorial-prev]", "[data-editorial-next]");
-    bindCarousel("[data-review-track]", "[data-reviews-prev]", "[data-reviews-next]");
-
-    root.querySelectorAll("[data-atelier-cart]").forEach((button) => {
-      button.addEventListener("click", () => {
-        const original = button.innerHTML;
-        button.innerHTML = "Agregado al carrito <span class=\"atelier-arrow\">&#8594;</span>";
-        button.classList.add("is-added");
-        window.setTimeout(() => { button.innerHTML = original; button.classList.remove("is-added"); }, 2200);
-      });
-    });
-  }
-
   function montar(datos) {
     if (EN_TIENDA) document.body.classList.add("publicada");
     const app = document.getElementById("app");
     // El nicho define el color de acento (skin por rubro). Sin dato → general.
     app.dataset.nicho = datos?.global?.nicho || "general";
-    app.dataset.plantilla = datos?.global?.plantilla_id || datos?.global?.estilo || "clasico";
     // Variante de color elegida por el merchant: pisa el acento del nicho. Sin
     // variante → queda el color del rubro (comportamiento de siempre).
     if (datos?.global?.tema) app.dataset.tema = datos.global.tema;
@@ -1487,7 +1282,6 @@
     const resto = app.dataset.ssr === "1" ? document.getElementById("tiq-resto") : null;
     if (resto) resto.innerHTML = render(datos, { sinHero: true });
     else app.innerHTML = render(datos);
-    iniciarAtelier();
     app.style.minHeight = ""; // la reserva de CLS (pagina.liquid) ya cumplió; altura real
     iniciarVcar(); // centra los carruseles de video
     autoplayMuro(); // los videos del muro se reproducen solos al entrar en vista

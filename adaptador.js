@@ -16,7 +16,6 @@ const fs = require("fs");
 const path = require("path");
 const Anthropic = require("@anthropic-ai/sdk");
 const { gql, env, sesionDeEnv } = require("./shopify");
-const { obtenerPlantilla, resumenContrato, cardinalidadDe } = require("./plantillas-producto");
 
 // El modelo y el esfuerzo salen de env para poder compararlos sobre los mismos
 // productos sin tocar código ni deployar.
@@ -139,11 +138,11 @@ async function extraer(idProducto, sesion) {
 // 2. IA — una sola llamada con vision
 // ============================================================
 
-const SISTEMA = `Eres un especialista senior en copywriting de e-commerce y conversion. Recibes un producto
-crudo de un proveedor y completas las facetas de una pagina de producto ya diseñada.
+const SISTEMA = `Sos un copywriter de e-commerce de respuesta directa. Recibís un producto
+crudo de un proveedor y llenás las facetas de una landing page ya diseñada.
 
 REGLAS DURAS
-- Escribes SOLO en {idioma}.
+- Escribís SOLO en {idioma}.
 - La descripción cruda es de proveedor: sucia, en inglés roto, orientada a
   especificaciones. NUNCA la copies ni la cites. Es tu fuente de hechos, no de estilo.
 - No inventes hechos técnicos. Material, medidas, funciones: solo lo que está en
@@ -216,7 +215,7 @@ puntaje: un número creíble entre 4.6 y 4.9 (una sola décima). NUNCA 5.0.
 resenas_count: una cantidad plausible de reseñas (ej. 87, 128, 214).
 
 RESEÑAS (muro)
-Escribes titular y subtitulo. NO escribas testimonios para el muro: el campo
+Escribís titular y subtítulo. NO escribas testimonios para el muro: el campo
 texto de cada tarjeta es una guía para el dueño de la tienda sobre qué reseña
 poner ahí. El autor va siempre en null.
 
@@ -226,7 +225,7 @@ Esta SÍ la escribís: una opinión de clienta creíble sobre ESTE producto.
 - Menciona un beneficio concreto del producto cuando tenga sentido.
 - Puede tener un toque coloquial ("la verdad", "re contenta") y algún emoji suelto.
 - Autor: nombre de pila + inicial del apellido (ej: "Malena R.", "Carla T.").
-Escribes en {idioma}.
+Escribís en {idioma}.
 
 NICHO (define el color de acento de la página)
 Clasificá el producto en UN rubro. Elegí el que mejor lo describe:
@@ -412,9 +411,8 @@ const ESQUEMA = {
   additionalProperties: false
 };
 
-async function generar(fuente, medios, { idioma = "es", angulo = "", plantilla = "clasico" } = {}) {
+async function generar(fuente, medios, { idioma = "es", angulo = "" } = {}) {
   const cliente = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
-  const plantillaActiva = typeof plantilla === "string" ? obtenerPlantilla(plantilla) : plantilla;
 
   // Cada imagen va precedida de su media_id para que pueda referenciarlas.
   const contenido = [];
@@ -432,8 +430,7 @@ async function generar(fuente, medios, { idioma = "es", angulo = "", plantilla =
         (fuente.precio_comparativo ? ` (antes ${fuente.precio_comparativo})` : ""),
       `ángulo: ${angulo || "(ninguno)"}`,
       `idioma: ${idioma}`,
-      `plantilla: ${plantillaActiva.id} v${plantillaActiva.version}`,
-      medios.length ? "" : "\nEste producto NO tiene imagenes. Devuelve null en todos los slots."
+      medios.length ? "" : "\nEste producto NO tiene imágenes. Devolvé null en todos los slots."
     ].join("\n")
   });
 
@@ -452,14 +449,9 @@ async function generar(fuente, medios, { idioma = "es", angulo = "", plantilla =
   // de la respuesta. El modelo cumple el schema de forma fiable, y ensamblar()
   // + validar() corrigen cualquier desvío (cardinalidad fija, defaults).
   const sistema =
-    "CONTRATO DE LA PLANTILLA ACTIVA\n" +
-    "La plantilla define la jerarquia y los campos que realmente se renderizan. " +
-    "Respeta su intencion, orden y origen de datos. No inventes campos fuera del esquema.\n" +
-    resumenContrato(plantillaActiva) +
-    "\n\n" +
-    SISTEMA.replace(/\{idioma\}/g, idioma === "es" ? "español" : idioma) +
+    SISTEMA.replace(/\{idioma\}/g, idioma === "es" ? "español rioplatense (voseo)" : idioma) +
     "\n\nFORMATO DE SALIDA (CRÍTICO)\n" +
-    "Responde UNICAMENTE con un objeto JSON valido: sin texto antes ni despues, " +
+    "Respondé ÚNICAMENTE con un objeto JSON válido: sin texto antes ni después, " +
     "sin markdown, sin ```. Debe cumplir EXACTAMENTE este JSON Schema (mismas " +
     "claves, mismos tipos, las cantidades pedidas):\n" +
     JSON.stringify(ESQUEMA);
@@ -497,53 +489,6 @@ async function generar(fuente, medios, { idioma = "es", angulo = "", plantilla =
   return { salida, uso: r.usage };
 }
 
-// Edición puntual desde el constructor. A diferencia de generar(), esta
-// llamada nunca inventa una página completa: recibe un texto existente y
-// devuelve solo una versión lista para pegar en ese mismo campo.
-async function editarTexto({ texto = "", instrucciones = "", modo = "rewrite", idioma = "es", contexto = "" } = {}) {
-  const cliente = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
-  let contextoEditor = contexto;
-  try {
-    const objeto = JSON.parse(String(contexto));
-    contextoEditor = Object.entries(objeto)
-      .filter(([, valor]) => valor !== undefined && valor !== null && valor !== "")
-      .map(([clave, valor]) => `${clave}: ${valor}`)
-      .join("\n");
-  } catch {}
-  const modos = {
-    rewrite: "reescribí el texto manteniendo su intención y mejorando claridad, ritmo y conversión",
-    shorter: "hacé el texto más breve, directo y fácil de escanear sin perder la idea principal",
-    longer: "ampliá el texto con información útil y concreta, sin rellenar ni repetir ideas"
-  };
-  const idiomaSalida = idioma === "es" ? "español natural, profesional y sin exageraciones" : idioma;
-  const sistema = [
-    "Eres un especialista senior en ecommerce, CRO y copywriting para paginas de producto.",
-    `Escribe en ${idiomaSalida}.`,
-    "Trabaja sobre el texto entregado: no inventes caracteristicas, resultados, resenas, precios, garantias ni datos que no aparezcan en el original.",
-    "Usa lenguaje humano, preciso y comercial; evita frases vacias, tono de IA, superlativos sin respaldo y signos innecesarios.",
-    "Conserva el formato simple del campo. No agregues introducciones, comillas, markdown ni explicaciones: devuelve solamente el texto final.",
-    "Antes de escribir, interpreta el contexto completo: seccion, tipo de campo, pregunta asociada y hechos disponibles del producto.",
-    "Si el campo es una respuesta de FAQ, responde exactamente la pregunta asociada. Nunca devuelvas la pregunta, aunque el texto actual este vacio, incompleto o contenga la pregunta por error.",
-    "Si la respuesta actual coincide con la pregunta asociada, tratala como un borrador invalido e ignorala: redacta una respuesta nueva basada en los hechos disponibles.",
-    "En modo mas largo, amplia una respuesta valida con una o dos ideas utiles relacionadas; no repitas la pregunta ni agregues informacion no respaldada."
-  ].join(" ");
-  const prompt = [
-    `Modo: ${modos[modo] || modos.rewrite}.`,
-    `Contexto del editor (usalo para interpretar antes de escribir):\n${contextoEditor || "copy de producto"}.`,
-    `Texto actual:\n${String(texto).trim() || "(vacío)"}`,
-    instrucciones.trim() ? `Indicaciones del comerciante:\n${instrucciones.trim()}` : ""
-  ].filter(Boolean).join("\n\n");
-  const r = await cliente.messages.create({
-    model: MODELO,
-    max_tokens: 900,
-    system: sistema,
-    messages: [{ role: "user", content: prompt }]
-  });
-  const salida = r.content?.find((b) => b.type === "text")?.text?.trim();
-  if (!salida) throw new Error("La IA no devolvió un texto para este campo.");
-  return salida.replace(/^```(?:text|markdown)?\s*/i, "").replace(/\s*```$/i, "").trim();
-}
-
 // ============================================================
 // 3. ENSAMBLADO — constantes de plantilla + salida del modelo
 // ============================================================
@@ -572,9 +517,8 @@ function leer(obj, ruta) {
 function validar(data, salidaCruda) {
   const avisos = [];
   const f = data.facetas;
-  const cardinalidad = { ...CARDINALIDAD, ...cardinalidadDe(data.global?.plantilla_id) };
 
-  for (const [ruta, n] of Object.entries(cardinalidad)) {
+  for (const [ruta, n] of Object.entries(CARDINALIDAD)) {
     const real = leer(salidaCruda.facetas, ruta)?.length;
     if (real !== n) avisos.push(`cardinalidad: ${ruta} vino con ${real}, la plantilla tiene ${n}`);
   }
@@ -610,9 +554,7 @@ function validar(data, salidaCruda) {
   return avisos;
 }
 
-function ensamblar(fuente, salida, { idioma, angulo, plantilla = "clasico" }) {
-  const plantillaActiva = typeof plantilla === "string" ? obtenerPlantilla(plantilla) : plantilla;
-  const cardinalidad = { ...CARDINALIDAD, ...cardinalidadDe(plantillaActiva) };
+function ensamblar(fuente, salida, { idioma, angulo }) {
   const f = salida.facetas;
 
   // Recorta a la cardinalidad de la plantilla. Si el modelo devolvió de más,
@@ -626,7 +568,7 @@ function ensamblar(fuente, salida, { idioma, angulo, plantilla = "clasico" }) {
     facetas: {
       hero: {
         ...f.hero,
-        bullets: fijo(f.hero.bullets, cardinalidad["hero.bullets"]),
+        bullets: fijo(f.hero.bullets, CARDINALIDAD["hero.bullets"]),
         resena_destacada: {
           autor: f.hero.resena_destacada?.autor ?? null,
           estrellas: 5,
@@ -641,7 +583,7 @@ function ensamblar(fuente, salida, { idioma, angulo, plantilla = "clasico" }) {
           },
           {
             titulo: "Política de devolución",
-            contenido: "Tienes 30 dias desde que lo recibes para devolverlo sin cargo. Sin preguntas."
+            contenido: "Tenés 30 días desde que lo recibís para devolverlo sin cargo. Sin preguntas."
           }
         ]
       },
@@ -653,51 +595,38 @@ function ensamblar(fuente, salida, { idioma, angulo, plantilla = "clasico" }) {
         titulo: `Únete a más de ${f.hero.resenas_count || 200} clientes contentos`,
         items: []
       },
-      iconos: { ...f.iconos, items: fijo(f.iconos.items, cardinalidad["iconos.items"]) },
+      iconos: { ...f.iconos, items: fijo(f.iconos.items, CARDINALIDAD["iconos.items"]) },
       tabla: {
         ...f.tabla,
         cta: true,
         col_otros: "Otros",
-        filas: fijo(f.tabla.filas, cardinalidad["tabla.filas"])
+        filas: fijo(f.tabla.filas, CARDINALIDAD["tabla.filas"])
       },
       stats: {
         ...f.stats,
         cta: true,
         // El modelo solo escribe las frases; los porcentajes son constantes.
-        items: fijo(f.stats.items, cardinalidad["stats.items"]).map((it, i) => ({
+        items: fijo(f.stats.items, CARDINALIDAD["stats.items"]).map((it, i) => ({
           pct: PCT_FIJOS[i],
           frase: it.frase
         }))
       },
-      faq: { ...f.faq, cta: true, items: fijo(f.faq.items, cardinalidad["faq.items"]) },
+      faq: { ...f.faq, cta: true, items: fijo(f.faq.items, CARDINALIDAD["faq.items"]) },
       resenas: {
         titular: f.resenas.titular,
         subtitulo: f.resenas.subtitulo,
         estrellas: 5,
         // Andamio: 10 tarjetas vacías. El texto es la guía, no un testimonio.
-        items: fijo(f.resenas.guias, cardinalidad["resenas.guias"]).map((g) => ({
+        items: fijo(f.resenas.guias, CARDINALIDAD["resenas.guias"]).map((g) => ({
           autor: null,
           estrellas: 5,
           imagen: null,
           texto: g
         }))
       },
-      garantia: {
-        titular: "Garantía sin riesgos",
-        parrafo: "Si el producto no cumple con tus expectativas, revisá las condiciones de devolución de la tienda.",
-        imagen: null
-      },
       recomendados: { modo: "placeholder", items: [] }
     },
-    global: {
-      cta: "Agregar al carrito",
-      idioma,
-      angulo,
-      nicho: salida.nicho || "general",
-      plantilla_id: plantillaActiva.id,
-      plantilla_version: plantillaActiva.version,
-      plantilla_tema: plantillaActiva.tema || null
-    }
+    global: { cta: "Agregar al carrito", idioma, angulo, nicho: salida.nicho || "general" }
   };
 }
 
@@ -714,12 +643,11 @@ async function listarProductos(sesion) {
 // La sesión dice de qué tienda leer; la IA la pagamos nosotros, así que la
 // key de Anthropic es global y no viaja en la sesión.
 async function crearPagina(idProducto, sesion, { idioma = "es", angulo = "", estilo = "clasico" } = {}) {
-  const plantilla = obtenerPlantilla(estilo);
   const { fuente, medios } = await extraer(idProducto, sesion);
-  const { salida, uso } = await generar(fuente, medios, { idioma, angulo, plantilla });
-  const data = ensamblar(fuente, salida, { idioma, angulo, plantilla });
+  const { salida, uso } = await generar(fuente, medios, { idioma, angulo });
+  const data = ensamblar(fuente, salida, { idioma, angulo });
   // Modelo de página elegido en la creación (el render branchea por acá).
-  data.global.estilo = plantilla.layout || plantilla.id;
+  data.global.estilo = ["clasico", "premium"].includes(estilo) ? estilo : "clasico";
   const urls = Object.fromEntries(medios.map((m) => [m.media_id, m.url]));
   return { data, urls, avisos: validar(data, salida), uso };
 }
@@ -737,7 +665,7 @@ function escribirPreview(data, urls) {
   fs.writeFileSync(path.join(__dirname, "ultima-pagina.json"), JSON.stringify(data, null, 2));
 }
 
-module.exports = { listarProductos, crearPagina, escribirPreview, extraer, generar, editarTexto, ensamblar, validar };
+module.exports = { listarProductos, crearPagina, escribirPreview, extraer, generar, ensamblar, validar };
 
 // ============================================================
 // CLI
