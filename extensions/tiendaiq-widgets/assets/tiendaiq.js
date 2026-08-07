@@ -1076,6 +1076,79 @@
     </section>`;
   }
 
+  // ---------- estilo "pagepilot" ----------
+  // ComposiciÃ³n editorial sobre las facetas universales existentes. Mantiene
+  // una sola fuente de datos para tienda, preview y pÃ¡ginas ya publicadas.
+  const pagepilotBoton = (g) => {
+    const variante = EN_TIENDA ? window.TIENDAIQ_VARIANT : null;
+    const contenido = `${g.boton_icono !== false ? CART_ICO : ""}<span>${esc(g.cta || "Agregar al carrito")}</span>`;
+    if (!variante) return `<button type="button" class="tiq-pp__cta">${contenido}</button>`;
+    return `<form method="post" action="/cart/add" onsubmit="return tiendaiqAgregar(event)"><input type="hidden" name="id" value="${esc(variante)}"><input type="hidden" name="quantity" value="1" id="tiendaiq-cantidad-form"><button type="submit" class="tiq-pp__cta">${contenido}</button></form>`;
+  };
+
+  function pagepilotHero(f, fuente, g) {
+    const h = f.hero || {};
+    const galeria = h.galeria || [];
+    const thumbs = galeria.map((id, i) => `<button type="button" class="tiq-pp__thumb${i === 0 ? " is-active" : ""}" onclick="cambiarPrincipal('${esc(id)}', this)" aria-label="Imagen ${i + 1}">${img(id, h.titulo || "Producto", { ancho: 160 })}</button>`).join("");
+    const bullets = (h.bullets || []).map((b) => {
+      const texto = typeof b === "string" ? b : [b.fuerte, b.resto].filter(Boolean).join(" ");
+      const icono = typeof b === "object" && b.icono && ICONOS_BULLET[b.icono] ? ICONOS_BULLET[b.icono] : ICONOS_BULLET.check;
+      return `<li>${icono}<span>${esc(texto)}</span></li>`;
+    }).join("");
+    const rd = h.resena_destacada || {};
+    const avatar = imgAsset(rd.avatar, `<span class="tiq-pp__avatar-fallback">${esc((rd.autor || "C").slice(0, 1))}</span>`);
+    const precio = precioBonito(fuente.moneda, fuente.precio);
+    const comparativo = fuente.precio_comparativo ? `<del>${esc(precioBonito(fuente.moneda, fuente.precio_comparativo))}</del>` : "";
+    return `<section class="tiq-pp__hero" data-bloque="hero"><div class="tiq-pp__wrap tiq-pp__hero-grid"><div class="tiq-pp__gallery"><div id="imagen-principal" class="tiq-pp__gallery-main">${img(galeria[0], h.titulo || "Producto", { hero: true })}</div><div class="tiq-pp__thumbs">${thumbs}</div></div><div class="tiq-pp__buy"><div class="tiq-pp__rating">${estrellas(5)} <span>Calificado con <strong>${esc(puntaje1(h.puntaje ?? 4.9))}/5</strong> por ${esc(miles(h.resenas_count || 0))} clientes satisfechos</span></div><h1>${esc(h.titulo || fuente.titulo_crudo || "Producto")}</h1><p class="tiq-pp__tagline">${esc(h.urgencia || h.subtitulo || "Una mejora simple para todos los dias.")}</p><p class="tiq-pp__subtitulo">${esc(h.subtitulo || "Pensado para resolver una necesidad cotidiana con menos esfuerzo.")}</p><ul class="tiq-pp__benefits">${bullets}</ul><div class="tiq-pp__price">${comparativo}<strong>${esc(precio)}</strong>${fuente.precio_comparativo ? `<span class="tiq-pp__save">Oferta especial</span>` : ""}</div>${pagepilotBoton(g)}<div class="tiq-pp__trust"><span>${ICONO.camion} Envio incluido</span><span>${ICONO.retorno} Devolucion simple</span></div>${rd.texto ? `<blockquote class="tiq-pp__quote"><div class="tiq-pp__quote-head">${avatar}<span>${estrellas(rd.estrellas || 5)}</span></div><p>"${esc(rd.texto)}"</p><cite>${ICONO.verificado} ${esc(rd.autor || "Cliente verificado")}</cite></blockquote>` : ""}</div></div></section>`;
+  }
+
+  function pagepilotTimeline(f) {
+    const s = f.stats || {};
+    const items = (s.items || []).map((it, i) => `<article class="tiq-pp__timeline-card"><span class="tiq-pp__eyebrow">Paso ${i + 1}</span><h3>${esc(it.frase || "Un resultado que se nota")}</h3><p>${esc((f.iconos?.items || [])[i]?.frase || "Sumalo a tu rutina y hacelo parte de tu dia.")}</p></article>`).join("");
+    if (!items && !s.imagen) return "";
+    return `<section class="tiq-pp__band tiq-pp__timeline" data-bloque="stats"><div class="tiq-pp__wrap"><header class="tiq-pp__section-head"><h2>${esc(s.titular || "Una rutina mas simple empieza hoy")}</h2><p>${esc(f.hero?.subtitulo || "Pequenos cambios que se sienten en el dia a dia.")}</p></header><div class="tiq-pp__timeline-grid"><div class="tiq-pp__feature-image">${img(s.imagen, s.titular || "Producto")}</div><div class="tiq-pp__timeline-list">${items}</div></div></div></section>`;
+  }
+
+  function pagepilotReviews(f) {
+    const r = f.resenas || {};
+    const items = (r.items || []).slice(0, 3).map((it) => `<article class="tiq-pp__review"><div class="tiq-pp__review-image">${it.imagen ? img(it.imagen, it.autor || "Cliente") : `<div class="ph-img">Foto del cliente</div>`}</div><div class="tiq-pp__review-body"><strong>${esc(it.autor || "Cliente verificado")}</strong>${estrellas(it.estrellas || 5)}<p>${esc(it.texto || "CompartÃ­ una experiencia real usando el producto.")}</p></div></article>`).join("");
+    if (!items) return "";
+    return `<section class="tiq-pp__reviews" data-bloque="resenas"><div class="tiq-pp__wrap"><header class="tiq-pp__section-head"><div class="tiq-pp__pill">${estrellas(5)} Basado en resenas confiables</div><h2>${esc(r.titular || "Lo que dice nuestra comunidad")}</h2><p>${esc(r.subtitulo || "Experiencias reales de personas que ya lo usan.")}</p></header><div class="tiq-pp__reviews-grid">${items}</div></div></section>`;
+  }
+
+  function pagepilotFeature(f, g) {
+    const i = f.iconos || {};
+    const items = (i.items || []).map((it) => `<li><span class="tiq-pp__feature-icon">${it.emoji ? esc(it.emoji) : ICONOS_BULLET.check}</span><span><strong>${esc(it.titulo)}</strong>${esc(it.frase)}</span></li>`).join("");
+    return `<section class="tiq-pp__band tiq-pp__feature" data-bloque="iconos"><div class="tiq-pp__wrap tiq-pp__feature-grid"><div class="tiq-pp__feature-image">${img(i.imagen_central, i.titular || "Producto")}</div><div><h2>${esc(i.titular || "Pensado para tu rutina")}</h2><p>${esc(i.subtitulo || "Todo lo que necesitas, en un solo producto.")}</p><ul class="tiq-pp__feature-list">${items}</ul>${pagepilotBoton(g)}</div></div></section>`;
+  }
+
+  function pagepilotProblem(f) {
+    const t = f.tabla || {};
+    const statsItems = (f.stats?.items || []).map((it) => `<div class="tiq-pp__stat"><b>${esc(it.pct ?? 0)}%</b><span>${esc(it.frase)}</span></div>`).join("");
+    return `<section class="tiq-pp__dark" data-bloque="tabla"><div class="tiq-pp__wrap tiq-pp__dark-grid"><div><span class="tiq-pp__dark-kicker">Por que importa</span><h2>${esc(t.titular || "Menos complicaciones, mas tranquilidad")}</h2><p>${esc(t.parrafo || "Una solucion pensada para hacer mas sencillo lo que antes costaba.")}</p></div><div class="tiq-pp__stats">${statsItems}</div></div></section>`;
+  }
+
+  function pagepilotSteps(f) {
+    const h = f.hero || {};
+    const imgs = h.galeria || [];
+    const items = (f.iconos?.items || []).slice(0, 3).map((it, i) => `<article class="tiq-pp__step"><div class="tiq-pp__step-image">${img(imgs[i] || imgs[0], it.titulo || "Producto")}</div><span class="tiq-pp__eyebrow">${esc(it.titulo || `Paso ${i + 1}`)}</span><p>${esc(it.frase || "Usalo de forma simple y disfrutÃ¡ el resultado.")}</p></article>`).join("");
+    if (!items) return "";
+    return `<section class="tiq-pp__steps" data-bloque="iconos"><div class="tiq-pp__wrap"><header class="tiq-pp__section-head"><h2>${esc(f.iconos?.titular || "Es realmente sencillo")}</h2><p>${esc(f.iconos?.subtitulo || "Una experiencia clara desde el primer uso.")}</p></header><div class="tiq-pp__steps-grid">${items}</div></div></section>`;
+  }
+
+  function pagepilotFaq(f) {
+    const q = f.faq || {};
+    const items = (q.items || []).map((it) => `<details><summary>${esc(it.pregunta)}<span>+</span></summary><p>${esc(it.respuesta)}</p></details>`).join("");
+    if (!items) return "";
+    return `<section class="tiq-pp__faq" data-bloque="faq"><div class="tiq-pp__wrap"><header class="tiq-pp__section-head"><h2>${esc(q.titular || "Preguntas frecuentes")}</h2><p>${esc(q.subtitulo || "Todo lo que necesitas saber antes de comprar.")}</p></header><div class="tiq-pp__faq-list">${items}</div></div></section>`;
+  }
+
+  function renderPagepilot(data) {
+    const f = data.facetas || {};
+    const g = data.global || {};
+    return [pagepilotHero(f, data.fuente || {}, g), pagepilotTimeline(f), pagepilotReviews(f), pagepilotFeature(f, g), pagepilotProblem(f), pagepilotSteps(f), pagepilotFaq(f), `<div class="tiq-pp__recommendations">${recomendados(f.recomendados || { modo: "placeholder", items: [] })}</div>`].filter(Boolean).join("\n");
+  }
+
   function renderPremium(data, opts = {}) {
     const f = data.facetas;
     const g = data.global;
@@ -1123,6 +1196,7 @@
   function render(data, opts = {}) {
     const f = data.facetas;
     const g = data.global;
+    if (g && g.estilo === "pagepilot") return renderPagepilot(data, opts);
     // Modelo de página elegido en la creación. "clasico" = comportamiento de
     // siempre; "premium" = armado alternativo (timer + comparación + marquee).
     if (g && g.estilo === "premium") return renderPremium(data, opts);
@@ -1220,9 +1294,14 @@
 
   // interacción mínima de la galería
   window.cambiarPrincipal = function (mediaId, boton) {
-    document.getElementById("imagen-principal").innerHTML = img(mediaId);
-    document.querySelectorAll(".hero__mini").forEach((m) => m.classList.remove("activa"));
-    boton.classList.add("activa");
+    const principal = document.getElementById("imagen-principal");
+    if (!principal) return;
+    principal.innerHTML = img(mediaId);
+    document.querySelectorAll(".hero__mini, .tiq-pp__thumb").forEach((m) => {
+      m.classList.remove("activa");
+      m.classList.remove("is-active");
+    });
+    boton.classList.add(boton.classList.contains("tiq-pp__thumb") ? "is-active" : "activa");
   };
 
   // Agregar al carrito sin salir de la página: POST a /cart/add.js (la API

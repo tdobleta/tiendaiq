@@ -2840,7 +2840,7 @@ body.sec-panel-abierto .constructor { padding-right: 356px; }
 .be-help[data-tip]:hover::before, .be-help[data-tip]:focus::before { opacity: 1; visibility: visible; }
 
 /* ---- Selector de modelo de página (Clásico / Premium) ---- */
-.modelos { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.modelos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 .modelo-card { text-align: left; border: 1.5px solid var(--borde); border-radius: 12px; padding: 14px; background: #fff; cursor: pointer; display: flex; flex-direction: column; gap: 8px; transition: border-color .12s, box-shadow .12s; position: relative; font: inherit; }
 .modelo-card:hover { border-color: #c9c9d2; }
 .modelo-card.is-sel { border-color: var(--ia); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ia) 18%, transparent); }
@@ -2850,11 +2850,16 @@ body.sec-panel-abierto .constructor { padding-right: 356px; }
 .modelo-card__mini i:nth-child(2) { width: 100%; }
 .modelo-card__mini i:nth-child(3) { width: 45%; }
 .modelo-card__mini--premium i:nth-child(1) { background: var(--ia); width: 100%; height: 10px; }
+.modelo-card__mini--pagepilot { background: #fff8dd; border: 1px solid #f0dfaa; }
+.modelo-card__mini--pagepilot i:nth-child(1) { background: #ffcb05; width: 42%; height: 10px; }
+.modelo-card__mini--pagepilot i:nth-child(2) { background: #303030; width: 82%; }
+.modelo-card__mini--pagepilot i:nth-child(3) { background: #ef7c2b; width: 58%; }
 .modelo-card__nom { font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 6px; }
 .modelo-card__nom .ico { width: 15px; height: 15px; color: var(--ia); opacity: 0; margin-left: auto; }
 .modelo-card.is-sel .modelo-card__nom .ico { opacity: 1; }
 .modelo-card__desc { font-size: 12px; color: var(--suave); line-height: 1.4; }
 .modelo-card__badge { font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; color: #fff; background: var(--ia); border-radius: 20px; padding: 2px 7px; }
+@media (max-width: 760px) { .modelos { grid-template-columns: 1fr; } }
 
 /* ============================================================
    ESCALA PUMPER — editor de bundles (tipografía + espacios).

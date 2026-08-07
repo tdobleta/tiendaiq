@@ -647,7 +647,7 @@ async function crearPagina(idProducto, sesion, { idioma = "es", angulo = "", est
   const { salida, uso } = await generar(fuente, medios, { idioma, angulo });
   const data = ensamblar(fuente, salida, { idioma, angulo });
   // Modelo de página elegido en la creación (el render branchea por acá).
-  data.global.estilo = ["clasico", "premium"].includes(estilo) ? estilo : "clasico";
+  data.global.estilo = ["clasico", "premium", "pagepilot"].includes(estilo) ? estilo : "clasico";
   const urls = Object.fromEntries(medios.map((m) => [m.media_id, m.url]));
   return { data, urls, avisos: validar(data, salida), uso };
 }

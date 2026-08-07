@@ -942,6 +942,11 @@
                     <span class="modelo-card__nom">Premium <span class="modelo-card__badge">Nuevo</span> ${ico("check")}</span>
                     <span class="modelo-card__desc">Timer de oferta, comparación y reseñas en carrusel infinito.</span>
                   </button>
+                  <button type="button" class="modelo-card ${estado.modeloPagina === "pagepilot" ? "is-sel" : ""}" data-modelo="pagepilot">
+                    <span class="modelo-card__mini modelo-card__mini--pagepilot"><i></i><i></i><i></i></span>
+                    <span class="modelo-card__nom">PagePilot <span class="modelo-card__badge">Nuevo</span> ${ico("check")}</span>
+                    <span class="modelo-card__desc">GalerÃ­a editorial, prueba social, beneficios y preguntas frecuentes.</span>
+                  </button>
                 </div>
               </s-stack>
             </s-section>
