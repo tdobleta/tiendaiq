@@ -34,7 +34,6 @@ function dominiosDe(texto) {
 
 const ARCHIVOS_CON_DOMINIO = [
   "shopify.app.toml",
-  "extensions/tiendaiq-widgets/blocks/cod.liquid",
   "extensions/tiendaiq-widgets/blocks/bundle.liquid"
 ];
 
