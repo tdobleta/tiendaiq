@@ -79,7 +79,9 @@
       src = window.TIENDAIQ_ASSET_BASE + ruta.split("/").pop();
     }
     // encodeURI: los nombres de archivo pueden traer espacios y comas.
-    return `<img src="${esc(encodeURI(src))}" alt="" onerror="this.outerHTML='${respaldo.replace(/'/g, "\\'")}'">`;
+    // El fallback viaja en un atributo propio. Inyectarlo dentro de un
+    // atributo onerror rompe el HTML cuando el fallback contiene comillas.
+    return `<img src="${esc(encodeURI(src))}" alt="" data-fallback="${esc(respaldo)}" onerror="this.outerHTML=this.dataset.fallback">`;
   };
 
   // role="img" + aria-label: el lector de pantalla anuncia "N de 5 estrellas"
@@ -1077,8 +1079,8 @@
   }
 
   // ---------- estilo "pagepilot" ----------
-  // ComposiciÃ³n editorial sobre las facetas universales existentes. Mantiene
-  // una sola fuente de datos para tienda, preview y pÃ¡ginas ya publicadas.
+  // Composición editorial sobre las facetas universales existentes. Mantiene
+  // una sola fuente de datos para tienda, preview y páginas ya publicadas.
   const pagepilotBoton = (g) => {
     const variante = EN_TIENDA ? window.TIENDAIQ_VARIANT : null;
     const contenido = `${g.boton_icono !== false ? CART_ICO : ""}<span>${esc(g.cta || "Agregar al carrito")}</span>`;
@@ -1099,19 +1101,19 @@
     const avatar = imgAsset(rd.avatar, `<span class="tiq-pp__avatar-fallback">${esc((rd.autor || "C").slice(0, 1))}</span>`);
     const precio = precioBonito(fuente.moneda, fuente.precio);
     const comparativo = fuente.precio_comparativo ? `<del>${esc(precioBonito(fuente.moneda, fuente.precio_comparativo))}</del>` : "";
-    return `<section class="tiq-pp__hero" data-bloque="hero"><div class="tiq-pp__wrap tiq-pp__hero-grid"><div class="tiq-pp__gallery"><div id="imagen-principal" class="tiq-pp__gallery-main">${img(galeria[0], h.titulo || "Producto", { hero: true })}</div><div class="tiq-pp__thumbs">${thumbs}</div></div><div class="tiq-pp__buy"><div class="tiq-pp__rating">${estrellas(5)} <span>Calificado con <strong>${esc(puntaje1(h.puntaje ?? 4.9))}/5</strong> por ${esc(miles(h.resenas_count || 0))} clientes satisfechos</span></div><h1>${esc(h.titulo || fuente.titulo_crudo || "Producto")}</h1><p class="tiq-pp__tagline">${esc(h.urgencia || h.subtitulo || "Una mejora simple para todos los dias.")}</p><p class="tiq-pp__subtitulo">${esc(h.subtitulo || "Pensado para resolver una necesidad cotidiana con menos esfuerzo.")}</p><ul class="tiq-pp__benefits">${bullets}</ul><div class="tiq-pp__price">${comparativo}<strong>${esc(precio)}</strong>${fuente.precio_comparativo ? `<span class="tiq-pp__save">Oferta especial</span>` : ""}</div>${pagepilotBoton(g)}<div class="tiq-pp__trust"><span>${ICONO.camion} Envio incluido</span><span>${ICONO.retorno} Devolucion simple</span></div>${rd.texto ? `<blockquote class="tiq-pp__quote"><div class="tiq-pp__quote-head">${avatar}<span>${estrellas(rd.estrellas || 5)}</span></div><p>"${esc(rd.texto)}"</p><cite>${ICONO.verificado} ${esc(rd.autor || "Cliente verificado")}</cite></blockquote>` : ""}</div></div></section>`;
+    return `<section class="tiq-pp__hero" data-bloque="hero"><div class="tiq-pp__wrap tiq-pp__hero-grid"><div class="tiq-pp__gallery"><div id="imagen-principal" class="tiq-pp__gallery-main">${img(galeria[0], h.titulo || "Producto", { hero: true })}</div><div class="tiq-pp__thumbs">${thumbs}</div></div><div class="tiq-pp__buy"><div class="tiq-pp__rating">${estrellas(5)} <span>Calificado con <strong>${esc(puntaje1(h.puntaje ?? 4.9))}/5</strong> por ${esc(miles(h.resenas_count || 0))} clientes satisfechos</span></div><h1>${esc(h.titulo || fuente.titulo_crudo || "Producto")}</h1><p class="tiq-pp__tagline">${esc(h.urgencia || h.subtitulo || "Una mejora simple para todos los días.")}</p><p class="tiq-pp__subtitulo">${esc(h.subtitulo || "Pensado para resolver una necesidad cotidiana con menos esfuerzo.")}</p><ul class="tiq-pp__benefits">${bullets}</ul><div class="tiq-pp__price">${comparativo}<strong>${esc(precio)}</strong>${fuente.precio_comparativo ? `<span class="tiq-pp__save">Oferta especial</span>` : ""}</div>${pagepilotBoton(g)}<div class="tiq-pp__trust"><span>${ICONO.camion} Envío incluido</span><span>${ICONO.retorno} Devolución simple</span></div>${rd.texto ? `<blockquote class="tiq-pp__quote"><div class="tiq-pp__quote-head">${avatar}<span>${estrellas(rd.estrellas || 5)}</span></div><p>"${esc(rd.texto)}"</p><cite>${ICONO.verificado} ${esc(rd.autor || "Cliente verificado")}</cite></blockquote>` : ""}</div></div></section>`;
   }
 
   function pagepilotTimeline(f) {
     const s = f.stats || {};
-    const items = (s.items || []).map((it, i) => `<article class="tiq-pp__timeline-card"><span class="tiq-pp__eyebrow">Paso ${i + 1}</span><h3>${esc(it.frase || "Un resultado que se nota")}</h3><p>${esc((f.iconos?.items || [])[i]?.frase || "Sumalo a tu rutina y hacelo parte de tu dia.")}</p></article>`).join("");
+    const items = (s.items || []).map((it, i) => `<article class="tiq-pp__timeline-card"><span class="tiq-pp__eyebrow">Paso ${i + 1}</span><h3>${esc(it.frase || "Un resultado que se nota")}</h3><p>${esc((f.iconos?.items || [])[i]?.frase || "Sumá el producto a tu rutina y hacelo parte de tu día.")}</p></article>`).join("");
     if (!items && !s.imagen) return "";
-    return `<section class="tiq-pp__band tiq-pp__timeline" data-bloque="stats"><div class="tiq-pp__wrap"><header class="tiq-pp__section-head"><h2>${esc(s.titular || "Una rutina mas simple empieza hoy")}</h2><p>${esc(f.hero?.subtitulo || "Pequenos cambios que se sienten en el dia a dia.")}</p></header><div class="tiq-pp__timeline-grid"><div class="tiq-pp__feature-image">${img(s.imagen, s.titular || "Producto")}</div><div class="tiq-pp__timeline-list">${items}</div></div></div></section>`;
+    return `<section class="tiq-pp__band tiq-pp__timeline" data-bloque="stats"><div class="tiq-pp__wrap"><header class="tiq-pp__section-head"><h2>${esc(s.titular || "Una rutina más simple empieza hoy")}</h2><p>${esc(f.hero?.subtitulo || "Pequeños cambios que se sienten en el día a día.")}</p></header><div class="tiq-pp__timeline-grid"><div class="tiq-pp__feature-image">${img(s.imagen, s.titular || "Producto")}</div><div class="tiq-pp__timeline-list">${items}</div></div></div></section>`;
   }
 
   function pagepilotReviews(f) {
     const r = f.resenas || {};
-    const items = (r.items || []).slice(0, 3).map((it) => `<article class="tiq-pp__review"><div class="tiq-pp__review-image">${it.imagen ? img(it.imagen, it.autor || "Cliente") : `<div class="ph-img">Foto del cliente</div>`}</div><div class="tiq-pp__review-body"><strong>${esc(it.autor || "Cliente verificado")}</strong>${estrellas(it.estrellas || 5)}<p>${esc(it.texto || "CompartÃ­ una experiencia real usando el producto.")}</p></div></article>`).join("");
+    const items = (r.items || []).slice(0, 3).map((it) => `<article class="tiq-pp__review"><div class="tiq-pp__review-image">${it.imagen ? img(it.imagen, it.autor || "Cliente") : `<div class="ph-img">Foto del cliente</div>`}</div><div class="tiq-pp__review-body"><strong>${esc(it.autor || "Cliente verificado")}</strong>${estrellas(it.estrellas || 5)}<p>${esc(it.texto || "Compartí una experiencia real usando el producto.")}</p></div></article>`).join("");
     if (!items) return "";
     return `<section class="tiq-pp__reviews" data-bloque="resenas"><div class="tiq-pp__wrap"><header class="tiq-pp__section-head"><div class="tiq-pp__pill">${estrellas(5)} Basado en resenas confiables</div><h2>${esc(r.titular || "Lo que dice nuestra comunidad")}</h2><p>${esc(r.subtitulo || "Experiencias reales de personas que ya lo usan.")}</p></header><div class="tiq-pp__reviews-grid">${items}</div></div></section>`;
   }
@@ -1119,19 +1121,19 @@
   function pagepilotFeature(f, g) {
     const i = f.iconos || {};
     const items = (i.items || []).map((it) => `<li><span class="tiq-pp__feature-icon">${it.emoji ? esc(it.emoji) : ICONOS_BULLET.check}</span><span><strong>${esc(it.titulo)}</strong>${esc(it.frase)}</span></li>`).join("");
-    return `<section class="tiq-pp__band tiq-pp__feature" data-bloque="iconos"><div class="tiq-pp__wrap tiq-pp__feature-grid"><div class="tiq-pp__feature-image">${img(i.imagen_central, i.titular || "Producto")}</div><div><h2>${esc(i.titular || "Pensado para tu rutina")}</h2><p>${esc(i.subtitulo || "Todo lo que necesitas, en un solo producto.")}</p><ul class="tiq-pp__feature-list">${items}</ul>${pagepilotBoton(g)}</div></div></section>`;
+    return `<section class="tiq-pp__band tiq-pp__feature" data-bloque="iconos"><div class="tiq-pp__wrap tiq-pp__feature-grid"><div class="tiq-pp__feature-image">${img(i.imagen_central, i.titular || "Producto")}</div><div><h2>${esc(i.titular || "Pensado para tu rutina")}</h2><p>${esc(i.subtitulo || "Todo lo que necesitás, en un solo producto.")}</p><ul class="tiq-pp__feature-list">${items}</ul>${pagepilotBoton(g)}</div></div></section>`;
   }
 
   function pagepilotProblem(f) {
     const t = f.tabla || {};
     const statsItems = (f.stats?.items || []).map((it) => `<div class="tiq-pp__stat"><b>${esc(it.pct ?? 0)}%</b><span>${esc(it.frase)}</span></div>`).join("");
-    return `<section class="tiq-pp__dark" data-bloque="tabla"><div class="tiq-pp__wrap tiq-pp__dark-grid"><div><span class="tiq-pp__dark-kicker">Por que importa</span><h2>${esc(t.titular || "Menos complicaciones, mas tranquilidad")}</h2><p>${esc(t.parrafo || "Una solucion pensada para hacer mas sencillo lo que antes costaba.")}</p></div><div class="tiq-pp__stats">${statsItems}</div></div></section>`;
+    return `<section class="tiq-pp__dark" data-bloque="tabla"><div class="tiq-pp__wrap tiq-pp__dark-grid"><div><span class="tiq-pp__dark-kicker">Por qué importa</span><h2>${esc(t.titular || "Menos complicaciones, más tranquilidad")}</h2><p>${esc(t.parrafo || "Una solución pensada para hacer más sencillo lo que antes costaba.")}</p></div><div class="tiq-pp__stats">${statsItems}</div></div></section>`;
   }
 
   function pagepilotSteps(f) {
     const h = f.hero || {};
     const imgs = h.galeria || [];
-    const items = (f.iconos?.items || []).slice(0, 3).map((it, i) => `<article class="tiq-pp__step"><div class="tiq-pp__step-image">${img(imgs[i] || imgs[0], it.titulo || "Producto")}</div><span class="tiq-pp__eyebrow">${esc(it.titulo || `Paso ${i + 1}`)}</span><p>${esc(it.frase || "Usalo de forma simple y disfrutÃ¡ el resultado.")}</p></article>`).join("");
+    const items = (f.iconos?.items || []).slice(0, 3).map((it, i) => `<article class="tiq-pp__step"><div class="tiq-pp__step-image">${img(imgs[i] || imgs[0], it.titulo || "Producto")}</div><span class="tiq-pp__eyebrow">${esc(it.titulo || `Paso ${i + 1}`)}</span><p>${esc(it.frase || "Usá el producto de forma simple y disfrutá el resultado.")}</p></article>`).join("");
     if (!items) return "";
     return `<section class="tiq-pp__steps" data-bloque="iconos"><div class="tiq-pp__wrap"><header class="tiq-pp__section-head"><h2>${esc(f.iconos?.titular || "Es realmente sencillo")}</h2><p>${esc(f.iconos?.subtitulo || "Una experiencia clara desde el primer uso.")}</p></header><div class="tiq-pp__steps-grid">${items}</div></div></section>`;
   }
@@ -1140,7 +1142,7 @@
     const q = f.faq || {};
     const items = (q.items || []).map((it) => `<details><summary>${esc(it.pregunta)}<span>+</span></summary><p>${esc(it.respuesta)}</p></details>`).join("");
     if (!items) return "";
-    return `<section class="tiq-pp__faq" data-bloque="faq"><div class="tiq-pp__wrap"><header class="tiq-pp__section-head"><h2>${esc(q.titular || "Preguntas frecuentes")}</h2><p>${esc(q.subtitulo || "Todo lo que necesitas saber antes de comprar.")}</p></header><div class="tiq-pp__faq-list">${items}</div></div></section>`;
+    return `<section class="tiq-pp__faq" data-bloque="faq"><div class="tiq-pp__wrap"><header class="tiq-pp__section-head"><h2>${esc(q.titular || "Preguntas frecuentes")}</h2><p>${esc(q.subtitulo || "Todo lo que necesitás saber antes de comprar.")}</p></header><div class="tiq-pp__faq-list">${items}</div></div></section>`;
   }
 
   function renderPagepilot(data) {
@@ -1187,7 +1189,7 @@
     const anterior = Number(fuente.precio_comparativo);
     const ahorro = Number.isFinite(actual) && Number.isFinite(anterior) && anterior > actual ? Math.round((1 - actual / anterior) * 100) : 0;
     const rating = Math.max(1, Math.min(5, Math.round(Number(h.puntaje || 5))));
-    return `<section class="tiq-ppb__hero" data-bloque="hero"><div class="tiq-ppb__wrap tiq-ppb__hero-grid"><div class="tiq-ppb__gallery"><div id="tiq-ppb-main" class="tiq-ppb__gallery-main">${img(galeria[0], titulo, { hero: true })}<button type="button" class="tiq-ppb__gallery-arrow tiq-ppb__gallery-arrow--prev" onclick="tiqPpbMover(-1)" aria-label="Imagen anterior">‹</button><button type="button" class="tiq-ppb__gallery-arrow tiq-ppb__gallery-arrow--next" onclick="tiqPpbMover(1)" aria-label="Imagen siguiente">›</button></div><div class="tiq-ppb__thumbs">${thumbs}</div></div><div class="tiq-ppb__buy"><div class="tiq-ppb__badge"><b>★</b><span>${esc(h.urgencia || "Oferta destacada")}</span></div><h1>${esc(titulo)}</h1><div class="tiq-ppb__rating">${estrellas(rating)} <span>Calificado con <strong>${esc(puntaje1(h.puntaje ?? 4.9))}/5</strong> por más de <strong>${esc(miles(h.resenas_count || 0))}</strong> personas</span></div><ul class="tiq-ppb__benefits">${bullets}</ul><div class="tiq-ppb__price">${comparativo}<strong>${esc(precio)}</strong>${ahorro ? `<span class="tiq-ppb__save">AHORRÁ ${ahorro}%</span>` : ""}</div>${pagepilotBlueButton(g, g.cta || "Añadir al carrito")}<div class="tiq-ppb__trust"><span>${ICONO.verificado} Garantía de devolución de 30 días</span><span>${ICONO.paquete} Envío y devoluciones simples</span></div><div class="tiq-ppb__payments" aria-label="Medios de pago"><span>AMEX</span><span>Apple Pay</span><span>VISA</span><span>MC</span><span>PayPal</span><span>G Pay</span><span>shop</span></div><div class="tiq-ppb__accordions">${accordions}</div>${review.texto ? `<blockquote class="tiq-ppb__quote">${avatar}<div><div class="tiq-ppb__quote-stars">${estrellas(review.estrellas || 5)}</div><p>"${esc(review.texto)}"</p><cite>${ICONO.verificado} ${esc(review.autor || "Cliente verificado")}</cite></div></blockquote>` : ""}${h.urgencia ? `<div class="tiq-ppb__scarcity">${ICONOS_BULLET.rayo}<strong>${esc(h.urgencia)}</strong><span>Consultá disponibilidad y condiciones antes de finalizar tu compra.</span></div>` : ""}</div></div></section>`;
+    return `<section class="tiq-ppb__hero" data-bloque="hero"><div class="tiq-ppb__wrap tiq-ppb__hero-grid"><div class="tiq-ppb__gallery"><div id="tiq-ppb-main" class="tiq-ppb__gallery-main">${img(galeria[0], titulo, { hero: true })}<button type="button" class="tiq-ppb__gallery-arrow tiq-ppb__gallery-arrow--prev" onclick="tiqPpbMover(-1)" aria-label="Imagen anterior">‹</button><button type="button" class="tiq-ppb__gallery-arrow tiq-ppb__gallery-arrow--next" onclick="tiqPpbMover(1)" aria-label="Imagen siguiente">›</button></div><div class="tiq-ppb__thumbs">${thumbs}</div></div><div class="tiq-ppb__buy"><div class="tiq-ppb__badge"><b>★</b><span>${esc(h.urgencia || "Oferta destacada")}</span></div><h1>${esc(titulo)}</h1><div class="tiq-ppb__rating">${estrellas(rating)} <span>Calificado con <strong>${esc(puntaje1(h.puntaje ?? 4.9))}/5</strong> por más de <strong>${esc(miles(h.resenas_count || 0))}</strong> personas</span></div><ul class="tiq-ppb__benefits">${bullets}</ul><div class="tiq-ppb__price">${comparativo}<strong>${esc(precio)}</strong>${ahorro ? `<span class="tiq-ppb__save">AHORRÁ ${ahorro}%</span>` : ""}</div>${pagepilotBlueButton(g, g.cta || "Añadir al carrito")}<div class="tiq-ppb__trust"><span>${ICONO.verificado} Garantía de devolución de 30 días</span><span>${ICONO.paquete} Envío y devoluciones simples</span></div><div class="tiq-ppb__payments" aria-label="Medios de pago"><span>AMEX</span><span>Apple Pay</span><span>VISA</span><span>MC</span><span>PayPal</span><span>G Pay</span><span>shop</span></div><div class="tiq-ppb__accordions">${accordions}</div>${review.texto ? `<blockquote class="tiq-ppb__quote"><span class="tiq-ppb__quote-avatar">${avatar}</span><div class="tiq-ppb__quote-body"><div class="tiq-ppb__quote-stars">${estrellas(review.estrellas || 5)}</div><p>"${esc(review.texto)}"</p><cite>${ICONO.verificado} ${esc(review.autor || "Cliente verificado")}</cite></div></blockquote>` : ""}${h.urgencia ? `<div class="tiq-ppb__scarcity">${ICONOS_BULLET.rayo}<strong>${esc(h.urgencia)}</strong><span>Consultá disponibilidad y condiciones antes de finalizar tu compra.</span></div>` : ""}</div></div></section>`;
   }
 
   function pagepilotBlueTicker(f) {
@@ -1201,6 +1203,10 @@
     const r = f.resenas || {};
     const galeria = f.hero?.galeria || [];
     const media = (r.items || []).map((item) => item.imagen).filter(Boolean).slice(0, 3);
+    // En la tienda no reutilizamos fotos del producto como si fueran UGC.
+    // El preview conserva el fallback visual para que el merchant pueda editar
+    // la sección aunque todavía no haya cargado contenido de clientes.
+    if (EN_TIENDA && !media.length) return "";
     const images = (media.length ? media : galeria.slice(0, 3)).map((id, i) => `<article class="tiq-ppb__ugc">${img(id, `Cliente ${i + 1}`)}</article>`).join("");
     if (!images) return "";
     return `<section class="tiq-ppb__social" data-bloque="clientes"><div class="tiq-ppb__wrap tiq-ppb__social-grid"><div><h2>${esc(r.titular || "Miles confían. Personas reales eligen calidad.")}</h2><p>${esc(r.subtitulo || "Experiencias reales de personas que ya incorporaron el producto a su rutina.")}</p>${pagepilotBlueButton(g, "Obtené el tuyo ahora")}</div><div class="tiq-ppb__ugc-grid">${images}</div></div></section>`;
@@ -1223,7 +1229,12 @@
 
   function pagepilotBlueReviews(f) {
     const r = f.resenas || {};
-    const items = (r.items || []).filter((item) => item.texto).slice(0, 4).map((item) => `<article class="tiq-ppb__review"><div class="tiq-ppb__review-media">${item.imagen ? img(item.imagen, item.autor || "Cliente") : `<div class="ph-img">Foto del cliente</div>`}</div><strong>${esc(item.autor || "Cliente verificado")}</strong>${estrellas(item.estrellas || 5)}<p>${esc(item.texto)}</p></article>`).join("");
+    const candidatas = (r.items || []).filter((item) => item.texto);
+    // Las tarjetas sin autor ni imagen son guías para el editor, no reseñas
+    // publicables. El preview las muestra para facilitar la edición; la tienda
+    // evita presentar copy de ejemplo como testimonio real.
+    const visibles = EN_TIENDA ? candidatas.filter((item) => item.autor || item.imagen) : candidatas;
+    const items = visibles.slice(0, 4).map((item) => `<article class="tiq-ppb__review"><div class="tiq-ppb__review-media">${item.imagen ? img(item.imagen, item.autor || "Cliente") : `<div class="ph-img">Foto del cliente</div>`}</div><strong>${esc(item.autor || "Cliente verificado")}</strong>${estrellas(item.estrellas || 5)}<p>${esc(item.texto)}</p></article>`).join("");
     if (!items) return "";
     return `<section class="tiq-ppb__reviews" data-bloque="resenas"><div class="tiq-ppb__wrap"><header class="tiq-ppb__section-head"><div class="tiq-ppb__pill">${estrellas(5)} Basado en ${esc(miles(r.items.length || 0))} reseñas confiables</div><h2>${esc(r.titular || "Lo que dicen nuestros clientes")}</h2><p>${esc(r.subtitulo || "Experiencias reales de personas que ya lo usan.")}</p></header><div class="tiq-ppb__reviews-grid">${items}</div></div></section>`;
   }
