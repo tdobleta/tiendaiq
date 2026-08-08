@@ -34,6 +34,14 @@
       ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])
     );
 
+  // Older generated payloads can contain UTF-8 decoded as Latin-1. Repair it
+  // at the renderer boundary so published pages do not expose mojibake.
+  const repararMojibake = (value) => {
+    const text = String(value ?? "");
+    if (!/[\u00c3\u00c2\u00e2\u00f0]/.test(text)) return text;
+    try { return decodeURIComponent(escape(text)); } catch { return text; }
+  };
+
   // El pool guarda media_id; la url se resuelve acá contra MAPA_URLS. En la
   // tienda ese mapa lo arma Liquid con las fotos vivas del producto; en el
   // preview local lo deja el adaptador. Media_id borrado → placeholder.
@@ -1448,7 +1456,7 @@
 
   function renderPagepilotBlueExact(data) {
     const b = ppbBlue(data);
-    return `<div class="tiq-ppb">${[ppbHero(data, b), ppbTicker(b), ppbSocial(data, b), ppbTextImage(data, b), ppbFeature(data, b), ppbReviews(b), ppbStats(b), ppbComparison(data, b), ppbPanel(data, b), ppbFaq(b), ppbRecommendations(data, b), ppbSticky(data)].join("\n")}</div>`;
+    return repararMojibake(`<div class="tiq-ppb">${[ppbHero(data, b), ppbTicker(b), ppbSocial(data, b), ppbTextImage(data, b), ppbFeature(data, b), ppbReviews(b), ppbStats(b), ppbComparison(data, b), ppbPanel(data, b), ppbFaq(b), ppbRecommendations(data, b), ppbSticky(data)].join("\n")}</div>`);
   }
 
   function renderPremium(data, opts = {}) {

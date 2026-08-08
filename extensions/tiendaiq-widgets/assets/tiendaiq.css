@@ -1413,3 +1413,54 @@ body.publicada #app .resena-destacada__editar { display: none; }
   #app .tiq-ppb__sticky .tiq-ppb__cta { width: 45vw; min-width: 0; padding: 10px 8px; font-size: 12px; }
   #app .tiq-ppb__sticky-product strong { max-width: 43vw; font-size: 12px; }
 }
+
+/* Final visual pass based on PagePilot's measured component rules. */
+#app .tiq-ppb {
+  font-family: Geist, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 16px;
+  line-height: 1.45;
+  overflow-wrap: break-word;
+}
+#app .tiq-ppb h1,
+#app .tiq-ppb h2,
+#app .tiq-ppb h3 { font-weight: 600; }
+#app .tiq-ppb h2 { font-size: 32px; line-height: 1.15; }
+#app .tiq-ppb__gallery-main > img { object-fit: contain; }
+#app .tiq-ppb__gallery-arrow,
+#app .tiq-ppb__thumb,
+#app .tiq-ppb__badge,
+#app .tiq-ppb__cta,
+#app .tiq-ppb__accordions details,
+#app .tiq-ppb__faq-list details,
+#app .tiq-ppb__quote,
+#app .tiq-ppb__rec-image { border-radius: 8px; }
+#app .tiq-ppb__cta { min-height: 52px; font-size: 14px; font-weight: 500; }
+#app .tiq-ppb__ticker { padding: 13px 0; }
+#app .tiq-ppb__ticker-track { gap: 24px; animation-duration: 38s; }
+#app .tiq-ppb__ticker-track span {
+  min-width: 0;
+  padding: 8px 20px;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--ppb-blue);
+  font-size: 13px;
+  font-weight: 500;
+}
+#app .tiq-ppb__ticker-track i {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  color: var(--ppb-blue);
+  background: var(--ppb-soft);
+}
+#app .tiq-ppb__quote-body { overflow-wrap: break-word; min-width: 0; }
+#app .tiq-ppb__rec-track {
+  overflow: hidden;
+  grid-template-columns: repeat(5, minmax(calc((100% - 48px) / 4), 1fr));
+}
+#app .tiq-ppb__rec-card > span { border-radius: 6px; font-weight: 500; }
+
+@media (max-width: 600px) {
+  #app .tiq-ppb h2 { font-size: 28px; }
+  #app .tiq-ppb__rec-track { grid-template-columns: repeat(5, minmax(calc((100% - 8px) / 2), 1fr)); }
+}
