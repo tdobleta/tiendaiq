@@ -1149,6 +1149,124 @@
     return [pagepilotHero(f, data.fuente || {}, g), pagepilotTimeline(f), pagepilotReviews(f), pagepilotFeature(f, g), pagepilotProblem(f), pagepilotSteps(f), pagepilotFaq(f), `<div class="tiq-pp__recommendations">${recomendados(f.recomendados || { modo: "placeholder", items: [] })}</div>`].filter(Boolean).join("\n");
   }
 
+  // ---------- estilo "pagepilot-blue" ----------
+  // Composición aditiva de la preview PagePilot. Lee únicamente el contrato
+  // universal, por eso también funciona cuando la IA devuelve otro producto,
+  // otro nicho o menos imágenes.
+  const pagepilotBlueButton = (g, label) => {
+    const variante = EN_TIENDA ? window.TIENDAIQ_VARIANT : null;
+    const texto = label || g.cta || "Comprar ahora";
+    const contenido = `${g.boton_icono !== false ? CART_ICO : ""}<span>${esc(texto)}</span>`;
+    if (!variante) return `<button type="button" class="tiq-ppb__cta">${contenido}</button>`;
+    return `<form method="post" action="/cart/add" onsubmit="return tiendaiqAgregar(event)"><input type="hidden" name="id" value="${esc(variante)}"><input type="hidden" name="quantity" value="1"><button type="submit" class="tiq-ppb__cta">${contenido}</button></form>`;
+  };
+
+  const pagepilotBlueIcon = (item) => {
+    if (item?.emoji) return esc(item.emoji);
+    return ICONOS_BULLET[item?.icono] || ICONOS_BULLET.check;
+  };
+
+  const pagepilotBlueText = (item) => {
+    if (typeof item === "string") return item;
+    return [item?.fuerte, item?.resto, item?.frase].filter(Boolean).join(" ");
+  };
+
+  function pagepilotBlueHero(f, fuente, g) {
+    const h = f.hero || {};
+    const galeria = h.galeria || [];
+    const titulo = h.titulo || fuente.titulo_crudo || "Producto";
+    const thumbs = galeria.slice(0, 5).map((id, i) => `<button type="button" class="tiq-ppb__thumb${i === 0 ? " is-active" : ""}" onclick="cambiarPrincipal('${esc(id)}', this)" aria-label="Imagen ${i + 1}">${img(id, titulo, { ancho: 160 })}</button>`).join("");
+    const bulletsData = (h.bullets || []).length ? h.bullets : (f.iconos?.items || []).slice(0, 4);
+    const bullets = bulletsData.slice(0, 4).map((item) => `<li><span class="tiq-ppb__benefit-icon">${pagepilotBlueIcon(item)}</span><span>${esc(pagepilotBlueText(item) || "Beneficio del producto")}</span></li>`).join("");
+    const accordions = (h.acordeones || []).slice(0, 3).map((item) => `<details><summary>${esc(item.titulo || "Información del producto")}<span>⌄</span></summary><p>${esc(item.contenido || "Consultá la información del producto antes de comprar.")}</p></details>`).join("");
+    const review = h.resena_destacada?.texto ? h.resena_destacada : {};
+    const avatar = imgAsset(review.avatar, `<span class="tiq-ppb__avatar-fallback">${esc((review.autor || "C").slice(0, 1))}</span>`);
+    const precio = precioBonito(fuente.moneda, fuente.precio || "");
+    const comparativo = fuente.precio_comparativo ? `<del>${esc(precioBonito(fuente.moneda, fuente.precio_comparativo))}</del>` : "";
+    const actual = Number(fuente.precio);
+    const anterior = Number(fuente.precio_comparativo);
+    const ahorro = Number.isFinite(actual) && Number.isFinite(anterior) && anterior > actual ? Math.round((1 - actual / anterior) * 100) : 0;
+    const rating = Math.max(1, Math.min(5, Math.round(Number(h.puntaje || 5))));
+    return `<section class="tiq-ppb__hero" data-bloque="hero"><div class="tiq-ppb__wrap tiq-ppb__hero-grid"><div class="tiq-ppb__gallery"><div id="tiq-ppb-main" class="tiq-ppb__gallery-main">${img(galeria[0], titulo, { hero: true })}<button type="button" class="tiq-ppb__gallery-arrow tiq-ppb__gallery-arrow--prev" onclick="tiqPpbMover(-1)" aria-label="Imagen anterior">‹</button><button type="button" class="tiq-ppb__gallery-arrow tiq-ppb__gallery-arrow--next" onclick="tiqPpbMover(1)" aria-label="Imagen siguiente">›</button></div><div class="tiq-ppb__thumbs">${thumbs}</div></div><div class="tiq-ppb__buy"><div class="tiq-ppb__badge"><b>★</b><span>${esc(h.urgencia || "Oferta destacada")}</span></div><h1>${esc(titulo)}</h1><div class="tiq-ppb__rating">${estrellas(rating)} <span>Calificado con <strong>${esc(puntaje1(h.puntaje ?? 4.9))}/5</strong> por más de <strong>${esc(miles(h.resenas_count || 0))}</strong> personas</span></div><ul class="tiq-ppb__benefits">${bullets}</ul><div class="tiq-ppb__price">${comparativo}<strong>${esc(precio)}</strong>${ahorro ? `<span class="tiq-ppb__save">AHORRÁ ${ahorro}%</span>` : ""}</div>${pagepilotBlueButton(g, g.cta || "Añadir al carrito")}<div class="tiq-ppb__trust"><span>${ICONO.verificado} Garantía de devolución de 30 días</span><span>${ICONO.paquete} Envío y devoluciones simples</span></div><div class="tiq-ppb__payments" aria-label="Medios de pago"><span>AMEX</span><span>Apple Pay</span><span>VISA</span><span>MC</span><span>PayPal</span><span>G Pay</span><span>shop</span></div><div class="tiq-ppb__accordions">${accordions}</div>${review.texto ? `<blockquote class="tiq-ppb__quote">${avatar}<div><div class="tiq-ppb__quote-stars">${estrellas(review.estrellas || 5)}</div><p>"${esc(review.texto)}"</p><cite>${ICONO.verificado} ${esc(review.autor || "Cliente verificado")}</cite></div></blockquote>` : ""}${h.urgencia ? `<div class="tiq-ppb__scarcity">${ICONOS_BULLET.rayo}<strong>${esc(h.urgencia)}</strong><span>Consultá disponibilidad y condiciones antes de finalizar tu compra.</span></div>` : ""}</div></div></section>`;
+  }
+
+  function pagepilotBlueTicker(f) {
+    const labels = ((f.hero?.bullets || []).map(pagepilotBlueText).concat((f.iconos?.items || []).map((item) => item.titulo || item.frase))).filter(Boolean).slice(0, 5);
+    if (!labels.length) return "";
+    const pills = labels.concat(labels).map((label, i) => `<span><i>${pagepilotBlueIcon(f.iconos?.items?.[i % Math.max(1, (f.iconos?.items || []).length)])}</i>${esc(label)}</span>`).join("");
+    return `<section class="tiq-ppb__ticker" aria-label="Beneficios del producto"><div class="tiq-ppb__ticker-track">${pills}</div></section>`;
+  }
+
+  function pagepilotBlueSocial(f, g) {
+    const r = f.resenas || {};
+    const galeria = f.hero?.galeria || [];
+    const media = (r.items || []).map((item) => item.imagen).filter(Boolean).slice(0, 3);
+    const images = (media.length ? media : galeria.slice(0, 3)).map((id, i) => `<article class="tiq-ppb__ugc">${img(id, `Cliente ${i + 1}`)}</article>`).join("");
+    if (!images) return "";
+    return `<section class="tiq-ppb__social" data-bloque="clientes"><div class="tiq-ppb__wrap tiq-ppb__social-grid"><div><h2>${esc(r.titular || "Miles confían. Personas reales eligen calidad.")}</h2><p>${esc(r.subtitulo || "Experiencias reales de personas que ya incorporaron el producto a su rutina.")}</p>${pagepilotBlueButton(g, "Obtené el tuyo ahora")}</div><div class="tiq-ppb__ugc-grid">${images}</div></div></section>`;
+  }
+
+  function pagepilotBlueTextImage(f, g) {
+    const s = f.stats || {};
+    const titulo = s.titular || "¿Cómo funciona?";
+    const imagen = s.imagen || f.hero?.galeria?.[0];
+    if (!titulo && !imagen) return "";
+    return `<section class="tiq-ppb__text-image" data-bloque="stats"><div class="tiq-ppb__wrap tiq-ppb__text-image-grid"><div><h2>${esc(titulo)}</h2><p>${esc(f.hero?.subtitulo || "Una experiencia simple, pensada para el uso diario.")}</p>${pagepilotBlueButton(g, "Compralo ahora")}</div><div class="tiq-ppb__media">${img(imagen, titulo || "Producto")}</div></div></section>`;
+  }
+
+  function pagepilotBlueFeature(f) {
+    const i = f.iconos || {};
+    const items = (i.items || []).slice(0, 5).map((item, n) => `<li><span class="tiq-ppb__feature-number">${n + 1}</span><span><strong>${esc(item.titulo || "Beneficio diario")}</strong>${esc(item.frase || "Un detalle que hace más simple el uso del producto.")}</span></li>`).join("");
+    if (!items && !i.imagen_central) return "";
+    return `<section class="tiq-ppb__feature" data-bloque="iconos"><div class="tiq-ppb__wrap tiq-ppb__feature-grid"><div class="tiq-ppb__media tiq-ppb__feature-media">${img(i.imagen_central || f.hero?.galeria?.[0], i.titular || "Producto")}</div><div><h2>${esc(i.titular || "Beneficios diarios del producto")}</h2><p>${esc(i.subtitulo || "Todo lo que necesitás para sumar una mejora real a tu rutina.")}</p><ul class="tiq-ppb__feature-list">${items}</ul></div></div></section>`;
+  }
+
+  function pagepilotBlueReviews(f) {
+    const r = f.resenas || {};
+    const items = (r.items || []).filter((item) => item.texto).slice(0, 4).map((item) => `<article class="tiq-ppb__review"><div class="tiq-ppb__review-media">${item.imagen ? img(item.imagen, item.autor || "Cliente") : `<div class="ph-img">Foto del cliente</div>`}</div><strong>${esc(item.autor || "Cliente verificado")}</strong>${estrellas(item.estrellas || 5)}<p>${esc(item.texto)}</p></article>`).join("");
+    if (!items) return "";
+    return `<section class="tiq-ppb__reviews" data-bloque="resenas"><div class="tiq-ppb__wrap"><header class="tiq-ppb__section-head"><div class="tiq-ppb__pill">${estrellas(5)} Basado en ${esc(miles(r.items.length || 0))} reseñas confiables</div><h2>${esc(r.titular || "Lo que dicen nuestros clientes")}</h2><p>${esc(r.subtitulo || "Experiencias reales de personas que ya lo usan.")}</p></header><div class="tiq-ppb__reviews-grid">${items}</div></div></section>`;
+  }
+
+  function pagepilotBlueStats(f) {
+    const s = f.stats || {};
+    const items = (s.items || []).slice(0, 4).map((item) => `<article><b>${esc(item.pct ?? 0)}%</b><p>${esc(item.frase || "Notaron una mejora al usarlo de forma constante.")}</p></article>`).join("");
+    if (!items) return "";
+    return `<section class="tiq-ppb__stats-section" data-bloque="stats"><div class="tiq-ppb__wrap"><header class="tiq-ppb__section-head"><h2>${esc(s.titular || "Lo que notaron quienes lo usan")}</h2></header><div class="tiq-ppb__stats-grid">${items}</div></div></section>`;
+  }
+
+  function pagepilotBlueComparison(f, g) {
+    const t = f.tabla || {};
+    const filas = (t.filas || []).filter(Boolean).map((fila) => `<div class="tiq-ppb__compare-row"><span>${esc(fila)}</span><b>${ICONOS_BULLET.check}</b><b class="is-no">×</b></div>`).join("");
+    if (!filas) return "";
+    return `<section class="tiq-ppb__comparison" data-bloque="tabla"><div class="tiq-ppb__wrap tiq-ppb__comparison-grid"><div><h2>${esc(t.titular || "Una diferencia que se nota")}</h2><p>${esc(t.parrafo || "Una solución pensada para hacer más sencillo lo que antes costaba.")}</p>${t.cta ? pagepilotBlueButton(g, "Obtené el tuyo ahora") : ""}</div><div class="tiq-ppb__compare"><div class="tiq-ppb__compare-head"><span></span><strong>Nuestro producto</strong><strong>${esc(t.col_otros || "Otros")}</strong></div>${filas}</div></div></section>`;
+  }
+
+  function pagepilotBlueCtaPanel(f, g) {
+    const titulo = "Una mejora simple para cada día";
+    const imagen = f.stats?.imagen || f.hero?.galeria?.[0];
+    if (!titulo && !imagen) return "";
+    return `<section class="tiq-ppb__cta-panel"><div class="tiq-ppb__wrap tiq-ppb__cta-panel-grid"><div class="tiq-ppb__media">${img(imagen, titulo || "Producto")}</div><div><div class="tiq-ppb__cta-panel-icon">${ICONO.corazon}</div><h2>${esc(titulo)}</h2><p>${esc(f.hero?.subtitulo || "Hacelo parte de tu rutina con una experiencia clara y sin complicaciones.")}</p>${pagepilotBlueButton(g, "Compralo ahora")}</div></div></section>`;
+  }
+
+  function pagepilotBlueFaq(f) {
+    const q = f.faq || {};
+    const items = (q.items || []).map((item) => `<details><summary>${esc(item.pregunta || "Pregunta frecuente")}<span>+</span></summary><p>${esc(item.respuesta || "Consultá las condiciones y el modo de uso del producto.")}</p></details>`).join("");
+    if (!items) return "";
+    return `<section class="tiq-ppb__faq" data-bloque="faq"><div class="tiq-ppb__wrap"><header class="tiq-ppb__section-head"><h2>${esc(q.titular || "Preguntas frecuentes")}</h2><p>${esc(q.subtitulo || "Todo lo que necesitás saber antes de comprar.")}</p></header><div class="tiq-ppb__faq-list">${items}</div></div></section>`;
+  }
+
+  function pagepilotBlueSticky(f, g) {
+    const titulo = f.hero?.titulo || "Producto";
+    return `<div class="tiq-ppb__sticky"><div class="tiq-ppb__sticky-inner"><div class="tiq-ppb__sticky-product">${img(f.hero?.galeria?.[0], titulo, { ancho: 64 })}<strong>${esc(titulo)}</strong></div>${pagepilotBlueButton(g, "Añadir al carrito")}</div></div>`;
+  }
+
+  function renderPagepilotBlue(data) {
+    const f = data.facetas || {};
+    const g = data.global || {};
+    return `<div class="tiq-ppb">${[pagepilotBlueHero(f, data.fuente || {}, g), pagepilotBlueTicker(f), pagepilotBlueSocial(f, g), pagepilotBlueTextImage(f, g), pagepilotBlueFeature(f), pagepilotBlueReviews(f), pagepilotBlueStats(f), pagepilotBlueComparison(f, g), pagepilotBlueCtaPanel(f, g), pagepilotBlueFaq(f), `<div class="tiq-ppb__recommendations">${recomendados(f.recomendados || { modo: "placeholder", items: [] })}</div>`, pagepilotBlueSticky(f, g)].filter(Boolean).join("\n")}</div>`;
+  }
+
   function renderPremium(data, opts = {}) {
     const f = data.facetas;
     const g = data.global;
@@ -1196,6 +1314,7 @@
   function render(data, opts = {}) {
     const f = data.facetas;
     const g = data.global;
+    if (g && g.estilo === "pagepilot-blue") return renderPagepilotBlue(data, opts);
     if (g && g.estilo === "pagepilot") return renderPagepilot(data, opts);
     // Modelo de página elegido en la creación. "clasico" = comportamiento de
     // siempre; "premium" = armado alternativo (timer + comparación + marquee).
@@ -1294,14 +1413,21 @@
 
   // interacción mínima de la galería
   window.cambiarPrincipal = function (mediaId, boton) {
-    const principal = document.getElementById("imagen-principal");
+    const principal = document.getElementById("imagen-principal") || document.getElementById("tiq-ppb-main");
     if (!principal) return;
     principal.innerHTML = img(mediaId);
-    document.querySelectorAll(".hero__mini, .tiq-pp__thumb").forEach((m) => {
+    document.querySelectorAll(".hero__mini, .tiq-pp__thumb, .tiq-ppb__thumb").forEach((m) => {
       m.classList.remove("activa");
       m.classList.remove("is-active");
     });
-    boton.classList.add(boton.classList.contains("tiq-pp__thumb") ? "is-active" : "activa");
+    boton.classList.add(boton.classList.contains("tiq-pp__thumb") || boton.classList.contains("tiq-ppb__thumb") ? "is-active" : "activa");
+  };
+
+  window.tiqPpbMover = function (delta) {
+    const thumbs = Array.from(document.querySelectorAll(".tiq-ppb__thumb"));
+    if (!thumbs.length) return;
+    const actual = Math.max(0, thumbs.findIndex((thumb) => thumb.classList.contains("is-active")));
+    thumbs[(actual + delta + thumbs.length) % thumbs.length].click();
   };
 
   // Agregar al carrito sin salir de la página: POST a /cart/add.js (la API

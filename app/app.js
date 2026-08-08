@@ -1179,6 +1179,14 @@
         tags: ["Editorial", "Galería", "Reviews"],
         activa: true,
         tipo: "premium"
+      },
+      {
+        id: "pagepilot-blue",
+        nombre: "PagePilot Blue",
+        subtitulo: "Producto editorial azul, prueba social, comparación y CTA fijo.",
+        tags: ["Editorial", "Comparación", "Azul"],
+        activa: true,
+        tipo: "premium"
       }
     ];
 
