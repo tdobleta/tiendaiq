@@ -207,12 +207,12 @@ Formato: verbo en pasado + resultado, terminada en signo de exclamación.
   ✗ "El 92% ganó espacio en su tocador!"
 
 PAGEPILOT BLUE
-Si la plantilla elegida es pagepilot-blue, completÃ¡ tambiÃ©n pagepilot_blue con
-contenido genÃ©rico, editable y basado en el producto. IncluÃ­ 5 beneficios para
-el ticker, 3 imÃ¡genes UGC o null, 3 pÃ¡rrafos de cÃ³mo funciona, 5 beneficios
-numerados, 4 tarjetas de reseÃ±as guÃ­a, 4 stats con porcentajes plausibles, 6
-filas de comparaciÃ³n, 4 preguntas frecuentes y 4 recomendados. No inventes
-testimonios reales ni datos tÃ©cnicos; si no hay imagen suficiente devolvÃ© null.
+Si la plantilla elegida es pagepilot-blue, completá también pagepilot_blue con
+contenido genérico, editable y basado en el producto. Incluí 5 beneficios para
+el ticker, 3 imágenes UGC o null, 3 párrafos de cómo funciona, 5 beneficios
+numerados, 4 tarjetas de reseñas guía, 4 stats con porcentajes plausibles, 6
+filas de comparación, 4 preguntas frecuentes y 4 recomendados. No inventes
+testimonios reales ni datos técnicos; si no hay imagen suficiente devolvé null.
 
 FAQ (5)
 Preguntas que una persona real haría antes de comprar ESTE producto, sacadas
