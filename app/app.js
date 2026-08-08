@@ -1753,6 +1753,30 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
             <div class="ayuda">Una reseña por bloque, separadas por una línea en blanco: la primera línea es el nombre y el resto el texto. Van reemplazando las tarjetas guía desde la primera.</div>
           </div>` +
           tarjetasMuro
+      },
+      pagepilot_blue: {
+        titulo: "Plantilla PagePilot Blue",
+        html: () => {
+          const pb = f.pagepilot_blue || (f.pagepilot_blue = {});
+          const social = pb.social || (pb.social = {});
+          const how = pb.como_funciona || (pb.como_funciona = {});
+          const feature = pb.feature || (pb.feature = {});
+          const panel = pb.panel || (pb.panel = {});
+          const items = Array.isArray(feature.items) ? feature.items : (feature.items = Array.from({ length: 5 }, () => ({ titulo: "", frase: "" })));
+          const ticker = Array.isArray(pb.ticker) ? pb.ticker : (pb.ticker = Array.from({ length: 5 }, () => ({ texto: "", icono: "check" })));
+          const socialImgs = Array.isArray(social.imagenes) ? social.imagenes : (social.imagenes = [null, null, null]);
+          const pagos = Array.isArray(pb.pagos) ? pb.pagos : (pb.pagos = ["amex", "apple", "visa", "mastercard", "paypal", "gpay", "shop"]);
+          const pagoNombres = { amex: "American Express", apple: "Apple Pay", visa: "Visa", mastercard: "Mastercard", paypal: "PayPal", gpay: "Google Pay", shop: "Shop Pay" };
+          const val = (ruta, fallback = "") => esc(leer(estado.pagina.data, ruta) ?? fallback);
+          const input = (ruta, label, fallback = "") => `<div class="campo campo--editor"><label>${label}</label><input type="text" data-ruta="${ruta}" value="${val(ruta, fallback)}"></div>`;
+          return `<div class="editor__ayuda">Esta composición mantiene todas las secciones de la preview. Los textos, imágenes y medios de pago son editables y los placeholders se reemplazan sin tocar el tema de Shopify.</div>` +
+            input("facetas.pagepilot_blue.badge", "Badge superior", "#1 EL MÁS VENDIDO DE 2026") +
+            `<h3 class="pe-prop__subheader">Ticker</h3>` + ticker.slice(0, 5).map((_, i) => input(`facetas.pagepilot_blue.ticker.${i}.texto`, `Mensaje ${i + 1}`, "Calidad pensada para todos los días")).join("") +
+            `<h3 class="pe-prop__subheader">Prueba social</h3>` + input("facetas.pagepilot_blue.social.titular", "Titular", "Miles confían. Personas reales eligen calidad.") + input("facetas.pagepilot_blue.social.subtitulo", "Subtítulo", "Descubrí una experiencia pensada para hacer más simple tu rutina.") + input("facetas.pagepilot_blue.social.cta", "Texto del botón", "Obtené el tuyo ahora") + socialImgs.slice(0, 3).map((_, i) => input(`facetas.pagepilot_blue.social.imagenes.${i}`, `Imagen UGC ${i + 1}`, "tiq-placeholder-ugc-" + (i + 1) + ".svg")).join("") +
+            `<h3 class="pe-prop__subheader">Cómo funciona</h3>` + input("facetas.pagepilot_blue.como_funciona.titular", "Titular", "¿Cómo funciona este producto?") + [0, 1, 2].map((i) => input(`facetas.pagepilot_blue.como_funciona.parrafos.${i}`, `Párrafo ${i + 1}`, "Texto editable de la sección.")).join("") + input("facetas.pagepilot_blue.como_funciona.imagen", "Imagen", "tiq-placeholder-detail.svg") +
+            `<h3 class="pe-prop__subheader">5 beneficios</h3>` + input("facetas.pagepilot_blue.feature.titular", "Titular", "5 beneficios para todos los días") + input("facetas.pagepilot_blue.feature.subtitulo", "Subtítulo", "Todo lo que necesitás para sumar una mejora real a tu rutina.") + items.slice(0, 5).map((_, i) => input(`facetas.pagepilot_blue.feature.items.${i}.titulo`, `Beneficio ${i + 1}`, "Beneficio diario") + input(`facetas.pagepilot_blue.feature.items.${i}.frase`, `Descripción ${i + 1}`, "Pensado para acompañarte con comodidad.")).join("") + input("facetas.pagepilot_blue.feature.imagen", "Imagen del bloque", "tiq-placeholder-detail.svg") +
+            `<h3 class="pe-prop__subheader">Panel azul y pagos</h3>` + input("facetas.pagepilot_blue.panel.titular", "Titular del panel", "Una mejora simple para cada día") + input("facetas.pagepilot_blue.panel.subtitulo", "Texto del panel", "Sumá una solución pensada para acompañarte con comodidad.") + input("facetas.pagepilot_blue.panel.imagen", "Imagen del panel", "tiq-placeholder-detail.svg") + `<div class="campo campo--editor"><label>Medios de pago activos</label><div class="fila-triple">${Object.entries(pagoNombres).map(([id, nombre]) => `<label><input type="checkbox" data-ppb-payment="${id}"${pagos.includes(id) ? " checked" : ""}> ${nombre}</label>`).join("")}</div></div>`;
+        }
       }
     };
   }
@@ -2053,6 +2077,16 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         return;
       }
       if (e.target.id === "btn-lote") return cargarLote();
+      const ppbPago = e.target.closest("[data-ppb-payment]");
+      if (ppbPago) {
+        const ruta = "facetas.pagepilot_blue.pagos";
+        const pagos = leer(estado.pagina.data, ruta) || [];
+        const idPago = ppbPago.dataset.ppbPayment;
+        fijar(estado.pagina.data, ruta, ppbPago.checked ? [...new Set([...pagos, idPago])] : pagos.filter((id) => id !== idPago));
+        marcarSucio();
+        repintarPreview();
+        return;
+      }
       // preset de un toque del botón de compra: setea forma/borde/mayús/ícono juntos
       const bp = e.target.closest("[data-boton-preset]");
       if (bp) {
@@ -2199,6 +2233,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   // A qué modal lleva cada bloque de la página. El orden importa: gana el
   // primer selector que matchee con closest().
   const ZONAS_EDICION = [
+    { sel: ".tiq-ppb__social, .tiq-ppb__text-image, .tiq-ppb__feature, .tiq-ppb__reviews, .tiq-ppb__stats-section, .tiq-ppb__comparison, .tiq-ppb__cta-panel, .tiq-ppb__faq, .tiq-ppb__recommendations", id: "pagepilot_blue" },
     { sel: ".hero__galeria, .pp-gallery-col", id: "galeria" },
     { sel: ".hero__bullets, .pp-benefits", id: "bullets" },
     { sel: ".hero__resenas, .hero__titulo, .hero__subtitulo, .hero__precios, .hero__cantidad, .pp-rating, #pp-product-title, .pp-lead, .pp-price", id: "encabezado" },
@@ -2261,7 +2296,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     };
 
     // Nombre legible de la zona (para el chip) + sync con la fila del árbol.
-    const NOMBRE_ZONA = { encabezado: "Encabezado", galeria: "Galería", bullets: "Beneficios", destacada: "Reseña destacada", acordeones: "Envío y devoluciones", iconos: "Íconos", stats: "Estadísticas", tabla: "Comparación", garantia: "Garantía", faq: "Preguntas frecuentes", resenas: "Reseñas", clientes: "Muro de clientes" };
+    const NOMBRE_ZONA = { pagepilot_blue: "PagePilot Blue", encabezado: "Encabezado", galeria: "Galería", bullets: "Beneficios", destacada: "Reseña destacada", acordeones: "Envío y devoluciones", iconos: "Íconos", stats: "Estadísticas", tabla: "Comparación", garantia: "Garantía", faq: "Preguntas frecuentes", resenas: "Reseñas", clientes: "Muro de clientes" };
     const nombreZona = (zid) => {
       if (zid.startsWith("sec:")) { const s = (estado.pagina.data.secciones || []).find((x) => x.id === zid.slice(4)); return s ? (catSeccion(s.tipo)?.nombre || "Sección") : "Sección"; }
       return NOMBRE_ZONA[zid] || zid;
@@ -3277,6 +3312,16 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
 
     p.addEventListener("click", (e) => {
       const t = e.target;
+      const ppbPago = t.closest("[data-ppb-payment]");
+      if (ppbPago) {
+        const ruta = "facetas.pagepilot_blue.pagos";
+        const pagos = leer(estado.pagina.data, ruta) || [];
+        const idPago = ppbPago.dataset.ppbPayment;
+        fijar(estado.pagina.data, ruta, ppbPago.checked ? [...new Set([...pagos, idPago])] : pagos.filter((id) => id !== idPago));
+        marcarSucio();
+        repintarPreview();
+        return;
+      }
       if (t === p.querySelector(".sec-panel__x") || t.closest(".sec-panel__x")) return cerrarPanelSeccion();
       const aiTrigger = t.closest("[data-ai-text]");
       if (aiTrigger) { abrirAiText(aiTrigger.dataset.aiText); return; }
@@ -3367,7 +3412,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       row("bullets", "Beneficios", I.beneficios) + row("destacada", "Reseña destacada", I.estrella) +
       row("resenas", "Reseñas", I.estrella);
     const v2 = (estado.pagina.data.secciones || []).map((s) => row("sec:" + s.id, catSeccion(s.tipo)?.nombre || "Sección", I.lista)).join("");
-    const extraOriginal = row("clientes", "Muro de clientes", I.video) + row("acordeones", "Envío y devoluciones", I.lista) +
+    const extraOriginal = row("pagepilot_blue", "PagePilot Blue", I.grupo) + row("clientes", "Muro de clientes", I.video) + row("acordeones", "Envío y devoluciones", I.lista) +
       row("faq", "Preguntas frecuentes", I.lista) + row("iconos", "Garantías / íconos", I.beneficios) +
       row("stats", "Estadísticas", I.lista) + v2;
     const extra = row("tabla", "Comparación", I.lista) + row("garantia", "Garantía", I.lista) + extraOriginal;

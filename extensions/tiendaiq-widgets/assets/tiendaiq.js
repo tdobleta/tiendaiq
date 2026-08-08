@@ -1273,9 +1273,169 @@
   }
 
   function renderPagepilotBlue(data) {
+    return renderPagepilotBlueExact(data);
+  }
+
+  const PPB_ASSETS = {
+    ugc: ["tiq-placeholder-ugc-1.svg", "tiq-placeholder-ugc-2.svg", "tiq-placeholder-ugc-3.svg"],
+    detail: "tiq-placeholder-detail.svg",
+    payments: {
+      amex: "tiq-payment-amex.svg", apple: "tiq-payment-apple.svg", visa: "tiq-payment-visa.svg",
+      mastercard: "tiq-payment-mastercard.svg", paypal: "tiq-payment-paypal.svg", gpay: "tiq-payment-gpay.svg", shop: "tiq-payment-shop.svg"
+    }
+  };
+  const PPB_DEFAULTS = {
+    badge: "#1 EL MÁS VENDIDO DE 2026",
+    ticker: ["Calidad pensada para todos los días", "Resultados simples y rápidos", "Diseño cómodo para tu rutina", "Una experiencia que se disfruta", "Elegí una solución práctica"],
+    social: { titular: "Miles confían. Personas reales eligen calidad.", subtitulo: "Descubrí una experiencia pensada para hacer más simple tu rutina.", cta: "Obtené el tuyo ahora", rating: "Calificado con 4.9/5 por clientes satisfechos", imagenes: [] },
+    como_funciona: { titular: "¿Cómo funciona este producto?", parrafos: ["Su diseño está pensado para resolver una necesidad cotidiana de forma simple.", "Usalo como parte de tu rutina y disfrutá una experiencia cómoda desde el primer momento.", "Una propuesta práctica para acompañarte todos los días, sin pasos innecesarios."], cta: "Compralo ahora", imagen: null },
+    feature: { titular: "5 beneficios para todos los días", subtitulo: "Todo lo que necesitás para sumar una mejora real a tu rutina.", items: ["Uso sencillo", "Diseño práctico", "Resultados claros", "Mantenimiento simple", "Para todos los días"].map((titulo) => ({ titulo, frase: "Pensado para acompañarte con comodidad." })), imagen: null },
+    reviews: { badge: "Basado en reseñas confiables", titular: "Lo que dicen quienes ya lo tienen", subtitulo: "Opiniones reales de clientes que organizaron su rutina.", items: ["Cliente 1", "Cliente 2", "Cliente 3", "Cliente 4"].map((autor, i) => ({ autor, estrellas: 5, texto: "Me resultó práctico y fácil de incorporar a mi rutina.", imagen: null })) },
+    blue_stats: { titular: "Lo que dicen los números", subtitulo: "Resultados que se sienten en la rutina.", items: [{ pct: 98, frase: "Notaron una mejora en su rutina." }, { pct: 100, frase: "Encontraron una forma más simple de usarlo." }, { pct: 100, frase: "Recomendaron la experiencia a otra persona." }, { pct: 96, frase: "Sintieron más confianza al usarlo." }] },
+    comparison: { titular: "Comparalo vos misma", parrafo: "Mirá por qué esta propuesta se destaca frente a las alternativas.", cta: "Obtené el tuyo ahora", filas: ["Diseño práctico", "Uso sencillo", "Cuidado diario", "Mantenimiento", "Versatilidad", "Durabilidad"], otros: "Otros" },
+    panel: { titular: "Una mejora simple para cada día", subtitulo: "Sumá una solución pensada para acompañarte con comodidad.", cta: "Compralo ahora", imagen: null },
+    faq: { titular: "Preguntas frecuentes", subtitulo: "Todo lo que necesitás saber antes de comprarlo.", items: ["¿De qué material está hecho?", "¿Cómo se usa?", "¿Cómo se limpia o mantiene?", "¿Qué pasa si no estoy conforme?"].map((pregunta) => ({ pregunta, respuesta: "Consultá la ficha del producto y la política de devolución para conocer todos los detalles." })) },
+    recomendados: ["Producto recomendado", "Accesorio recomendado", "Complemento diario", "Opción favorita"].map((titulo) => ({ imagen: null, titulo, precio: "19.99", comparativo: "24.99", descuento: "20%" }))
+  };
+
+  const ppbPick = (obj, key, fallback) => obj?.[key] !== undefined && obj?.[key] !== null && obj?.[key] !== "" ? obj[key] : fallback;
+  const ppbAssetUrl = (name) => {
+    if (!name) return "";
+    if (/^(https?:|data:|\/)/.test(name)) return name;
+    if (EN_TIENDA && window.TIENDAIQ_ASSET_BASE) return window.TIENDAIQ_ASSET_BASE + name;
+    return `/widgets/${name}`;
+  };
+  const ppbAssetImg = (name, alt = "") => `<img src="${esc(ppbAssetUrl(name))}" alt="${esc(alt)}" loading="lazy" decoding="async">`;
+  const ppbAssetOrMedia = (value, alt, fallback) => value ? (/\.svg$|\.png$|\.jpe?g$|\.webp$/.test(String(value)) ? ppbAssetImg(value, alt) : img(value, alt)) : ppbAssetImg(fallback, alt);
+  const ppbText = (value, fallback) => esc(value || fallback);
+
+  function ppbBlue(data) {
     const f = data.facetas || {};
-    const g = data.global || {};
-    return `<div class="tiq-ppb">${[pagepilotBlueHero(f, data.fuente || {}, g), pagepilotBlueTicker(f), pagepilotBlueSocial(f, g), pagepilotBlueTextImage(f, g), pagepilotBlueFeature(f), pagepilotBlueReviews(f), pagepilotBlueStats(f), pagepilotBlueComparison(f, g), pagepilotBlueCtaPanel(f, g), pagepilotBlueFaq(f), `<div class="tiq-ppb__recommendations">${recomendados(f.recomendados || { modo: "placeholder", items: [] })}</div>`, pagepilotBlueSticky(f, g)].filter(Boolean).join("\n")}</div>`;
+    const raw = f.pagepilot_blue || {};
+    const b = {
+      ...PPB_DEFAULTS,
+      ...raw,
+      social: { ...PPB_DEFAULTS.social, ...(raw.social || {}) },
+      como_funciona: { ...PPB_DEFAULTS.como_funciona, ...(raw.como_funciona || {}) },
+      feature: { ...PPB_DEFAULTS.feature, ...(raw.feature || {}) },
+      reviews: { ...PPB_DEFAULTS.reviews, ...(raw.reviews || {}) },
+      blue_stats: { ...PPB_DEFAULTS.blue_stats, ...(raw.blue_stats || {}) },
+      comparison: { ...PPB_DEFAULTS.comparison, ...(raw.comparison || {}) },
+      panel: { ...PPB_DEFAULTS.panel, ...(raw.panel || {}) },
+      faq: { ...PPB_DEFAULTS.faq, ...(raw.faq || {}) },
+      recomendados: Array.isArray(raw.recomendados) && raw.recomendados.length ? raw.recomendados : PPB_DEFAULTS.recomendados
+    };
+    b.ticker = Array.isArray(raw.ticker) && raw.ticker.length ? raw.ticker : PPB_DEFAULTS.ticker;
+    b.pagos = Array.isArray(raw.pagos) && raw.pagos.length ? raw.pagos : ["amex", "apple", "visa", "mastercard", "paypal", "gpay", "shop"];
+    b.social.imagenes = Array.isArray(raw.social?.imagenes) ? raw.social.imagenes : [];
+    b.como_funciona.parrafos = Array.isArray(raw.como_funciona?.parrafos) && raw.como_funciona.parrafos.length ? raw.como_funciona.parrafos : PPB_DEFAULTS.como_funciona.parrafos;
+    b.feature.items = Array.isArray(raw.feature?.items) && raw.feature.items.length ? raw.feature.items : PPB_DEFAULTS.feature.items;
+    b.reviews.items = Array.isArray(raw.reviews?.items) && raw.reviews.items.length ? raw.reviews.items : PPB_DEFAULTS.reviews.items;
+    b.blue_stats.items = Array.isArray(raw.blue_stats?.items) && raw.blue_stats.items.length ? raw.blue_stats.items : PPB_DEFAULTS.blue_stats.items;
+    b.comparison.filas = Array.isArray(raw.comparison?.filas) && raw.comparison.filas.length ? raw.comparison.filas : PPB_DEFAULTS.comparison.filas;
+    b.faq.items = Array.isArray(raw.faq?.items) && raw.faq.items.length ? raw.faq.items : PPB_DEFAULTS.faq.items;
+    if (!Array.isArray(raw.reviews?.items) || !raw.reviews.items.length) {
+      const existentes = (f.resenas?.items || []).filter((item) => item?.texto).slice(0, 4);
+      if (existentes.length) b.reviews.items = existentes.map((item, i) => ({ autor: item.autor || `Cliente ${i + 1}`, estrellas: item.estrellas || 5, texto: item.texto, imagen: item.imagen || null }));
+    }
+    if (!Array.isArray(raw.blue_stats?.items) || !raw.blue_stats.items.length) {
+      const existentes = (f.stats?.items || []).filter((item) => item?.frase).slice(0, 4);
+      if (existentes.length) b.blue_stats.items = existentes.map((item, i) => ({ pct: [98, 100, 100, 96][i], frase: item.frase }));
+    }
+    if (!Array.isArray(raw.comparison?.filas) || !raw.comparison.filas.length) b.comparison.filas = (f.tabla?.filas || []).filter(Boolean).slice(0, 6).length ? (f.tabla.filas || []).filter(Boolean).slice(0, 6) : b.comparison.filas;
+    if (!Array.isArray(raw.faq?.items) || !raw.faq.items.length) b.faq.items = (f.faq?.items || []).filter((item) => item?.pregunta).slice(0, 4).length ? (f.faq.items || []).filter((item) => item?.pregunta).slice(0, 4) : b.faq.items;
+    while (b.blue_stats.items.length < 4) b.blue_stats.items.push(PPB_DEFAULTS.blue_stats.items[b.blue_stats.items.length]);
+    while (b.comparison.filas.length < 6) b.comparison.filas.push(PPB_DEFAULTS.comparison.filas[b.comparison.filas.length]);
+    return b;
+  }
+
+  function ppbAddButton(g, label, extra = "") {
+    const variante = EN_TIENDA ? window.TIENDAIQ_VARIANT : null;
+    const contenido = `${g.boton_icono !== false ? CART_ICO : ""}<span>${esc(label || g.cta || "Comprar ahora")}</span>`;
+    const attrs = `class="tiq-ppb__cta ${extra}" data-ppb-add`;
+    if (!variante) return `<button type="button" ${attrs}>${contenido}</button>`;
+    return `<form method="post" action="/cart/add" onsubmit="return tiqPpbAgregar(event)"><input type="hidden" name="id" value="${esc(variante)}"><input type="hidden" name="quantity" value="1"><button type="submit" ${attrs}>${contenido}</button></form>`;
+  }
+
+  function ppbHero(data, b) {
+    const f = data.facetas || {}, h = f.hero || {}, fuente = data.fuente || {}, g = data.global || {};
+    const titulo = h.titulo || fuente.titulo_crudo || "Producto";
+    const gallery = Array.isArray(h.galeria) && h.galeria.length ? h.galeria : [null, null, null, null, null];
+    const thumbs = gallery.slice(0, 5).map((id, i) => `<button type="button" class="tiq-ppb__thumb${i === 0 ? " is-active" : ""}" onclick="cambiarPrincipal('${esc(id || "")}', this)" aria-label="Imagen ${i + 1}">${id ? img(id, titulo, { ancho: 160 }) : ppbAssetImg(PPB_ASSETS.detail, titulo)}</button>`).join("");
+    const bullets = (Array.isArray(h.bullets) && h.bullets.length ? h.bullets : [{ fuerte: "Mirada más expresiva", resto: "" }, { fuerte: "Rutina más rápida", resto: "" }, { fuerte: "Sensación muy ligera", resto: "" }, { fuerte: "Uso diario sencillo", resto: "" }]).slice(0, 4).map((item) => `<li><span class="tiq-ppb__benefit-icon">${pagepilotBlueIcon(item)}</span><span>${esc(pagepilotBlueText(item) || "Beneficio del producto")}</span></li>`).join("");
+    const accordionData = (Array.isArray(h.acordeones) ? h.acordeones : []).slice(0, 3);
+    const accordionDefaults = [{ titulo: "Descripción", contenido: "Conocé los detalles y beneficios del producto." }, { titulo: "Cómo usar", contenido: "Usalo siguiendo las indicaciones de la ficha del producto." }, { titulo: "Envíos y devoluciones", contenido: "Consultá las condiciones de envío y devolución antes de comprar." }];
+    while (accordionData.length < 3) accordionData.push(accordionDefaults[accordionData.length]);
+    const accordions = accordionData.map((item) => `<details><summary>${esc(item.titulo || "Información del producto")}<span>⌄</span></summary><p>${esc(item.contenido || "Consultá la información del producto antes de comprar.")}</p></details>`).join("");
+    const review = h.resena_destacada || {};
+    const avatar = imgAsset(review.avatar, `<span class="tiq-ppb__avatar-fallback">${esc((review.autor || "C").slice(0, 1))}</span>`);
+    const precio = precioBonito(fuente.moneda, fuente.precio || "0.00");
+    const anterior = fuente.precio_comparativo ? precioBonito(fuente.moneda, fuente.precio_comparativo) : "";
+    const ahorro = Number(fuente.precio) && Number(fuente.precio_comparativo) > Number(fuente.precio) ? Math.round((1 - Number(fuente.precio) / Number(fuente.precio_comparativo)) * 100) : 0;
+    const reviewText = review.texto || "Una experiencia práctica y simple para sumar a tu rutina diaria.";
+    return `<section class="tiq-ppb__hero" data-bloque="hero"><div class="tiq-ppb__wrap tiq-ppb__hero-grid"><div class="tiq-ppb__gallery"><div id="tiq-ppb-main" class="tiq-ppb__gallery-main">${gallery[0] ? img(gallery[0], titulo, { hero: true }) : ppbAssetImg(PPB_ASSETS.detail, titulo)}<button type="button" class="tiq-ppb__gallery-arrow tiq-ppb__gallery-arrow--prev" onclick="tiqPpbMover(-1)" aria-label="Imagen anterior">‹</button><button type="button" class="tiq-ppb__gallery-arrow tiq-ppb__gallery-arrow--next" onclick="tiqPpbMover(1)" aria-label="Imagen siguiente">›</button></div><div class="tiq-ppb__thumbs">${thumbs}</div></div><div class="tiq-ppb__buy"><div class="tiq-ppb__badge"><b>★</b><span>${ppbText(b.badge, PPB_DEFAULTS.badge)}</span></div><h1>${esc(titulo)}</h1><div class="tiq-ppb__rating">${estrellas(Math.max(1, Math.min(5, Math.round(Number(h.puntaje || 5)))))} <span>Calificado con <strong>${esc(puntaje1(h.puntaje ?? 4.9))}/5</strong> por más de <strong>${esc(miles(h.resenas_count || 0))}</strong> personas</span></div><ul class="tiq-ppb__benefits">${bullets}</ul><div class="tiq-ppb__price">${anterior ? `<del>${esc(anterior)}</del>` : ""}<strong>${esc(precio)}</strong>${ahorro ? `<span class="tiq-ppb__save">AHORRÁ ${ahorro}%</span>` : ""}</div>${ppbAddButton(g, g.cta || "Añadir al carrito")}<div class="tiq-ppb__trust"><span>${ICONO.verificado} Garantía de devolución de 30 días</span><span>${ICONO.paquete} Envío y devoluciones simples</span></div><div class="tiq-ppb__payments" aria-label="Medios de pago">${b.pagos.slice(0, 7).map((id) => PPB_ASSETS.payments[id] ? ppbAssetImg(PPB_ASSETS.payments[id], id) : "").join("")}</div><div class="tiq-ppb__accordions">${accordions}</div><div class="tiq-ppb__guarantee">${ICONO.corazon}<span>Menos del 1% de los clientes solicita nuestra garantía de devolución</span></div><blockquote class="tiq-ppb__quote"><button type="button" aria-label="Reseña anterior">‹</button><span class="tiq-ppb__quote-avatar">${avatar}</span><div class="tiq-ppb__quote-body"><div class="tiq-ppb__quote-stars">${estrellas(review.estrellas || 5)}</div><p>"${esc(reviewText)}"</p><cite>${ICONO.verificado} ${esc(review.autor || "Cliente verificado")}</cite></div><button type="button" aria-label="Reseña siguiente">›</button></blockquote></div></div></section>`;
+  }
+
+  function ppbTicker(b) {
+    const items = b.ticker.slice(0, 5).map((item) => typeof item === "string" ? { texto: item } : item);
+    const pills = items.concat(items).map((item, i) => `<span><i>${ICONOS_BULLET[item.icono] || ICONOS_BULLET.check}</i>${esc(item.texto || "Beneficio del producto")}</span>`).join("");
+    return `<section class="tiq-ppb__ticker" aria-label="Beneficios del producto"><div class="tiq-ppb__ticker-track">${pills}</div></section>`;
+  }
+
+  function ppbSocial(data, b) {
+    const existing = (data.facetas?.resenas?.items || []).map((item) => item?.imagen).filter(Boolean).slice(0, 3);
+    const images = b.social.imagenes.length ? b.social.imagenes.slice(0, 3) : (existing.length ? existing : PPB_ASSETS.ugc);
+    return `<section class="tiq-ppb__social" data-bloque="clientes"><div class="tiq-ppb__wrap tiq-ppb__social-grid"><div><h2>${esc(b.social.titular)}</h2><p>${esc(b.social.subtitulo)}</p>${ppbAddButton(data.global || {}, b.social.cta)}<div class="tiq-ppb__social-rating">${estrellas(5)} <span>${esc(b.social.rating)}</span></div></div><div class="tiq-ppb__ugc-grid">${images.map((id, i) => `<article class="tiq-ppb__ugc">${ppbAssetOrMedia(id, `Contenido de cliente ${i + 1}`, PPB_ASSETS.ugc[i % 3])}</article>`).join("")}</div></div></section>`;
+  }
+
+  function ppbTextImage(data, b) {
+    const imagen = b.como_funciona.imagen || data.facetas?.stats?.imagen || data.facetas?.hero?.galeria?.[0];
+    return `<section class="tiq-ppb__text-image" data-bloque="stats"><div class="tiq-ppb__wrap tiq-ppb__text-image-grid"><div><h2>${esc(b.como_funciona.titular)}</h2>${b.como_funciona.parrafos.slice(0, 3).map((p) => `<p>${esc(p)}</p>`).join("")}${ppbAddButton(data.global || {}, b.como_funciona.cta)}</div><div class="tiq-ppb__media">${ppbAssetOrMedia(imagen, b.como_funciona.titular, PPB_ASSETS.detail)}</div></div></section>`;
+  }
+
+  function ppbFeature(data, b) {
+    const imagen = b.feature.imagen || data.facetas?.iconos?.imagen_central || data.facetas?.hero?.galeria?.[0];
+    const items = b.feature.items.slice(0, 5).map((item, i) => `<li><span class="tiq-ppb__feature-number">${i + 1}</span><span><strong>${esc(item.titulo || "Beneficio diario")}</strong>${esc(item.frase || "Pensado para acompañarte con comodidad.")}</span></li>`).join("");
+    return `<section class="tiq-ppb__feature" data-bloque="iconos"><div class="tiq-ppb__wrap tiq-ppb__feature-grid"><div class="tiq-ppb__media tiq-ppb__feature-media">${ppbAssetOrMedia(imagen, b.feature.titular, PPB_ASSETS.detail)}</div><div><h2>${esc(b.feature.titular)}</h2><p>${esc(b.feature.subtitulo)}</p><ul class="tiq-ppb__feature-list">${items}</ul></div></div></section>`;
+  }
+
+  function ppbReviews(b) {
+    const items = b.reviews.items.slice(0, 4).map((item, i) => `<article class="tiq-ppb__review"><div class="tiq-ppb__review-media">${ppbAssetOrMedia(item.imagen, item.autor || "Cliente", PPB_ASSETS.ugc[i % 3])}</div><strong>${esc(item.autor || "Cliente verificado")}</strong>${estrellas(item.estrellas || 5)}<p>${esc(item.texto || "Una experiencia práctica para todos los días.")}</p></article>`).join("");
+    return `<section class="tiq-ppb__reviews" data-bloque="resenas"><div class="tiq-ppb__wrap"><header class="tiq-ppb__section-head"><div class="tiq-ppb__pill">${estrellas(5)} ${esc(b.reviews.badge)}</div><h2>${esc(b.reviews.titular)}</h2><p>${esc(b.reviews.subtitulo)}</p></header><div class="tiq-ppb__reviews-grid">${items}</div></div></section>`;
+  }
+
+  function ppbStats(b) {
+    return `<section class="tiq-ppb__stats-section" data-bloque="stats"><div class="tiq-ppb__wrap"><header class="tiq-ppb__section-head"><h2>${esc(b.blue_stats.titular)}</h2><p>${esc(b.blue_stats.subtitulo)}</p></header><div class="tiq-ppb__stats-grid">${b.blue_stats.items.slice(0, 4).map((item) => `<article><b>${esc(item.pct ?? 0)}%</b><p>${esc(item.frase || "Notaron una mejora en su rutina.")}</p></article>`).join("")}</div></div></section>`;
+  }
+
+  function ppbComparison(data, b) {
+    const rows = b.comparison.filas.slice(0, 6).map((fila) => `<div class="tiq-ppb__compare-row"><span>${esc(fila)}</span><b>${ICONOS_BULLET.check}</b><b class="is-no">×</b></div>`).join("");
+    return `<section class="tiq-ppb__comparison" data-bloque="tabla"><div class="tiq-ppb__wrap tiq-ppb__comparison-grid"><div><h2>${esc(b.comparison.titular)}</h2><p>${esc(b.comparison.parrafo)}</p>${ppbAddButton(data.global || {}, b.comparison.cta)}</div><div class="tiq-ppb__compare"><div class="tiq-ppb__compare-head"><span></span><strong>Nuestro producto</strong><strong>${esc(b.comparison.otros)}</strong></div>${rows}</div></div></section>`;
+  }
+
+  function ppbPanel(data, b) {
+    const imagen = b.panel.imagen || data.facetas?.stats?.imagen || data.facetas?.hero?.galeria?.[0];
+    return `<section class="tiq-ppb__cta-panel"><div class="tiq-ppb__wrap tiq-ppb__cta-panel-grid"><div class="tiq-ppb__media">${ppbAssetOrMedia(imagen, b.panel.titular, PPB_ASSETS.detail)}</div><div><div class="tiq-ppb__cta-panel-icon">${ICONO.corazon}</div><h2>${esc(b.panel.titular)}</h2><p>${esc(b.panel.subtitulo)}</p>${ppbAddButton(data.global || {}, b.panel.cta)}</div></div></section>`;
+  }
+
+  function ppbFaq(b) {
+    return `<section class="tiq-ppb__faq" data-bloque="faq"><div class="tiq-ppb__wrap"><header class="tiq-ppb__section-head"><h2>${esc(b.faq.titular)}</h2><p>${esc(b.faq.subtitulo)}</p></header><div class="tiq-ppb__faq-list">${b.faq.items.slice(0, 4).map((item) => `<details><summary>${esc(item.pregunta)}<span>+</span></summary><p>${esc(item.respuesta)}</p></details>`).join("")}</div></div></section>`;
+  }
+
+  function ppbRecommendations(data, b) {
+    const moneda = data.fuente?.moneda;
+    const cards = b.recomendados.slice(0, 4).map((item, i) => `<article class="tiq-ppb__rec-card"><div class="tiq-ppb__rec-image">${ppbAssetOrMedia(item.imagen, item.titulo, PPB_ASSETS.detail)}</div><strong>${esc(item.titulo || "Producto recomendado")}</strong><div class="tiq-ppb__rec-price">${esc(precioBonito(moneda, item.precio || "19.99"))} <del>${esc(precioBonito(moneda, item.comparativo || "24.99"))}</del></div><span>${esc(item.descuento || "20%")} DE DESCUENTO</span></article>`).join("");
+    return `<section class="tiq-ppb__recommendations"><div class="tiq-ppb__wrap"><header class="tiq-ppb__section-head"><h2>Productos recomendados</h2></header><div class="tiq-ppb__rec-track">${cards}</div></div></section>`;
+  }
+
+  function ppbSticky(data) {
+    const h = data.facetas?.hero || {}, titulo = h.titulo || data.fuente?.titulo_crudo || "Producto";
+    return `<div class="tiq-ppb__sticky"><div class="tiq-ppb__sticky-inner"><div class="tiq-ppb__sticky-product">${h.galeria?.[0] ? img(h.galeria[0], titulo, { ancho: 64 }) : ppbAssetImg(PPB_ASSETS.detail, titulo)}<strong>${esc(titulo)}</strong></div>${ppbAddButton(data.global || {}, data.global?.cta || "Añadir al carrito", "tiq-ppb__sticky-cta")}</div></div><div class="tiq-ppb__toast" role="status" aria-live="polite">Producto agregado al carrito de demostración</div>`;
+  }
+
+  function renderPagepilotBlueExact(data) {
+    const b = ppbBlue(data);
+    return `<div class="tiq-ppb">${[ppbHero(data, b), ppbTicker(b), ppbSocial(data, b), ppbTextImage(data, b), ppbFeature(data, b), ppbReviews(b), ppbStats(b), ppbComparison(data, b), ppbPanel(data, b), ppbFaq(b), ppbRecommendations(data, b), ppbSticky(data)].join("\n")}</div>`;
   }
 
   function renderPremium(data, opts = {}) {
@@ -1441,6 +1601,18 @@
     thumbs[(actual + delta + thumbs.length) % thumbs.length].click();
   };
 
+  window.tiqPpbMostrarToast = function () {
+    const toast = document.querySelector(".tiq-ppb__toast");
+    if (!toast) return;
+    toast.classList.add("is-visible");
+    clearTimeout(toast._tiqTimer);
+    toast._tiqTimer = setTimeout(() => toast.classList.remove("is-visible"), 2200);
+  };
+  window.tiqPpbAgregar = function (ev) {
+    window.tiqPpbMostrarToast();
+    return window.tiendaiqAgregar(ev);
+  };
+
   // Agregar al carrito sin salir de la página: POST a /cart/add.js (la API
   // AJAX de Shopify), feedback en el botón y aviso al tema por si tiene
   // contador de carrito. Si el fetch falla, cae al POST clásico del form.
@@ -1505,6 +1677,13 @@
     iniciarTimers(); // countdown de la barra de oferta (estilo premium)
     // Solo en la tienda: el preview no tiene storefront al que preguntarle.
     if (EN_TIENDA) cargarRecomendados(datos?.fuente?.moneda);
+    if (!document.documentElement._tiqPpbClick) {
+      document.documentElement._tiqPpbClick = true;
+      document.addEventListener("click", (ev) => {
+        const btn = ev.target.closest?.("[data-ppb-add]");
+        if (btn && !btn.closest("form")) window.tiqPpbMostrarToast();
+      });
+    }
   }
 
   if (DATOS) {

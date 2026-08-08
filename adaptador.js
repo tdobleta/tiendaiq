@@ -206,6 +206,14 @@ Formato: verbo en pasado + resultado, terminada en signo de exclamación.
   ✓ "Ganaron espacio en su tocador!"
   ✗ "El 92% ganó espacio en su tocador!"
 
+PAGEPILOT BLUE
+Si la plantilla elegida es pagepilot-blue, completÃ¡ tambiÃ©n pagepilot_blue con
+contenido genÃ©rico, editable y basado en el producto. IncluÃ­ 5 beneficios para
+el ticker, 3 imÃ¡genes UGC o null, 3 pÃ¡rrafos de cÃ³mo funciona, 5 beneficios
+numerados, 4 tarjetas de reseÃ±as guÃ­a, 4 stats con porcentajes plausibles, 6
+filas de comparaciÃ³n, 4 preguntas frecuentes y 4 recomendados. No inventes
+testimonios reales ni datos tÃ©cnicos; si no hay imagen suficiente devolvÃ© null.
+
 FAQ (5)
 Preguntas que una persona real haría antes de comprar ESTE producto, sacadas
 de las dudas que genera la descripción. Respuestas de 2 frases.
@@ -392,6 +400,24 @@ const ESQUEMA = {
           },
           required: ["titular", "subtitulo", "guias"],
           additionalProperties: false
+        },
+        pagepilot_blue: {
+          type: "object",
+          properties: {
+            badge: { type: "string" },
+            ticker: { type: "array", items: { type: "object", properties: { icono: { type: "string" }, texto: { type: "string" } }, required: ["icono", "texto"], additionalProperties: false } },
+            pagos: { type: "array", items: { type: "string", enum: ["amex", "apple", "visa", "mastercard", "paypal", "gpay", "shop"] } },
+            social: { type: "object", properties: { titular: { type: "string" }, subtitulo: { type: "string" }, cta: { type: "string" }, rating: { type: "string" }, imagenes: { type: "array", items: { type: ["string", "null"] } } }, required: ["titular", "subtitulo", "cta", "rating", "imagenes"], additionalProperties: false },
+            como_funciona: { type: "object", properties: { titular: { type: "string" }, parrafos: { type: "array", items: { type: "string" } }, cta: { type: "string" }, imagen: { type: ["string", "null"] } }, required: ["titular", "parrafos", "cta", "imagen"], additionalProperties: false },
+            feature: { type: "object", properties: { titular: { type: "string" }, subtitulo: { type: "string" }, items: { type: "array", items: { type: "object", properties: { titulo: { type: "string" }, frase: { type: "string" } }, required: ["titulo", "frase"], additionalProperties: false } }, imagen: { type: ["string", "null"] } }, required: ["titular", "subtitulo", "items", "imagen"], additionalProperties: false },
+            reviews: { type: "object", properties: { badge: { type: "string" }, titular: { type: "string" }, subtitulo: { type: "string" }, items: { type: "array", items: { type: "object", properties: { autor: { type: "string" }, estrellas: { type: "integer" }, texto: { type: "string" }, imagen: { type: ["string", "null"] } }, required: ["autor", "estrellas", "texto", "imagen"], additionalProperties: false } } }, required: ["badge", "titular", "subtitulo", "items"], additionalProperties: false },
+            blue_stats: { type: "object", properties: { titular: { type: "string" }, subtitulo: { type: "string" }, items: { type: "array", items: { type: "object", properties: { pct: { type: "integer" }, frase: { type: "string" } }, required: ["pct", "frase"], additionalProperties: false } } }, required: ["titular", "subtitulo", "items"], additionalProperties: false },
+            comparison: { type: "object", properties: { titular: { type: "string" }, parrafo: { type: "string" }, cta: { type: "string" }, filas: { type: "array", items: { type: "string" } }, otros: { type: "string" } }, required: ["titular", "parrafo", "cta", "filas", "otros"], additionalProperties: false },
+            panel: { type: "object", properties: { titular: { type: "string" }, subtitulo: { type: "string" }, cta: { type: "string" }, imagen: { type: ["string", "null"] } }, required: ["titular", "subtitulo", "cta", "imagen"], additionalProperties: false },
+            faq: { type: "object", properties: { titular: { type: "string" }, subtitulo: { type: "string" }, items: { type: "array", items: { type: "object", properties: { pregunta: { type: "string" }, respuesta: { type: "string" } }, required: ["pregunta", "respuesta"], additionalProperties: false } } }, required: ["titular", "subtitulo", "items"], additionalProperties: false },
+            recomendados: { type: "array", items: { type: "object", properties: { imagen: { type: ["string", "null"] }, titulo: { type: "string" }, precio: { type: "string" }, comparativo: { type: "string" }, descuento: { type: "string" } }, required: ["imagen", "titulo", "precio", "comparativo", "descuento"], additionalProperties: false } }
+          },
+          additionalProperties: false
         }
       },
       required: [
@@ -507,7 +533,16 @@ const CARDINALIDAD = {
   "tabla.filas": 5,
   "stats.items": 3,
   "faq.items": 5,
-  "resenas.guias": 10
+  "resenas.guias": 10,
+  "pagepilot_blue.ticker": 5,
+  "pagepilot_blue.social.imagenes": 3,
+  "pagepilot_blue.como_funciona.parrafos": 3,
+  "pagepilot_blue.feature.items": 5,
+  "pagepilot_blue.reviews.items": 4,
+  "pagepilot_blue.blue_stats.items": 4,
+  "pagepilot_blue.comparison.filas": 6,
+  "pagepilot_blue.faq.items": 4,
+  "pagepilot_blue.recomendados": 4
 };
 
 function leer(obj, ruta) {
@@ -556,6 +591,7 @@ function validar(data, salidaCruda) {
 
 function ensamblar(fuente, salida, { idioma, angulo }) {
   const f = salida.facetas;
+  const pb = f.pagepilot_blue || {};
 
   // Recorta a la cardinalidad de la plantilla. Si el modelo devolvió de más,
   // sobran; si devolvió de menos, el aviso ya lo marcó y la faceta renderiza
@@ -624,7 +660,97 @@ function ensamblar(fuente, salida, { idioma, angulo }) {
           texto: g
         }))
       },
-      recomendados: { modo: "placeholder", items: [] }
+      recomendados: { modo: "placeholder", items: [] },
+      pagepilot_blue: {
+        badge: pb.badge || "#1 EL MÁS VENDIDO DE 2026",
+        ticker: fijo(pb.ticker, 5).length ? fijo(pb.ticker, 5) : [
+          { icono: "escudo", texto: "Calidad pensada para todos los días" },
+          { icono: "reloj", texto: "Resultados simples y rápidos" },
+          { icono: "hoja", texto: "Diseño cómodo para tu rutina" },
+          { icono: "brillo", texto: "Una experiencia que se disfruta" },
+          { icono: "check", texto: "Elegí una solución práctica" }
+        ],
+        pagos: Array.isArray(pb.pagos) && pb.pagos.length ? pb.pagos.slice(0, 7) : ["amex", "apple", "visa", "mastercard", "paypal", "gpay", "shop"],
+        social: {
+          titular: pb.social?.titular || "Miles confían. Personas reales eligen calidad.",
+          subtitulo: pb.social?.subtitulo || "Descubrí una experiencia pensada para hacer más simple tu rutina.",
+          cta: pb.social?.cta || "Obtené el tuyo ahora",
+          rating: pb.social?.rating || "Calificado con 4.9/5 por clientes satisfechos",
+          imagenes: fijo(pb.social?.imagenes, 3)
+        },
+        como_funciona: {
+          titular: pb.como_funciona?.titular || "¿Cómo funciona este producto?",
+          parrafos: fijo(pb.como_funciona?.parrafos, 3).length ? fijo(pb.como_funciona.parrafos, 3) : [
+            "Su diseño está pensado para resolver una necesidad cotidiana de forma simple.",
+            "Usalo como parte de tu rutina y disfrutá una experiencia cómoda desde el primer momento.",
+            "Una propuesta práctica para acompañarte todos los días, sin pasos innecesarios."
+          ],
+          cta: pb.como_funciona?.cta || "Compralo ahora",
+          imagen: pb.como_funciona?.imagen || null
+        },
+        feature: {
+          titular: pb.feature?.titular || "5 beneficios para todos los días",
+          subtitulo: pb.feature?.subtitulo || "Todo lo que necesitás para sumar una mejora real a tu rutina.",
+          items: fijo(pb.feature?.items, 5).length ? fijo(pb.feature.items, 5) : [
+            { titulo: "Uso sencillo", frase: "Incorporalo a tu rutina sin pasos innecesarios." },
+            { titulo: "Diseño práctico", frase: "Pensado para acompañarte con comodidad." },
+            { titulo: "Resultados claros", frase: "Disfrutá una experiencia fácil de entender." },
+            { titulo: "Mantenimiento simple", frase: "Cuidalo y tenelo listo para volver a usar." },
+            { titulo: "Para todos los días", frase: "Una solución versátil para distintos momentos." }
+          ],
+          imagen: pb.feature?.imagen || null
+        },
+        reviews: {
+          badge: pb.reviews?.badge || "Basado en reseñas confiables",
+          titular: pb.reviews?.titular || "Lo que dicen quienes ya lo tienen",
+          subtitulo: pb.reviews?.subtitulo || "Opiniones reales de clientes que organizaron su rutina.",
+          items: fijo(pb.reviews?.items, 4).length ? fijo(pb.reviews.items, 4) : [
+            { autor: "Cliente 1", estrellas: 5, texto: "Me resultó práctico y fácil de incorporar a mi rutina.", imagen: null },
+            { autor: "Cliente 2", estrellas: 5, texto: "Me gusta que sea simple de usar y guardar.", imagen: null },
+            { autor: "Cliente 3", estrellas: 5, texto: "Cumple con lo que necesitaba para el día a día.", imagen: null },
+            { autor: "Cliente 4", estrellas: 5, texto: "Una compra útil, cómoda y sencilla de mantener.", imagen: null }
+          ]
+        },
+        blue_stats: {
+          titular: pb.blue_stats?.titular || "Lo que dicen los números",
+          subtitulo: pb.blue_stats?.subtitulo || "Resultados que se sienten en la rutina.",
+          items: fijo(pb.blue_stats?.items, 4).length ? fijo(pb.blue_stats.items, 4) : [
+            { pct: 98, frase: "Notaron una mejora en su rutina." },
+            { pct: 100, frase: "Encontraron una forma más simple de usarlo." },
+            { pct: 100, frase: "Recomendaron la experiencia a otra persona." },
+            { pct: 96, frase: "Sintieron más confianza al usarlo." }
+          ]
+        },
+        comparison: {
+          titular: pb.comparison?.titular || "Comparalo vos misma",
+          parrafo: pb.comparison?.parrafo || "Mirá por qué esta propuesta se destaca frente a las alternativas.",
+          cta: pb.comparison?.cta || "Obtené el tuyo ahora",
+          filas: fijo(pb.comparison?.filas, 6).length ? fijo(pb.comparison.filas, 6) : ["Diseño práctico", "Uso sencillo", "Cuidado diario", "Mantenimiento", "Versatilidad", "Durabilidad"],
+          otros: pb.comparison?.otros || "Otros"
+        },
+        panel: {
+          titular: pb.panel?.titular || "Una mejora simple para cada día",
+          subtitulo: pb.panel?.subtitulo || "Sumá una solución pensada para acompañarte con comodidad.",
+          cta: pb.panel?.cta || "Compralo ahora",
+          imagen: pb.panel?.imagen || null
+        },
+        faq: {
+          titular: pb.faq?.titular || "Preguntas frecuentes",
+          subtitulo: pb.faq?.subtitulo || "Todo lo que necesitás saber antes de comprarlo.",
+          items: fijo(pb.faq?.items, 4).length ? fijo(pb.faq.items, 4) : [
+            { pregunta: "¿De qué material está hecho?", respuesta: "Consultá la ficha del producto para conocer los materiales disponibles." },
+            { pregunta: "¿Cómo se usa?", respuesta: "Usalo siguiendo las indicaciones de la ficha y adaptalo a tu rutina." },
+            { pregunta: "¿Cómo se limpia o mantiene?", respuesta: "Limpiá el producto con el método recomendado para conservarlo en buen estado." },
+            { pregunta: "¿Qué pasa si no estoy conforme?", respuesta: "Contás con la política de devolución indicada en tu compra." }
+          ]
+        },
+        recomendados: fijo(pb.recomendados, 4).length ? fijo(pb.recomendados, 4) : [
+          { imagen: null, titulo: "Producto recomendado", precio: "19.99", comparativo: "24.99", descuento: "20%" },
+          { imagen: null, titulo: "Accesorio recomendado", precio: "19.99", comparativo: "24.99", descuento: "20%" },
+          { imagen: null, titulo: "Complemento diario", precio: "19.99", comparativo: "24.99", descuento: "20%" },
+          { imagen: null, titulo: "Opción favorita", precio: "19.99", comparativo: "24.99", descuento: "20%" }
+        ]
+      }
     },
     global: { cta: "Agregar al carrito", idioma, angulo, nicho: salida.nicho || "general" }
   };

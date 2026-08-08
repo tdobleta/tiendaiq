@@ -1194,3 +1194,73 @@ body.publicada #app .resena-destacada__editar { display: none; }
   #app .tiq-ppb__sticky-product strong { font-size: 12px; }
   #app .tiq-ppb__sticky .tiq-ppb__cta { min-width: 0; width: auto; padding: 12px 14px; font-size: 11px; }
 }
+
+/* Paridad fina con la especificación standalone de pagepilot-blue. */
+#app .tiq-ppb { --ppb-blue: #2927d7; --ppb-blue-2: #5e5be8; --ppb-ink: #25262d; --ppb-muted: #666873; --ppb-soft: #f2f3ff; --ppb-line: #dedee5; font-family: Arial, Helvetica, sans-serif; color: var(--ppb-ink); }
+#app .tiq-ppb__hero { padding: 34px 0 28px; }
+#app .tiq-ppb__gallery-main { border-radius: 10px; }
+#app .tiq-ppb__gallery-arrow { width: 40px; height: 40px; border-radius: 8px; box-shadow: none; }
+#app .tiq-ppb__gallery-arrow--prev { left: 12px; }
+#app .tiq-ppb__gallery-arrow--next { right: 12px; }
+#app .tiq-ppb__thumbs { gap: 9px; }
+#app .tiq-ppb__thumb { border-radius: 8px; }
+#app .tiq-ppb__buy h1 { font-size: clamp(32px, 4vw, 44px); }
+#app .tiq-ppb__badge { border-radius: 7px; }
+#app .tiq-ppb__benefits li { min-height: 44px; }
+#app .tiq-ppb__payments img { width: auto; height: 20px; max-width: 72px; border-radius: 3px; }
+#app .tiq-ppb__quote { grid-template-columns: 28px 45px minmax(0, 1fr) 28px; }
+#app .tiq-ppb__quote > button { grid-row: 1; }
+#app .tiq-ppb__quote > button:first-child { grid-column: 1; }
+#app .tiq-ppb__quote-avatar { grid-column: 2; }
+#app .tiq-ppb__quote-body { grid-column: 3; }
+#app .tiq-ppb__quote > button:last-child { grid-column: 4; }
+#app .tiq-ppb__social, #app .tiq-ppb__text-image, #app .tiq-ppb__feature, #app .tiq-ppb__reviews, #app .tiq-ppb__stats-section, #app .tiq-ppb__comparison, #app .tiq-ppb__cta-panel, #app .tiq-ppb__faq, #app .tiq-ppb__recommendations { padding-top: 70px; padding-bottom: 70px; }
+#app .tiq-ppb__ugc { aspect-ratio: 3 / 5; }
+#app .tiq-ppb__social-rating { display: flex; align-items: center; gap: 8px; margin-top: 16px; color: var(--ppb-muted); font-size: 13px; }
+#app .tiq-ppb__social-rating .estrellas { color: var(--ppb-blue); letter-spacing: 1px; }
+#app .tiq-ppb__media { min-height: 330px; aspect-ratio: 1 / 1; }
+#app .tiq-ppb__media .ph-img { min-height: 330px; }
+#app .tiq-ppb__feature-media img { aspect-ratio: 1 / 1; }
+#app .tiq-ppb__stats-section { background: #fff; }
+#app .tiq-ppb__stats-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); max-width: 920px; }
+#app .tiq-ppb__stats-grid article { min-height: 185px; background: linear-gradient(135deg, #6764e1, #2927d7); }
+#app .tiq-ppb__stats-grid article b { width: 76px; height: 76px; }
+#app .tiq-ppb__compare-head { background: linear-gradient(180deg, #5e5be8, #817ff6); }
+#app .tiq-ppb__comparison-grid { grid-template-columns: .9fr 1.1fr; }
+#app .tiq-ppb__cta-panel-grid { padding: 16px; }
+#app .tiq-ppb__cta-panel-grid .tiq-ppb__media { min-height: 0; }
+#app .tiq-ppb__recommendations { background: #fff; }
+#app .tiq-ppb__rec-track { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+#app .tiq-ppb__rec-card { min-width: 0; }
+#app .tiq-ppb__rec-image { aspect-ratio: 1 / 1; margin-bottom: 10px; overflow: hidden; border-radius: 8px; background: #f2f2f4; }
+#app .tiq-ppb__rec-image img { width: 100%; height: 100%; object-fit: cover; }
+#app .tiq-ppb__rec-card strong { display: block; font-size: 14px; }
+#app .tiq-ppb__rec-price { margin-top: 6px; font-size: 12px; }
+#app .tiq-ppb__rec-price del { color: #888; margin-left: 4px; }
+#app .tiq-ppb__rec-card > span { display: inline-block; margin-top: 6px; padding: 3px 6px; border-radius: 999px; background: var(--ppb-blue); color: #fff; font-size: 10px; font-weight: 800; }
+#app .tiq-ppb__sticky { min-height: 68px; padding: 8px 0; }
+#app .tiq-ppb__sticky .tiq-ppb__cta { min-height: 44px; width: 220px; }
+#app .tiq-ppb__toast { position: fixed; right: 22px; bottom: 88px; z-index: 120; padding: 12px 16px; border-radius: 8px; background: #202126; color: #fff; font-size: 13px; opacity: 0; pointer-events: none; transform: translateY(8px); transition: opacity .2s ease, transform .2s ease; }
+#app .tiq-ppb__toast.is-visible { opacity: 1; transform: translateY(0); }
+#app .tiq-ppb__cta form { width: 100%; }
+
+@media (max-width: 900px) {
+  #app .tiq-ppb__hero-grid, #app .tiq-ppb__social-grid, #app .tiq-ppb__text-image-grid, #app .tiq-ppb__feature-grid, #app .tiq-ppb__comparison-grid, #app .tiq-ppb__cta-panel-grid { grid-template-columns: 1fr; gap: 28px; }
+  #app .tiq-ppb__comparison-grid { text-align: center; }
+  #app .tiq-ppb__comparison-grid .tiq-ppb__cta { margin-left: auto; margin-right: auto; }
+  #app .tiq-ppb__stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 600px) {
+  #app .tiq-ppb__wrap, #app .tiq-ppb__sticky-inner { width: calc(100% - 28px); }
+  #app .tiq-ppb__hero { padding-top: 14px; }
+  #app .tiq-ppb__benefits { grid-template-columns: 1fr; }
+  #app .tiq-ppb__social, #app .tiq-ppb__text-image, #app .tiq-ppb__feature, #app .tiq-ppb__reviews, #app .tiq-ppb__stats-section, #app .tiq-ppb__comparison, #app .tiq-ppb__cta-panel, #app .tiq-ppb__faq, #app .tiq-ppb__recommendations { padding-top: 48px; padding-bottom: 48px; }
+  #app .tiq-ppb__reviews-grid { grid-template-columns: 1fr; }
+  #app .tiq-ppb__stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #app .tiq-ppb__stats-grid article { min-height: 155px; }
+  #app .tiq-ppb__stats-grid article b { width: 58px; height: 58px; font-size: 16px; }
+  #app .tiq-ppb__compare-head, #app .tiq-ppb__compare-row { grid-template-columns: minmax(0, 1fr) 88px 58px; }
+  #app .tiq-ppb__rec-track { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #app .tiq-ppb__sticky .tiq-ppb__cta { width: 45vw; min-width: 0; padding-left: 10px; padding-right: 10px; }
+  #app .tiq-ppb__toast { right: 14px; bottom: 78px; max-width: calc(100% - 28px); }
+}
