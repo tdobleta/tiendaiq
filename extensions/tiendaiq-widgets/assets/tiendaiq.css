@@ -1264,3 +1264,152 @@ body.publicada #app .resena-destacada__editar { display: none; }
   #app .tiq-ppb__sticky .tiq-ppb__cta { width: 45vw; min-width: 0; padding-left: 10px; padding-right: 10px; }
   #app .tiq-ppb__toast { right: 14px; bottom: 78px; max-width: calc(100% - 28px); }
 }
+
+/* PagePilot Blue: valores del HTML de referencia, con el scope del widget. */
+#app .tiq-ppb {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 16px;
+  line-height: normal;
+  color: #25262d;
+}
+#app .tiq-ppb h1,
+#app .tiq-ppb h2 { font-weight: 700; }
+#app .tiq-ppb h2 { font-size: clamp(28px, 3.2vw, 40px); line-height: 1.1; }
+#app .tiq-ppb__hero { padding: 34px 0 28px; }
+#app .tiq-ppb__hero-grid { grid-template-columns: minmax(0, 1fr) minmax(390px, .94fr); gap: 28px; }
+#app .tiq-ppb__gallery-main { border-radius: 10px; }
+#app .tiq-ppb__gallery-arrow { width: 40px; height: 40px; border-radius: 8px; box-shadow: 0 3px 12px rgba(41, 39, 215, .13); font-size: 28px; }
+#app .tiq-ppb__gallery-arrow--prev { left: 12px; }
+#app .tiq-ppb__gallery-arrow--next { right: 12px; }
+#app .tiq-ppb__thumbs { gap: 9px; margin-top: 12px; }
+#app .tiq-ppb__thumb { border: 1px solid #d7d7df; border-radius: 9px; }
+#app .tiq-ppb__thumb.is-active { border-width: 2px; }
+#app .tiq-ppb__badge { gap: 8px; padding: 7px 10px; border-radius: 8px; color: #3431c7; background: #fbfbff; font-size: 12px; }
+#app .tiq-ppb__badge b { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 5px; color: #fff; background: #2927d7; font-size: 12px; }
+#app .tiq-ppb__buy h1 { margin: 14px 0 6px; font-size: clamp(32px, 4vw, 44px); line-height: 1.04; }
+#app .tiq-ppb__rating { gap: 7px; padding: 0; border-bottom: 0; color: #4d4e57; font-size: 13px; }
+#app .tiq-ppb__rating .estrellas { color: #3935df; letter-spacing: 1px; }
+#app .tiq-ppb__benefits { gap: 8px; margin: 16px 0 12px; padding: 0; border-bottom: 0; }
+#app .tiq-ppb__benefits li { align-items: center; gap: 9px; min-height: 44px; padding: 8px 10px; border-radius: 9px; background: #f4f5ff; color: #4d4f58; font-size: 13px; }
+#app .tiq-ppb__benefit-icon { flex: 0 0 28px; width: 28px; height: 28px; background: #fff; font-size: 16px; }
+#app .tiq-ppb__benefit-icon svg { width: 16px; height: 16px; }
+#app .tiq-ppb__price { gap: 9px; padding: 11px 0; border-top: 1px solid #dedee5; color: #25262d; }
+#app .tiq-ppb__price del { color: #909099; }
+#app .tiq-ppb__price strong { font-size: 20px; }
+#app .tiq-ppb__save { padding: 4px 8px; border-radius: 7px; background: #6865ef; font-size: 11px; }
+#app .tiq-ppb__cta { min-height: 52px; border-radius: 8px; }
+#app .tiq-ppb__trust { justify-content: center; gap: 16px; padding: 10px 0 6px; color: #555762; font-size: 11px; }
+#app .tiq-ppb__payments { gap: 8px; padding: 5px 0 12px; }
+#app .tiq-ppb__payments img { width: auto; height: 20px; max-width: 72px; padding: 2px 5px; border: 1px solid #dddde4; border-radius: 3px; background: #fff; }
+#app .tiq-ppb__accordions { gap: 6px; }
+#app .tiq-ppb__accordions details { border-radius: 7px; background: #f1f1f2; }
+#app .tiq-ppb__accordions summary { padding: 10px 12px; font-size: 13px; }
+#app .tiq-ppb__accordions details p { padding: 0 12px 11px; font-size: 12px; }
+#app .tiq-ppb__guarantee { gap: 8px; margin: 8px 0; padding: 9px 10px; border-radius: 7px; font-size: 11px; }
+#app .tiq-ppb__quote { grid-template-columns: auto 42px minmax(0, 1fr) auto; gap: 10px; margin-top: 9px; padding: 13px 12px; border-radius: 9px; }
+#app .tiq-ppb__quote > button { width: auto; height: auto; border-radius: 0; font-size: 25px; }
+#app .tiq-ppb__quote-avatar,
+#app .tiq-ppb__quote-avatar > img,
+#app .tiq-ppb__quote-avatar .tiq-ppb__avatar-fallback { width: 42px; height: 42px; }
+#app .tiq-ppb__quote p { margin: 3px 0; font-size: 12px; line-height: 1.35; }
+#app .tiq-ppb__ticker { padding: 10px 0; }
+#app .tiq-ppb__ticker-track { gap: 30px; animation-duration: 28s; }
+#app .tiq-ppb__ticker-track span { min-width: 170px; padding: 0; border-radius: 0; background: transparent; color: #fff; font-size: 13px; }
+#app .tiq-ppb__ticker-track i { width: 26px; height: 26px; border-radius: 50%; color: #2927d7; background: #fff; }
+#app .tiq-ppb__social-grid,
+#app .tiq-ppb__text-image-grid,
+#app .tiq-ppb__feature-grid,
+#app .tiq-ppb__comparison-grid,
+#app .tiq-ppb__cta-panel-grid { grid-template-columns: minmax(0, .92fr) minmax(0, 1.08fr); gap: 44px; }
+#app .tiq-ppb__social,
+#app .tiq-ppb__text-image,
+#app .tiq-ppb__feature,
+#app .tiq-ppb__reviews,
+#app .tiq-ppb__stats-section,
+#app .tiq-ppb__comparison,
+#app .tiq-ppb__cta-panel,
+#app .tiq-ppb__faq { padding: 70px 0; }
+#app .tiq-ppb__social p,
+#app .tiq-ppb__comparison p,
+#app .tiq-ppb__text-image p,
+#app .tiq-ppb__feature p,
+#app .tiq-ppb__cta-panel p { font-size: 15px; }
+#app .tiq-ppb__ugc { aspect-ratio: 3 / 5; border-radius: 10px; }
+#app .tiq-ppb__media { min-height: 330px; border-radius: 10px; }
+#app .tiq-ppb__media img { min-height: 330px; }
+#app .tiq-ppb__feature-list { gap: 8px; margin: 22px 0 0; }
+#app .tiq-ppb__feature-list li { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid #d9dbee; font-size: 14px; }
+#app .tiq-ppb__feature-number { width: 28px; height: 28px; flex: 0 0 28px; }
+#app .tiq-ppb__reviews { background: #fff; }
+#app .tiq-ppb__stats-section { background: #f2f3ff; }
+#app .tiq-ppb__stats-grid { grid-template-columns: repeat(4, 1fr); max-width: 920px; gap: 13px; }
+#app .tiq-ppb__stats-grid article { min-height: 185px; padding: 24px 15px 18px; border-radius: 8px; background: linear-gradient(135deg, #6764e1, #2927d7); }
+#app .tiq-ppb__stats-grid article b { width: 76px; height: 76px; margin-bottom: 17px; }
+#app .tiq-ppb__comparison-grid { grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); }
+#app .tiq-ppb__compare { border-radius: 9px; }
+#app .tiq-ppb__compare-head { min-height: 80px; background: transparent; }
+#app .tiq-ppb__compare-head > * { padding: 10px; }
+#app .tiq-ppb__compare-head strong:nth-child(2) { color: #fff; background: #2927d7; }
+#app .tiq-ppb__compare-head strong:last-child { color: #25262d; background: #fff; }
+#app .tiq-ppb__compare-row { min-height: 56px; border-bottom: 1px solid #e2e2e7; border-top: 0; font-size: 13px; }
+#app .tiq-ppb__compare-row > * { padding: 10px; }
+#app .tiq-ppb__compare-row b { color: #fff; background: #7775ef; }
+#app .tiq-ppb__compare-row b.is-no { color: #ed3847; background: #fff; }
+#app .tiq-ppb__cta-panel { background: #2927d7; color: #fff; }
+#app .tiq-ppb__cta-panel-grid { padding: 0; border-radius: 0; background: transparent; }
+#app .tiq-ppb__cta-panel-grid .tiq-ppb__media { background: #fff; }
+#app .tiq-ppb__recommendations { padding: 70px 0 110px; }
+#app .tiq-ppb__rec-track { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px; }
+#app .tiq-ppb__rec-image { aspect-ratio: 1; border-radius: 8px; }
+#app .tiq-ppb__sticky { min-height: 68px; padding: 0; }
+#app .tiq-ppb__sticky-inner { min-height: 68px; }
+#app .tiq-ppb__sticky .tiq-ppb__cta { width: 220px; min-height: 44px; }
+
+@media (max-width: 900px) {
+  #app .tiq-ppb__hero-grid,
+  #app .tiq-ppb__social-grid,
+  #app .tiq-ppb__text-image-grid,
+  #app .tiq-ppb__feature-grid,
+  #app .tiq-ppb__comparison-grid,
+  #app .tiq-ppb__cta-panel-grid { grid-template-columns: 1fr; gap: 28px; }
+  #app .tiq-ppb__comparison-grid { text-align: center; }
+  #app .tiq-ppb__comparison-grid .tiq-ppb__cta { margin-right: auto; margin-left: auto; }
+  #app .tiq-ppb__stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #app .tiq-ppb__reviews-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 600px) {
+  #app .tiq-ppb__wrap,
+  #app .tiq-ppb__sticky-inner { width: calc(100% - 28px); }
+  #app .tiq-ppb__hero { padding-top: 14px; }
+  #app .tiq-ppb__benefits { grid-template-columns: 1fr; gap: 7px; }
+  #app .tiq-ppb__benefits li { align-items: flex-start; font-size: 12px; }
+  #app .tiq-ppb__benefit-icon { flex-basis: 28px; }
+  #app .tiq-ppb__trust { align-items: flex-start; flex-direction: column; }
+  #app .tiq-ppb__quote { grid-template-columns: 38px minmax(0, 1fr); gap: 8px; }
+  #app .tiq-ppb__quote > button:first-child { display: none; }
+  #app .tiq-ppb__quote > button:last-child { display: none; }
+  #app .tiq-ppb__quote-avatar,
+  #app .tiq-ppb__quote-avatar > img,
+  #app .tiq-ppb__quote-avatar .tiq-ppb__avatar-fallback { width: 38px; height: 38px; }
+  #app .tiq-ppb__social,
+  #app .tiq-ppb__text-image,
+  #app .tiq-ppb__feature,
+  #app .tiq-ppb__reviews,
+  #app .tiq-ppb__stats-section,
+  #app .tiq-ppb__comparison,
+  #app .tiq-ppb__cta-panel,
+  #app .tiq-ppb__faq,
+  #app .tiq-ppb__recommendations { padding-top: 48px; padding-bottom: 48px; }
+  #app .tiq-ppb__reviews-grid { grid-template-columns: 1fr; }
+  #app .tiq-ppb__stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  #app .tiq-ppb__stats-grid article { min-height: 155px; padding: 15px 8px; }
+  #app .tiq-ppb__stats-grid article b { width: 58px; height: 58px; margin-bottom: 10px; font-size: 16px; }
+  #app .tiq-ppb__compare-head,
+  #app .tiq-ppb__compare-row { grid-template-columns: minmax(0, 1fr) 88px 58px; }
+  #app .tiq-ppb__compare-head strong,
+  #app .tiq-ppb__compare-row span { font-size: 11px; }
+  #app .tiq-ppb__rec-track { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #app .tiq-ppb__sticky .tiq-ppb__cta { width: 45vw; min-width: 0; padding: 10px 8px; font-size: 12px; }
+  #app .tiq-ppb__sticky-product strong { max-width: 43vw; font-size: 12px; }
+}

@@ -211,7 +211,9 @@ Si la plantilla elegida es pagepilot-blue, completá también pagepilot_blue con
 contenido genérico, editable y basado en el producto. Incluí 5 beneficios para
 el ticker, 3 imágenes UGC o null, 3 párrafos de cómo funciona, 5 beneficios
 numerados, 4 tarjetas de reseñas guía, 4 stats con porcentajes plausibles, 6
-filas de comparación, 4 preguntas frecuentes y 4 recomendados. No inventes
+filas de comparación, 5 preguntas frecuentes y 5 recomendados. Incluí también
+3 acordeones del hero con los títulos "Descripción", "Cómo usar" y "Envíos y devoluciones".
+No inventes
 testimonios reales ni datos técnicos; si no hay imagen suficiente devolvé null.
 
 FAQ (5)
@@ -407,7 +409,7 @@ const ESQUEMA = {
             badge: { type: "string" },
             ticker: { type: "array", items: { type: "object", properties: { icono: { type: "string" }, texto: { type: "string" } }, required: ["icono", "texto"], additionalProperties: false } },
             pagos: { type: "array", items: { type: "string", enum: ["amex", "apple", "visa", "mastercard", "paypal", "gpay", "shop"] } },
-            social: { type: "object", properties: { titular: { type: "string" }, subtitulo: { type: "string" }, cta: { type: "string" }, rating: { type: "string" }, imagenes: { type: "array", items: { type: ["string", "null"] } } }, required: ["titular", "subtitulo", "cta", "rating", "imagenes"], additionalProperties: false },
+            social: { type: "object", properties: { titular: { type: "string" }, enfasis: { type: "string" }, subtitulo: { type: "string" }, cta: { type: "string" }, rating: { type: "string" }, imagenes: { type: "array", items: { type: ["string", "null"] } } }, required: ["titular", "enfasis", "subtitulo", "cta", "rating", "imagenes"], additionalProperties: false },
             como_funciona: { type: "object", properties: { titular: { type: "string" }, parrafos: { type: "array", items: { type: "string" } }, cta: { type: "string" }, imagen: { type: ["string", "null"] } }, required: ["titular", "parrafos", "cta", "imagen"], additionalProperties: false },
             feature: { type: "object", properties: { titular: { type: "string" }, subtitulo: { type: "string" }, items: { type: "array", items: { type: "object", properties: { titulo: { type: "string" }, frase: { type: "string" } }, required: ["titulo", "frase"], additionalProperties: false } }, imagen: { type: ["string", "null"] } }, required: ["titular", "subtitulo", "items", "imagen"], additionalProperties: false },
             reviews: { type: "object", properties: { badge: { type: "string" }, titular: { type: "string" }, subtitulo: { type: "string" }, items: { type: "array", items: { type: "object", properties: { autor: { type: "string" }, estrellas: { type: "integer" }, texto: { type: "string" }, imagen: { type: ["string", "null"] } }, required: ["autor", "estrellas", "texto", "imagen"], additionalProperties: false } } }, required: ["badge", "titular", "subtitulo", "items"], additionalProperties: false },
@@ -415,6 +417,7 @@ const ESQUEMA = {
             comparison: { type: "object", properties: { titular: { type: "string" }, parrafo: { type: "string" }, cta: { type: "string" }, filas: { type: "array", items: { type: "string" } }, otros: { type: "string" } }, required: ["titular", "parrafo", "cta", "filas", "otros"], additionalProperties: false },
             panel: { type: "object", properties: { titular: { type: "string" }, subtitulo: { type: "string" }, cta: { type: "string" }, imagen: { type: ["string", "null"] } }, required: ["titular", "subtitulo", "cta", "imagen"], additionalProperties: false },
             faq: { type: "object", properties: { titular: { type: "string" }, subtitulo: { type: "string" }, items: { type: "array", items: { type: "object", properties: { pregunta: { type: "string" }, respuesta: { type: "string" } }, required: ["pregunta", "respuesta"], additionalProperties: false } } }, required: ["titular", "subtitulo", "items"], additionalProperties: false },
+            acordeones: { type: "array", items: { type: "object", properties: { titulo: { type: "string" }, contenido: { type: "string" } }, required: ["titulo", "contenido"], additionalProperties: false } },
             recomendados: { type: "array", items: { type: "object", properties: { imagen: { type: ["string", "null"] }, titulo: { type: "string" }, precio: { type: "string" }, comparativo: { type: "string" }, descuento: { type: "string" } }, required: ["imagen", "titulo", "precio", "comparativo", "descuento"], additionalProperties: false } }
           },
           additionalProperties: false
@@ -541,8 +544,9 @@ const CARDINALIDAD = {
   "pagepilot_blue.reviews.items": 4,
   "pagepilot_blue.blue_stats.items": 4,
   "pagepilot_blue.comparison.filas": 6,
-  "pagepilot_blue.faq.items": 4,
-  "pagepilot_blue.recomendados": 4
+  "pagepilot_blue.faq.items": 5,
+  "pagepilot_blue.recomendados": 5,
+  "pagepilot_blue.acordeones": 3
 };
 
 function leer(obj, ruta) {
@@ -672,7 +676,8 @@ function ensamblar(fuente, salida, { idioma, angulo }) {
         ],
         pagos: Array.isArray(pb.pagos) && pb.pagos.length ? pb.pagos.slice(0, 7) : ["amex", "apple", "visa", "mastercard", "paypal", "gpay", "shop"],
         social: {
-          titular: pb.social?.titular || "Miles confían. Personas reales eligen calidad.",
+          titular: pb.social?.titular || "Miles confían. Mujeres reales eligen calidad.",
+          enfasis: pb.social?.enfasis || "Mujeres reales",
           subtitulo: pb.social?.subtitulo || "Descubrí una experiencia pensada para hacer más simple tu rutina.",
           cta: pb.social?.cta || "Obtené el tuyo ahora",
           rating: pb.social?.rating || "Calificado con 4.9/5 por clientes satisfechos",
@@ -689,8 +694,8 @@ function ensamblar(fuente, salida, { idioma, angulo }) {
           imagen: pb.como_funciona?.imagen || null
         },
         feature: {
-          titular: pb.feature?.titular || "5 beneficios para todos los días",
-          subtitulo: pb.feature?.subtitulo || "Todo lo que necesitás para sumar una mejora real a tu rutina.",
+          titular: pb.feature?.titular || "5 beneficios diarios del producto",
+          subtitulo: pb.feature?.subtitulo || "Potenciá tu rutina para disfrutar un resultado que se nota.",
           items: fijo(pb.feature?.items, 5).length ? fijo(pb.feature.items, 5) : [
             { titulo: "Uso sencillo", frase: "Incorporalo a tu rutina sin pasos innecesarios." },
             { titulo: "Diseño práctico", frase: "Pensado para acompañarte con comodidad." },
@@ -737,18 +742,25 @@ function ensamblar(fuente, salida, { idioma, angulo }) {
         faq: {
           titular: pb.faq?.titular || "Preguntas frecuentes",
           subtitulo: pb.faq?.subtitulo || "Todo lo que necesitás saber antes de comprarlo.",
-          items: fijo(pb.faq?.items, 4).length ? fijo(pb.faq.items, 4) : [
+          items: fijo(pb.faq?.items, 5).length ? fijo(pb.faq.items, 5) : [
             { pregunta: "¿De qué material está hecho?", respuesta: "Consultá la ficha del producto para conocer los materiales disponibles." },
             { pregunta: "¿Cómo se usa?", respuesta: "Usalo siguiendo las indicaciones de la ficha y adaptalo a tu rutina." },
             { pregunta: "¿Cómo se limpia o mantiene?", respuesta: "Limpiá el producto con el método recomendado para conservarlo en buen estado." },
+            { pregunta: "¿Qué colores tiene disponibles?", respuesta: "Revisá las variantes disponibles en la ficha antes de agregarlo al carrito." },
             { pregunta: "¿Qué pasa si no estoy conforme?", respuesta: "Contás con la política de devolución indicada en tu compra." }
           ]
         },
-        recomendados: fijo(pb.recomendados, 4).length ? fijo(pb.recomendados, 4) : [
+        acordeones: fijo(pb.acordeones, 3).length ? fijo(pb.acordeones, 3) : [
+          { titulo: "Descripción", contenido: "Conocé los detalles y beneficios del producto." },
+          { titulo: "Cómo usar", contenido: "Usalo siguiendo las indicaciones de la ficha del producto." },
+          { titulo: "Envíos y devoluciones", contenido: "Consultá las condiciones de envío y devolución antes de comprar." }
+        ],
+        recomendados: fijo(pb.recomendados, 5).length ? fijo(pb.recomendados, 5) : [
           { imagen: null, titulo: "Producto recomendado", precio: "19.99", comparativo: "24.99", descuento: "20%" },
           { imagen: null, titulo: "Accesorio recomendado", precio: "19.99", comparativo: "24.99", descuento: "20%" },
           { imagen: null, titulo: "Complemento diario", precio: "19.99", comparativo: "24.99", descuento: "20%" },
-          { imagen: null, titulo: "Opción favorita", precio: "19.99", comparativo: "24.99", descuento: "20%" }
+          { imagen: null, titulo: "Opción favorita", precio: "19.99", comparativo: "24.99", descuento: "20%" },
+          { imagen: null, titulo: "Más vendidos", precio: "19.99", comparativo: "24.99", descuento: "20%" }
         ]
       }
     },
