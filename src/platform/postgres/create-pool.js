@@ -5,10 +5,11 @@ function createPostgresPool({ databaseUrl, caCertificate, Pool }) {
   if (typeof Pool !== "function") throw new TypeError("Se requiere el constructor Pool de pg");
 
   const local = /localhost|127\.0\.0\.1|sslmode=disable/.test(databaseUrl);
-  if (!local && !caCertificate) {
-    throw new Error("PG_CA_CERT es obligatorio para validar TLS en PostgreSQL remoto");
-  }
-  const ssl = local ? false : { rejectUnauthorized: true, ca: caCertificate };
+  // Public CAs are verified through Node's trust store. A private CA can be
+  // provided when a database provider requires one; verification stays strict.
+  const ssl = local ? false : caCertificate
+    ? { rejectUnauthorized: true, ca: caCertificate }
+    : { rejectUnauthorized: true };
 
   return new Pool({
     connectionString: databaseUrl,
