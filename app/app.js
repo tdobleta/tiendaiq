@@ -3930,6 +3930,41 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     return cerrar;
   }
 
+  // Confirmacion propia para acciones destructivas dentro del iframe de Shopify.
+  // Evita los dialogs nativos, que pueden quedar bloqueados en una app embebida.
+  function confirmarAccion({ titulo, mensaje, confirmar = "Eliminar" }) {
+    return new Promise((resolver) => {
+      document.getElementById("tiq-confirmacion")?.remove();
+      const modal = document.createElement("div");
+      modal.id = "tiq-confirmacion";
+      modal.className = "tiq-confirmacion";
+      modal.innerHTML = `
+        <div class="tiq-confirmacion__caja" role="alertdialog" aria-modal="true" aria-labelledby="tiq-confirmacion-titulo" aria-describedby="tiq-confirmacion-mensaje">
+          <h2 id="tiq-confirmacion-titulo">${esc(titulo)}</h2>
+          <p id="tiq-confirmacion-mensaje">${esc(mensaje)}</p>
+          <div class="tiq-confirmacion__acciones">
+            <button type="button" class="tiq-confirmacion__cancelar">Cancelar</button>
+            <button type="button" class="tiq-confirmacion__confirmar">${esc(confirmar)}</button>
+          </div>
+        </div>`;
+      document.body.appendChild(modal);
+
+      const cerrar = (aceptada) => {
+        document.removeEventListener("keydown", alTeclado, true);
+        modal.remove();
+        resolver(aceptada);
+      };
+      const alTeclado = (evento) => {
+        if (evento.key === "Escape") cerrar(false);
+      };
+      modal.onclick = (evento) => { if (evento.target === modal) cerrar(false); };
+      modal.querySelector(".tiq-confirmacion__cancelar").onclick = () => cerrar(false);
+      modal.querySelector(".tiq-confirmacion__confirmar").onclick = () => cerrar(true);
+      document.addEventListener("keydown", alTeclado, true);
+      modal.querySelector(".tiq-confirmacion__cancelar").focus();
+    });
+  }
+
   // Carga diferida de assets del preview de Bundles: en vez de bajarlos en toda
   // la app, se inyectan solo al entrar a la pantalla que los usa. Idempotente.
   const _widgetsCargados = new Set();
@@ -4316,7 +4351,10 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       const ids = estado.bundles.sel.slice();
       if (!ids.length) return;
       if (acc === "eliminar") {
-        if (!confirm(`¿Eliminar ${ids.length} bundle(s)? Se borran también sus descuentos en Shopify.`)) return;
+        if (!await confirmarAccion({
+          titulo: `Eliminar ${ids.length} bundle(s)`,
+          mensaje: "Tambien se eliminaran sus descuentos automaticos en Shopify.",
+        })) return;
         estado.bundles.config.lista = estado.bundles.config.lista.filter((b) => !ids.includes(b.id));
       } else {
         const activo = acc === "activar";
@@ -4381,7 +4419,10 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         };
         m.querySelector('[data-a="eliminar"]').onclick = async () => {
           cerrarAccMenu();
-          if (!confirm("¿Eliminar este bundle? Se borran también sus descuentos en Shopify.")) return;
+          if (!await confirmarAccion({
+            titulo: "Eliminar bundle",
+            mensaje: "Tambien se eliminaran sus descuentos automaticos en Shopify.",
+          })) return;
           const [borrado] = estado.bundles.config.lista.splice(i, 1);
           await guardarBundles();
           pintarDashboardBundles();
