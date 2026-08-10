@@ -17,16 +17,17 @@ test("Postgres remoto exige una CA y nunca desactiva la validación TLS", () => 
   }
 
   const remoteWithSystemTrust = createPostgresPool({
-    databaseUrl: "postgresql://db.internal/tiendaiq",
+    databaseUrl: "postgresql://db.internal/tiendaiq?sslmode=require",
     Pool: FakePool
   });
   assert.deepEqual(remoteWithSystemTrust.options.ssl, { rejectUnauthorized: true });
   const remote = createPostgresPool({
-    databaseUrl: "postgresql://db.internal/tiendaiq",
+    databaseUrl: "postgresql://db.internal/tiendaiq?sslmode=require",
     caCertificate: "CERTIFICADO",
     Pool: FakePool
   });
   assert.deepEqual(remote.options.ssl, { rejectUnauthorized: true, ca: "CERTIFICADO" });
+  assert.equal(remote.options.connectionString.includes("sslmode"), false);
 
   const local = createPostgresPool({
     databaseUrl: "postgresql://localhost/tiendaiq?sslmode=disable",
