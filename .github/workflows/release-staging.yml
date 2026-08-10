@@ -23,6 +23,13 @@ jobs:
 
       - run: npm install --no-audit --no-fund
 
+      - name: Prepare isolated runtime roles
+        env:
+          ALLOW_ROLE_BOOTSTRAP: "1"
+          MIGRATION_DATABASE_URL: ${{ secrets.STAGING_MIGRATION_DATABASE_URL }}
+          PG_CA_CERT: ${{ secrets.STAGING_PG_CA_CERT }}
+        run: node scripts/preparar-roles-runtime.js
+
       - name: Migrate staging with the owner credential
         env:
           MIGRATION_DATABASE_URL: ${{ secrets.STAGING_MIGRATION_DATABASE_URL }}

@@ -23,18 +23,10 @@ interna en el momento de crearla.
 3. Crear la credencial `tiendaiq_worker` y guardar su URL interna.
 4. En el servicio web, cargar solo `DATABASE_URL`: URL de `tiendaiq_web`.
 5. En el worker, cargar solo `DATABASE_URL`: URL de `tiendaiq_worker`.
-6. Con la URL externa original y el CA configurados localmente, ejecutar:
-
-```powershell
-$env:ALLOW_ROLE_BOOTSTRAP="1"
-$env:MIGRATION_DATABASE_URL="<url externa original>"
-$env:PG_CA_CERT="<ca de Render>"
-node scripts/preparar-roles-runtime.js
-```
-
-7. Crear los secretos `RENDER_STAGING_WEB_DEPLOY_HOOK` y
+6. Crear los secretos `STAGING_PG_CA_CERT`, `RENDER_STAGING_WEB_DEPLOY_HOOK` y
    `RENDER_STAGING_WORKER_DEPLOY_HOOK` con los hooks de los servicios staging.
-8. Disparar el workflow manual `Release staging`. Migra y luego despliega web y
+7. Disparar el workflow manual `Release staging`. Comprueba y prepara la
+   capacidad del worker, migra y luego despliega web y
    worker; `/ready` debe confirmar aislamiento y el rol web no
    puede ser dueno ni miembro de la capacidad worker.
 

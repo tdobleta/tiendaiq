@@ -126,10 +126,10 @@ if (faltanCompliance.length || !/\[\[webhooks\.subscriptions\]\]/.test(toml)) {
 
 // ---------- despliegue y migraciones ----------
 
-if (!/preDeployCommand:/.test(render) && /npm run db:migrate/.test(releaseWorkflow) && /environment:\s*staging/.test(releaseWorkflow)) {
+if (!/preDeployCommand:/.test(render) && /ALLOW_ROLE_BOOTSTRAP/.test(releaseWorkflow) && /npm run db:migrate/.test(releaseWorkflow) && /environment:\s*staging/.test(releaseWorkflow)) {
   ok("el release de staging migra con una aprobación separada del runtime");
 } else {
-  mal("el release de staging migra con una aprobación separada del runtime", "el workflow manual debe migrar y Render no debe recibir preDeployCommand");
+  mal("el release de staging migra con una aprobación separada del runtime", "el workflow manual debe preparar roles, migrar y Render no debe recibir preDeployCommand");
 }
 
 if (/healthCheckPath:\s*\/ready/.test(render)) {
