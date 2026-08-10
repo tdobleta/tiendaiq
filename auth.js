@@ -18,10 +18,11 @@ const { guardarTienda, normalizar, esDominioValido } = require("./tiendas");
 const { metrica } = require("./monitoreo");
 const { guardarEstadoDB, consumirEstadoDB } = require("./db");
 
-// write_orders: lo usa el formulario COD para crear pedidos contra reembolso.
 // OJO: al agregar un alcance, las tiendas ya instaladas tienen que volver a
 // pasar por /auth?shop=... para autorizarlo.
-// write_files: imágenes que el merchant sube al formulario COD (Files API).
+// read_discounts: métricas de uso de las reglas creadas por TiendaIQ, sin leer
+// pedidos ni datos protegidos de compradores.
+// write_files: imágenes que el merchant sube al editor (Files API).
 // write_discounts: los bundles crean descuentos automáticos (por volumen)
 // que Shopify hace cumplir en el checkout.
 // write_online_store_navigation: el menú principal (Inicio/Comprar/Nosotros/
@@ -30,7 +31,7 @@ const { guardarEstadoDB, consumirEstadoDB } = require("./db");
 // escribir archivos al tema no se exenta para este caso de uso). El video
 // slider y demás secciones viven en la landing (metafield + app block), no en
 // el tema. La verificación de "landing viva" se hace fetcheando el storefront.
-const ALCANCES = "read_products,write_products,write_orders,read_files,write_files,read_content,write_content,write_discounts,write_online_store_navigation";
+const ALCANCES = "read_products,write_products,read_files,write_files,read_content,write_content,read_discounts,write_discounts,write_online_store_navigation";
 
 // Comparación en tiempo constante: comparar firmas con === filtra el secreto
 // de a un carácter por vez.
