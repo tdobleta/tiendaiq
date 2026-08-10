@@ -13,14 +13,17 @@ function withoutUrlSslOptions(databaseUrl) {
   return url.toString();
 }
 
-function createPostgresPool({ databaseUrl, caCertificate, Pool }) {
+function createPostgresPool({ databaseUrl, caCertificate, privateNetwork = false, Pool }) {
   if (!databaseUrl) throw new Error("DATABASE_URL es obligatoria para conectar Postgres");
   if (typeof Pool !== "function") throw new TypeError("Se requiere el constructor Pool de pg");
 
   const local = /localhost|127\.0\.0\.1|sslmode=disable/.test(databaseUrl);
+  if (privateNetwork && /sslmode=(?!disable)/.test(databaseUrl)) {
+    throw new Error("PG_PRIVATE_NETWORK=1 requiere la URL interna de Render, sin sslmode externo");
+  }
   // Render can use a CA available in the host system trust store. Keep
   // verification strict and allow an explicit private CA when one is required.
-  const ssl = local ? false : caCertificate
+  const ssl = (local || privateNetwork) ? false : caCertificate
     ? { rejectUnauthorized: true, ca: caCertificate }
     : { rejectUnauthorized: true };
 

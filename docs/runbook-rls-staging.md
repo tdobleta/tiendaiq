@@ -8,8 +8,9 @@ privacidad, versiones y publicaciones. No mueve documentos ni cambia su formato.
 
 - Crear un backup restaurable de PostgreSQL.
 - Confirmar que staging contiene al menos dos tiendas de prueba.
-- Configurar `TOKEN_ENC_KEY` y `NODE_OPTIONS=--use-openssl-ca`. `PG_CA_CERT` queda
-  disponible solo para un proveedor con CA privada.
+- Configurar `TOKEN_ENC_KEY` y `PG_PRIVATE_NETWORK=1` porque web y worker usan
+  la URL interna de Render en la misma region. Una URL externa no puede usar
+  esta variable: debe conservar TLS validado y, si hace falta, `PG_CA_CERT`.
 - Confirmar que el rol web de `DATABASE_URL` no es superuser, no tiene
   `BYPASSRLS`, no es dueno de tablas y no hereda la capacidad worker.
 - Confirmar que `MIGRATION_DATABASE_URL`, `DATABASE_URL` web y la URL del

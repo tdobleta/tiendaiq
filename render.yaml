@@ -35,13 +35,9 @@ services:
       # 32 bytes en base64. Produccion falla al arrancar si falta.
       - key: TOKEN_ENC_KEY
         sync: false
-      # Compatible con Node 20+; usa las CA del sistema para Postgres sin
-      # desactivar la verificacion TLS.
-      - key: NODE_OPTIONS
-        value: "--use-openssl-ca"
-      # CA de PostgreSQL para validar TLS. Mantener como secreto multilinea.
-      - key: PG_CA_CERT
-        sync: false
+      # DATABASE_URL es interna y viaja solo por la red privada de Render.
+      - key: PG_PRIVATE_NETWORK
+        value: "1"
       - key: PG_POOL_MAX
         value: "10"
       - key: SHOPIFY_OAUTH_TIMEOUT_MS
@@ -76,10 +72,8 @@ services:
         sync: false
       - key: TOKEN_ENC_KEY
         sync: false
-      - key: NODE_OPTIONS
-        value: "--use-openssl-ca"
-      - key: PG_CA_CERT
-        sync: false
+      - key: PG_PRIVATE_NETWORK
+        value: "1"
       - key: SHOPIFY_CLIENT_ID
         sync: false
       - key: SHOPIFY_CLIENT_SECRET

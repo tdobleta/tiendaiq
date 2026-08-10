@@ -138,10 +138,10 @@ if (/healthCheckPath:\s*\/ready/.test(render)) {
   mal("Render espera readiness de almacenamiento y aislamiento", "healthCheckPath debe apuntar a /ready");
 }
 
-if (/key:\s*PG_CA_CERT/.test(render)) {
-  ok("Render declara el certificado CA de PostgreSQL");
+if (/key:\s*PG_PRIVATE_NETWORK\s+value:\s*"1"/.test(render)) {
+  ok("Render declara la red privada de PostgreSQL");
 } else {
-  mal("Render declara el certificado CA de PostgreSQL", "falta PG_CA_CERT entre los secretos");
+  mal("Render declara la red privada de PostgreSQL", "falta PG_PRIVATE_NETWORK=1 para las URLs internas");
 }
 
 const runtimeUrls = render.match(/- key:\s*DATABASE_URL\s+sync:\s*false/g) || [];

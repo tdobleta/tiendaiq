@@ -48,7 +48,12 @@ let inboxRepository = null;
 async function pg() {
   if (pool) return pool;
   const { Pool } = require("pg");
-  pool = createPostgresPool({ databaseUrl: env.DATABASE_URL, caCertificate: env.PG_CA_CERT, Pool });
+  pool = createPostgresPool({
+    databaseUrl: env.DATABASE_URL,
+    caCertificate: env.PG_CA_CERT,
+    privateNetwork: env.PG_PRIVATE_NETWORK === "1",
+    Pool
+  });
   return pool;
 }
 
