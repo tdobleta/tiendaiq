@@ -23,7 +23,7 @@ interna en el momento de crearla.
 3. Crear la credencial `tiendaiq_worker` y guardar su URL interna.
 4. En el servicio web, cargar solo `DATABASE_URL`: URL de `tiendaiq_web`.
 5. En el worker, cargar solo `DATABASE_URL`: URL de `tiendaiq_worker`.
-6. Crear los secretos `STAGING_PG_CA_CERT`, `RENDER_STAGING_WEB_DEPLOY_HOOK` y
+6. Crear los secretos `RENDER_STAGING_WEB_DEPLOY_HOOK` y
    `RENDER_STAGING_WORKER_DEPLOY_HOOK` con los hooks de los servicios staging.
 7. Disparar el workflow manual `Release staging`. Comprueba y prepara la
    capacidad del worker, migra y luego despliega web y

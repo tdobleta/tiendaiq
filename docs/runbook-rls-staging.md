@@ -8,7 +8,8 @@ privacidad, versiones y publicaciones. No mueve documentos ni cambia su formato.
 
 - Crear un backup restaurable de PostgreSQL.
 - Confirmar que staging contiene al menos dos tiendas de prueba.
-- Configurar `TOKEN_ENC_KEY` y `PG_CA_CERT`.
+- Configurar `TOKEN_ENC_KEY` y `NODE_USE_SYSTEM_CA=1`. `PG_CA_CERT` queda
+  disponible solo para un proveedor con CA privada.
 - Confirmar que el rol web de `DATABASE_URL` no es superuser, no tiene
   `BYPASSRLS`, no es dueno de tablas y no hereda la capacidad worker.
 - Confirmar que `MIGRATION_DATABASE_URL`, `DATABASE_URL` web y la URL del
