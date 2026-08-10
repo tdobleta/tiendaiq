@@ -42,11 +42,10 @@ api_version = "2026-07"
 
   # Obligatorios para el App Store, aunque no guardemos datos de clientes
   # finales (solo tokens de tienda y páginas generadas). El handler responde
-  # 200 después de validar la firma; ver el comentario en server.js.
-  [webhooks.privacy_compliance]
-  customer_data_request_url = "https://tiendaiq.com/webhooks"
-  customer_deletion_url = "https://tiendaiq.com/webhooks"
-  shop_deletion_url = "https://tiendaiq.com/webhooks"
+  # 200 después de validar la firma y persistir el evento durable.
+  [[webhooks.subscriptions]]
+  compliance_topics = ["customers/data_request", "customers/redact", "shop/redact"]
+  uri = "https://tiendaiq.com/webhooks"
 
   # app/uninstalled y app_subscriptions/update NO se declaran acá.
   #

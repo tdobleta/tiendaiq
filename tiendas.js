@@ -8,6 +8,7 @@
 
 const { guardarTiendaDB, leerTiendaDB, borrarTiendaDB, listarTiendasDB,
         incrementarUsoDB, decrementarUsoDB, actualizarCamposTiendaDB } = require("./db");
+const { TenantContext } = require("./src/tenancy/tenant-context");
 
 // Shopify manda el dominio de mil formas: con https://, con barra, en el claim
 // `dest` del pase. Se normaliza siempre a "xxx.myshopify.com".
@@ -70,8 +71,16 @@ async function actualizarCamposTienda(dominio, campos) {
 // La sesión es lo que viaja por toda la app: quién es y con qué token.
 // Nada llama a Shopify sin una de estas.
 async function sesionDe(dominio) {
-  const t = await leerTiendaDB(normalizar(dominio));
-  if (!t) throw new Error(`La tienda ${normalizar(dominio)} no tiene la app instalada`);
+  const context = dominio instanceof TenantContext ? dominio : null;
+  const tienda = context ? context.tenantId : normalizar(dominio);
+  const t = await leerTiendaDB(context || tienda);
+  if (!t) {
+    const e = new Error(`La tienda ${tienda} no tiene la app instalada`);
+    e.code = "TIENDA_NO_INSTALADA";
+    e.status = 401;
+    e.tienda = tienda;
+    throw e;
+  }
   return { tienda: t.dominio, token: t.token };
 }
 

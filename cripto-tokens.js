@@ -26,6 +26,10 @@ let CLAVE = null;
 let avisado = false;
 (function cargarClave() {
   const b64 = (env.TOKEN_ENC_KEY || "").trim();
+  const produccion = env.DEV_MODE !== "1" && (!!env.DATABASE_URL || process.env.NODE_ENV === "production");
+  if (!b64 && produccion) {
+    throw new Error("TOKEN_ENC_KEY es obligatoria en produccion; no se permiten tokens de Shopify en claro.");
+  }
   if (!b64) return; // sin clave → modo claro (passthrough)
   const buf = Buffer.from(b64, "base64");
   if (buf.length !== 32) {

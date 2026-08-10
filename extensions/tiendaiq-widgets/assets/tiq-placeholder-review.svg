@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" role="img" aria-labelledby="t">
+  <title id="t">Foto de cliente pendiente</title>
+  <rect width="600" height="600" rx="18" fill="#f0f0f2"/>
+  <rect x="190" y="155" width="220" height="190" rx="30" fill="#fff" stroke="#c9ceda" stroke-width="18"/>
+  <circle cx="265" cy="245" r="20" fill="#c9ceda"/>
+  <path d="M220 315l68-65 52 45 30-28 70 73H220z" fill="#e0e4eb"/>
+  <circle cx="300" cy="420" r="20" fill="#c9ceda" opacity=".7"/>
+  <ellipse cx="300" cy="465" rx="100" ry="18" fill="#d6dae3" opacity=".7"/>
+</svg>

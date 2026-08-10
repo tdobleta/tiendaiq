@@ -40,6 +40,8 @@ const ARCHIVOS_CON_DOMINIO = [
 // El dominio de referencia es el `application_url` del toml: es el que Shopify
 // tiene cargado en el Partner Dashboard.
 const toml = leer("shopify.app.toml");
+const render = leer("render.yaml");
+const releaseWorkflow = leer(".github/workflows/release-staging.yml");
 const principal = toml.match(/^application_url\s*=\s*"([^"]+)"/m)?.[1];
 
 if (!principal) {
@@ -107,6 +109,70 @@ if (apiCliente && apiExtension && apiCliente !== apiExtension) {
   mal("la versión de API es la misma en el cliente y en el extension", `shopify.js usa ${apiCliente} y el extension ${apiExtension}`);
 } else if (apiCliente) {
   ok(`versión de API ${apiCliente} en el cliente y en el extension`);
+}
+
+// ---------- webhooks obligatorios de privacidad ----------
+
+const complianceTopics = ["customers/data_request", "customers/redact", "shop/redact"];
+const complianceDeclarados = toml.match(/compliance_topics\s*=\s*\[([^\]]+)\]/)?.[1] || "";
+const faltanCompliance = complianceTopics.filter((topic) => !complianceDeclarados.includes(`"${topic}"`));
+if (faltanCompliance.length || !/\[\[webhooks\.subscriptions\]\]/.test(toml)) {
+  mal("Shopify recibe los tres webhooks obligatorios de privacidad", `faltan o usan sintaxis antigua: ${faltanCompliance.join(", ") || "subscriptions"}`);
+} else if (!/uri\s*=\s*"https:\/\/tiendaiq\.com\/webhooks"/.test(toml)) {
+  mal("los webhooks de privacidad apuntan al ingress durable", "la suscripcion no usa https://tiendaiq.com/webhooks");
+} else {
+  ok("Shopify recibe los tres webhooks obligatorios de privacidad");
+}
+
+// ---------- despliegue y migraciones ----------
+
+if (!/preDeployCommand:/.test(render) && /npm run db:migrate/.test(releaseWorkflow) && /environment:\s*staging/.test(releaseWorkflow)) {
+  ok("el release de staging migra con una aprobación separada del runtime");
+} else {
+  mal("el release de staging migra con una aprobación separada del runtime", "el workflow manual debe migrar y Render no debe recibir preDeployCommand");
+}
+
+if (/healthCheckPath:\s*\/ready/.test(render)) {
+  ok("Render espera readiness de almacenamiento y aislamiento");
+} else {
+  mal("Render espera readiness de almacenamiento y aislamiento", "healthCheckPath debe apuntar a /ready");
+}
+
+if (/key:\s*PG_CA_CERT/.test(render)) {
+  ok("Render declara el certificado CA de PostgreSQL");
+} else {
+  mal("Render declara el certificado CA de PostgreSQL", "falta PG_CA_CERT entre los secretos");
+}
+
+const runtimeUrls = render.match(/- key:\s*DATABASE_URL\s+sync:\s*false/g) || [];
+const migrationUrls = render.match(/- key:\s*MIGRATION_DATABASE_URL\s+sync:\s*false/g) || [];
+if (runtimeUrls.length === 2 && migrationUrls.length === 0 &&
+    /STAGING_MIGRATION_DATABASE_URL/.test(releaseWorkflow) &&
+    !/- key:\s*DATABASE_URL\s+fromDatabase:/.test(render)) {
+  ok("Render no expone la credencial migradora a web ni worker");
+} else {
+  mal(
+    "Render no expone la credencial migradora a web ni worker",
+    "web y worker deben usar DATABASE_URL secretas; la credencial dueña sólo va en el entorno staging de GitHub"
+  );
+}
+
+if (/type:\s*worker[\s\S]*name:\s*tiendaiq-worker[\s\S]*startCommand:\s*npm run worker/.test(render)) {
+  ok("Render ejecuta generación y publicaciones en un worker separado");
+} else {
+  mal("Render ejecuta las publicaciones en un worker separado", "falta el servicio tiendaiq-worker");
+}
+
+if (/RENDER_STAGING_WEB_DEPLOY_HOOK/.test(releaseWorkflow) && /RENDER_STAGING_WORKER_DEPLOY_HOOK/.test(releaseWorkflow)) {
+  ok("web y worker se despliegan solo después de la migración de staging");
+} else {
+  mal("web y worker se despliegan solo después de la migración de staging", "el workflow debe disparar ambos deploy hooks después de migrar");
+}
+
+if (/type:\s*worker[\s\S]*key:\s*ANTHROPIC_API_KEY/.test(render)) {
+  ok("el worker recibe la credencial de generación de IA");
+} else {
+  mal("el worker recibe la credencial de generación de IA", "falta ANTHROPIC_API_KEY en tiendaiq-worker");
 }
 
 console.log(fallos ? `\n  ${fallos} incoherencia(s)\n` : "");

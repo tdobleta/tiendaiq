@@ -1,0 +1,40 @@
+name: Release staging
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tiendaiq-staging-release
+  cancel-in-progress: false
+
+jobs:
+  migrate-and-deploy:
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - run: npm install --no-audit --no-fund
+
+      - name: Migrate staging with the owner credential
+        env:
+          MIGRATION_DATABASE_URL: ${{ secrets.STAGING_MIGRATION_DATABASE_URL }}
+          PG_CA_CERT: ${{ secrets.STAGING_PG_CA_CERT }}
+        run: npm run db:migrate
+
+      - name: Deploy web after a successful migration
+        env:
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_STAGING_WEB_DEPLOY_HOOK }}
+        run: curl --fail-with-body --request POST --get --data-urlencode "ref=${GITHUB_SHA}" "$RENDER_DEPLOY_HOOK"
+
+      - name: Deploy worker after a successful migration
+        env:
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_STAGING_WORKER_DEPLOY_HOOK }}
+        run: curl --fail-with-body --request POST --get --data-urlencode "ref=${GITHUB_SHA}" "$RENDER_DEPLOY_HOOK"

@@ -259,11 +259,8 @@
   function addonsHTML(o) {
     var ad = o.addons || {};
     var h = "";
-    if (ad.regalo && ad.regalo.on) {
-      var items = ad.regalo.items || (ad.regalo.nombre ? [{ nombre: ad.regalo.nombre, cantidad: 1 }] : []);
-      items.forEach(function (it) { h += filaRegalo(it); });
-    }
-    if (ad.envio && ad.envio.on) h += '<div class="tiq-bdl__ship">🚚 + ' + esc(ad.envio.texto || "FREE SHIPPING") + "</div>";
+    // Datos guardados por builds anteriores no deben convertirse en promesas
+    // comerciales hasta que carrito y checkout respalden la operación real.
     return h ? '<div class="tiq-bdl__addons">' + h + "</div>" : "";
   }
 

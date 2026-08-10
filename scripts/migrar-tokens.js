@@ -1,36 +1,67 @@
-// ============================================================
-// Migración: cifra en reposo los tokens de tienda que estén en CLARO.
-//
-// Idempotente: re-escribe cada tienda pasando por guardarTiendaDB, que cifra el
-// token. Los que ya estaban cifrados se descifran al leer y se vuelven a cifrar
-// (mismo valor de token, solo cambia el envoltorio) → correrlo N veces es seguro
-// y NO desloguea a nadie (el token efectivo no cambia).
-//
-// Uso (con la env cargada):
-//   TOKEN_ENC_KEY="<32 bytes base64>" DATABASE_URL="<...>" node scripts/migrar-tokens.js
-//
-// Requiere que TOKEN_ENC_KEY esté seteada (si no, cripto-tokens.js pasa el token
-// tal cual y la migración no cifra nada → aborta con aviso).
-// ============================================================
+"use strict";
 
-const { cifradoActivo } = require("../cripto-tokens");
-const { listarTiendasDB, guardarTiendaDB, USA_PG } = require("../db");
+// Administrative, idempotent migration for legacy plaintext Shopify tokens.
+// Cross-tenant enumeration is deliberately restricted to the migrator role;
+// neither the web process nor the worker may perform this operation.
+
+const { Pool } = require("pg");
+const { env } = require("../shopify");
+const { cifrarToken, descifrarToken, estaCifrado, cifradoActivo } = require("../cripto-tokens");
+const { createPostgresPool } = require("../src/platform/postgres/create-pool");
 
 async function main() {
   if (!cifradoActivo()) {
-    console.error("✗ TOKEN_ENC_KEY no está seteada — no hay con qué cifrar. Cargá la env y reintentá.");
-    process.exit(1);
+    throw new Error("TOKEN_ENC_KEY no esta configurada; la migracion no puede cifrar tokens");
   }
-  const tiendas = await listarTiendasDB(); // vienen con el token en claro (descifrado al leer)
+  if (!env.MIGRATION_DATABASE_URL) {
+    throw new Error("MIGRATION_DATABASE_URL es obligatoria para una operacion transversal");
+  }
+
+  const pool = createPostgresPool({
+    databaseUrl: env.MIGRATION_DATABASE_URL,
+    caCertificate: env.PG_CA_CERT,
+    Pool
+  });
+
   let cifradas = 0;
-  for (const datos of tiendas) {
-    if (!datos || !datos.dominio) continue;
-    await guardarTiendaDB(datos.dominio, datos); // guardarTiendaDB cifra el token
-    cifradas++;
-    console.log("  ✓ " + datos.dominio);
+  let omitidas = 0;
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const result = await client.query(
+      `SELECT dominio, datos->>'token' AS token
+         FROM public.tiendas
+        WHERE datos ? 'token'
+        FOR UPDATE`
+    );
+
+    for (const row of result.rows) {
+      if (!row.token || estaCifrado(row.token)) {
+        omitidas++;
+        continue;
+      }
+      const encrypted = cifrarToken(descifrarToken(row.token));
+      await client.query(
+        `UPDATE public.tiendas
+            SET datos = jsonb_set(datos, '{token}', to_jsonb($2::text), false),
+                actualizada = now()
+          WHERE dominio = $1`,
+        [row.dominio, encrypted]
+      );
+      cifradas++;
+    }
+    await client.query("COMMIT");
+    console.log(`Migracion terminada: ${cifradas} token(s) cifrados, ${omitidas} sin cambios.`);
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+    await pool.end();
   }
-  console.log(`\nListo. ${cifradas} tienda(s) con el token cifrado en reposo (${USA_PG ? "Postgres" : "archivos"}).`);
-  process.exit(0);
 }
 
-main().catch((e) => { console.error("✗ Migración falló:", e.message); process.exit(1); });
+main().catch((error) => {
+  console.error("Migracion de tokens fallida:", error.message);
+  process.exitCode = 1;
+});

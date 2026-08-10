@@ -10,10 +10,9 @@
 //   EL DESCUENTO → la plata de verdad. Vive como DESCUENTO AUTOMÁTICO
 //                nativo de Shopify (uno por peldaño con descuento > 0).
 //                Shopify lo hace cumplir en el checkout: imposible de
-//                falsear desde el navegador. Igual que el recálculo
-//                server-side de COD, la fuente de verdad es Shopify.
+//                falsear desde el navegador. La fuente de verdad es Shopify.
 //
-// Responsabilidades del módulo (espeja cod.js):
+// Responsabilidades del módulo:
 //   1. CONFIG    por tienda (lista de bundles). Clave `bundles` en la DB.
 //   2. DESCUENTOS crea/borra los descuentos automáticos que respaldan cada
 //                bundle. Se re-sincronizan al guardar.
@@ -83,7 +82,8 @@ function configDefault() {
   return {
     activo: false,
     instalado: null, // { tema, fecha } cuando se inyectó en el tema
-    lista: []        // bundle[]
+    lista: [],       // bundle[]
+    pending_cleanup_ids: [] // descuentos de bundles borrados que Shopify no dejó limpiar todavía
   };
 }
 
@@ -103,6 +103,16 @@ async function leerConfigBundles(tienda) {
   const cfg = mezclar(configDefault(), t.bundles || {});
   // Cada bundle también se completa contra su default (por si sumamos campos).
   cfg.lista = (cfg.lista || []).map((b) => mezclar(bundleDefault(), b));
+  // Builds anteriores permitían guardar promesas visuales sin operación real.
+  // Las apagamos al leer para que ni el admin ni el storefront las vuelvan a
+  // publicar; el resto de la configuración permanece editable y reversible.
+  for (const bundle of cfg.lista) {
+    for (const oferta of bundle.ofertas || []) {
+      if (oferta.addons?.regalo) oferta.addons.regalo.on = false;
+      if (oferta.addons?.envio) oferta.addons.envio.on = false;
+      oferta.redondeo = false;
+    }
+  }
   return cfg;
 }
 
@@ -111,6 +121,51 @@ async function guardarConfigBundles(tienda, config) {
   if (!t.token) throw new Error(`La tienda ${tienda} no está instalada`);
   await guardarTienda(tienda, t.token, { ...t, bundles: config });
   return config;
+}
+
+function errorConfig(message) {
+  const error = new Error(message);
+  error.status = 422;
+  return error;
+}
+
+// Solo estas dos familias tienen hoy una regla nativa de Shopify que respalda
+// lo prometido en el storefront. La validación vive en el servidor para que no
+// dependa de que la interfaz oculte correctamente controles experimentales.
+function validarConfigBundles(config) {
+  if (!config || !Array.isArray(config.lista)) throw errorConfig("La configuración de bundles no es válida.");
+
+  for (const bundle of config.lista) {
+    if (!bundle || bundle.activo === false) continue;
+    if (!["volumen", "bxgy"].includes(bundle.tipo || "volumen")) {
+      throw errorConfig("Ese tipo de bundle todavía no está disponible para publicar.");
+    }
+    if (bundle.tipo === "bxgy") continue;
+
+    for (const oferta of bundle.ofertas || []) {
+      if (!oferta || oferta.activo === false) continue;
+      const tipo = oferta.tipo_desc || (Number(oferta.descuento) > 0 ? "porcentaje" : "ninguno");
+      if (!["porcentaje", "ninguno"].includes(tipo)) {
+        throw errorConfig("Ese tipo de descuento todavía no está disponible para publicar.");
+      }
+      if (oferta.addons?.regalo?.on || oferta.addons?.envio?.on) {
+        throw errorConfig("Los regalos adicionales y las promesas de envío todavía no están disponibles para publicar.");
+      }
+      if (oferta.redondeo) {
+        throw errorConfig("El redondeo de precios todavía no está disponible para publicar.");
+      }
+    }
+  }
+  return config;
+}
+
+function bundleEsPublicable(bundle) {
+  try {
+    validarConfigBundles({ lista: [bundle] });
+    return bundle?.activo !== false;
+  } catch {
+    return false;
+  }
 }
 
 // ---------- descuentos automáticos ----------
@@ -172,13 +227,20 @@ function porcentajeValido(descuento, cantidad) {
 // Borra los descuentos que respaldaban un bundle. Tolera ids muertos (si el
 // merchant borró el descuento a mano, el userErrors no nos frena).
 async function borrarDescuentos(sesion, ids = [], log = () => {}) {
+  const borrados = [];
+  const fallidos = [];
   for (const id of ids) {
     try {
-      await gql(M_BORRAR, { id }, sesion);
+      const r = await gql(M_BORRAR, { id }, sesion);
+      const errores = r.discountAutomaticDelete?.userErrors || [];
+      if (errores.length) throw new Error(errores.map((e) => e.message).join(" · "));
+      borrados.push(id);
     } catch (e) {
+      fallidos.push(id);
       log(`  aviso · no se pudo borrar ${id}: ${e.message}`);
     }
   }
+  return { borrados, fallidos };
 }
 
 // Crea un descuento automático por peldaño con descuento > 0. Devuelve los
@@ -225,7 +287,8 @@ function combinaDe(bundle) {
 async function crearPeldanos(sesion, bundle, items, creados, log) {
   for (const oferta of bundle.ofertas || []) {
     if (oferta.activo === false) continue; // nivel apagado: no crea descuento
-    const desc = Number(oferta.descuento) || 0;
+    const tipo = oferta.tipo_desc || (Number(oferta.descuento) > 0 ? "porcentaje" : "ninguno");
+    const desc = tipo === "ninguno" ? 0 : Number(oferta.descuento) || 0;
     const cant = Math.max(1, Number(oferta.cantidad) || 1);
     if (desc <= 0) continue;
 
@@ -285,19 +348,35 @@ async function crearDescuentoBxgy(sesion, bundle, log = () => {}) {
   return [id];
 }
 
-// Re-sincroniza los descuentos de TODA la lista: borra los viejos y crea los
-// nuevos según la config actual. Devuelve la lista con los discount_ids
-// actualizados. Idempotente: correrlo dos veces deja el mismo estado.
+// Re-sincroniza con una saga compensable: primero crea el reemplazo y solo
+// después retira la versión anterior. Si crear falla, los descuentos viejos
+// siguen activos y cualquier creación parcial se compensa. `discount_ids`
+// conserva también las limpiezas pendientes para no dejar ids huérfanos.
 async function sincronizarDescuentos(sesion, config, log = () => {}) {
+  validarConfigBundles(config);
   for (const bundle of config.lista) {
-    await borrarDescuentos(sesion, bundle.discount_ids, log);
+    const anteriores = [...new Set(bundle.discount_ids || [])];
+
+    if (bundle.activo === false) {
+      const limpieza = await borrarDescuentos(sesion, anteriores, log);
+      bundle.discount_ids = limpieza.fallidos;
+      bundle.sync_status = limpieza.fallidos.length ? "cleanup_pending" : "inactive";
+      continue;
+    }
+
     try {
-      bundle.discount_ids = await crearDescuentos(sesion, bundle, log);
+      const nuevos = await crearDescuentos(sesion, bundle, log);
+      bundle.discount_ids = [...new Set([...anteriores, ...nuevos])];
+      const limpieza = await borrarDescuentos(sesion, anteriores, log);
+      bundle.discount_ids = [...new Set([...nuevos, ...limpieza.fallidos])];
+      bundle.sync_status = limpieza.fallidos.length ? "cleanup_pending" : "active";
     } catch (e) {
-      // Los que alcanzaron a crearse quedan anotados antes de propagar el
-      // error: están vivos en la tienda del merchant y el próximo guardado
-      // tiene que poder borrarlos. Sin esto se acumulan sin rastro.
-      bundle.discount_ids = e.creados || [];
+      const parciales = e.creados || [];
+      const compensacion = await borrarDescuentos(sesion, parciales, log);
+      bundle.discount_ids = [...new Set([...anteriores, ...compensacion.fallidos])];
+      bundle.sync_status = "error";
+      bundle.sync_error = e.message;
+      e.requierePersistencia = true;
       throw e;
     }
   }
@@ -306,84 +385,49 @@ async function sincronizarDescuentos(sesion, config, log = () => {}) {
 
 // ---------- métricas ----------
 //
-// Se calculan contra los pedidos REALES de la tienda: un pedido "con bundle"
-// es el que trae aplicado uno de nuestros descuentos automáticos (los creamos
-// con el título "TiendaIQ Bundle · ..."), así que son identificables.
-//
-// Ventana de 30 días: sin el alcance read_all_orders, Shopify solo deja ver
-// los pedidos de los últimos 60, así que quedamos holgados.
+// Shopify mantiene un contador asíncrono por descuento. Leerlo conserva una
+// señal útil para el merchant sin consultar pedidos ni datos de compradores.
+// Los IDs nacen y se guardan al sincronizar cada bundle, así que tampoco
+// inferimos pertenencia por títulos editables.
 
-const Q_ORDENES = `query($q: String!, $cursor: String) {
-  orders(first: 100, query: $q, after: $cursor, sortKey: CREATED_AT, reverse: true) {
-    pageInfo { hasNextPage endCursor }
-    nodes {
+const Q_USO_DESCUENTOS = `query($ids: [ID!]!) {
+  nodes(ids: $ids) {
+    ... on DiscountAutomaticNode {
       id
-      currentTotalPriceSet { shopMoney { amount currencyCode } }
-      totalDiscountsSet { shopMoney { amount } }
-      discountApplications(first: 10) {
-        nodes {
-          ... on AutomaticDiscountApplication { title }
-          ... on DiscountCodeApplication { code }
-        }
+      automaticDiscount {
+        ... on DiscountAutomaticBasic { asyncUsageCount }
+        ... on DiscountAutomaticBxgy { asyncUsageCount }
       }
     }
   }
 }`;
 
-const dos = (n) => Math.round(n * 100) / 100;
-const ES_NUESTRO = (a) =>
-  String(a?.title || a?.code || "").startsWith("TiendaIQ Bundle");
-// El título es "TiendaIQ Bundle · <nombre> · ..." → el nombre del bundle es el
-// segundo segmento. Sirve para atribuir ingresos/pedidos por oferta.
-const NOMBRE_DE_TITULO = (a) => String(a?.title || "").split(" · ")[1] || null;
+async function metricasBundles(sesion, config = configDefault()) {
+  const lista = config.lista || [];
+  const ids = [...new Set(lista.flatMap((bundle) => bundle.discount_ids || []).filter(Boolean))];
+  const usosPorId = new Map();
 
-async function metricasBundles(sesion, dias = 30) {
-  const desde = new Date(Date.now() - dias * 86400000).toISOString().slice(0, 10);
-  const q = `created_at:>=${desde}`;
-
-  let cursor = null;
-  let vueltas = 0;
-  let pedidos = 0;
-  let ingresos = 0;
-  let descuento = 0;
-  let moneda = null;
-  const porBundle = {}; // { "<nombre>": { pedidos, ingresos } }
-
-  do {
-    const conn = (await gql(Q_ORDENES, { q, cursor }, sesion)).orders;
-    for (const o of conn.nodes || []) {
-      const apps = o.discountApplications?.nodes || [];
-      const nuestro = apps.find(ES_NUESTRO);
-      if (!nuestro) continue;
-      pedidos++;
-      const m = o.currentTotalPriceSet?.shopMoney;
-      const monto = Number(m?.amount || 0);
-      ingresos += monto;
-      descuento += Number(o.totalDiscountsSet?.shopMoney?.amount || 0);
-      moneda = moneda || m?.currencyCode;
-      // Atribución por-bundle: el pedido cuenta para el bundle de su descuento.
-      const nom = NOMBRE_DE_TITULO(nuestro);
-      if (nom) {
-        const pb = (porBundle[nom] = porBundle[nom] || { pedidos: 0, ingresos: 0 });
-        pb.pedidos++;
-        pb.ingresos += monto;
-      }
+  for (let inicio = 0; inicio < ids.length; inicio += 250) {
+    const lote = ids.slice(inicio, inicio + 250);
+    const resultado = await gql(Q_USO_DESCUENTOS, { ids: lote }, sesion);
+    for (const node of resultado.nodes || []) {
+      if (!node?.id) continue;
+      usosPorId.set(node.id, Number(node.automaticDiscount?.asyncUsageCount || 0));
     }
-    cursor = conn.pageInfo?.hasNextPage ? conn.pageInfo.endCursor : null;
-    vueltas++;
-  } while (cursor && vueltas < 5); // tope 500 pedidos: no colgamos el dashboard
+  }
+
+  const porBundle = Object.fromEntries(lista.map((bundle) => [
+    bundle.id,
+    { usos: (bundle.discount_ids || []).reduce((total, id) => total + (usosPorId.get(id) || 0), 0) }
+  ]));
 
   return {
-    dias,
-    pedidos,
-    ingresos: dos(ingresos),
-    descuento: dos(descuento),
-    ticket: pedidos ? dos(ingresos / pedidos) : 0,
-    moneda: moneda || "USD",
-    parcial: !!cursor, // había más pedidos de los que recorrimos
-    porBundle: Object.fromEntries(
-      Object.entries(porBundle).map(([k, v]) => [k, { pedidos: v.pedidos, ingresos: dos(v.ingresos) }])
-    )
+    ofertasActivas: lista.filter((bundle) => bundle.activo !== false).length,
+    reglas: usosPorId.size,
+    usos: [...usosPorId.values()].reduce((total, value) => total + value, 0),
+    faltantes: Math.max(0, ids.length - usosPorId.size),
+    actualizadoAsincrono: true,
+    porBundle
   };
 }
 
@@ -392,6 +436,8 @@ module.exports = {
   configDefault,
   leerConfigBundles,
   guardarConfigBundles,
+  validarConfigBundles,
+  bundleEsPublicable,
   sincronizarDescuentos,
   borrarDescuentos,
   metricasBundles
