@@ -4,6 +4,8 @@ tiendas/
 paginas/
 estados/
 jobs/
+!src/jobs/
+!src/jobs/*.js
 reservas-uso/
 webhook-inbox/
 ultima-pagina.json

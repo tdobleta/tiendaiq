@@ -9,6 +9,11 @@ const { createJobRunner } = require("../src/jobs/job-runner");
 const { boundedInteger } = require("../src/jobs/runtime");
 const { createPublishPageHandler } = require("../src/jobs/publish-page-handler");
 
+test("el runtime del worker forma parte del artefacto versionado", () => {
+  const runtimePath = path.join(__dirname, "..", "src", "jobs", "runtime.js");
+  assert.equal(fs.existsSync(runtimePath), true);
+});
+
 const tenant = TenantContext.fromShopDomain("jobs.myshopify.com", { source: "internal-job" });
 const job = (overrides = {}) => ({
   id: "11111111-1111-4111-8111-111111111111",
