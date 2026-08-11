@@ -41,13 +41,9 @@ async function main() {
         `CREATE ROLE ${quoteIdentifier(WORKER_CAPABILITY)} NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS`
       );
     }
-    const webMembership = await client.query(
-      "SELECT pg_has_role($1, $2, 'member') AS member",
-      [WEB_ROLE, WORKER_CAPABILITY]
-    );
-    if (webMembership.rows[0]?.member) {
-      throw new Error(`${WEB_ROLE} ya heredó la capacidad worker; revocala con la credencial administrativa`);
-    }
+    // This administrative bootstrap is the only place that may repair role
+    // membership. Runtime credentials never receive this authority.
+    await client.query(`REVOKE ${quoteIdentifier(WORKER_CAPABILITY)} FROM ${quoteIdentifier(WEB_ROLE)}`);
     await client.query(`GRANT ${quoteIdentifier(WORKER_CAPABILITY)} TO ${quoteIdentifier(WORKER_ROLE)}`);
 
     const verified = await client.query(

@@ -273,6 +273,13 @@ test("el bootstrap de roles usa la misma politica TLS que las migraciones", () =
   assert.doesNotMatch(source, /ssl:\s*process\.env\.PG_CA_CERT/);
 });
 
+test("el bootstrap administrativo revoca la capacidad worker del proceso web", () => {
+  const source = fs.readFileSync(path.join(__dirname, "..", "scripts", "preparar-roles-runtime.js"), "utf8");
+
+  assert.match(source, /REVOKE \$\{quoteIdentifier\(WORKER_CAPABILITY\)\} FROM \$\{quoteIdentifier\(WEB_ROLE\)\}/);
+  assert.match(source, /GRANT \$\{quoteIdentifier\(WORKER_CAPABILITY\)\} TO \$\{quoteIdentifier\(WORKER_ROLE\)\}/);
+});
+
 test("la admision global expone solo un agregado y reserva acceso administrativo", () => {
   const sql = fs.readFileSync(
     path.join(__dirname, "..", "db", "migrations", "0010_generation_admission_control.sql"),
