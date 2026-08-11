@@ -42,6 +42,8 @@ const ARCHIVOS_CON_DOMINIO = [
 const toml = leer("shopify.app.toml");
 const render = leer("render.yaml");
 const releaseWorkflow = leer(".github/workflows/release-staging.yml");
+const capacityWorkflow = leer(".github/workflows/capacity-staging.yml");
+const verificationWorkflow = leer(".github/workflows/verificar.yml");
 const principal = toml.match(/^application_url\s*=\s*"([^"]+)"/m)?.[1];
 
 if (!principal) {
@@ -174,6 +176,33 @@ if (/RENDER_STAGING_WEB_DEPLOY_HOOK/.test(releaseWorkflow) && /RENDER_STAGING_WO
   ok("web y worker se despliegan solo después de la migración de staging");
 } else {
   mal("web y worker se despliegan solo después de la migración de staging", "el workflow debe disparar ambos deploy hooks después de migrar");
+}
+
+if (/environment:\s*staging/.test(capacityWorkflow) &&
+    /ref:\s*\$\{\{ github\.sha \}\}/.test(capacityWorkflow) &&
+    /STAGING_WEB_DATABASE_URL/.test(capacityWorkflow) &&
+    /STAGING_WORKER_DATABASE_URL/.test(capacityWorkflow) &&
+    /RUN_STAGING_QUEUE_CAPACITY/.test(capacityWorkflow) &&
+    /npm run carga:cola/.test(capacityWorkflow) &&
+    !/STAGING_MIGRATION_DATABASE_URL/.test(capacityWorkflow)) {
+  ok("la capacidad de staging usa un commit revisado y credenciales runtime");
+} else {
+  mal(
+    "la capacidad de staging usa un commit revisado y credenciales runtime",
+    "el workflow manual debe fijar github.sha, exigir confirmacion y no usar la credencial migradora"
+  );
+}
+
+if (/Cola durable y limpieza sobre PostgreSQL real/.test(verificationWorkflow) &&
+    /ALLOW_QUEUE_LOAD_TEST:\s*"1"/.test(verificationWorkflow) &&
+    /TEST_WORKER_DATABASE_URL/.test(verificationWorkflow) &&
+    /npm run carga:cola/.test(verificationWorkflow)) {
+  ok("CI ejecuta la cola y su limpieza contra PostgreSQL real");
+} else {
+  mal(
+    "CI ejecuta la cola y su limpieza contra PostgreSQL real",
+    "la verificacion debe ejercitar el probe con credenciales web y worker separadas"
+  );
 }
 
 if (/type:\s*worker[\s\S]*key:\s*ANTHROPIC_API_KEY/.test(render)) {

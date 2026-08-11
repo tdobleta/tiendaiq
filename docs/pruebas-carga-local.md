@@ -38,6 +38,33 @@ Los defaults son 1.000 tiendas, 1.000 jobs, 40 operaciones de preparacion y 16
 carriles worker. `LOAD_FAKE_WORK_MS` simula trabajo sin llamar a Shopify o IA.
 Un destino remoto exige ademas la frase de autorizacion indicada por el script.
 
+La ejecucion registra el `runId` antes de escribir, comprueba persistencia,
+leases, estado final y recuentos de limpieza. Si GitHub o el runner se
+interrumpen, se puede repetir en modo limpieza usando exclusivamente ese
+identificador; no acepta prefijos ni patrones libres.
+
+### Ejecucion protegida en staging
+
+El workflow manual `Capacity staging` usa el entorno protegido `staging` y el
+commit exacto desde el que fue invocado. Requiere dos secretos adicionales en
+ese entorno de GitHub:
+
+```text
+STAGING_WEB_DATABASE_URL=<URL externa de la credencial tiendaiq_web>
+STAGING_WORKER_DATABASE_URL=<URL externa de la credencial tiendaiq_worker>
+```
+
+Estas URLs no se escriben en el repositorio, no se pasan al runtime contrario y
+no sustituyen `STAGING_MIGRATION_DATABASE_URL`. Para una prueba normal se elige
+`mode=run` y se confirma con `RUN_STAGING_QUEUE_CAPACITY`. Para retirar restos
+de una ejecucion cancelada se elige `mode=cleanup`, se pega el `runId` de doce
+caracteres mostrado al inicio y se confirma con
+`CLEAN_STAGING_QUEUE_CAPACITY`.
+
+La prueba remota sigue usando trabajo falso de 5 ms. Valida PostgreSQL, RLS,
+pool, encolado, leases, concurrencia y limpieza; no consume Anthropic, no llama
+a Shopify y no valida todavia las 500 generaciones reales del gate final.
+
 ## Prueba local sin efectos externos
 
 Requiere Node.js 20 o posterior. No hace falta instalar paquetes ni modificar

@@ -64,6 +64,20 @@ jobs:
           TEST_WORKER_DATABASE_URL: postgresql://tiendaiq_worker:worker_test@127.0.0.1:5432/tiendaiq_staging?sslmode=disable
         run: npm run db:test:integration
 
+      - name: Cola durable y limpieza sobre PostgreSQL real
+        env:
+          ALLOW_QUEUE_LOAD_TEST: "1"
+          TEST_DATABASE_URL: postgresql://tiendaiq_web:web_test@127.0.0.1:5432/tiendaiq_staging?sslmode=disable
+          TEST_WORKER_DATABASE_URL: postgresql://tiendaiq_worker:worker_test@127.0.0.1:5432/tiendaiq_staging?sslmode=disable
+          LOAD_TENANTS: "100"
+          LOAD_JOBS: "100"
+          LOAD_SETUP_CONCURRENCY: "20"
+          LOAD_WORKER_LANES: "8"
+          LOAD_FAKE_WORK_MS: "1"
+          LOAD_MAX_DRAIN_SECONDS: "60"
+          PG_POOL_MAX: "10"
+        run: npm run carga:cola
+
       - name: Pruebas de unidad y dominio
         run: npm run unidad
 
