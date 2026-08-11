@@ -293,6 +293,7 @@ test("el bootstrap administrativo elimina herencias de producto y reconstruye so
   assert.match(source, /WHERE parent\.rolname = \$1 AND member\.rolname <> \$2/);
   assert.match(source, /REVOKE \$\{quoteIdentifier\(parent\)\} FROM \$\{quoteIdentifier\(member\)\}/);
   assert.match(source, /PROVIDER_MANAGED_MEMBERSHIPS\.includes\(parent\)/);
+  assert.match(source, /"tiendaiq_staging_user"/);
   assert.match(source, /ALTER ROLE \$\{quoteIdentifier\(role\)\} NOINHERIT/);
   assert.match(source, /REVOKE \$\{quoteIdentifier\(WORKER_CAPABILITY\)\} FROM \$\{quoteIdentifier\(member\)\}/);
   assert.match(source, /GRANT \$\{quoteIdentifier\(WORKER_CAPABILITY\)\} TO \$\{quoteIdentifier\(WORKER_ROLE\)\}/);

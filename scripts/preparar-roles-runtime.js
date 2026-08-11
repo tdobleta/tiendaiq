@@ -7,10 +7,15 @@ const WEB_ROLE = "tiendaiq_web";
 const WORKER_ROLE = "tiendaiq_worker";
 const WORKER_CAPABILITY = "tiendaiq_worker_capability";
 const RUNTIME_ROLES = [WEB_ROLE, WORKER_ROLE];
-// Render assigns these service-observability roles to managed credentials and
-// does not permit a database owner to revoke them. NOINHERIT prevents their
-// privileges from flowing into ordinary application statements.
-const PROVIDER_MANAGED_MEMBERSHIPS = ["pg_read_all_stats", "pg_signal_backend"];
+// Render assigns these memberships to managed credentials and does not permit
+// a database owner to revoke them. NOINHERIT prevents their privileges from
+// flowing into ordinary application statements. The default role must never
+// retain the worker capability; that membership is removed separately below.
+const PROVIDER_MANAGED_MEMBERSHIPS = [
+  "pg_read_all_stats",
+  "pg_signal_backend",
+  "tiendaiq_staging_user"
+];
 
 function quoteIdentifier(value) {
   return `"${String(value).replaceAll('"', '""')}"`;
