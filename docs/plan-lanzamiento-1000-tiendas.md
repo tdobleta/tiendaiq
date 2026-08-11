@@ -65,6 +65,24 @@ El resultado es **NO-GO** si falta una cuota externa, si la cola supera los 10
 minutos de antiguedad, si hay cualquier fuga entre tenants o si una migracion no
 puede desplegarse de forma compatible.
 
+### Gate protegido del proveedor de IA
+
+El workflow manual `Anthropic capacity staging` separa la capacidad del
+proveedor de la cola y de Shopify. Ejecuta el contrato real de generacion de
+pagina con un producto sintetico sin datos personales ni llamadas a tiendas.
+Admite perfiles de 8, 50 y 500 llamadas, siempre con ocho carriles como maximo.
+
+La ejecucion exige el secreto `STAGING_ANTHROPIC_API_KEY`, una confirmacion que
+incluye el perfil elegido y el entorno protegido `staging`. Una primera llamada
+proyecta el gasto con 25% de margen y detiene el resto si supera el techo del
+perfil. La salida conserva solamente latencias, tokens, costo estimado, avisos y
+tipos de error; nunca registra prompts, respuestas o la clave.
+
+El perfil de 8 valida acceso y concurrencia inicial. El de 50 sirve para revisar
+latencia, rate limits y costo antes de autorizar el gate final de 500. Ningun
+perfil reemplaza la prueba de cola durable: ambos resultados son necesarios para
+el GO.
+
 ## Riesgos que requieren accion manual
 
 No hace falta comprar una suscripcion para continuar el desarrollo local. Antes

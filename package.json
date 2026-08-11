@@ -22,6 +22,7 @@
     "carga:mock": "node scripts/servidor-carga-local.js",
     "carga:http": "node scripts/carga-local.js",
     "carga:cola": "node scripts/probar-capacidad-cola.js",
+    "carga:anthropic": "node scripts/probar-capacidad-anthropic.js",
     "probar": "npm run verificar && npm run coherencia && npm run unidad && npm run humo"
   },
   "engines": {

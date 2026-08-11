@@ -43,6 +43,7 @@ const toml = leer("shopify.app.toml");
 const render = leer("render.yaml");
 const releaseWorkflow = leer(".github/workflows/release-staging.yml");
 const capacityWorkflow = leer(".github/workflows/capacity-staging.yml");
+const anthropicCapacityWorkflow = leer(".github/workflows/anthropic-capacity-staging.yml");
 const verificationWorkflow = leer(".github/workflows/verificar.yml");
 const principal = toml.match(/^application_url\s*=\s*"([^"]+)"/m)?.[1];
 
@@ -190,6 +191,22 @@ if (/environment:\s*staging/.test(capacityWorkflow) &&
   mal(
     "la capacidad de staging usa un commit revisado y credenciales runtime",
     "el workflow manual debe fijar github.sha, exigir confirmacion y no usar la credencial migradora"
+  );
+}
+
+if (/environment:\s*staging/.test(anthropicCapacityWorkflow) &&
+    /ref:\s*\$\{\{ github\.sha \}\}/.test(anthropicCapacityWorkflow) &&
+    /STAGING_ANTHROPIC_API_KEY/.test(anthropicCapacityWorkflow) &&
+    /AI_CAPACITY_CONCURRENCY:\s*"8"/.test(anthropicCapacityWorkflow) &&
+    /AUTHORIZE_PAID_ANTHROPIC_STAGING_\$\{PROFILE\}/.test(anthropicCapacityWorkflow) &&
+    /I_AUTHORIZE_PAID_ANTHROPIC_STAGING_CAPACITY/.test(anthropicCapacityWorkflow) &&
+    /npm run carga:anthropic|node scripts\/probar-capacidad-anthropic\.js/.test(anthropicCapacityWorkflow) &&
+    !/STAGING_MIGRATION_DATABASE_URL/.test(anthropicCapacityWorkflow)) {
+  ok("la capacidad de Anthropic exige staging, autorizacion paga y techo de concurrencia");
+} else {
+  mal(
+    "la capacidad de Anthropic exige staging, autorizacion paga y techo de concurrencia",
+    "el workflow debe fijar el commit, usar la clave de staging y exigir doble autorizacion sin credenciales migradoras"
   );
 }
 

@@ -1,0 +1,68 @@
+name: Anthropic capacity staging
+
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: Cantidad de generaciones reales pagas
+        required: true
+        default: "8"
+        type: choice
+        options:
+          - "8"
+          - "50"
+          - "500"
+      confirmation:
+        description: Escribir AUTHORIZE_PAID_ANTHROPIC_STAGING_<perfil>
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tiendaiq-staging-anthropic-capacity
+  cancel-in-progress: false
+
+jobs:
+  provider-capacity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Validate deliberate paid authorization
+        shell: bash
+        env:
+          PROFILE: ${{ inputs.profile }}
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          [[ "$CONFIRMATION" == "AUTHORIZE_PAID_ANTHROPIC_STAGING_${PROFILE}" ]]
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - run: npm install --no-audit --no-fund
+
+      - name: Exercise the real page-generation contract
+        env:
+          AI_CAPACITY_ENVIRONMENT: staging
+          ALLOW_PAID_ANTHROPIC_CAPACITY: I_AUTHORIZE_PAID_ANTHROPIC_STAGING_CAPACITY
+          AI_CAPACITY_CALLS: ${{ inputs.profile }}
+          AI_CAPACITY_CONCURRENCY: "8"
+          AI_CAPACITY_MAX_P95_MS: "120000"
+          AI_CAPACITY_MAX_ERROR_RATE: "0.01"
+          AI_INPUT_PRICE_USD_PER_MTOK: "5"
+          AI_OUTPUT_PRICE_USD_PER_MTOK: "25"
+          # Hard ceilings; the pilot request projects cost before the remainder.
+          AI_CAPACITY_MAX_BUDGET_USD: ${{ inputs.profile == '500' && '250' || inputs.profile == '50' && '25' || '5' }}
+          ANTHROPIC_API_KEY: ${{ secrets.STAGING_ANTHROPIC_API_KEY }}
+          MODELO_IA: claude-sonnet-5
+          ESFUERZO_IA: medium
+          ANTHROPIC_TIMEOUT_MS: "120000"
+        run: node scripts/probar-capacidad-anthropic.js
