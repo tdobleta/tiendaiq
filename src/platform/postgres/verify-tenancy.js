@@ -42,12 +42,16 @@ async function verifyTenantIsolation(pool) {
   const role = await pool.query(`
     SELECT rolsuper AS superuser,
            rolbypassrls AS bypass_rls,
+           rolinherit AS inherits_roles,
            pg_has_role(current_user, 'tiendaiq_worker_capability', 'member') AS worker_capability
     FROM pg_roles
     WHERE rolname = current_user
   `);
   if (role.rows[0]?.superuser || role.rows[0]?.bypass_rls) {
     throw new Error("Aislamiento inválido: el rol de la aplicación puede omitir RLS");
+  }
+  if (role.rows[0]?.inherits_roles) {
+    throw new Error("Aislamiento invalido: el rol web no puede heredar privilegios del proveedor");
   }
   if (role.rows[0]?.worker_capability) {
     throw new Error("Aislamiento inválido: el proceso web tiene capacidad de worker");
@@ -58,6 +62,7 @@ async function verifyTenantIsolation(pool) {
     forced: true,
     protectedTables: PROTECTED_TABLES.length,
     roleBypassesRls: false,
+    inheritsRoles: false,
     workerCapability: false
   };
 }

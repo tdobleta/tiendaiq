@@ -178,7 +178,7 @@ describe("readiness de aislamiento", () => {
   test("acepta RLS forzado con un rol sin bypass", async () => {
     const responses = [
       { rows: [{ enabled: true, forced: true, all_present: true, owns_protected_table: false }] },
-      { rows: [{ superuser: false, bypass_rls: false, worker_capability: false }] }
+      { rows: [{ superuser: false, bypass_rls: false, inherits_roles: false, worker_capability: false }] }
     ];
     const result = await verifyTenantIsolation({ async query() { return responses.shift(); } });
     assert.deepEqual(result, {
@@ -186,6 +186,7 @@ describe("readiness de aislamiento", () => {
       forced: true,
       protectedTables: 12,
       roleBypassesRls: false,
+      inheritsRoles: false,
       workerCapability: false
     });
   });
@@ -205,6 +206,17 @@ describe("readiness de aislamiento", () => {
     await assert.rejects(
       verifyTenantIsolation({ async query() { return responses.shift(); } }),
       /puede omitir RLS/
+    );
+  });
+
+  test("rechaza un rol web que hereda privilegios de proveedor", async () => {
+    const responses = [
+      { rows: [{ enabled: true, forced: true, all_present: true, owns_protected_table: false }] },
+      { rows: [{ superuser: false, bypass_rls: false, inherits_roles: true, worker_capability: false }] }
+    ];
+    await assert.rejects(
+      verifyTenantIsolation({ async query() { return responses.shift(); } }),
+      /no puede heredar privilegios del proveedor/
     );
   });
 
@@ -273,13 +285,15 @@ test("el bootstrap de roles usa la misma politica TLS que las migraciones", () =
   assert.doesNotMatch(source, /ssl:\s*process\.env\.PG_CA_CERT/);
 });
 
-test("el bootstrap administrativo elimina herencias runtime y reconstruye solo la capacidad worker", () => {
+test("el bootstrap administrativo elimina herencias de producto y reconstruye solo la capacidad worker", () => {
   const source = fs.readFileSync(path.join(__dirname, "..", "scripts", "preparar-roles-runtime.js"), "utf8");
 
   assert.match(source, /FROM pg_auth_members AS membership/);
   assert.match(source, /WHERE member\.rolname = ANY\(\$1::text\[\]\)/);
   assert.match(source, /WHERE parent\.rolname = \$1 AND member\.rolname <> \$2/);
   assert.match(source, /REVOKE \$\{quoteIdentifier\(parent\)\} FROM \$\{quoteIdentifier\(member\)\}/);
+  assert.match(source, /PROVIDER_MANAGED_MEMBERSHIPS\.includes\(parent\)/);
+  assert.match(source, /ALTER ROLE \$\{quoteIdentifier\(role\)\} NOINHERIT/);
   assert.match(source, /REVOKE \$\{quoteIdentifier\(WORKER_CAPABILITY\)\} FROM \$\{quoteIdentifier\(member\)\}/);
   assert.match(source, /GRANT \$\{quoteIdentifier\(WORKER_CAPABILITY\)\} TO \$\{quoteIdentifier\(WORKER_ROLE\)\}/);
   assert.match(source, /unexpectedMemberships/);
