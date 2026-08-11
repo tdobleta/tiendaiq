@@ -108,11 +108,26 @@ Un servidor de staging debe exponer endpoints equivalentes que solo validen y
 encolen objetos sinteticos en infraestructura aislada. Para un host no local se
 requiere la siguiente autorizacion deliberada:
 
+En el web service de staging se habilitan temporalmente con cuatro variables:
+
+```text
+ENABLE_SYNTHETIC_LOAD_ENDPOINTS=1
+SYNTHETIC_LOAD_ENVIRONMENT=staging
+SYNTHETIC_LOAD_TOKEN=<secreto aleatorio de al menos 32 caracteres>
+SYNTHETIC_LOAD_EXPIRES_AT=<fecha ISO UTC dentro de las proximas 2 horas>
+```
+
+Las variables deben permanecer ausentes en produccion. Los endpoints no llaman
+a Shopify, Anthropic, billing, worker o PostgreSQL; miden exclusivamente el
+borde HTTP y la capacidad de admision del proceso web. El token se envia en el
+header `Authorization`. La ruta se cierra automaticamente al vencer la fecha;
+al terminar se eliminan igualmente las cuatro variables y se redeploya el web.
+
 ```powershell
 $env:ALLOW_NON_LOCAL_LOAD_TEST = "I_UNDERSTAND_THIS_GENERATES_TRAFFIC"
 $env:LOAD_TEST_AUTHORIZATION = "Bearer <token-del-endpoint-sintetico>"
 $env:LOAD_TEST_HEADERS_JSON = '{"x-test-environment":"staging"}'
-node scripts/carga-local.js --base-url https://staging.example.test --session-path /load/session --job-path /load/jobs --sessions 2000 --jobs 1000 --concurrency 200
+node scripts/carga-local.js --base-url https://staging.example.test --session-path /__load/session --job-path /__load/jobs --sessions 2000 --jobs 1000 --concurrency 200
 ```
 
 La misma compuerta bloquea produccion por defecto. Autorizar la variable no

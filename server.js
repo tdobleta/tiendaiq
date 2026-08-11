@@ -26,6 +26,7 @@ const { despublicarPagina } = require("./publicar");
 const { env, sesionDeEnv } = require("./shopify");
 const { sesionDe, borrarTienda } = require("./tiendas");
 const { createConcurrencyGate } = require("./src/capacity/concurrency-gate");
+const { createSyntheticLoadHandler } = require("./src/capacity/synthetic-load-endpoints");
 const {
   guardarPaginaDB,
   leerPaginaDB,
@@ -268,6 +269,14 @@ function leerCuerpo(req, limite = 1_000_000) {
     req.on("error", reject);
   });
 }
+
+const syntheticLoadHandler = createSyntheticLoadHandler({
+  enabled: env.ENABLE_SYNTHETIC_LOAD_ENDPOINTS,
+  environment: env.SYNTHETIC_LOAD_ENVIRONMENT,
+  token: env.SYNTHETIC_LOAD_TOKEN,
+  expiresAt: env.SYNTHETIC_LOAD_EXPIRES_AT,
+  readJson: leerCuerpo
+});
 
 const TIPOS = {
   ".html": "text/html; charset=utf-8",
@@ -908,6 +917,7 @@ const servidor = http.createServer(async (req, res) => {
         ts: new Date().toISOString()
       });
     }
+    if (await syntheticLoadHandler(req, res, url)) return;
 
     if (url.pathname === "/auth") return await iniciarInstalacion(res, url, URL_APP);
     if (url.pathname === "/auth/callback") return await terminarInstalacion(res, url);
