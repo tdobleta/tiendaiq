@@ -12,7 +12,7 @@
     "start": "node server.js",
     "verificar": "node pruebas/sintaxis.js",
     "coherencia": "node pruebas/coherencia.js",
-    "unidad": "node --test \"pruebas/*.test.js\"",
+    "unidad": "node --test pruebas/*.test.js",
     "humo": "node pruebas/humo.js",
     "probar": "npm run verificar && npm run coherencia && npm run unidad && npm run humo"
   },
