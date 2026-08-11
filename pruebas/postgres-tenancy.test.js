@@ -324,6 +324,9 @@ test("el fixture y los probes de PostgreSQL usan los roles runtime efectivos", (
   assert.match(fixture, /workerRuntime: "tiendaiq_worker_runtime"/);
   assert.match(fixture, /GRANT \$\{quoteIdentifier\(EXPECTED_ROLES\.webRuntime\)\} TO/);
   assert.match(fixture, /GRANT \$\{quoteIdentifier\(EXPECTED_ROLES\.workerRuntime\)\} TO/);
+  assert.match(fixture, /FROM pg_auth_members membership/);
+  assert.match(fixture, /AS direct_worker_capability/);
+  assert.doesNotMatch(fixture, /pg_has_role\(current_user, \$1, 'member'\)/);
   for (const source of [rlsProbe, capacityProbe]) {
     assert.match(source, /runtimeRole: WEB_RUNTIME_ROLE/);
     assert.match(source, /runtimeRole: WORKER_RUNTIME_ROLE/);

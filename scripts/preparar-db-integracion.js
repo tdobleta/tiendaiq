@@ -57,7 +57,13 @@ async function verifyLoginRole(url, expectedRole) {
   try {
     const result = await client.query(
       `SELECT current_user, rolsuper, rolbypassrls,
-              pg_has_role(current_user, $1, 'member') AS worker_capability
+              EXISTS (
+                SELECT 1
+                FROM pg_auth_members membership
+                JOIN pg_roles capability ON capability.oid = membership.roleid
+                WHERE membership.member = pg_roles.oid
+                  AND capability.rolname = $1
+              ) AS direct_worker_capability
        FROM pg_roles WHERE rolname = current_user`,
       [EXPECTED_ROLES.capability]
     );
@@ -65,8 +71,8 @@ async function verifyLoginRole(url, expectedRole) {
     if (!current || current.current_user !== expectedRole || current.rolsuper || current.rolbypassrls) {
       throw new Error(`El rol ${expectedRole} tiene privilegios incompatibles`);
     }
-    if (current.worker_capability) {
-      throw new Error(`El login ${expectedRole} hereda una capacidad worker directa`);
+    if (current.direct_worker_capability) {
+      throw new Error(`El login ${expectedRole} tiene una capacidad worker directa`);
     }
   } finally {
     await client.end();
