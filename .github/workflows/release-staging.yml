@@ -12,7 +12,7 @@ concurrency:
 
 env:
   # Candidate reviewed in the isolated staging branch. Update through a reviewed commit.
-  STAGING_RELEASE_REF: edabbbeba0bd37c200464c80c909a2f6f46e0b13
+  STAGING_RELEASE_REF: 9e57466c612592c63694e4b58d6147e4296c42ef
 
 jobs:
   migrate-and-deploy:
