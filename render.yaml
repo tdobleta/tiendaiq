@@ -1,12 +1,9 @@
 # ============================================================
-# Render — infraestructura de TiendaIQ en un archivo.
+# Render - infraestructura de TiendaIQ en un archivo.
 #
-# Con esto, "New → Blueprint" en Render levanta el server Y la base de datos
-# juntos, conectados. No hay que configurar la DATABASE_URL a mano: Render la
-# inyecta desde la base que crea acá.
-#
-# Las claves secretas (tokens) NO van acá — se cargan en el panel de Render
-# como variables de entorno (sync: false las deja en blanco para completar).
+# Web y worker reciben solo URLs de usuarios separados creados en Database >
+# Credentials. La credencial propietaria queda fuera de los procesos runtime y
+# vive unicamente en el entorno protegido del workflow de release de staging.
 # ============================================================
 
 databases:
@@ -22,28 +19,86 @@ services:
     plan: starter
     buildCommand: npm install
     startCommand: node server.js
-    healthCheckPath: /
+    healthCheckPath: /ready
     envVars:
+      # URL interna del usuario tiendaiq_web. Nunca usar la credencial duena.
       - key: DATABASE_URL
-        fromDatabase:
-          name: tiendaiq-db
-          property: connectionString
-      # APP_URL se completa con la URL que Render te da (https://tiendaiq.onrender.com)
+        sync: false
       - key: APP_URL
         sync: false
-      # Secretos: se pegan en el panel, no en el repo.
       - key: SHOPIFY_CLIENT_ID
         sync: false
       - key: SHOPIFY_CLIENT_SECRET
         sync: false
       - key: ANTHROPIC_API_KEY
         sync: false
-      # DEV_MODE apagado en producción: todo pasa por el pase firmado.
+      # 32 bytes en base64. Produccion falla al arrancar si falta.
+      - key: TOKEN_ENC_KEY
+        sync: false
+      # DATABASE_URL es interna y viaja solo por la red privada de Render.
+      - key: PG_PRIVATE_NETWORK
+        value: "1"
+      # The managed Render credential only opens the connection. PostgreSQL
+      # switches into this NOINHERIT role before the first application query.
+      - key: PG_RUNTIME_ROLE
+        value: "tiendaiq_web_runtime"
+      - key: PG_POOL_MAX
+        value: "10"
+      - key: SHOPIFY_OAUTH_TIMEOUT_MS
+        value: "15000"
+      - key: ANTHROPIC_TIMEOUT_MS
+        value: "120000"
+      - key: TEXT_EDIT_CONCURRENCY
+        value: "4"
+      - key: PUBLIC_BUNDLES_CACHE_MS
+        value: "60000"
+      - key: GENERATION_QUEUE_MAX_PER_TENANT
+        value: "2"
+      - key: GENERATION_QUEUE_MAX_GLOBAL
+        value: "120"
       - key: DEV_MODE
         value: "0"
-      # Plan gratis: páginas por mes antes de exigir suscripción.
       - key: PAGINAS_GRATIS
         value: "3"
-      # Cargos de PRUEBA mientras no lances en serio. Cambiar a "0" para cobrar.
+      # Mantener en 1 hasta terminar el QA de billing en la dev store.
       - key: PLAN_TEST
         value: "1"
+
+  - type: worker
+    name: tiendaiq-worker
+    runtime: node
+    plan: starter
+    buildCommand: npm install
+    startCommand: npm run worker
+    envVars:
+      # URL interna del usuario tiendaiq_worker.
+      - key: DATABASE_URL
+        sync: false
+      - key: TOKEN_ENC_KEY
+        sync: false
+      - key: PG_PRIVATE_NETWORK
+        value: "1"
+      - key: PG_RUNTIME_ROLE
+        value: "tiendaiq_worker_runtime"
+      - key: SHOPIFY_CLIENT_ID
+        sync: false
+      - key: SHOPIFY_CLIENT_SECRET
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: PG_POOL_MAX
+        value: "12"
+      - key: ANTHROPIC_TIMEOUT_MS
+        value: "120000"
+      - key: JOB_GENERATION_CONCURRENCY
+        value: "8"
+      - key: JOB_PUBLICATION_CONCURRENCY
+        value: "4"
+      - key: WEBHOOK_CONCURRENCY
+        value: "2"
+      - key: JOB_POLL_MS
+        value: "1000"
+      - key: JOB_LEASE_SECONDS
+        value: "300"
+      - key: DEV_MODE
+        value: "0"

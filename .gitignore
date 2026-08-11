@@ -3,6 +3,11 @@ node_modules/
 tiendas/
 paginas/
 estados/
+jobs/
+!src/jobs/
+!src/jobs/*.js
+reservas-uso/
+webhook-inbox/
 ultima-pagina.json
 tunel.log
 tunel.pid
@@ -16,6 +21,7 @@ oauth.js
 
 # Logs de la herramienta Playwright MCP (no versionar)
 .playwright-mcp/
+.tmp-postgres/
 
 # Experimentos de nichos (themes por rubro + generador) — no versionar
 construir-nicho.js

@@ -20,6 +20,7 @@ const CARPETAS_FUERA = new Set([
   "node_modules",
   ".git",
   ".github",
+  ".skill-deps",
   "nichos",
   "estados",
   "tiendas",

@@ -34,6 +34,14 @@
       ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])
     );
 
+  // Older generated payloads can contain UTF-8 decoded as Latin-1. Repair it
+  // at the renderer boundary so published pages do not expose mojibake.
+  const repararMojibake = (value) => {
+    const text = String(value ?? "");
+    if (!/[\u00c3\u00c2\u00e2\u00f0]/.test(text)) return text;
+    try { return decodeURIComponent(escape(text)); } catch { return text; }
+  };
+
   // El pool guarda media_id; la url se resuelve acá contra MAPA_URLS. En la
   // tienda ese mapa lo arma Liquid con las fotos vivas del producto; en el
   // preview local lo deja el adaptador. Media_id borrado → placeholder.
@@ -530,6 +538,15 @@
   }
 
   function recomendados(f) {
+    if (EN_TIENDA) {
+      return `
+      <section class="recomendados" data-tiq-live-recommendations hidden>
+        <div class="contenedor">
+          <h2>Productos recomendados</h2>
+          <div class="recomendados__grid"></div>
+        </div>
+      </section>`;
+    }
     const items =
       f.modo === "placeholder" || !(f.items ?? []).length
         ? Array.from({ length: 5 }, (_, i) => ({
@@ -1278,6 +1295,7 @@
 
   const PPB_ASSETS = {
     ugc: ["tiq-placeholder-ugc-1.svg", "tiq-placeholder-ugc-2.svg", "tiq-placeholder-ugc-3.svg"],
+    review: "tiq-placeholder-review.svg",
     detail: "tiq-placeholder-detail.svg",
     payments: {
       amex: "tiq-payment-amex.svg", apple: "tiq-payment-apple.svg", visa: "tiq-payment-visa.svg",
@@ -1285,17 +1303,18 @@
     }
   };
   const PPB_DEFAULTS = {
-    badge: "#1 EL MÁS VENDIDO DE 2026",
-    ticker: ["Calidad pensada para todos los días", "Resultados simples y rápidos", "Diseño cómodo para tu rutina", "Una experiencia que se disfruta", "Elegí una solución práctica"],
-    social: { titular: "Miles confían. Personas reales eligen calidad.", subtitulo: "Descubrí una experiencia pensada para hacer más simple tu rutina.", cta: "Obtené el tuyo ahora", rating: "Calificado con 4.9/5 por clientes satisfechos", imagenes: [] },
+    badge: "PRODUCTO DESTACADO",
+    ticker: ["Aplicación sencilla", "Calidad diaria", "Resultados rápidos", "Naturalidad total", "Mirada realzada"],
+    social: { titular: "Contenido de clientes", enfasis: "", subtitulo: "Agregá contenido autorizado para mostrar esta sección.", cta: "Obtené el tuyo ahora", rating: "", imagenes: [] },
     como_funciona: { titular: "¿Cómo funciona este producto?", parrafos: ["Su diseño está pensado para resolver una necesidad cotidiana de forma simple.", "Usalo como parte de tu rutina y disfrutá una experiencia cómoda desde el primer momento.", "Una propuesta práctica para acompañarte todos los días, sin pasos innecesarios."], cta: "Compralo ahora", imagen: null },
-    feature: { titular: "5 beneficios para todos los días", subtitulo: "Todo lo que necesitás para sumar una mejora real a tu rutina.", items: ["Uso sencillo", "Diseño práctico", "Resultados claros", "Mantenimiento simple", "Para todos los días"].map((titulo) => ({ titulo, frase: "Pensado para acompañarte con comodidad." })), imagen: null },
-    reviews: { badge: "Basado en reseñas confiables", titular: "Lo que dicen quienes ya lo tienen", subtitulo: "Opiniones reales de clientes que organizaron su rutina.", items: ["Cliente 1", "Cliente 2", "Cliente 3", "Cliente 4"].map((autor, i) => ({ autor, estrellas: 5, texto: "Me resultó práctico y fácil de incorporar a mi rutina.", imagen: null })) },
-    blue_stats: { titular: "Lo que dicen los números", subtitulo: "Resultados que se sienten en la rutina.", items: [{ pct: 98, frase: "Notaron una mejora en su rutina." }, { pct: 100, frase: "Encontraron una forma más simple de usarlo." }, { pct: 100, frase: "Recomendaron la experiencia a otra persona." }, { pct: 96, frase: "Sintieron más confianza al usarlo." }] },
-    comparison: { titular: "Comparalo vos misma", parrafo: "Mirá por qué esta propuesta se destaca frente a las alternativas.", cta: "Obtené el tuyo ahora", filas: ["Diseño práctico", "Uso sencillo", "Cuidado diario", "Mantenimiento", "Versatilidad", "Durabilidad"], otros: "Otros" },
+    feature: { titular: "5 beneficios diarios del producto", subtitulo: "Potenciá tu rutina para disfrutar un resultado que se nota.", items: ["Uso sencillo", "Diseño práctico", "Resultados claros", "Mantenimiento simple", "Para todos los días"].map((titulo) => ({ titulo, frase: "Pensado para acompañarte con comodidad." })), imagen: null },
+    reviews: { badge: "Reseñas verificadas", titular: "Experiencias de clientes", subtitulo: "Importá reseñas reales para mostrar esta sección.", items: [] },
+    blue_stats: { titular: "Resultados verificados", subtitulo: "Agregá una fuente válida para publicar estadísticas.", items: [] },
+    comparison: { titular: "Comparalo vos misma", parrafo: "Mirá por qué esta propuesta se destaca frente a las alternativas.", cta: "Obtené el tuyo ahora", filas: ["Mayor definición", "Aplicación fluida", "Resultado natural", "Sin grumos", "Secado rápido", "Resistencia diaria"], otros: "Otros" },
     panel: { titular: "Una mejora simple para cada día", subtitulo: "Sumá una solución pensada para acompañarte con comodidad.", cta: "Compralo ahora", imagen: null },
-    faq: { titular: "Preguntas frecuentes", subtitulo: "Todo lo que necesitás saber antes de comprarlo.", items: ["¿De qué material está hecho?", "¿Cómo se usa?", "¿Cómo se limpia o mantiene?", "¿Qué pasa si no estoy conforme?"].map((pregunta) => ({ pregunta, respuesta: "Consultá la ficha del producto y la política de devolución para conocer todos los detalles." })) },
-    recomendados: ["Producto recomendado", "Accesorio recomendado", "Complemento diario", "Opción favorita"].map((titulo) => ({ imagen: null, titulo, precio: "19.99", comparativo: "24.99", descuento: "20%" }))
+    faq: { titular: "Preguntas frecuentes", subtitulo: "Todo lo que necesitás saber antes de comprarlo.", items: ["¿De qué material está hecho?", "¿Cómo se usa?", "¿Cómo se limpia o mantiene?", "¿Qué colores tiene disponibles?", "¿Qué pasa si no estoy conforme?"].map((pregunta) => ({ pregunta, respuesta: "Consultá la ficha del producto y la política de devolución para conocer todos los detalles." })) },
+    acordeones: [{ titulo: "Descripción", contenido: "Conocé los detalles y beneficios del producto." }, { titulo: "Cómo usar", contenido: "Usalo siguiendo las indicaciones de la ficha del producto." }, { titulo: "Envíos y devoluciones", contenido: "Consultá las condiciones de envío y devolución antes de comprar." }],
+    recomendados: []
   };
 
   const ppbPick = (obj, key, fallback) => obj?.[key] !== undefined && obj?.[key] !== null && obj?.[key] !== "" ? obj[key] : fallback;
@@ -1308,6 +1327,11 @@
   const ppbAssetImg = (name, alt = "") => `<img src="${esc(ppbAssetUrl(name))}" alt="${esc(alt)}" loading="lazy" decoding="async">`;
   const ppbAssetOrMedia = (value, alt, fallback) => value ? (/\.svg$|\.png$|\.jpe?g$|\.webp$/.test(String(value)) ? ppbAssetImg(value, alt) : img(value, alt)) : ppbAssetImg(fallback, alt);
   const ppbText = (value, fallback) => esc(value || fallback);
+  const ppbEmphasis = (value, emphasis) => {
+    const text = esc(value || "");
+    const term = esc(emphasis || "");
+    return term && text.includes(term) ? text.replace(term, `<em>${term}</em>`) : text;
+  };
 
   function ppbBlue(data) {
     const f = data.facetas || {};
@@ -1323,28 +1347,20 @@
       comparison: { ...PPB_DEFAULTS.comparison, ...(raw.comparison || {}) },
       panel: { ...PPB_DEFAULTS.panel, ...(raw.panel || {}) },
       faq: { ...PPB_DEFAULTS.faq, ...(raw.faq || {}) },
-      recomendados: Array.isArray(raw.recomendados) && raw.recomendados.length ? raw.recomendados : PPB_DEFAULTS.recomendados
+      acordeones: Array.isArray(raw.acordeones) && raw.acordeones.length ? raw.acordeones : PPB_DEFAULTS.acordeones,
+      recomendados: Array.isArray(raw.recomendados) ? raw.recomendados : PPB_DEFAULTS.recomendados
     };
     b.ticker = Array.isArray(raw.ticker) && raw.ticker.length ? raw.ticker : PPB_DEFAULTS.ticker;
     b.pagos = Array.isArray(raw.pagos) && raw.pagos.length ? raw.pagos : ["amex", "apple", "visa", "mastercard", "paypal", "gpay", "shop"];
     b.social.imagenes = Array.isArray(raw.social?.imagenes) ? raw.social.imagenes : [];
     b.como_funciona.parrafos = Array.isArray(raw.como_funciona?.parrafos) && raw.como_funciona.parrafos.length ? raw.como_funciona.parrafos : PPB_DEFAULTS.como_funciona.parrafos;
     b.feature.items = Array.isArray(raw.feature?.items) && raw.feature.items.length ? raw.feature.items : PPB_DEFAULTS.feature.items;
-    b.reviews.items = Array.isArray(raw.reviews?.items) && raw.reviews.items.length ? raw.reviews.items : PPB_DEFAULTS.reviews.items;
-    b.blue_stats.items = Array.isArray(raw.blue_stats?.items) && raw.blue_stats.items.length ? raw.blue_stats.items : PPB_DEFAULTS.blue_stats.items;
+    b.reviews.items = Array.isArray(raw.reviews?.items) ? raw.reviews.items : [];
+    b.blue_stats.items = Array.isArray(raw.blue_stats?.items) ? raw.blue_stats.items : [];
     b.comparison.filas = Array.isArray(raw.comparison?.filas) && raw.comparison.filas.length ? raw.comparison.filas : PPB_DEFAULTS.comparison.filas;
     b.faq.items = Array.isArray(raw.faq?.items) && raw.faq.items.length ? raw.faq.items : PPB_DEFAULTS.faq.items;
-    if (!Array.isArray(raw.reviews?.items) || !raw.reviews.items.length) {
-      const existentes = (f.resenas?.items || []).filter((item) => item?.texto).slice(0, 4);
-      if (existentes.length) b.reviews.items = existentes.map((item, i) => ({ autor: item.autor || `Cliente ${i + 1}`, estrellas: item.estrellas || 5, texto: item.texto, imagen: item.imagen || null }));
-    }
-    if (!Array.isArray(raw.blue_stats?.items) || !raw.blue_stats.items.length) {
-      const existentes = (f.stats?.items || []).filter((item) => item?.frase).slice(0, 4);
-      if (existentes.length) b.blue_stats.items = existentes.map((item, i) => ({ pct: [98, 100, 100, 96][i], frase: item.frase }));
-    }
     if (!Array.isArray(raw.comparison?.filas) || !raw.comparison.filas.length) b.comparison.filas = (f.tabla?.filas || []).filter(Boolean).slice(0, 6).length ? (f.tabla.filas || []).filter(Boolean).slice(0, 6) : b.comparison.filas;
-    if (!Array.isArray(raw.faq?.items) || !raw.faq.items.length) b.faq.items = (f.faq?.items || []).filter((item) => item?.pregunta).slice(0, 4).length ? (f.faq.items || []).filter((item) => item?.pregunta).slice(0, 4) : b.faq.items;
-    while (b.blue_stats.items.length < 4) b.blue_stats.items.push(PPB_DEFAULTS.blue_stats.items[b.blue_stats.items.length]);
+    if (!Array.isArray(raw.faq?.items) || !raw.faq.items.length) b.faq.items = (f.faq?.items || []).filter((item) => item?.pregunta).slice(0, 5).length ? (f.faq.items || []).filter((item) => item?.pregunta).slice(0, 5) : b.faq.items;
     while (b.comparison.filas.length < 6) b.comparison.filas.push(PPB_DEFAULTS.comparison.filas[b.comparison.filas.length]);
     return b;
   }
@@ -1363,17 +1379,22 @@
     const gallery = Array.isArray(h.galeria) && h.galeria.length ? h.galeria : [null, null, null, null, null];
     const thumbs = gallery.slice(0, 5).map((id, i) => `<button type="button" class="tiq-ppb__thumb${i === 0 ? " is-active" : ""}" onclick="cambiarPrincipal('${esc(id || "")}', this)" aria-label="Imagen ${i + 1}">${id ? img(id, titulo, { ancho: 160 }) : ppbAssetImg(PPB_ASSETS.detail, titulo)}</button>`).join("");
     const bullets = (Array.isArray(h.bullets) && h.bullets.length ? h.bullets : [{ fuerte: "Mirada más expresiva", resto: "" }, { fuerte: "Rutina más rápida", resto: "" }, { fuerte: "Sensación muy ligera", resto: "" }, { fuerte: "Uso diario sencillo", resto: "" }]).slice(0, 4).map((item) => `<li><span class="tiq-ppb__benefit-icon">${pagepilotBlueIcon(item)}</span><span>${esc(pagepilotBlueText(item) || "Beneficio del producto")}</span></li>`).join("");
-    const accordionData = (Array.isArray(h.acordeones) ? h.acordeones : []).slice(0, 3);
+    const accordionData = (Array.isArray(b.acordeones) ? b.acordeones : []).slice(0, 3);
     const accordionDefaults = [{ titulo: "Descripción", contenido: "Conocé los detalles y beneficios del producto." }, { titulo: "Cómo usar", contenido: "Usalo siguiendo las indicaciones de la ficha del producto." }, { titulo: "Envíos y devoluciones", contenido: "Consultá las condiciones de envío y devolución antes de comprar." }];
     while (accordionData.length < 3) accordionData.push(accordionDefaults[accordionData.length]);
     const accordions = accordionData.map((item) => `<details><summary>${esc(item.titulo || "Información del producto")}<span>⌄</span></summary><p>${esc(item.contenido || "Consultá la información del producto antes de comprar.")}</p></details>`).join("");
     const review = h.resena_destacada || {};
     const avatar = imgAsset(review.avatar, `<span class="tiq-ppb__avatar-fallback">${esc((review.autor || "C").slice(0, 1))}</span>`);
+    const reviewPool = [review, ...(Array.isArray(f.resenas?.items) ? f.resenas.items : [])].filter((item) => item?.texto).slice(0, 5);
     const precio = precioBonito(fuente.moneda, fuente.precio || "0.00");
     const anterior = fuente.precio_comparativo ? precioBonito(fuente.moneda, fuente.precio_comparativo) : "";
     const ahorro = Number(fuente.precio) && Number(fuente.precio_comparativo) > Number(fuente.precio) ? Math.round((1 - Number(fuente.precio) / Number(fuente.precio_comparativo)) * 100) : 0;
     const reviewText = review.texto || "Una experiencia práctica y simple para sumar a tu rutina diaria.";
-    return `<section class="tiq-ppb__hero" data-bloque="hero"><div class="tiq-ppb__wrap tiq-ppb__hero-grid"><div class="tiq-ppb__gallery"><div id="tiq-ppb-main" class="tiq-ppb__gallery-main">${gallery[0] ? img(gallery[0], titulo, { hero: true }) : ppbAssetImg(PPB_ASSETS.detail, titulo)}<button type="button" class="tiq-ppb__gallery-arrow tiq-ppb__gallery-arrow--prev" onclick="tiqPpbMover(-1)" aria-label="Imagen anterior">‹</button><button type="button" class="tiq-ppb__gallery-arrow tiq-ppb__gallery-arrow--next" onclick="tiqPpbMover(1)" aria-label="Imagen siguiente">›</button></div><div class="tiq-ppb__thumbs">${thumbs}</div></div><div class="tiq-ppb__buy"><div class="tiq-ppb__badge"><b>★</b><span>${ppbText(b.badge, PPB_DEFAULTS.badge)}</span></div><h1>${esc(titulo)}</h1><div class="tiq-ppb__rating">${estrellas(Math.max(1, Math.min(5, Math.round(Number(h.puntaje || 5)))))} <span>Calificado con <strong>${esc(puntaje1(h.puntaje ?? 4.9))}/5</strong> por más de <strong>${esc(miles(h.resenas_count || 0))}</strong> personas</span></div><ul class="tiq-ppb__benefits">${bullets}</ul><div class="tiq-ppb__price">${anterior ? `<del>${esc(anterior)}</del>` : ""}<strong>${esc(precio)}</strong>${ahorro ? `<span class="tiq-ppb__save">AHORRÁ ${ahorro}%</span>` : ""}</div>${ppbAddButton(g, g.cta || "Añadir al carrito")}<div class="tiq-ppb__trust"><span>${ICONO.verificado} Garantía de devolución de 30 días</span><span>${ICONO.paquete} Envío y devoluciones simples</span></div><div class="tiq-ppb__payments" aria-label="Medios de pago">${b.pagos.slice(0, 7).map((id) => PPB_ASSETS.payments[id] ? ppbAssetImg(PPB_ASSETS.payments[id], id) : "").join("")}</div><div class="tiq-ppb__accordions">${accordions}</div><div class="tiq-ppb__guarantee">${ICONO.corazon}<span>Menos del 1% de los clientes solicita nuestra garantía de devolución</span></div><blockquote class="tiq-ppb__quote"><button type="button" aria-label="Reseña anterior">‹</button><span class="tiq-ppb__quote-avatar">${avatar}</span><div class="tiq-ppb__quote-body"><div class="tiq-ppb__quote-stars">${estrellas(review.estrellas || 5)}</div><p>"${esc(reviewText)}"</p><cite>${ICONO.verificado} ${esc(review.autor || "Cliente verificado")}</cite></div><button type="button" aria-label="Reseña siguiente">›</button></blockquote></div></div></section>`;
+    const badge = String(b.badge || PPB_DEFAULTS.badge).trim();
+    const badgeMatch = badge.match(/^(#[0-9]+)\s+(.+)$/);
+    const badgeMark = badgeMatch ? badgeMatch[1] : "★";
+    const badgeLabel = badgeMatch ? badgeMatch[2] : badge;
+    return `<section class="tiq-ppb__hero" data-bloque="hero"><div class="tiq-ppb__wrap tiq-ppb__hero-grid"><div class="tiq-ppb__gallery"><div id="tiq-ppb-main" class="tiq-ppb__gallery-main">${gallery[0] ? img(gallery[0], titulo, { hero: true }) : ppbAssetImg(PPB_ASSETS.detail, titulo)}<button type="button" class="tiq-ppb__gallery-arrow tiq-ppb__gallery-arrow--prev" onclick="tiqPpbMover(-1)" aria-label="Imagen anterior">‹</button><button type="button" class="tiq-ppb__gallery-arrow tiq-ppb__gallery-arrow--next" onclick="tiqPpbMover(1)" aria-label="Imagen siguiente">›</button></div><div class="tiq-ppb__thumbs">${thumbs}</div></div><div class="tiq-ppb__buy"><div class="tiq-ppb__badge"><b>${esc(badgeMark)}</b><span>${esc(badgeLabel)}</span></div><h1>${esc(titulo)}</h1><div class="tiq-ppb__rating">${estrellas(Math.max(1, Math.min(5, Math.round(Number(h.puntaje || 5)))))} <span>Calificado con <strong>${esc(puntaje1(h.puntaje ?? 4.9))}/5</strong> por más de <strong>${esc(miles(h.resenas_count || 0))}</strong> personas</span></div><ul class="tiq-ppb__benefits">${bullets}</ul><div class="tiq-ppb__price">${anterior ? `<del>${esc(anterior)}</del>` : ""}<strong>${esc(precio)}</strong>${ahorro ? `<span class="tiq-ppb__save">AHORRA ${ahorro}%</span>` : ""}</div>${ppbAddButton(g, g.cta || "Añadir al carrito")}<div class="tiq-ppb__trust"><span>${ICONO.verificado} Garantía de devolución de 30 días</span><span>${ICONO.paquete} Devoluciones en 30 días</span></div><div class="tiq-ppb__payments" aria-label="Medios de pago">${b.pagos.slice(0, 7).map((id) => PPB_ASSETS.payments[id] ? ppbAssetImg(PPB_ASSETS.payments[id], id) : "").join("")}</div><div class="tiq-ppb__accordions">${accordions}</div><div class="tiq-ppb__guarantee">${ICONO.corazon}<span>Menos del 1% de los clientes solicita nuestra Garantía de Devolución</span></div><blockquote class="tiq-ppb__quote" data-ppb-review-pool='${esc(JSON.stringify(reviewPool))}' data-ppb-review-index="0"><button type="button" onclick="tiqPpbReviewMover(-1)" aria-label="Reseña anterior">‹</button><span class="tiq-ppb__quote-avatar">${avatar}</span><div class="tiq-ppb__quote-body"><div class="tiq-ppb__quote-stars">${estrellas(review.estrellas || 5)}</div><p>"${esc(reviewText)}"</p><cite>${ICONO.verificado} ${esc(review.autor || "Cliente verificado")}</cite></div><button type="button" onclick="tiqPpbReviewMover(1)" aria-label="Reseña siguiente">›</button></blockquote></div></div></section>`;
   }
 
   function ppbTicker(b) {
@@ -1385,7 +1406,7 @@
   function ppbSocial(data, b) {
     const existing = (data.facetas?.resenas?.items || []).map((item) => item?.imagen).filter(Boolean).slice(0, 3);
     const images = b.social.imagenes.length ? b.social.imagenes.slice(0, 3) : (existing.length ? existing : PPB_ASSETS.ugc);
-    return `<section class="tiq-ppb__social" data-bloque="clientes"><div class="tiq-ppb__wrap tiq-ppb__social-grid"><div><h2>${esc(b.social.titular)}</h2><p>${esc(b.social.subtitulo)}</p>${ppbAddButton(data.global || {}, b.social.cta)}<div class="tiq-ppb__social-rating">${estrellas(5)} <span>${esc(b.social.rating)}</span></div></div><div class="tiq-ppb__ugc-grid">${images.map((id, i) => `<article class="tiq-ppb__ugc">${ppbAssetOrMedia(id, `Contenido de cliente ${i + 1}`, PPB_ASSETS.ugc[i % 3])}</article>`).join("")}</div></div></section>`;
+    return `<section class="tiq-ppb__social" data-bloque="clientes"><div class="tiq-ppb__wrap tiq-ppb__social-grid"><div><h2>${ppbEmphasis(b.social.titular, b.social.enfasis)}</h2><p>${esc(b.social.subtitulo)}</p>${ppbAddButton(data.global || {}, b.social.cta)}<div class="tiq-ppb__social-rating">${estrellas(5)} <span>${esc(b.social.rating)}</span></div></div><div class="tiq-ppb__ugc-grid">${images.map((id, i) => `<article class="tiq-ppb__ugc">${ppbAssetOrMedia(id, `Contenido de cliente ${i + 1}`, PPB_ASSETS.ugc[i % 3])}</article>`).join("")}</div></div></section>`;
   }
 
   function ppbTextImage(data, b) {
@@ -1400,11 +1421,13 @@
   }
 
   function ppbReviews(b) {
-    const items = b.reviews.items.slice(0, 4).map((item, i) => `<article class="tiq-ppb__review"><div class="tiq-ppb__review-media">${ppbAssetOrMedia(item.imagen, item.autor || "Cliente", PPB_ASSETS.ugc[i % 3])}</div><strong>${esc(item.autor || "Cliente verificado")}</strong>${estrellas(item.estrellas || 5)}<p>${esc(item.texto || "Una experiencia práctica para todos los días.")}</p></article>`).join("");
+    if (!b.reviews.items.length) return "";
+    const items = b.reviews.items.slice(0, 4).map((item) => `<article class="tiq-ppb__review"><div class="tiq-ppb__review-media">${ppbAssetOrMedia(item.imagen, item.autor || "Cliente", PPB_ASSETS.review)}</div><strong>${esc(item.autor || "Cliente verificado")}</strong>${estrellas(item.estrellas || 5)}<p>${esc(item.texto || "Una experiencia práctica para todos los días.")}</p></article>`).join("");
     return `<section class="tiq-ppb__reviews" data-bloque="resenas"><div class="tiq-ppb__wrap"><header class="tiq-ppb__section-head"><div class="tiq-ppb__pill">${estrellas(5)} ${esc(b.reviews.badge)}</div><h2>${esc(b.reviews.titular)}</h2><p>${esc(b.reviews.subtitulo)}</p></header><div class="tiq-ppb__reviews-grid">${items}</div></div></section>`;
   }
 
   function ppbStats(b) {
+    if (!b.blue_stats.items.length) return "";
     return `<section class="tiq-ppb__stats-section" data-bloque="stats"><div class="tiq-ppb__wrap"><header class="tiq-ppb__section-head"><h2>${esc(b.blue_stats.titular)}</h2><p>${esc(b.blue_stats.subtitulo)}</p></header><div class="tiq-ppb__stats-grid">${b.blue_stats.items.slice(0, 4).map((item) => `<article><b>${esc(item.pct ?? 0)}%</b><p>${esc(item.frase || "Notaron una mejora en su rutina.")}</p></article>`).join("")}</div></div></section>`;
   }
 
@@ -1419,23 +1442,57 @@
   }
 
   function ppbFaq(b) {
-    return `<section class="tiq-ppb__faq" data-bloque="faq"><div class="tiq-ppb__wrap"><header class="tiq-ppb__section-head"><h2>${esc(b.faq.titular)}</h2><p>${esc(b.faq.subtitulo)}</p></header><div class="tiq-ppb__faq-list">${b.faq.items.slice(0, 4).map((item) => `<details><summary>${esc(item.pregunta)}<span>+</span></summary><p>${esc(item.respuesta)}</p></details>`).join("")}</div></div></section>`;
+    return `<section class="tiq-ppb__faq" data-bloque="faq"><div class="tiq-ppb__wrap"><header class="tiq-ppb__section-head"><h2>${esc(b.faq.titular)}</h2><p>${esc(b.faq.subtitulo)}</p></header><div class="tiq-ppb__faq-list">${b.faq.items.slice(0, 5).map((item) => `<details><summary>${esc(item.pregunta)}<span>+</span></summary><p>${esc(item.respuesta)}</p></details>`).join("")}</div></div></section>`;
   }
 
   function ppbRecommendations(data, b) {
+    if (EN_TIENDA) {
+      return `<section class="tiq-ppb__recommendations" data-tiq-live-recommendations hidden><div class="tiq-ppb__wrap"><header class="tiq-ppb__section-head"><h2>Productos recomendados</h2></header><div class="tiq-ppb__rec-track"></div></div></section>`;
+    }
     const moneda = data.fuente?.moneda;
-    const cards = b.recomendados.slice(0, 4).map((item, i) => `<article class="tiq-ppb__rec-card"><div class="tiq-ppb__rec-image">${ppbAssetOrMedia(item.imagen, item.titulo, PPB_ASSETS.detail)}</div><strong>${esc(item.titulo || "Producto recomendado")}</strong><div class="tiq-ppb__rec-price">${esc(precioBonito(moneda, item.precio || "19.99"))} <del>${esc(precioBonito(moneda, item.comparativo || "24.99"))}</del></div><span>${esc(item.descuento || "20%")} DE DESCUENTO</span></article>`).join("");
+    const items = b.recomendados.length
+      ? b.recomendados.slice(0, 5)
+      : Array.from({ length: 5 }, () => ({ imagen: null, titulo: "Producto del catálogo", precio: "", comparativo: "", descuento: "" }));
+    const cards = items.map((item) => `<article class="tiq-ppb__rec-card"><div class="tiq-ppb__rec-image">${ppbAssetOrMedia(item.imagen, item.titulo, PPB_ASSETS.detail)}</div><strong>${esc(item.titulo || "Producto del catálogo")}</strong><div class="tiq-ppb__rec-price">${item.precio ? esc(precioBonito(moneda, item.precio)) : "Precio de Shopify"}${item.comparativo ? ` <del>${esc(precioBonito(moneda, item.comparativo))}</del>` : ""}</div>${item.descuento ? `<span>${esc(item.descuento)} DE DESCUENTO</span>` : ""}</article>`).join("");
     return `<section class="tiq-ppb__recommendations"><div class="tiq-ppb__wrap"><header class="tiq-ppb__section-head"><h2>Productos recomendados</h2></header><div class="tiq-ppb__rec-track">${cards}</div></div></section>`;
   }
 
   function ppbSticky(data) {
     const h = data.facetas?.hero || {}, titulo = h.titulo || data.fuente?.titulo_crudo || "Producto";
-    return `<div class="tiq-ppb__sticky"><div class="tiq-ppb__sticky-inner"><div class="tiq-ppb__sticky-product">${h.galeria?.[0] ? img(h.galeria[0], titulo, { ancho: 64 }) : ppbAssetImg(PPB_ASSETS.detail, titulo)}<strong>${esc(titulo)}</strong></div>${ppbAddButton(data.global || {}, data.global?.cta || "Añadir al carrito", "tiq-ppb__sticky-cta")}</div></div><div class="tiq-ppb__toast" role="status" aria-live="polite">Producto agregado al carrito de demostración</div>`;
+    const mensaje = EN_TIENDA ? "Producto agregado al carrito" : "Vista previa: el carrito no cambia";
+    return `<div class="tiq-ppb__sticky"><div class="tiq-ppb__sticky-inner"><div class="tiq-ppb__sticky-product">${h.galeria?.[0] ? img(h.galeria[0], titulo, { ancho: 64 }) : ppbAssetImg(PPB_ASSETS.detail, titulo)}<strong>${esc(titulo)}</strong></div>${ppbAddButton(data.global || {}, data.global?.cta || "Añadir al carrito", "tiq-ppb__sticky-cta")}</div></div><div class="tiq-ppb__toast" role="status" aria-live="polite">${mensaje}</div>`;
   }
 
   function renderPagepilotBlueExact(data) {
     const b = ppbBlue(data);
-    return `<div class="tiq-ppb">${[ppbHero(data, b), ppbTicker(b), ppbSocial(data, b), ppbTextImage(data, b), ppbFeature(data, b), ppbReviews(b), ppbStats(b), ppbComparison(data, b), ppbPanel(data, b), ppbFaq(b), ppbRecommendations(data, b), ppbSticky(data)].join("\n")}</div>`;
+    return repararMojibake(`<div class="tiq-ppb">${[ppbHero(data, b), ppbTicker(b), ppbSocial(data, b), ppbTextImage(data, b), ppbFeature(data, b), ppbReviews(b), ppbStats(b), ppbComparison(data, b), ppbPanel(data, b), ppbFaq(b), ppbRecommendations(data, b), ppbSticky(data)].join("\n")}</div>`);
+  }
+
+  function filtrarClaimsSinFuente(html, datos) {
+    const compliance = datos?.compliance || {};
+    const verificado = compliance.claims_verified === true;
+    const selectores = [];
+
+    if (!verificado || !compliance.review_source) {
+      selectores.push(
+        ".hero__resenas", ".resena-destacada", ".resenas", ".tiq-mq",
+        ".tiq-pp__rating", ".tiq-pp__quote", ".tiq-pp__reviews",
+        ".tiq-ppb__rating", ".tiq-ppb__quote", ".tiq-ppb__social", ".tiq-ppb__reviews"
+      );
+    }
+    if (!verificado || !compliance.statistics_source) {
+      selectores.push(".stats", ".tiq-pp__dark", ".tiq-ppb__stats-section", ".tiq-ppb__comparison");
+    }
+    if (!verificado || !compliance.policy_source) {
+      selectores.push(".hero__urgencia", ".hero__timer", ".hero__badges", ".tiq-pp__trust", ".tiq-ppb__trust", ".tiq-ppb__guarantee");
+    }
+    if (!verificado) selectores.push(".tiq-ppb__badge");
+    if (!selectores.length) return html;
+
+    const fragmento = document.createElement("template");
+    fragmento.innerHTML = html;
+    fragmento.content.querySelectorAll([...new Set(selectores)].join(",")).forEach((nodo) => nodo.remove());
+    return fragmento.innerHTML;
   }
 
   function renderPremium(data, opts = {}) {
@@ -1529,14 +1586,20 @@
     return out.join("\n");
   }
 
-  // Recomendados en vivo: en la tienda se piden a la API de recomendaciones
-  // de Shopify (la misma que usan los temas), así la sección refleja SIEMPRE
-  // el catálogo real, sin congelar nada en la generación. Si no devuelve
-  // nada útil cae a /products.json; si tampoco, quedan los placeholders.
+  // Recomendados en vivo: precios, descuentos e imágenes salen siempre del
+  // catálogo de Shopify. Si ambas APIs fallan, la sección permanece oculta.
   async function cargarRecomendados(moneda) {
-    const grid = document.querySelector(".recomendados__grid");
+    const grids = Array.from(document.querySelectorAll(".recomendados__grid"));
+    const ppbTracks = Array.from(document.querySelectorAll(".tiq-ppb__rec-track"));
     const idProducto = window.TIENDAIQ_PRODUCT_ID;
-    if (!grid || !idProducto) return;
+    if ((!grids.length && !ppbTracks.length) || !idProducto) return;
+
+    const importe = (value) => {
+      if (value == null || value === "") return null;
+      const number = Number(value);
+      if (!Number.isFinite(number)) return null;
+      return typeof value === "number" ? number / 100 : number;
+    };
 
     const normalizar = (p) => ({
       nombre: p.title,
@@ -1546,7 +1609,11 @@
       precio:
         typeof p.price === "number"
           ? (p.price / 100).toFixed(2)
-          : p.price ?? p.variants?.[0]?.price ?? ""
+          : p.price ?? p.variants?.[0]?.price ?? "",
+      comparativo:
+        typeof p.compare_at_price === "number"
+          ? (p.compare_at_price / 100).toFixed(2)
+          : p.compare_at_price ?? p.variants?.[0]?.compare_at_price ?? ""
     });
 
     let productos = [];
@@ -1565,9 +1632,8 @@
     }
     if (!productos.length) return;
 
-    grid.innerHTML = productos
-      .map(normalizar)
-      .map(
+    const reales = productos.map(normalizar);
+    const genericHtml = reales.map(
         (p) => `
         <a class="tarjeta-producto" href="${esc(p.url)}">
           ${
@@ -1580,6 +1646,24 @@
         </a>`
       )
       .join("");
+    grids.forEach((grid) => {
+      grid.innerHTML = genericHtml;
+      const section = grid.closest("[data-tiq-live-recommendations]");
+      if (section) section.hidden = false;
+    });
+
+    const ppbHtml = reales.map((p) => {
+      const price = importe(p.precio);
+      const compareAt = importe(p.comparativo);
+      const hasDiscount = price != null && compareAt != null && compareAt > price;
+      const discount = hasDiscount ? Math.round((1 - price / compareAt) * 100) : null;
+      return `<a class="tiq-ppb__rec-card" href="${esc(p.url)}"><div class="tiq-ppb__rec-image">${p.imagen ? `<img src="${esc(p.imagen)}" alt="${esc(p.nombre)}" loading="lazy">` : `<div class="tiq-ppb__asset-placeholder" aria-hidden="true"></div>`}</div><strong>${esc(p.nombre)}</strong><div class="tiq-ppb__rec-price">${esc(precioBonito(moneda ?? "", p.precio))}${hasDiscount ? ` <del>${esc(precioBonito(moneda ?? "", p.comparativo))}</del>` : ""}</div>${discount ? `<span>${discount}% DE DESCUENTO</span>` : ""}</a>`;
+    }).join("");
+    ppbTracks.forEach((track) => {
+      track.innerHTML = ppbHtml;
+      const section = track.closest("[data-tiq-live-recommendations]");
+      if (section) section.hidden = false;
+    });
   }
 
   // interacción mínima de la galería
@@ -1601,6 +1685,30 @@
     thumbs[(actual + delta + thumbs.length) % thumbs.length].click();
   };
 
+  window.tiqPpbReviewMover = function (delta) {
+    const quote = document.querySelector(".tiq-ppb__quote[data-ppb-review-pool]");
+    if (!quote) return;
+    let pool;
+    try { pool = JSON.parse(quote.dataset.ppbReviewPool || "[]"); } catch { pool = []; }
+    if (pool.length < 2) return;
+    const current = Number(quote.dataset.ppbReviewIndex) || 0;
+    const next = (current + delta + pool.length) % pool.length;
+    const review = pool[next] || {};
+    quote.dataset.ppbReviewIndex = String(next);
+    const stars = Math.max(1, Math.min(5, Number(review.estrellas) || 5));
+    const body = quote.querySelector(".tiq-ppb__quote-body");
+    if (body) {
+      const rating = body.querySelector(".tiq-ppb__quote-stars");
+      const text = body.querySelector("p");
+      const author = body.querySelector("cite");
+      if (rating) rating.textContent = "★".repeat(stars);
+      if (text) text.textContent = `"${review.texto || "Una experiencia práctica y simple para sumar a tu rutina diaria."}"`;
+      if (author) author.textContent = `✓ ${review.autor || "Cliente verificado"}`;
+    }
+    const avatar = quote.querySelector(".tiq-ppb__quote-avatar");
+    if (avatar) avatar.innerHTML = `<span class="tiq-ppb__avatar-fallback">${esc((review.autor || "C").slice(0, 1))}</span>`;
+  };
+
   window.tiqPpbMostrarToast = function () {
     const toast = document.querySelector(".tiq-ppb__toast");
     if (!toast) return;
@@ -1609,7 +1717,6 @@
     toast._tiqTimer = setTimeout(() => toast.classList.remove("is-visible"), 2200);
   };
   window.tiqPpbAgregar = function (ev) {
-    window.tiqPpbMostrarToast();
     return window.tiendaiqAgregar(ev);
   };
 
@@ -1638,6 +1745,7 @@
       })
       .then(() => {
         boton.textContent = "✓ Agregado al carrito";
+        if (boton.matches("[data-ppb-add]")) window.tiqPpbMostrarToast();
         document.documentElement.dispatchEvent(
           new CustomEvent("cart:refresh", { bubbles: true })
         );
@@ -1657,6 +1765,7 @@
   function montar(datos) {
     if (EN_TIENDA) document.body.classList.add("publicada");
     const app = document.getElementById("app");
+    app.classList.toggle("tiq-claims-unverified", datos?.compliance?.claims_verified !== true);
     // El nicho define el color de acento (skin por rubro). Sin dato → general.
     app.dataset.nicho = datos?.global?.nicho || "general";
     // Variante de color elegida por el merchant: pisa el acento del nicho. Sin
@@ -1668,8 +1777,8 @@
     // Los handlers del hero son inline globales (cambiarPrincipal / tiendaiqAgregar)
     // → funcionan sobre el DOM del SSR sin re-montar nada. Fallback: render total.
     const resto = app.dataset.ssr === "1" ? document.getElementById("tiq-resto") : null;
-    if (resto) resto.innerHTML = render(datos, { sinHero: true });
-    else app.innerHTML = render(datos);
+    if (resto) resto.innerHTML = filtrarClaimsSinFuente(render(datos, { sinHero: true }), datos);
+    else app.innerHTML = filtrarClaimsSinFuente(render(datos), datos);
     app.style.minHeight = ""; // la reserva de CLS (pagina.liquid) ya cumplió; altura real
     iniciarVcar(); // centra los carruseles de video
     autoplayMuro(); // los videos del muro se reproducen solos al entrar en vista

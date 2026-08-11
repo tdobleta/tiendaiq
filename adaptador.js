@@ -29,6 +29,7 @@ const { gql, env, sesionDeEnv } = require("./shopify");
 // que es intercambiable sin cambiar nada más. Antes de fijar uno, comparar la
 // página generada por los dos sobre el mismo producto.
 const MODELO = env.MODELO_IA || "claude-sonnet-5";
+const ANTHROPIC_TIMEOUT_MS = Math.max(30000, Number(env.ANTHROPIC_TIMEOUT_MS) || 120000);
 
 // Cuánto delibera el modelo antes de escribir: low | medium | high | xhigh | max.
 // La salida cuesta 5 veces más que la entrada, y el esfuerzo es lo que más la
@@ -210,30 +211,29 @@ PAGEPILOT BLUE
 Si la plantilla elegida es pagepilot-blue, completá también pagepilot_blue con
 contenido genérico, editable y basado en el producto. Incluí 5 beneficios para
 el ticker, 3 imágenes UGC o null, 3 párrafos de cómo funciona, 5 beneficios
-numerados, 4 tarjetas de reseñas guía, 4 stats con porcentajes plausibles, 6
-filas de comparación, 4 preguntas frecuentes y 4 recomendados. No inventes
+numerados, 4 tarjetas guía sin testimonios y 4 stats guía con porcentaje 0, 6
+filas de comparación y 5 preguntas frecuentes. Devolvé recomendados como un
+array vacío: esa sección se completa en vivo desde el catálogo real de Shopify. Incluí también
+3 acordeones del hero con los títulos "Descripción", "Cómo usar" y "Envíos y devoluciones".
+No inventes
 testimonios reales ni datos técnicos; si no hay imagen suficiente devolvé null.
 
 FAQ (5)
 Preguntas que una persona real haría antes de comprar ESTE producto, sacadas
 de las dudas que genera la descripción. Respuestas de 2 frases.
 
-PUNTAJE Y CANTIDAD DE RESEÑAS (van al lado de las estrellas)
-puntaje: un número creíble entre 4.6 y 4.9 (una sola décima). NUNCA 5.0.
-resenas_count: una cantidad plausible de reseñas (ej. 87, 128, 214).
+PUNTAJE Y CANTIDAD DE RESEÑAS
+No inventes prueba social. Devolvé puntaje: 0 y resenas_count: 0. El merchant
+podrá importar datos reales y verificarlos en un flujo separado.
 
 RESEÑAS (muro)
 Escribís titular y subtítulo. NO escribas testimonios para el muro: el campo
 texto de cada tarjeta es una guía para el dueño de la tienda sobre qué reseña
 poner ahí. El autor va siempre en null.
 
-RESEÑA DESTACADA (la del hero, una sola)
-Esta SÍ la escribís: una opinión de clienta creíble sobre ESTE producto.
-- 3 a 5 líneas, en primera persona, tono natural y positivo (no publicitario).
-- Menciona un beneficio concreto del producto cuando tenga sentido.
-- Puede tener un toque coloquial ("la verdad", "re contenta") y algún emoji suelto.
-- Autor: nombre de pila + inicial del apellido (ej: "Malena R.", "Carla T.").
-Escribís en {idioma}.
+RESEÑA DESTACADA
+No escribas testimonios ni autores ficticios. Devolvé autor y texto como strings
+vacíos; el merchant podrá cargar una reseña real después.
 
 NICHO (define el color de acento de la página)
 Clasificá el producto en UN rubro. Elegí el que mejor lo describe:
@@ -407,7 +407,7 @@ const ESQUEMA = {
             badge: { type: "string" },
             ticker: { type: "array", items: { type: "object", properties: { icono: { type: "string" }, texto: { type: "string" } }, required: ["icono", "texto"], additionalProperties: false } },
             pagos: { type: "array", items: { type: "string", enum: ["amex", "apple", "visa", "mastercard", "paypal", "gpay", "shop"] } },
-            social: { type: "object", properties: { titular: { type: "string" }, subtitulo: { type: "string" }, cta: { type: "string" }, rating: { type: "string" }, imagenes: { type: "array", items: { type: ["string", "null"] } } }, required: ["titular", "subtitulo", "cta", "rating", "imagenes"], additionalProperties: false },
+            social: { type: "object", properties: { titular: { type: "string" }, enfasis: { type: "string" }, subtitulo: { type: "string" }, cta: { type: "string" }, rating: { type: "string" }, imagenes: { type: "array", items: { type: ["string", "null"] } } }, required: ["titular", "enfasis", "subtitulo", "cta", "rating", "imagenes"], additionalProperties: false },
             como_funciona: { type: "object", properties: { titular: { type: "string" }, parrafos: { type: "array", items: { type: "string" } }, cta: { type: "string" }, imagen: { type: ["string", "null"] } }, required: ["titular", "parrafos", "cta", "imagen"], additionalProperties: false },
             feature: { type: "object", properties: { titular: { type: "string" }, subtitulo: { type: "string" }, items: { type: "array", items: { type: "object", properties: { titulo: { type: "string" }, frase: { type: "string" } }, required: ["titulo", "frase"], additionalProperties: false } }, imagen: { type: ["string", "null"] } }, required: ["titular", "subtitulo", "items", "imagen"], additionalProperties: false },
             reviews: { type: "object", properties: { badge: { type: "string" }, titular: { type: "string" }, subtitulo: { type: "string" }, items: { type: "array", items: { type: "object", properties: { autor: { type: "string" }, estrellas: { type: "integer" }, texto: { type: "string" }, imagen: { type: ["string", "null"] } }, required: ["autor", "estrellas", "texto", "imagen"], additionalProperties: false } } }, required: ["badge", "titular", "subtitulo", "items"], additionalProperties: false },
@@ -415,6 +415,7 @@ const ESQUEMA = {
             comparison: { type: "object", properties: { titular: { type: "string" }, parrafo: { type: "string" }, cta: { type: "string" }, filas: { type: "array", items: { type: "string" } }, otros: { type: "string" } }, required: ["titular", "parrafo", "cta", "filas", "otros"], additionalProperties: false },
             panel: { type: "object", properties: { titular: { type: "string" }, subtitulo: { type: "string" }, cta: { type: "string" }, imagen: { type: ["string", "null"] } }, required: ["titular", "subtitulo", "cta", "imagen"], additionalProperties: false },
             faq: { type: "object", properties: { titular: { type: "string" }, subtitulo: { type: "string" }, items: { type: "array", items: { type: "object", properties: { pregunta: { type: "string" }, respuesta: { type: "string" } }, required: ["pregunta", "respuesta"], additionalProperties: false } } }, required: ["titular", "subtitulo", "items"], additionalProperties: false },
+            acordeones: { type: "array", items: { type: "object", properties: { titulo: { type: "string" }, contenido: { type: "string" } }, required: ["titulo", "contenido"], additionalProperties: false } },
             recomendados: { type: "array", items: { type: "object", properties: { imagen: { type: ["string", "null"] }, titulo: { type: "string" }, precio: { type: "string" }, comparativo: { type: "string" }, descuento: { type: "string" } }, required: ["imagen", "titulo", "precio", "comparativo", "descuento"], additionalProperties: false } }
           },
           additionalProperties: false
@@ -489,7 +490,7 @@ async function generar(fuente, medios, { idioma = "es", angulo = "" } = {}) {
     output_config: { effort: ESFUERZO },
     system: sistema,
     messages: [{ role: "user", content: contenido }]
-  });
+  }, { timeout: ANTHROPIC_TIMEOUT_MS, maxRetries: 1 });
   const r = await flujo.finalMessage();
 
   if (r.stop_reason === "refusal") {
@@ -541,8 +542,8 @@ const CARDINALIDAD = {
   "pagepilot_blue.reviews.items": 4,
   "pagepilot_blue.blue_stats.items": 4,
   "pagepilot_blue.comparison.filas": 6,
-  "pagepilot_blue.faq.items": 4,
-  "pagepilot_blue.recomendados": 4
+  "pagepilot_blue.faq.items": 5,
+  "pagepilot_blue.acordeones": 3
 };
 
 function leer(obj, ruta) {
@@ -601,25 +602,32 @@ function ensamblar(fuente, salida, { idioma, angulo }) {
   return {
     fuente,
     pool_imagenes: salida.pool_imagenes,
+    compliance: {
+      claims_verified: false,
+      review_source: null,
+      statistics_source: null,
+      policy_source: null
+    },
     facetas: {
       hero: {
         ...f.hero,
+        puntaje: 0,
+        resenas_count: 0,
         bullets: fijo(f.hero.bullets, CARDINALIDAD["hero.bullets"]),
         resena_destacada: {
-          autor: f.hero.resena_destacada?.autor ?? null,
-          estrellas: 5,
-          texto: f.hero.resena_destacada?.texto ?? null,
-          avatar: elegirAvatar()
+          autor: null,
+          estrellas: null,
+          texto: null,
+          avatar: null
         },
         acordeones: [
           {
             titulo: "Información de envío",
-            contenido:
-              "Envío rastreado y asegurado a todo el país. Despachamos dentro de las 24 hs hábiles."
+            contenido: "Consultá las condiciones y los tiempos de envío informados por la tienda."
           },
           {
             titulo: "Política de devolución",
-            contenido: "Tenés 30 días desde que lo recibís para devolverlo sin cargo. Sin preguntas."
+            contenido: "Consultá la política de devolución de la tienda antes de completar la compra."
           }
         ]
       },
@@ -628,7 +636,7 @@ function ensamblar(fuente, salida, { idioma, angulo }) {
       // pieza propia (con foco). Sin clips, el render la oculta (editor y
       // tienda). Va arriba del FAQ cuando el merchant la retome.
       clientes: {
-        titulo: `Únete a más de ${f.hero.resenas_count || 200} clientes contentos`,
+        titulo: "Contenido de clientes",
         items: []
       },
       iconos: { ...f.iconos, items: fijo(f.iconos.items, CARDINALIDAD["iconos.items"]) },
@@ -640,12 +648,8 @@ function ensamblar(fuente, salida, { idioma, angulo }) {
       },
       stats: {
         ...f.stats,
-        cta: true,
-        // El modelo solo escribe las frases; los porcentajes son constantes.
-        items: fijo(f.stats.items, CARDINALIDAD["stats.items"]).map((it, i) => ({
-          pct: PCT_FIJOS[i],
-          frase: it.frase
-        }))
+        cta: false,
+        items: []
       },
       faq: { ...f.faq, cta: true, items: fijo(f.faq.items, CARDINALIDAD["faq.items"]) },
       resenas: {
@@ -662,7 +666,7 @@ function ensamblar(fuente, salida, { idioma, angulo }) {
       },
       recomendados: { modo: "placeholder", items: [] },
       pagepilot_blue: {
-        badge: pb.badge || "#1 EL MÁS VENDIDO DE 2026",
+        badge: "Producto destacado",
         ticker: fijo(pb.ticker, 5).length ? fijo(pb.ticker, 5) : [
           { icono: "escudo", texto: "Calidad pensada para todos los días" },
           { icono: "reloj", texto: "Resultados simples y rápidos" },
@@ -672,10 +676,11 @@ function ensamblar(fuente, salida, { idioma, angulo }) {
         ],
         pagos: Array.isArray(pb.pagos) && pb.pagos.length ? pb.pagos.slice(0, 7) : ["amex", "apple", "visa", "mastercard", "paypal", "gpay", "shop"],
         social: {
-          titular: pb.social?.titular || "Miles confían. Personas reales eligen calidad.",
-          subtitulo: pb.social?.subtitulo || "Descubrí una experiencia pensada para hacer más simple tu rutina.",
+          titular: "Mirá el producto en uso",
+          enfasis: "producto en uso",
+          subtitulo: "Agregá contenido real de clientes cuando tengas autorización para publicarlo.",
           cta: pb.social?.cta || "Obtené el tuyo ahora",
-          rating: pb.social?.rating || "Calificado con 4.9/5 por clientes satisfechos",
+          rating: "",
           imagenes: fijo(pb.social?.imagenes, 3)
         },
         como_funciona: {
@@ -689,8 +694,8 @@ function ensamblar(fuente, salida, { idioma, angulo }) {
           imagen: pb.como_funciona?.imagen || null
         },
         feature: {
-          titular: pb.feature?.titular || "5 beneficios para todos los días",
-          subtitulo: pb.feature?.subtitulo || "Todo lo que necesitás para sumar una mejora real a tu rutina.",
+          titular: pb.feature?.titular || "5 beneficios diarios del producto",
+          subtitulo: pb.feature?.subtitulo || "Potenciá tu rutina para disfrutar un resultado que se nota.",
           items: fijo(pb.feature?.items, 5).length ? fijo(pb.feature.items, 5) : [
             { titulo: "Uso sencillo", frase: "Incorporalo a tu rutina sin pasos innecesarios." },
             { titulo: "Diseño práctico", frase: "Pensado para acompañarte con comodidad." },
@@ -701,25 +706,15 @@ function ensamblar(fuente, salida, { idioma, angulo }) {
           imagen: pb.feature?.imagen || null
         },
         reviews: {
-          badge: pb.reviews?.badge || "Basado en reseñas confiables",
-          titular: pb.reviews?.titular || "Lo que dicen quienes ya lo tienen",
-          subtitulo: pb.reviews?.subtitulo || "Opiniones reales de clientes que organizaron su rutina.",
-          items: fijo(pb.reviews?.items, 4).length ? fijo(pb.reviews.items, 4) : [
-            { autor: "Cliente 1", estrellas: 5, texto: "Me resultó práctico y fácil de incorporar a mi rutina.", imagen: null },
-            { autor: "Cliente 2", estrellas: 5, texto: "Me gusta que sea simple de usar y guardar.", imagen: null },
-            { autor: "Cliente 3", estrellas: 5, texto: "Cumple con lo que necesitaba para el día a día.", imagen: null },
-            { autor: "Cliente 4", estrellas: 5, texto: "Una compra útil, cómoda y sencilla de mantener.", imagen: null }
-          ]
+          badge: "Reseñas verificadas",
+          titular: "Experiencias de clientes",
+          subtitulo: "Importá reseñas reales antes de activar esta sección.",
+          items: []
         },
         blue_stats: {
-          titular: pb.blue_stats?.titular || "Lo que dicen los números",
-          subtitulo: pb.blue_stats?.subtitulo || "Resultados que se sienten en la rutina.",
-          items: fijo(pb.blue_stats?.items, 4).length ? fijo(pb.blue_stats.items, 4) : [
-            { pct: 98, frase: "Notaron una mejora en su rutina." },
-            { pct: 100, frase: "Encontraron una forma más simple de usarlo." },
-            { pct: 100, frase: "Recomendaron la experiencia a otra persona." },
-            { pct: 96, frase: "Sintieron más confianza al usarlo." }
-          ]
+          titular: "Resultados verificados",
+          subtitulo: "Agregá una fuente válida antes de publicar estadísticas.",
+          items: []
         },
         comparison: {
           titular: pb.comparison?.titular || "Comparalo vos misma",
@@ -737,19 +732,20 @@ function ensamblar(fuente, salida, { idioma, angulo }) {
         faq: {
           titular: pb.faq?.titular || "Preguntas frecuentes",
           subtitulo: pb.faq?.subtitulo || "Todo lo que necesitás saber antes de comprarlo.",
-          items: fijo(pb.faq?.items, 4).length ? fijo(pb.faq.items, 4) : [
+          items: fijo(pb.faq?.items, 5).length ? fijo(pb.faq.items, 5) : [
             { pregunta: "¿De qué material está hecho?", respuesta: "Consultá la ficha del producto para conocer los materiales disponibles." },
             { pregunta: "¿Cómo se usa?", respuesta: "Usalo siguiendo las indicaciones de la ficha y adaptalo a tu rutina." },
             { pregunta: "¿Cómo se limpia o mantiene?", respuesta: "Limpiá el producto con el método recomendado para conservarlo en buen estado." },
+            { pregunta: "¿Qué colores tiene disponibles?", respuesta: "Revisá las variantes disponibles en la ficha antes de agregarlo al carrito." },
             { pregunta: "¿Qué pasa si no estoy conforme?", respuesta: "Contás con la política de devolución indicada en tu compra." }
           ]
         },
-        recomendados: fijo(pb.recomendados, 4).length ? fijo(pb.recomendados, 4) : [
-          { imagen: null, titulo: "Producto recomendado", precio: "19.99", comparativo: "24.99", descuento: "20%" },
-          { imagen: null, titulo: "Accesorio recomendado", precio: "19.99", comparativo: "24.99", descuento: "20%" },
-          { imagen: null, titulo: "Complemento diario", precio: "19.99", comparativo: "24.99", descuento: "20%" },
-          { imagen: null, titulo: "Opción favorita", precio: "19.99", comparativo: "24.99", descuento: "20%" }
-        ]
+        acordeones: fijo(pb.acordeones, 3).length ? fijo(pb.acordeones, 3) : [
+          { titulo: "Descripción", contenido: "Conocé los detalles y beneficios del producto." },
+          { titulo: "Cómo usar", contenido: "Usalo siguiendo las indicaciones de la ficha del producto." },
+          { titulo: "Envíos y devoluciones", contenido: "Consultá las condiciones de envío y devolución antes de comprar." }
+        ],
+        recomendados: []
       }
     },
     global: { cta: "Agregar al carrito", idioma, angulo, nicho: salida.nicho || "general" }
@@ -818,7 +814,7 @@ async function editarTexto({ texto = "", instrucciones = "", modo = "rewrite", i
     max_tokens: 900,
     system: sistema,
     messages: [{ role: "user", content: prompt }]
-  });
+  }, { timeout: ANTHROPIC_TIMEOUT_MS, maxRetries: 1 });
   const salida = r.content?.find((b) => b.type === "text")?.text?.trim();
   if (!salida) throw new Error("La IA no devolvió un texto para este campo.");
   return salida.replace(/^```(?:text|markdown)?\s*/i, "").replace(/\s*```$/i, "").trim();
