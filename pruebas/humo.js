@@ -104,7 +104,16 @@ async function main() {
   const hijo = spawn(process.execPath, [path.join(__dirname, "..", "server.js")], {
     // DATABASE_URL vacío a propósito: almacén en archivos, cero efectos.
     // DEV_MODE apagado: queremos que /api/* exija el pase, que es el caso real.
-    env: { ...process.env, PORT: String(PUERTO), APP_URL: BASE, DATABASE_URL: "", DEV_MODE: "" },
+    env: {
+      ...process.env,
+      PORT: String(PUERTO),
+      APP_URL: BASE,
+      DATABASE_URL: "",
+      DEV_MODE: "",
+      // El callback debe rechazar una firma inválida, no fallar por falta de
+      // configuración Shopify en el proceso aislado de esta prueba.
+      SHOPIFY_CLIENT_SECRET: "secreto-humo"
+    },
     stdio: ["ignore", "pipe", "pipe"]
   });
 
