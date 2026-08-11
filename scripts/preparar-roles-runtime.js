@@ -1,6 +1,7 @@
 "use strict";
 
-const { Client } = require("pg");
+const { Pool } = require("pg");
+const { createPostgresPool } = require("../src/platform/postgres/create-pool");
 
 const WEB_ROLE = "tiendaiq_web";
 const WORKER_ROLE = "tiendaiq_worker";
@@ -17,13 +18,12 @@ async function main() {
   const databaseUrl = process.env.MIGRATION_DATABASE_URL;
   if (!databaseUrl) throw new Error("Falta MIGRATION_DATABASE_URL");
 
-  const client = new Client({
-    connectionString: databaseUrl,
-    ssl: process.env.PG_CA_CERT
-      ? { ca: process.env.PG_CA_CERT.replace(/\\n/g, "\n"), rejectUnauthorized: true }
-      : undefined
+  const pool = createPostgresPool({
+    databaseUrl,
+    caCertificate: process.env.PG_CA_CERT,
+    Pool
   });
-  await client.connect();
+  const client = await pool.connect();
   try {
     const roles = await client.query(
       "SELECT rolname FROM pg_roles WHERE rolname = ANY($1::text[])",
@@ -62,7 +62,8 @@ async function main() {
     );
     if (invalid) throw new Error(`Privilegios inválidos para ${invalid.rolname}`);
   } finally {
-    await client.end();
+    client.release();
+    await pool.end();
   }
 
   console.log("  roles runtime listos: web aislado y worker con capacidad explícita");

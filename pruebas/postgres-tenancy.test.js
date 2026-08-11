@@ -265,6 +265,14 @@ test("la migracion de tokens exige el rol administrativo", () => {
   assert.match(source, /SELECT dominio, datos->>'token'/);
 });
 
+test("el bootstrap de roles usa la misma politica TLS que las migraciones", () => {
+  const source = fs.readFileSync(path.join(__dirname, "..", "scripts", "preparar-roles-runtime.js"), "utf8");
+
+  assert.match(source, /createPostgresPool/);
+  assert.match(source, /databaseUrl/);
+  assert.doesNotMatch(source, /ssl:\s*process\.env\.PG_CA_CERT/);
+});
+
 test("la admision global expone solo un agregado y reserva acceso administrativo", () => {
   const sql = fs.readFileSync(
     path.join(__dirname, "..", "db", "migrations", "0010_generation_admission_control.sql"),
