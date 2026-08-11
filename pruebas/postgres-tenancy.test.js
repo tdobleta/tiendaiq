@@ -273,11 +273,24 @@ test("el bootstrap de roles usa la misma politica TLS que las migraciones", () =
   assert.doesNotMatch(source, /ssl:\s*process\.env\.PG_CA_CERT/);
 });
 
-test("el bootstrap administrativo revoca la capacidad worker del proceso web", () => {
+test("el bootstrap administrativo elimina herencias runtime y reconstruye solo la capacidad worker", () => {
   const source = fs.readFileSync(path.join(__dirname, "..", "scripts", "preparar-roles-runtime.js"), "utf8");
 
-  assert.match(source, /REVOKE \$\{quoteIdentifier\(WORKER_CAPABILITY\)\} FROM \$\{quoteIdentifier\(WEB_ROLE\)\}/);
+  assert.match(source, /FROM pg_auth_members AS membership/);
+  assert.match(source, /WHERE member\.rolname = ANY\(\$1::text\[\]\)/);
+  assert.match(source, /WHERE parent\.rolname = \$1 AND member\.rolname <> \$2/);
+  assert.match(source, /REVOKE \$\{quoteIdentifier\(parent\)\} FROM \$\{quoteIdentifier\(member\)\}/);
+  assert.match(source, /REVOKE \$\{quoteIdentifier\(WORKER_CAPABILITY\)\} FROM \$\{quoteIdentifier\(member\)\}/);
   assert.match(source, /GRANT \$\{quoteIdentifier\(WORKER_CAPABILITY\)\} TO \$\{quoteIdentifier\(WORKER_ROLE\)\}/);
+  assert.match(source, /unexpectedMemberships/);
+});
+
+test("el diagnostico de roles solo inspecciona privilegios y membresias", () => {
+  const source = fs.readFileSync(path.join(__dirname, "..", "scripts", "diagnosticar-roles-runtime.js"), "utf8");
+
+  assert.match(source, /pg_auth_members/);
+  assert.match(source, /rolbypassrls/);
+  assert.doesNotMatch(source, /\b(?:ALTER|CREATE|DELETE|DROP|GRANT|INSERT|REVOKE|UPDATE)\b/);
 });
 
 test("la admision global expone solo un agregado y reserva acceso administrativo", () => {

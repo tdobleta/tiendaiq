@@ -6,6 +6,7 @@ const { createPostgresPool } = require("../src/platform/postgres/create-pool");
 const WEB_ROLE = "tiendaiq_web";
 const WORKER_ROLE = "tiendaiq_worker";
 const WORKER_CAPABILITY = "tiendaiq_worker_capability";
+const RUNTIME_ROLES = [WEB_ROLE, WORKER_ROLE];
 
 function quoteIdentifier(value) {
   return `"${String(value).replaceAll('"', '""')}"`;
@@ -27,10 +28,10 @@ async function main() {
   try {
     const roles = await client.query(
       "SELECT rolname FROM pg_roles WHERE rolname = ANY($1::text[])",
-      [[WEB_ROLE, WORKER_ROLE]]
+      [RUNTIME_ROLES]
     );
     const existing = new Set(roles.rows.map((row) => row.rolname));
-    const missing = [WEB_ROLE, WORKER_ROLE].filter((role) => !existing.has(role));
+    const missing = RUNTIME_ROLES.filter((role) => !existing.has(role));
     if (missing.length) {
       throw new Error(`Creá primero estas credenciales en Render: ${missing.join(", ")}`);
     }
@@ -41,22 +42,57 @@ async function main() {
         `CREATE ROLE ${quoteIdentifier(WORKER_CAPABILITY)} NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS`
       );
     }
-    // This administrative bootstrap is the only place that may repair role
-    // membership. Runtime credentials never receive this authority.
-    await client.query(`REVOKE ${quoteIdentifier(WORKER_CAPABILITY)} FROM ${quoteIdentifier(WEB_ROLE)}`);
+    // Render creates runtime credentials through a default role. Remove every
+    // inherited membership, then reconstruct the one worker-only capability.
+    const runtimeMemberships = await client.query(
+      `SELECT member.rolname AS member, parent.rolname AS parent
+       FROM pg_auth_members AS membership
+       JOIN pg_roles AS member ON member.oid = membership.member
+       JOIN pg_roles AS parent ON parent.oid = membership.roleid
+       WHERE member.rolname = ANY($1::text[])`,
+      [RUNTIME_ROLES]
+    );
+    for (const { member, parent } of runtimeMemberships.rows) {
+      await client.query(`REVOKE ${quoteIdentifier(parent)} FROM ${quoteIdentifier(member)}`);
+    }
+
+    const capabilityMembers = await client.query(
+      `SELECT member.rolname AS member
+       FROM pg_auth_members AS membership
+       JOIN pg_roles AS member ON member.oid = membership.member
+       JOIN pg_roles AS parent ON parent.oid = membership.roleid
+       WHERE parent.rolname = $1 AND member.rolname <> $2`,
+      [WORKER_CAPABILITY, WORKER_ROLE]
+    );
+    for (const { member } of capabilityMembers.rows) {
+      await client.query(`REVOKE ${quoteIdentifier(WORKER_CAPABILITY)} FROM ${quoteIdentifier(member)}`);
+    }
+
     await client.query(`GRANT ${quoteIdentifier(WORKER_CAPABILITY)} TO ${quoteIdentifier(WORKER_ROLE)}`);
 
     const verified = await client.query(
       `SELECT rolname, rolsuper, rolbypassrls,
               pg_has_role(rolname, $1, 'member') AS worker_capability
        FROM pg_roles WHERE rolname = ANY($2::text[]) ORDER BY rolname`,
-      [WORKER_CAPABILITY, [WEB_ROLE, WORKER_ROLE]]
+      [WORKER_CAPABILITY, RUNTIME_ROLES]
     );
     const invalid = verified.rows.find((row) =>
       row.rolsuper || row.rolbypassrls || (row.rolname === WEB_ROLE && row.worker_capability) ||
       (row.rolname === WORKER_ROLE && !row.worker_capability)
     );
     if (invalid) throw new Error(`Privilegios inválidos para ${invalid.rolname}`);
+    const unexpectedMemberships = await client.query(
+      `SELECT member.rolname AS member, parent.rolname AS parent
+       FROM pg_auth_members AS membership
+       JOIN pg_roles AS member ON member.oid = membership.member
+       JOIN pg_roles AS parent ON parent.oid = membership.roleid
+       WHERE member.rolname = ANY($1::text[])
+         AND NOT (member.rolname = $2 AND parent.rolname = $3)`,
+      [RUNTIME_ROLES, WORKER_ROLE, WORKER_CAPABILITY]
+    );
+    if (unexpectedMemberships.rowCount) {
+      throw new Error(`Unexpected role membership for ${unexpectedMemberships.rows[0].member}`);
+    }
   } finally {
     client.release();
     await pool.end();
