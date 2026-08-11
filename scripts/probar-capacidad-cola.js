@@ -9,6 +9,8 @@ const { createJobRepository } = require("../src/platform/postgres/job-repository
 const { withTenantTransaction } = require("../src/platform/postgres/with-tenant-transaction");
 
 const REMOTE_AUTHORIZATION = "I_UNDERSTAND_THIS_WRITES_SYNTHETIC_STAGING_DATA";
+const WEB_RUNTIME_ROLE = "tiendaiq_web_runtime";
+const WORKER_RUNTIME_ROLE = "tiendaiq_worker_runtime";
 
 function integer(value, fallback, min, max, name) {
   const parsed = value == null || value === "" ? fallback : Number(value);
@@ -67,8 +69,18 @@ async function main() {
     TenantContext.fromShopDomain(`${prefix}-${index + 1}.myshopify.com`, { source: "development" })
   );
 
-  const webPool = createPostgresPool({ databaseUrl: webUrl, caCertificate: process.env.PG_CA_CERT, Pool });
-  const workerPool = createPostgresPool({ databaseUrl: workerUrl, caCertificate: process.env.PG_CA_CERT, Pool });
+  const webPool = createPostgresPool({
+    databaseUrl: webUrl,
+    caCertificate: process.env.PG_CA_CERT,
+    runtimeRole: WEB_RUNTIME_ROLE,
+    Pool
+  });
+  const workerPool = createPostgresPool({
+    databaseUrl: workerUrl,
+    caCertificate: process.env.PG_CA_CERT,
+    runtimeRole: WORKER_RUNTIME_ROLE,
+    Pool
+  });
   const webJobs = createJobRepository(webPool);
   const workerJobs = createJobRepository(workerPool);
   const enqueueLatencies = [];

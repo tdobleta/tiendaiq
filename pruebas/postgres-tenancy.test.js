@@ -315,6 +315,21 @@ test("el bootstrap crea roles propios y no intenta modificar credenciales gestio
   assert.doesNotMatch(source, /REVOKE \$\{quoteIdentifier\(parent\)\}/);
 });
 
+test("el fixture y los probes de PostgreSQL usan los roles runtime efectivos", () => {
+  const fixture = fs.readFileSync(path.join(__dirname, "..", "scripts", "preparar-db-integracion.js"), "utf8");
+  const rlsProbe = fs.readFileSync(path.join(__dirname, "..", "scripts", "probar-rls.js"), "utf8");
+  const capacityProbe = fs.readFileSync(path.join(__dirname, "..", "scripts", "probar-capacidad-cola.js"), "utf8");
+
+  assert.match(fixture, /webRuntime: "tiendaiq_web_runtime"/);
+  assert.match(fixture, /workerRuntime: "tiendaiq_worker_runtime"/);
+  assert.match(fixture, /GRANT \$\{quoteIdentifier\(EXPECTED_ROLES\.webRuntime\)\} TO/);
+  assert.match(fixture, /GRANT \$\{quoteIdentifier\(EXPECTED_ROLES\.workerRuntime\)\} TO/);
+  for (const source of [rlsProbe, capacityProbe]) {
+    assert.match(source, /runtimeRole: WEB_RUNTIME_ROLE/);
+    assert.match(source, /runtimeRole: WORKER_RUNTIME_ROLE/);
+  }
+});
+
 test("la migracion de roles gestionados mueve privilegios y capacidad al rol efectivo", () => {
   const sql = fs.readFileSync(
     path.join(__dirname, "..", "db", "migrations", "0011_render_managed_runtime_roles.sql"),

@@ -12,6 +12,9 @@ const { createInboxRepository } = require("../src/platform/postgres/inbox-reposi
 const { verifyTenantIsolation } = require("../src/platform/postgres/verify-tenancy");
 const { withTenantTransaction } = require("../src/platform/postgres/with-tenant-transaction");
 
+const WEB_RUNTIME_ROLE = "tiendaiq_web_runtime";
+const WORKER_RUNTIME_ROLE = "tiendaiq_worker_runtime";
+
 async function main() {
   if (env.ALLOW_RLS_TEST !== "1") {
     throw new Error("Definí ALLOW_RLS_TEST=1 para autorizar la fila señuelo en staging");
@@ -21,8 +24,18 @@ async function main() {
   const workerDatabaseUrl = env.TEST_WORKER_DATABASE_URL;
   if (!workerDatabaseUrl) throw new Error("Falta TEST_WORKER_DATABASE_URL");
 
-  const webPool = createPostgresPool({ databaseUrl, caCertificate: env.PG_CA_CERT, Pool });
-  const workerPool = createPostgresPool({ databaseUrl: workerDatabaseUrl, caCertificate: env.PG_CA_CERT, Pool });
+  const webPool = createPostgresPool({
+    databaseUrl,
+    caCertificate: env.PG_CA_CERT,
+    runtimeRole: WEB_RUNTIME_ROLE,
+    Pool
+  });
+  const workerPool = createPostgresPool({
+    databaseUrl: workerDatabaseUrl,
+    caCertificate: env.PG_CA_CERT,
+    runtimeRole: WORKER_RUNTIME_ROLE,
+    Pool
+  });
   const suffix = crypto.randomBytes(6).toString("hex");
   const tenantA = TenantContext.fromShopDomain(`rls-a-${suffix}.myshopify.com`, { source: "internal-job" });
   const tenantB = TenantContext.fromShopDomain(`rls-b-${suffix}.myshopify.com`, { source: "internal-job" });

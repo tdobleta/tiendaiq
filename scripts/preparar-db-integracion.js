@@ -7,6 +7,8 @@ const EXPECTED_ROLES = Object.freeze({
   migration: "tiendaiq_migrator",
   web: "tiendaiq_web",
   worker: "tiendaiq_worker",
+  webRuntime: "tiendaiq_web_runtime",
+  workerRuntime: "tiendaiq_worker_runtime",
   capability: "tiendaiq_worker_capability"
 });
 const LOCAL_HOSTS = new Set(["127.0.0.1", "localhost", "[::1]"]);
@@ -49,7 +51,7 @@ async function ensureLoginRole(admin, { role, password }) {
   );
 }
 
-async function verifyRuntimeRole(url, expectedRole, workerCapability) {
+async function verifyLoginRole(url, expectedRole) {
   const client = new Client({ connectionString: url.toString(), ssl: false });
   await client.connect();
   try {
@@ -63,8 +65,8 @@ async function verifyRuntimeRole(url, expectedRole, workerCapability) {
     if (!current || current.current_user !== expectedRole || current.rolsuper || current.rolbypassrls) {
       throw new Error(`El rol ${expectedRole} tiene privilegios incompatibles`);
     }
-    if (current.worker_capability !== workerCapability) {
-      throw new Error(`La capacidad worker de ${expectedRole} no coincide con lo esperado`);
+    if (current.worker_capability) {
+      throw new Error(`El login ${expectedRole} hereda una capacidad worker directa`);
     }
   } finally {
     await client.end();
@@ -94,6 +96,13 @@ async function main() {
     await ensureLoginRole(admin, migration);
     await ensureLoginRole(admin, web);
     await ensureLoginRole(admin, worker);
+    for (const role of [EXPECTED_ROLES.webRuntime, EXPECTED_ROLES.workerRuntime]) {
+      await admin.query(
+        `CREATE ROLE ${quoteIdentifier(role)} NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS`
+      ).catch((error) => {
+        if (error.code !== "42710") throw error;
+      });
+    }
 
     const capability = await admin.query("SELECT 1 FROM pg_roles WHERE rolname = $1", [EXPECTED_ROLES.capability]);
     if (!capability.rowCount) {
@@ -101,11 +110,17 @@ async function main() {
         `CREATE ROLE ${quoteIdentifier(EXPECTED_ROLES.capability)} NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS`
       );
     }
+    for (const role of [EXPECTED_ROLES.migration, EXPECTED_ROLES.web, EXPECTED_ROLES.worker]) {
+      await admin.query(`REVOKE ${quoteIdentifier(EXPECTED_ROLES.capability)} FROM ${quoteIdentifier(role)}`);
+    }
     await admin.query(
-      `GRANT ${quoteIdentifier(EXPECTED_ROLES.capability)} TO ${quoteIdentifier(EXPECTED_ROLES.worker)}`
+      `GRANT ${quoteIdentifier(EXPECTED_ROLES.webRuntime)} TO ${quoteIdentifier(EXPECTED_ROLES.web)}`
     );
     await admin.query(
-      `GRANT ${quoteIdentifier(EXPECTED_ROLES.capability)} TO ${quoteIdentifier(EXPECTED_ROLES.migration)} WITH ADMIN OPTION`
+      `GRANT ${quoteIdentifier(EXPECTED_ROLES.workerRuntime)} TO ${quoteIdentifier(EXPECTED_ROLES.worker)}`
+    );
+    await admin.query(
+      `GRANT ${quoteIdentifier(EXPECTED_ROLES.capability)} TO ${quoteIdentifier(EXPECTED_ROLES.workerRuntime)}`
     );
 
     const databaseResult = await admin.query(
@@ -123,9 +138,9 @@ async function main() {
     await admin.end();
   }
 
-  await verifyRuntimeRole(webUrl, EXPECTED_ROLES.web, false);
-  await verifyRuntimeRole(workerUrl, EXPECTED_ROLES.worker, true);
-  console.log("  base desechable lista: migrador, web y worker separados");
+  await verifyLoginRole(webUrl, EXPECTED_ROLES.web);
+  await verifyLoginRole(workerUrl, EXPECTED_ROLES.worker);
+  console.log("  base desechable lista: logins, runtime roles y worker separados");
 }
 
 main().catch((error) => {
