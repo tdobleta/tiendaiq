@@ -1,0 +1,104 @@
+name: Capacity staging
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Ejecutar la prueba o limpiar un run interrumpido
+        required: true
+        type: choice
+        options:
+          - run
+          - cleanup
+      confirmation:
+        description: RUN_STAGING_QUEUE_CAPACITY o CLEAN_STAGING_QUEUE_CAPACITY
+        required: true
+        type: string
+      cleanup_run_id:
+        description: Solo para cleanup; runId hexadecimal registrado al iniciar
+        required: false
+        type: string
+      tenants:
+        description: Cantidad de tenants sinteticos para run
+        required: true
+        default: "1000"
+        type: choice
+        options:
+          - "100"
+          - "500"
+          - "1000"
+          - "2000"
+      jobs:
+        description: Cantidad de jobs sinteticos para run
+        required: true
+        default: "1000"
+        type: choice
+        options:
+          - "100"
+          - "500"
+          - "1000"
+          - "2000"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tiendaiq-staging-capacity
+  cancel-in-progress: false
+
+jobs:
+  queue-capacity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The environment only allows main. github.sha preserves the exact
+          # reviewed commit selected when the manual run starts.
+          ref: ${{ github.sha }}
+
+      - name: Validate deliberate authorization
+        shell: bash
+        env:
+          MODE: ${{ inputs.mode }}
+          CONFIRMATION: ${{ inputs.confirmation }}
+          CLEANUP_RUN_ID: ${{ inputs.cleanup_run_id }}
+        run: |
+          set -euo pipefail
+          if [[ "$MODE" == "run" && "$CONFIRMATION" == "RUN_STAGING_QUEUE_CAPACITY" ]]; then
+            exit 0
+          fi
+          if [[ "$MODE" == "cleanup" && "$CONFIRMATION" == "CLEAN_STAGING_QUEUE_CAPACITY" && "$CLEANUP_RUN_ID" =~ ^[a-fA-F0-9]{12}$ ]]; then
+            exit 0
+          fi
+          echo "Confirmacion o runId invalidos para el modo seleccionado" >&2
+          exit 1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - run: npm install --no-audit --no-fund
+
+      - name: Exercise durable PostgreSQL queue with runtime credentials
+        shell: bash
+        env:
+          ALLOW_QUEUE_LOAD_TEST: "1"
+          ALLOW_REMOTE_QUEUE_LOAD_TEST: I_UNDERSTAND_THIS_WRITES_SYNTHETIC_STAGING_DATA
+          TEST_DATABASE_URL: ${{ secrets.STAGING_WEB_DATABASE_URL }}
+          TEST_WORKER_DATABASE_URL: ${{ secrets.STAGING_WORKER_DATABASE_URL }}
+          LOAD_CLEANUP_RUN_ID: ${{ inputs.cleanup_run_id }}
+          LOAD_TENANTS: ${{ inputs.tenants }}
+          LOAD_JOBS: ${{ inputs.jobs }}
+          LOAD_SETUP_CONCURRENCY: "40"
+          LOAD_WORKER_LANES: "16"
+          LOAD_FAKE_WORK_MS: "5"
+          LOAD_MAX_DRAIN_SECONDS: "900"
+          PG_POOL_MAX: "10"
+        run: |
+          set -euo pipefail
+          if [[ "${{ inputs.mode }}" == "cleanup" ]]; then
+            export LOAD_TENANTS=2000
+          fi
+          npm run carga:cola

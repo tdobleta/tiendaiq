@@ -26,6 +26,21 @@ function percentile(values, fraction) {
   return sorted[Math.max(0, Math.ceil(sorted.length * fraction) - 1)];
 }
 
+function normalizeRunId(value) {
+  const runId = String(value || "").trim().toLowerCase();
+  if (!/^[a-f0-9]{12}$/.test(runId)) {
+    throw new Error("LOAD_CLEANUP_RUN_ID debe ser el runId hexadecimal de 12 caracteres registrado por la prueba");
+  }
+  return runId;
+}
+
+function errorSummary(error) {
+  if (error instanceof AggregateError) {
+    return error.errors.map(errorSummary).join(" | ");
+  }
+  return String(error?.message || error);
+}
+
 function assertAuthorized(urlValue, name) {
   if (!urlValue) throw new Error(`Falta ${name}`);
   const url = new URL(urlValue);
@@ -47,6 +62,84 @@ async function parallelMap(items, concurrency, work) {
   await Promise.all(workers);
 }
 
+function observePoolPeak(pool) {
+  let peak = pool.totalCount;
+  pool.on("connect", () => { peak = Math.max(peak, pool.totalCount); });
+  return () => Math.max(peak, pool.totalCount);
+}
+
+async function inspectRunJobs(pool, workerId, prefix) {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query("SELECT set_config('app.worker_id', $1, true)", [workerId]);
+    const result = await client.query(
+      `SELECT count(*)::int AS total,
+              count(*) FILTER (WHERE status = 'queued')::int AS queued,
+              count(*) FILTER (WHERE status = 'running')::int AS running,
+              count(*) FILTER (WHERE status = 'succeeded')::int AS succeeded,
+              count(*) FILTER (WHERE status = 'failed')::int AS failed,
+              coalesce(extract(epoch FROM (now() - min(created_at) FILTER (WHERE status = 'queued'))), 0)::float8
+                AS oldest_queued_seconds
+       FROM control_plane.jobs
+       WHERE type = 'capacity-probe' AND idempotency_key LIKE $1`,
+      [`${prefix}:%`]
+    );
+    await client.query("COMMIT");
+    const row = result.rows[0] || {};
+    return Object.fromEntries(Object.entries(row).map(([key, value]) => [key, Number(value || 0)]));
+  } catch (error) {
+    await client.query("ROLLBACK").catch(() => {});
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+async function cleanupSyntheticRun({ workerPool, webPool, tenants, setupConcurrency, prefix }) {
+  const errors = [];
+  let jobsDeleted = 0;
+  let storesDeleted = 0;
+  let tenantsDeleted = 0;
+
+  try {
+    const client = await workerPool.connect();
+    try {
+      await client.query("BEGIN");
+      await client.query("SELECT set_config('app.worker_id', $1, true)", [`${prefix}:cleanup`]);
+      const deleted = await client.query(
+        "DELETE FROM control_plane.jobs WHERE type = 'capacity-probe' AND idempotency_key LIKE $1",
+        [`${prefix}:%`]
+      );
+      jobsDeleted = deleted.rowCount;
+      await client.query("COMMIT");
+    } catch (error) {
+      await client.query("ROLLBACK").catch(() => {});
+      throw error;
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    errors.push(new Error(`jobs: ${error.message}`));
+  }
+
+  await parallelMap(tenants, setupConcurrency, async (tenant) => {
+    try {
+      await withTenantTransaction(webPool, tenant, async (client) => {
+        const store = await client.query("DELETE FROM public.tiendas WHERE dominio = $1", [tenant.tenantId]);
+        const registry = await client.query("DELETE FROM control_plane.tenants WHERE id = $1", [tenant.tenantId]);
+        storesDeleted += store.rowCount;
+        tenantsDeleted += registry.rowCount;
+      });
+    } catch (error) {
+      errors.push(new Error(`${tenant.tenantId}: ${error.message}`));
+    }
+  });
+
+  if (errors.length) throw new AggregateError(errors, `Limpieza incompleta para ${prefix}`);
+  return { jobsDeleted, storesDeleted, tenantsDeleted };
+}
+
 async function main() {
   if (process.env.ALLOW_QUEUE_LOAD_TEST !== "1") {
     throw new Error("Defina ALLOW_QUEUE_LOAD_TEST=1 para autorizar datos sinteticos desechables");
@@ -57,13 +150,16 @@ async function main() {
   assertAuthorized(webUrl, "TEST_DATABASE_URL");
   assertAuthorized(workerUrl, "TEST_WORKER_DATABASE_URL");
 
-  const tenantsCount = integer(process.env.LOAD_TENANTS, 1000, 1, 2000, "LOAD_TENANTS");
+  const cleanupOnly = Boolean(process.env.LOAD_CLEANUP_RUN_ID);
+  const tenantsCount = integer(process.env.LOAD_TENANTS, cleanupOnly ? 2000 : 1000, 1, 2000, "LOAD_TENANTS");
   const jobsCount = integer(process.env.LOAD_JOBS, 1000, 1, 2000, "LOAD_JOBS");
   const setupConcurrency = integer(process.env.LOAD_SETUP_CONCURRENCY, 40, 1, 100, "LOAD_SETUP_CONCURRENCY");
   const workerLanes = integer(process.env.LOAD_WORKER_LANES, 16, 1, 32, "LOAD_WORKER_LANES");
   const fakeWorkMs = integer(process.env.LOAD_FAKE_WORK_MS, 5, 0, 5000, "LOAD_FAKE_WORK_MS");
   const maxDrainSeconds = integer(process.env.LOAD_MAX_DRAIN_SECONDS, 900, 1, 3600, "LOAD_MAX_DRAIN_SECONDS");
-  const runId = crypto.randomBytes(6).toString("hex");
+  const runId = cleanupOnly
+    ? normalizeRunId(process.env.LOAD_CLEANUP_RUN_ID)
+    : crypto.randomBytes(6).toString("hex");
   const prefix = `capacity-${runId}`;
   const tenants = Array.from({ length: tenantsCount }, (_, index) =>
     TenantContext.fromShopDomain(`${prefix}-${index + 1}.myshopify.com`, { source: "development" })
@@ -81,114 +177,139 @@ async function main() {
     runtimeRole: WORKER_RUNTIME_ROLE,
     Pool
   });
+  const webPoolPeak = observePoolPeak(webPool);
+  const workerPoolPeak = observePoolPeak(workerPool);
   const webJobs = createJobRepository(webPool);
   const workerJobs = createJobRepository(workerPool);
   const enqueueLatencies = [];
   let processed = 0;
   let processError = null;
+  let result = null;
+  let primaryError = null;
+  let cleanup = null;
+
+  console.log(JSON.stringify({
+    event: cleanupOnly ? "queue_load_cleanup_started" : "queue_load_started",
+    runId,
+    tenants: tenantsCount,
+    jobs: cleanupOnly ? 0 : jobsCount
+  }));
 
   try {
-    const setupStarted = performance.now();
-    await parallelMap(tenants, setupConcurrency, (tenant) =>
-      withTenantTransaction(webPool, tenant, async (client) => {
-        await client.query(
-          `INSERT INTO control_plane.tenants (id, shop_domain) VALUES ($1, $1)
-           ON CONFLICT (id) DO NOTHING`,
-          [tenant.tenantId]
-        );
-        await client.query(
-          `INSERT INTO public.tiendas (dominio, datos) VALUES ($1, $2)
-           ON CONFLICT (dominio) DO UPDATE SET datos = EXCLUDED.datos`,
-          [tenant.tenantId, { dominio: tenant.tenantId, synthetic: true, run_id: runId }]
-        );
-      })
-    );
-    const setupMs = performance.now() - setupStarted;
-
-    const enqueueStarted = performance.now();
-    const jobs = Array.from({ length: jobsCount }, (_, index) => index);
-    await parallelMap(jobs, setupConcurrency, async (index) => {
-      const tenant = tenants[index % tenants.length];
-      const started = performance.now();
-      await webJobs.enqueue(tenant, {
-        type: "capacity-probe",
-        payload: { synthetic: true, runId, sequence: index + 1 },
-        idempotencyKey: `${prefix}:${index + 1}`,
-        maxAttempts: 2
-      });
-      enqueueLatencies.push(performance.now() - started);
-    });
-    const enqueueMs = performance.now() - enqueueStarted;
-
-    const drainStarted = performance.now();
-    async function lane(index) {
-      while (!processError) {
-        const current = await workerJobs.claim(`${prefix}:worker:${index}`, 120, ["capacity-probe"]);
-        if (!current) return;
-        try {
-          if (fakeWorkMs) await new Promise((resolve) => setTimeout(resolve, fakeWorkMs));
-          const completed = await workerJobs.succeed(current.tenant, current, { synthetic: true });
-          if (!completed) throw new Error(`Lease perdido para ${current.id}`);
-          processed += 1;
-        } catch (error) {
-          processError = error;
-          return;
-        }
-      }
-    }
-    await Promise.all(Array.from({ length: workerLanes }, (_, index) => lane(index + 1)));
-    const drainMs = performance.now() - drainStarted;
-    if (processError) throw processError;
-    if (processed !== jobsCount) throw new Error(`Se procesaron ${processed}/${jobsCount} jobs`);
-
-    const result = {
-      passed: drainMs / 1000 <= maxDrainSeconds,
-      runId,
-      tenants: tenantsCount,
-      jobs: jobsCount,
-      workerLanes,
-      fakeWorkMs,
-      setupMs,
-      enqueueMs,
-      enqueueP95Ms: percentile(enqueueLatencies, 0.95),
-      drainMs,
-      jobsPerSecond: jobsCount / Math.max(0.001, drainMs / 1000),
-      maxDrainSeconds,
-      webPoolPeak: webPool.totalCount,
-      workerPoolPeak: workerPool.totalCount
-    };
-    console.log(JSON.stringify(result));
-    if (!result.passed) process.exitCode = 1;
-  } finally {
-    try {
-      const cleanup = await workerPool.connect();
-      try {
-        await cleanup.query("BEGIN");
-        await cleanup.query("SELECT set_config('app.worker_id', $1, true)", [`${prefix}:cleanup`]);
-        await cleanup.query(
-          "DELETE FROM control_plane.jobs WHERE type = 'capacity-probe' AND idempotency_key LIKE $1",
-          [`${prefix}:%`]
-        );
-        await cleanup.query("COMMIT");
-      } catch (error) {
-        await cleanup.query("ROLLBACK").catch(() => {});
-        throw error;
-      } finally {
-        cleanup.release();
-      }
+    if (!cleanupOnly) {
+      const setupStarted = performance.now();
       await parallelMap(tenants, setupConcurrency, (tenant) =>
         withTenantTransaction(webPool, tenant, async (client) => {
-          await client.query("DELETE FROM public.tiendas WHERE dominio = $1", [tenant.tenantId]);
-          await client.query("DELETE FROM control_plane.tenants WHERE id = $1", [tenant.tenantId]);
+          await client.query(
+            `INSERT INTO control_plane.tenants (id, shop_domain) VALUES ($1, $1)
+             ON CONFLICT (id) DO NOTHING`,
+            [tenant.tenantId]
+          );
+          await client.query(
+            `INSERT INTO public.tiendas (dominio, datos) VALUES ($1, $2)
+             ON CONFLICT (dominio) DO UPDATE SET datos = EXCLUDED.datos`,
+            [tenant.tenantId, { dominio: tenant.tenantId, synthetic: true, run_id: runId }]
+          );
         })
       );
+      const setupMs = performance.now() - setupStarted;
+
+      const enqueueStarted = performance.now();
+      const jobs = Array.from({ length: jobsCount }, (_, index) => index);
+      await parallelMap(jobs, setupConcurrency, async (index) => {
+        const tenant = tenants[index % tenants.length];
+        const started = performance.now();
+        await webJobs.enqueue(tenant, {
+          type: "capacity-probe",
+          payload: { synthetic: true, runId, sequence: index + 1 },
+          idempotencyKey: `${prefix}:${index + 1}`,
+          maxAttempts: 2
+        });
+        enqueueLatencies.push(performance.now() - started);
+      });
+      const enqueueMs = performance.now() - enqueueStarted;
+      const queued = await inspectRunJobs(workerPool, `${prefix}:metrics:queued`, prefix);
+      if (queued.total !== jobsCount || queued.queued !== jobsCount) {
+        throw new Error(`La cola persistio ${queued.queued}/${jobsCount} jobs sinteticos`);
+      }
+
+      const drainStarted = performance.now();
+      async function lane(index) {
+        while (!processError) {
+          const current = await workerJobs.claim(`${prefix}:worker:${index}`, 120, ["capacity-probe"]);
+          if (!current) return;
+          try {
+            if (fakeWorkMs) await new Promise((resolve) => setTimeout(resolve, fakeWorkMs));
+            const completed = await workerJobs.succeed(current.tenant, current, { synthetic: true });
+            if (!completed) throw new Error(`Lease perdido para ${current.id}`);
+            processed += 1;
+          } catch (error) {
+            processError = error;
+            return;
+          }
+        }
+      }
+      await Promise.all(Array.from({ length: workerLanes }, (_, index) => lane(index + 1)));
+      const drainMs = performance.now() - drainStarted;
+      if (processError) throw processError;
+      if (processed !== jobsCount) throw new Error(`Se procesaron ${processed}/${jobsCount} jobs`);
+      const drained = await inspectRunJobs(workerPool, `${prefix}:metrics:drained`, prefix);
+      if (drained.succeeded !== jobsCount || drained.queued || drained.running || drained.failed) {
+        throw new Error(`Estado final invalido: ${JSON.stringify(drained)}`);
+      }
+
+      result = {
+        passed: drainMs / 1000 <= maxDrainSeconds,
+        runId,
+        tenants: tenantsCount,
+        jobs: jobsCount,
+        workerLanes,
+        fakeWorkMs,
+        setupMs,
+        enqueueMs,
+        enqueueP95Ms: percentile(enqueueLatencies, 0.95),
+        oldestQueuedSeconds: queued.oldest_queued_seconds,
+        drainMs,
+        jobsPerSecond: jobsCount / Math.max(0.001, drainMs / 1000),
+        maxDrainSeconds,
+        webPoolPeak: webPoolPeak(),
+        workerPoolPeak: workerPoolPeak()
+      };
+    }
+  } catch (error) {
+    primaryError = error;
+  } finally {
+    try {
+      cleanup = await cleanupSyntheticRun({ workerPool, webPool, tenants, setupConcurrency, prefix });
+      const remaining = await inspectRunJobs(workerPool, `${prefix}:metrics:cleanup`, prefix);
+      if (remaining.total !== 0) throw new Error(`Persisten ${remaining.total} jobs despues de limpiar`);
+    } catch (error) {
+      primaryError = primaryError
+        ? new AggregateError([primaryError, error], `Prueba y limpieza fallaron para ${prefix}`)
+        : error;
     } finally {
       await Promise.all([webPool.end(), workerPool.end()]);
     }
   }
+
+  if (primaryError) throw primaryError;
+  if (cleanupOnly) {
+    console.log(JSON.stringify({ passed: true, mode: "cleanup", runId, cleanup }));
+    return;
+  }
+  result.cleanup = cleanup;
+  if (cleanup.jobsDeleted !== jobsCount || cleanup.storesDeleted !== tenantsCount || cleanup.tenantsDeleted !== tenantsCount) {
+    throw new Error(`Limpieza no verificable: ${JSON.stringify(cleanup)}`);
+  }
+  console.log(JSON.stringify(result));
+  if (!result.passed) process.exitCode = 1;
 }
 
-main().catch((error) => {
-  console.error(`Prueba de capacidad no ejecutada: ${error.message}`);
-  process.exitCode = 2;
-});
+if (require.main === module) {
+  main().catch((error) => {
+    console.error(`Prueba de capacidad no ejecutada: ${errorSummary(error)}`);
+    process.exitCode = 2;
+  });
+}
+
+module.exports = { assertAuthorized, normalizeRunId, percentile };
