@@ -13,7 +13,7 @@
     "worker": "node worker.js",
     "verificar": "node pruebas/sintaxis.js",
     "coherencia": "node pruebas/coherencia.js",
-    "unidad": "node --test \"pruebas/*.test.js\"",
+    "unidad": "node --test pruebas/*.test.js",
     "humo": "node pruebas/humo.js",
     "db:migrate": "node scripts/migrar-db.js",
     "db:migrate:check": "node scripts/migrar-db.js --dry-run",

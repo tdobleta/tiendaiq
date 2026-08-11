@@ -116,8 +116,8 @@ async function main() {
       APP_URL: BASE,
       DATABASE_URL: "",
       DEV_MODE: "",
-      // El callback debe validar una firma invalida, no fallar porque falta
-      // configuracion de Shopify en la maquina que ejecuta el smoke test.
+      // El callback debe rechazar una firma inválida, no fallar por falta de
+      // configuración Shopify en el proceso aislado de esta prueba.
       SHOPIFY_CLIENT_SECRET: "secreto-humo"
     },
     stdio: ["ignore", "pipe", "pipe"]

@@ -10,12 +10,22 @@ concurrency:
   group: tiendaiq-staging-release
   cancel-in-progress: false
 
+env:
+  # Candidate reviewed in the isolated staging branch. Update through a reviewed commit.
+  STAGING_RELEASE_REF: edabbbeba0bd37c200464c80c909a2f6f46e0b13
+
 jobs:
   migrate-and-deploy:
     runs-on: ubuntu-latest
     environment: staging
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.STAGING_RELEASE_REF }}
+
+      - id: release
+        name: Resolve the reviewed release commit
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - uses: actions/setup-node@v4
         with:
@@ -37,9 +47,9 @@ jobs:
       - name: Deploy web after a successful migration
         env:
           RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_STAGING_WEB_DEPLOY_HOOK }}
-        run: curl --fail-with-body --request POST --get --data-urlencode "ref=${GITHUB_SHA}" "$RENDER_DEPLOY_HOOK"
+        run: curl --fail-with-body --request POST --get --data-urlencode "ref=${{ steps.release.outputs.sha }}" "$RENDER_DEPLOY_HOOK"
 
       - name: Deploy worker after a successful migration
         env:
           RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_STAGING_WORKER_DEPLOY_HOOK }}
-        run: curl --fail-with-body --request POST --get --data-urlencode "ref=${GITHUB_SHA}" "$RENDER_DEPLOY_HOOK"
+        run: curl --fail-with-body --request POST --get --data-urlencode "ref=${{ steps.release.outputs.sha }}" "$RENDER_DEPLOY_HOOK"
