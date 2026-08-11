@@ -144,6 +144,13 @@ if (/key:\s*PG_PRIVATE_NETWORK\s+value:\s*"1"/.test(render)) {
   mal("Render declara la red privada de PostgreSQL", "falta PG_PRIVATE_NETWORK=1 para las URLs internas");
 }
 
+if (/key:\s*PG_RUNTIME_ROLE\s+value:\s*"tiendaiq_web_runtime"/.test(render) &&
+    /key:\s*PG_RUNTIME_ROLE\s+value:\s*"tiendaiq_worker_runtime"/.test(render)) {
+  ok("Render activa roles PostgreSQL aislados por proceso");
+} else {
+  mal("Render activa roles PostgreSQL aislados por proceso", "web y worker deben declarar PG_RUNTIME_ROLE distinto");
+}
+
 const runtimeUrls = render.match(/- key:\s*DATABASE_URL\s+sync:\s*false/g) || [];
 const migrationUrls = render.match(/- key:\s*MIGRATION_DATABASE_URL\s+sync:\s*false/g) || [];
 if (runtimeUrls.length === 2 && migrationUrls.length === 0 &&

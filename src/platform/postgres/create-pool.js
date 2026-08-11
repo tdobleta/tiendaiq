@@ -13,7 +13,18 @@ function withoutUrlSslOptions(databaseUrl) {
   return url.toString();
 }
 
-function createPostgresPool({ databaseUrl, caCertificate, privateNetwork = false, Pool }) {
+function runtimeRoleOption(runtimeRole) {
+  if (!runtimeRole) return undefined;
+  if (!/^[a-z_][a-z0-9_]{0,62}$/.test(runtimeRole)) {
+    throw new Error("PG_RUNTIME_ROLE debe ser un identificador PostgreSQL seguro");
+  }
+  // node-postgres forwards libpq's `options` startup parameter before the
+  // first query. This avoids an unprotected statement between connect() and
+  // SET ROLE, and makes current_user the isolated runtime role everywhere.
+  return `-c role=${runtimeRole}`;
+}
+
+function createPostgresPool({ databaseUrl, caCertificate, privateNetwork = false, runtimeRole, Pool }) {
   if (!databaseUrl) throw new Error("DATABASE_URL es obligatoria para conectar Postgres");
   if (typeof Pool !== "function") throw new TypeError("Se requiere el constructor Pool de pg");
 
@@ -30,10 +41,11 @@ function createPostgresPool({ databaseUrl, caCertificate, privateNetwork = false
   return new Pool({
     connectionString: withoutUrlSslOptions(databaseUrl),
     ssl,
+    options: runtimeRoleOption(runtimeRole),
     max: Math.max(2, Number(process.env.PG_POOL_MAX) || 10),
     connectionTimeoutMillis: Math.max(1000, Number(process.env.PG_CONNECT_TIMEOUT_MS) || 5000),
     idleTimeoutMillis: 30000
   });
 }
 
-module.exports = { createPostgresPool };
+module.exports = { createPostgresPool, runtimeRoleOption };

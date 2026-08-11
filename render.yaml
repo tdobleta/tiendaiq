@@ -38,6 +38,10 @@ services:
       # DATABASE_URL es interna y viaja solo por la red privada de Render.
       - key: PG_PRIVATE_NETWORK
         value: "1"
+      # The managed Render credential only opens the connection. PostgreSQL
+      # switches into this NOINHERIT role before the first application query.
+      - key: PG_RUNTIME_ROLE
+        value: "tiendaiq_web_runtime"
       - key: PG_POOL_MAX
         value: "10"
       - key: SHOPIFY_OAUTH_TIMEOUT_MS
@@ -74,6 +78,8 @@ services:
         sync: false
       - key: PG_PRIVATE_NETWORK
         value: "1"
+      - key: PG_RUNTIME_ROLE
+        value: "tiendaiq_worker_runtime"
       - key: SHOPIFY_CLIENT_ID
         sync: false
       - key: SHOPIFY_CLIENT_SECRET

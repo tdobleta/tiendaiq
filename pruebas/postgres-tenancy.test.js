@@ -46,6 +46,20 @@ test("Postgres remoto exige una CA y nunca desactiva la validación TLS", () => 
     Pool: FakePool
   });
   assert.equal(local.options.ssl, false);
+
+  const isolated = createPostgresPool({
+    databaseUrl: "postgresql://dpg-interno/tiendaiq",
+    privateNetwork: true,
+    runtimeRole: "tiendaiq_web_runtime",
+    Pool: FakePool
+  });
+  assert.equal(isolated.options.options, "-c role=tiendaiq_web_runtime");
+  assert.throws(() => createPostgresPool({
+    databaseUrl: "postgresql://dpg-interno/tiendaiq",
+    privateNetwork: true,
+    runtimeRole: "web; reset role",
+    Pool: FakePool
+  }), /PG_RUNTIME_ROLE/);
 });
 
 function rlsPool() {
@@ -285,19 +299,32 @@ test("el bootstrap de roles usa la misma politica TLS que las migraciones", () =
   assert.doesNotMatch(source, /ssl:\s*process\.env\.PG_CA_CERT/);
 });
 
-test("el bootstrap administrativo elimina herencias de producto y reconstruye solo la capacidad worker", () => {
+test("el bootstrap crea roles propios y no intenta modificar credenciales gestionadas por Render", () => {
   const source = fs.readFileSync(path.join(__dirname, "..", "scripts", "preparar-roles-runtime.js"), "utf8");
 
-  assert.match(source, /FROM pg_auth_members AS membership/);
-  assert.match(source, /WHERE member\.rolname = ANY\(\$1::text\[\]\)/);
+  assert.match(source, /const WEB_LOGIN_ROLE = "tiendaiq_web"/);
+  assert.match(source, /const WEB_RUNTIME_ROLE = "tiendaiq_web_runtime"/);
+  assert.match(source, /const WORKER_RUNTIME_ROLE = "tiendaiq_worker_runtime"/);
+  assert.match(source, /CREATE ROLE \$\{quoteIdentifier\(role\)\} NOLOGIN/);
   assert.match(source, /WHERE parent\.rolname = \$1 AND member\.rolname <> \$2/);
-  assert.match(source, /REVOKE \$\{quoteIdentifier\(parent\)\} FROM \$\{quoteIdentifier\(member\)\}/);
-  assert.match(source, /PROVIDER_MANAGED_MEMBERSHIPS\.includes\(parent\)/);
-  assert.match(source, /"tiendaiq_staging_user"/);
-  assert.match(source, /ALTER ROLE \$\{quoteIdentifier\(role\)\} NOINHERIT/);
+  assert.match(source, /GRANT \$\{quoteIdentifier\(WEB_RUNTIME_ROLE\)\} TO \$\{quoteIdentifier\(WEB_LOGIN_ROLE\)\}/);
+  assert.match(source, /GRANT \$\{quoteIdentifier\(WORKER_RUNTIME_ROLE\)\} TO \$\{quoteIdentifier\(WORKER_LOGIN_ROLE\)\}/);
   assert.match(source, /REVOKE \$\{quoteIdentifier\(WORKER_CAPABILITY\)\} FROM \$\{quoteIdentifier\(member\)\}/);
-  assert.match(source, /GRANT \$\{quoteIdentifier\(WORKER_CAPABILITY\)\} TO \$\{quoteIdentifier\(WORKER_ROLE\)\}/);
-  assert.match(source, /unexpectedMemberships/);
+  assert.match(source, /GRANT \$\{quoteIdentifier\(WORKER_CAPABILITY\)\} TO \$\{quoteIdentifier\(WORKER_RUNTIME_ROLE\)\}/);
+  assert.doesNotMatch(source, /ALTER ROLE/);
+  assert.doesNotMatch(source, /REVOKE \$\{quoteIdentifier\(parent\)\}/);
+});
+
+test("la migracion de roles gestionados mueve privilegios y capacidad al rol efectivo", () => {
+  const sql = fs.readFileSync(
+    path.join(__dirname, "..", "db", "migrations", "0011_render_managed_runtime_roles.sql"),
+    "utf8"
+  );
+
+  assert.match(sql, /REVOKE ALL ON ALL TABLES[\s\S]*FROM tiendaiq_web, tiendaiq_worker/);
+  assert.match(sql, /TO tiendaiq_web_runtime, tiendaiq_worker_runtime/);
+  assert.match(sql, /pg_has_role\(current_user, 'tiendaiq_worker_capability', 'member'\)/);
+  assert.doesNotMatch(sql, /pg_has_role\(session_user/);
 });
 
 test("el diagnostico de roles solo inspecciona privilegios y membresias", () => {

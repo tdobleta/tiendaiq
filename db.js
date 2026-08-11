@@ -52,6 +52,7 @@ async function pg() {
     databaseUrl: env.DATABASE_URL,
     caCertificate: env.PG_CA_CERT,
     privateNetwork: env.PG_PRIVATE_NETWORK === "1",
+    runtimeRole: env.PG_RUNTIME_ROLE,
     Pool
   });
   return pool;
