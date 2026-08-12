@@ -2,6 +2,15 @@ name: Release staging
 
 on:
   workflow_dispatch:
+    inputs:
+      release_sha:
+        description: SHA completo (40 caracteres) revisado y presente en main
+        required: true
+        type: string
+      confirmation:
+        description: Escribir DEPLOY_REVIEWED_STAGING
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -10,10 +19,6 @@ concurrency:
   group: tiendaiq-staging-release
   cancel-in-progress: false
 
-env:
-  # Candidate reviewed in the isolated staging branch. Update through a reviewed commit.
-  STAGING_RELEASE_REF: 02606118835a4b0c220287e022b67b59f4b02c20
-
 jobs:
   migrate-and-deploy:
     runs-on: ubuntu-latest
@@ -21,11 +26,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ env.STAGING_RELEASE_REF }}
+          ref: ${{ inputs.release_sha }}
+          fetch-depth: 0
 
       - id: release
-        name: Resolve the reviewed release commit
-        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+        name: Validate the immutable reviewed release commit
+        shell: bash
+        env:
+          REQUESTED_SHA: ${{ inputs.release_sha }}
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          [[ "$REQUESTED_SHA" =~ ^[a-f0-9]{40}$ ]] || { echo "release_sha debe ser un SHA completo" >&2; exit 1; }
+          [[ "$CONFIRMATION" == "DEPLOY_REVIEWED_STAGING" ]] || { echo "Confirmacion invalida" >&2; exit 1; }
+          ACTUAL_SHA="$(git rev-parse HEAD)"
+          [[ "$ACTUAL_SHA" == "$REQUESTED_SHA" ]] || { echo "El checkout no coincide con el SHA solicitado" >&2; exit 1; }
+          git fetch origin main --depth=1
+          [[ "$(git rev-parse origin/main)" == "$ACTUAL_SHA" ]] || { echo "El SHA revisado debe ser el HEAD actual de main" >&2; exit 1; }
+          echo "sha=$ACTUAL_SHA" >> "$GITHUB_OUTPUT"
 
       - uses: actions/setup-node@v4
         with:
@@ -53,3 +71,21 @@ jobs:
         env:
           RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_STAGING_WORKER_DEPLOY_HOOK }}
         run: curl --fail-with-body --request POST --get --data-urlencode "ref=${{ steps.release.outputs.sha }}" "$RENDER_DEPLOY_HOOK"
+
+      - name: Wait for the deployed web readiness gate
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ steps.release.outputs.sha }}
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 90); do
+            if curl --fail --silent --show-error --max-time 10 https://tiendaiq-staging-web.onrender.com/ready \
+              | node -e 'let body="";process.stdin.on("data",c=>body+=c).on("end",()=>{const ready=JSON.parse(body);process.exit(ready.ok===true&&ready.release===process.env.EXPECTED_SHA?0:1)})'; then
+              echo "Staging web aprobo /ready con el SHA esperado"
+              exit 0
+            fi
+            echo "Esperando readiness de staging ($attempt/90)"
+            sleep 10
+          done
+          echo "Staging no aprobo /ready dentro de 15 minutos" >&2
+          exit 1

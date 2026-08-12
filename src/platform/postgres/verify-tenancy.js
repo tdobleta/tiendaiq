@@ -15,7 +15,7 @@ const PROTECTED_TABLES = Object.freeze([
   ["app_data", "publications"]
 ]);
 
-async function verifyTenantIsolation(pool) {
+async function verifyProtectedTables(pool) {
   if (!pool || typeof pool.query !== "function") throw new TypeError("Se requiere un pool de Postgres");
 
   const values = PROTECTED_TABLES.flat();
@@ -36,27 +36,42 @@ async function verifyTenantIsolation(pool) {
     throw new Error("Aislamiento incompleto: todas las tablas tenant-owned deben tener RLS habilitado y forzado");
   }
   if (state.owns_protected_table) {
-    throw new Error("Aislamiento inválido: el rol web no puede ser dueño de tablas protegidas");
+    throw new Error("Aislamiento invalido: el rol runtime no puede ser dueno de tablas protegidas");
   }
+}
+
+async function verifyRuntimeRole(pool, { expectedRole, workerCapability }) {
+  if (!expectedRole) throw new Error("El rol runtime esperado es obligatorio");
 
   const role = await pool.query(`
-    SELECT rolsuper AS superuser,
+    SELECT current_user AS current_role,
+           rolsuper AS superuser,
            rolbypassrls AS bypass_rls,
            rolinherit AS inherits_roles,
            pg_has_role(current_user, 'tiendaiq_worker_capability', 'member') AS worker_capability
     FROM pg_roles
     WHERE rolname = current_user
   `);
-  if (role.rows[0]?.superuser || role.rows[0]?.bypass_rls) {
-    throw new Error("Aislamiento inválido: el rol de la aplicación puede omitir RLS");
+  const state = role.rows[0];
+  if (!state || state.current_role !== expectedRole) {
+    throw new Error(`Aislamiento invalido: se esperaba el rol ${expectedRole}`);
   }
-  if (role.rows[0]?.inherits_roles) {
-    throw new Error("Aislamiento invalido: el rol web no puede heredar privilegios del proveedor");
+  if (state.superuser || state.bypass_rls) {
+    throw new Error("Aislamiento invalido: el rol de la aplicacion puede omitir RLS");
   }
-  if (role.rows[0]?.worker_capability) {
-    throw new Error("Aislamiento inválido: el proceso web tiene capacidad de worker");
+  if (state.inherits_roles) {
+    throw new Error("Aislamiento invalido: el rol runtime no puede heredar privilegios del proveedor");
   }
+  if (state.worker_capability !== workerCapability) {
+    throw new Error(workerCapability
+      ? "Aislamiento invalido: el proceso worker no tiene capacidad de worker"
+      : "Aislamiento invalido: el proceso web tiene capacidad de worker");
+  }
+}
 
+async function verifyTenantIsolation(pool, { expectedRole = "tiendaiq_web_runtime" } = {}) {
+  await verifyProtectedTables(pool);
+  await verifyRuntimeRole(pool, { expectedRole, workerCapability: false });
   return {
     enabled: true,
     forced: true,
@@ -67,4 +82,17 @@ async function verifyTenantIsolation(pool) {
   };
 }
 
-module.exports = { PROTECTED_TABLES, verifyTenantIsolation };
+async function verifyWorkerIsolation(pool, { expectedRole = "tiendaiq_worker_runtime" } = {}) {
+  await verifyProtectedTables(pool);
+  await verifyRuntimeRole(pool, { expectedRole, workerCapability: true });
+  return {
+    enabled: true,
+    forced: true,
+    protectedTables: PROTECTED_TABLES.length,
+    roleBypassesRls: false,
+    inheritsRoles: false,
+    workerCapability: true
+  };
+}
+
+module.exports = { PROTECTED_TABLES, verifyTenantIsolation, verifyWorkerIsolation };
