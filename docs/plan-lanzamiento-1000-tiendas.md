@@ -67,6 +67,33 @@ total. El conteo global se resuelve mediante una funcion PostgreSQL que devuelve
 solo agregados; el rol web no obtiene acceso a filas de otros tenants. Al llegar
 al limite se responde `429` o `503` con `Retry-After` sin reservar cupo.
 
+### Evidencia de staging real - 12 de agosto de 2026
+
+El release revisado `95a81bccac219b9355cf9adb4861a696d9b5caf3` fue promovido
+por el workflow protegido `Release staging #12`. El endpoint publico de
+readiness respondio:
+
+- `ok=true`;
+- `release=95a81bccac219b9355cf9adb4861a696d9b5caf3`;
+- almacenamiento `postgres`;
+- RLS habilitado y forzado sobre 12 tablas protegidas;
+- rol web sin `BYPASSRLS`, sin herencia y sin capacidad worker.
+
+La cola durable de staging fue validada nuevamente con credenciales runtime
+separadas despues de agregar la compuerta operativa de pausa de generaciones:
+
+- `Capacity staging #7`, `runId=804dbfd8d951`: 100 tenants y 100 jobs,
+  drenaje en 8,40 s, 11,90 jobs/s, limpieza completa 100/100/100.
+- `Capacity staging #8`, `runId=b49beb1fa343`: 500 tenants y 500 jobs,
+  drenaje en 28,69 s, 17,43 jobs/s, limpieza completa 500/500/500.
+- `Capacity staging #9`, `runId=bd3d9d2ef957`: 1.000 tenants y 1.000 jobs,
+  drenaje en 81,09 s, 12,33 jobs/s, `oldestQueuedSeconds=40,12`, picos de
+  pool `web=10` y `worker=10`, limpieza completa 1.000/1.000/1.000.
+
+Esta evidencia cierra el gate de cola durable sintetica de staging para
+1.000/1.000. No cierra los gates de Anthropic, Shopify E2E, billing real ni
+alertas automaticas.
+
 ## Criterios de salida
 
 El lanzamiento recibe **GO** solamente si se cumplen todos estos puntos:

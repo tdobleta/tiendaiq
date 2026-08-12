@@ -124,8 +124,8 @@ Registrar cada ejecucion con este formato:
 
 | Fecha | Ola | SHA | Workflow | Resultado | Evidencia |
 | --- | --- | --- | --- | --- | --- |
-| pendiente | 1 | pendiente | Release staging | NO-GO | falta ejecutar |
-| pendiente | 1 | pendiente | Capacity staging 1000/1000 | NO-GO | falta ejecutar |
+| 2026-08-12 | 1 | `95a81bccac219b9355cf9adb4861a696d9b5caf3` | Release staging #12 | OK | `/ready ok`, Postgres, RLS forzado en 12 tablas, rol web sin bypass/herencia/capacidad worker |
+| 2026-08-12 | 1 | `95a81bccac219b9355cf9adb4861a696d9b5caf3` | Capacity staging #9 1000/1000 | OK | `runId=bd3d9d2ef957`, drenaje 81,09 s, limpieza 1.000/1.000/1.000 |
 | pendiente | 1 | pendiente | Anthropic profile 8/50 | NO-GO | falta secreto y cuota |
 | pendiente | 1 | pendiente | Shopify E2E billing/webhooks | NO-GO | falta ejecutar |
 
