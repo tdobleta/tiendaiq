@@ -126,7 +126,8 @@ Registrar cada ejecucion con este formato:
 | --- | --- | --- | --- | --- | --- |
 | 2026-08-12 | 1 | `95a81bccac219b9355cf9adb4861a696d9b5caf3` | Release staging #12 | OK | `/ready ok`, Postgres, RLS forzado en 12 tablas, rol web sin bypass/herencia/capacidad worker |
 | 2026-08-12 | 1 | `95a81bccac219b9355cf9adb4861a696d9b5caf3` | Capacity staging #9 1000/1000 | OK | `runId=bd3d9d2ef957`, drenaje 81,09 s, limpieza 1.000/1.000/1.000 |
-| pendiente | 1 | pendiente | Anthropic profile 8/50 | NO-GO | falta secreto y cuota |
+| 2026-08-12 | 1 | `3aeb762d142a20fc117a21a39679abdcd5241db8` | Anthropic capacity staging #3 perfil 8 | OK | 8/8 llamadas reales, error rate 0, p95 39,33 s, costo estimado USD 0,8907 bajo techo USD 5 |
+| pendiente | 1 | pendiente | Anthropic profile 50/500 | NO-GO | falta ejecutar perfiles de mayor evidencia antes de aumentar ola |
 | pendiente | 1 | pendiente | Shopify E2E billing/webhooks | NO-GO | falta ejecutar |
 
 No borrar filas fallidas. Una falla con causa y correccion es mejor evidencia
