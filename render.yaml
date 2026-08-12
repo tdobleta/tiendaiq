@@ -30,8 +30,6 @@ services:
         sync: false
       - key: SHOPIFY_CLIENT_SECRET
         sync: false
-      - key: ANTHROPIC_API_KEY
-        sync: false
       # 32 bytes en base64. Produccion falla al arrancar si falta.
       - key: TOKEN_ENC_KEY
         sync: false
@@ -56,6 +54,8 @@ services:
         value: "2"
       - key: GENERATION_QUEUE_MAX_GLOBAL
         value: "120"
+      # Si Anthropic no tiene saldo, cuota confirmada o esta en incidente,
+      # cambiar este valor a "1" en Render antes de abrir trafico.
       - key: GENERATION_ADMISSION_PAUSED
         value: "0"
       - key: GENERATION_ADMISSION_RETRY_AFTER_SECONDS

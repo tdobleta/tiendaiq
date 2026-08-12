@@ -122,6 +122,12 @@ fallo de RLS, Render, PostgreSQL ni del worker; bloquea exclusivamente los
 gates de capacidad IA 50/500 hasta cargar credito o corregir billing en
 Anthropic.
 
+Mientras el balance del proveedor este agotado, la operacion correcta es dejar
+pausada la admision de nuevas generaciones con `GENERATION_ADMISSION_PAUSED=1`
+en el servicio web de Render y no ejecutar workflows de capacidad Anthropic. La
+clave de IA pertenece solamente al worker; la web no debe recibirla porque solo
+admite y encola solicitudes.
+
 ## Criterios de salida
 
 El lanzamiento recibe **GO** solamente si se cumplen todos estos puntos:
@@ -170,7 +176,8 @@ No hace falta comprar una suscripcion para continuar el desarrollo local. Antes
 de abrir al publico, una persona con acceso a las cuentas debe:
 
 1. Confirmar o ampliar la cuota de Anthropic para el perfil de ocho generaciones
-   concurrentes y cargar credito suficiente antes de repetir perfiles 50/500.
+   concurrentes, cargar credito suficiente y despausar admision solo antes de
+   repetir perfiles 50/500.
 2. Crear el entorno de staging en Render/PostgreSQL, cargar los secretos y
    habilitar metricas y alertas.
 3. Ejecutar el QA de billing con `PLAN_TEST=1` y cambiarlo a `0` solo despues de

@@ -50,6 +50,14 @@ const launchPlan = leer("docs/plan-lanzamiento-1000-tiendas.md");
 const ola1Runbook = leer("docs/runbook-ola-1.md");
 const principal = toml.match(/^application_url\s*=\s*"([^"]+)"/m)?.[1];
 
+function servicioRender(nombre) {
+  const escaped = nombre.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return render.match(new RegExp(`- type:\\s*(?:web|worker)[\\s\\S]*?name:\\s*${escaped}[\\s\\S]*?(?=\\n\\s*- type:|\\n\\s*databases:|\\n\\s*$)`))?.[0] || "";
+}
+
+const renderWebService = servicioRender("tiendaiq");
+const renderWorkerService = servicioRender("tiendaiq-worker");
+
 if (!principal) {
   mal("shopify.app.toml declara application_url", "no se encontró la línea application_url");
 } else {
@@ -269,7 +277,16 @@ if (/Cola durable y limpieza sobre PostgreSQL real/.test(verificationWorkflow) &
   );
 }
 
-if (/type:\s*worker[\s\S]*key:\s*ANTHROPIC_API_KEY/.test(render)) {
+if (!/key:\s*ANTHROPIC_API_KEY/.test(renderWebService)) {
+  ok("la web no recibe la credencial de generacion de IA");
+} else {
+  mal(
+    "la web no recibe la credencial de generacion de IA",
+    "server.js solo debe admitir y encolar; ANTHROPIC_API_KEY pertenece al worker"
+  );
+}
+
+if (/key:\s*ANTHROPIC_API_KEY/.test(renderWorkerService)) {
   ok("el worker recibe la credencial de generación de IA");
 } else {
   mal("el worker recibe la credencial de generación de IA", "falta ANTHROPIC_API_KEY en tiendaiq-worker");

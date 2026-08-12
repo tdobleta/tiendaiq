@@ -19,6 +19,8 @@ producto y una de infraestructura registran evidencia de todos estos puntos:
 - `Anthropic capacity staging` paso primero perfil 8 y despues perfil 50 sin
   error rate mayor a 1%, p95 menor a 120 segundos y gasto dentro del techo
   aprobado.
+- El balance de Anthropic tiene credito suficiente, el techo de gasto esta
+  aprobado y `GENERATION_ADMISSION_PAUSED=0` solo despues de esa confirmacion.
 - Shopify OAuth, billing con cobro real, publicacion, desinstalacion y los tres
   webhooks de privacidad pasaron en una development store.
 - `PLAN_TEST=0` fue decidido por direccion para el canary; si sigue en `1`, el
@@ -111,6 +113,8 @@ Orden de degradacion:
 2. Reducir concurrencia antes de reintentar masivo.
 3. Mantener evidencias sin prompts ni respuestas.
 4. Si falta cuota o presupuesto, NO-GO para avanzar de ola.
+5. Si falta saldo o billing del proveedor, dejar `GENERATION_ADMISSION_PAUSED=1`
+   en web y no ejecutar `Anthropic capacity staging` hasta recargar credito.
 
 ### Shopify
 
