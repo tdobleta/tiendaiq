@@ -106,18 +106,7 @@ function createJobRepository(pool) {
       try {
         await client.query("BEGIN");
         await client.query("SELECT set_config('app.worker_id', $1, true)", [workerId]);
-        const result = await client.query(
-          `SELECT type,
-                  count(*) FILTER (WHERE status = 'queued')::int AS queued,
-                  count(*) FILTER (WHERE status = 'running')::int AS running,
-                  count(*) FILTER (WHERE status = 'failed')::int AS failed,
-                  coalesce(extract(epoch FROM (now() - min(created_at) FILTER (WHERE status = 'queued'))), 0)::float8
-                    AS oldest_queued_seconds
-           FROM control_plane.jobs
-           WHERE status IN ('queued', 'running', 'failed')
-           GROUP BY type
-           ORDER BY type`
-        );
+        const result = await client.query("SELECT * FROM control_plane.operational_queue_status()");
         await client.query("COMMIT");
         return result.rows.map((row) => ({
           type: row.type,

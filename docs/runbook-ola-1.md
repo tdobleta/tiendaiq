@@ -62,13 +62,17 @@ aislamiento. La fuente minima para cola/admission control es `/ops/status`,
 llamado con `Authorization: Bearer $OPS_STATUS_TOKEN`. Ese endpoint devuelve
 solo metricas agregadas (`queue`, `totals`, `generationAdmission`) y no expone
 tiendas, prompts, respuestas ni tokens. Las alertas de cola vieja, jobs fallidos
-y pausa de admision deben leer de ahi antes de Ola 1.
+y pausa de admision deben leer de ahi antes de Ola 1. La cola que ve web sale de
+una funcion PostgreSQL agregada con `SECURITY DEFINER`; web no recibe capacidad
+worker ni acceso a filas de jobs.
 
 El workflow manual `Ops readiness staging` es el preflight barato antes de
 mirar capacidad externa: valida `/ready`, el SHA desplegado, aislamiento y
-antiguedad de cola sin consumir Anthropic ni tocar Shopify. No reemplaza las
-alertas automaticas de Render/Sentry; sirve para dejar evidencia reproducible y
-para separar ruido de deploy de una senal operativa real.
+antiguedad de cola por dos caminos: consulta PostgreSQL con la credencial
+runtime del worker y consulta `/ops/status` con `STAGING_OPS_STATUS_TOKEN`. No
+consume Anthropic ni toca Shopify. No reemplaza las alertas automaticas de
+Render/Sentry; sirve para dejar evidencia reproducible y para separar ruido de
+deploy de una senal operativa real.
 
 ## Demanda excedente
 
@@ -79,6 +83,9 @@ Cuando una tienda queda fuera del cupo de la ola vigente:
 - La interfaz debe explicar que la generacion quedo en espera o fue limitada
   temporalmente; no debe prometer ejecucion inmediata.
 - No se reserva cupo ni se cobra consumo de IA si la solicitud no entra a cola.
+- La edicion IA puntual del editor (`/api/texto/editar`) queda fuera del GO
+  mientras no use cola durable y worker; si se intenta usar durante el canary,
+  debe degradar de forma controlada sin llamar Anthropic desde web.
 
 El objetivo no es esconder el limite, sino proteger reputacion y datos mientras
 el sistema absorbe demanda real.

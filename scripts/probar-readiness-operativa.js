@@ -32,6 +32,14 @@ function assertExpectedSha(value) {
   return sha;
 }
 
+function assertOpsStatusToken(value) {
+  const token = String(value || "").trim();
+  if (token.length < 32) {
+    throw new Error("OPS_STATUS_TOKEN debe tener al menos 32 caracteres");
+  }
+  return token;
+}
+
 function summarizeQueue(rows) {
   const totals = {
     types: 0,
@@ -85,6 +93,31 @@ function evaluateQueue(summary, { maxOldestQueuedSeconds, maxRunning, maxFailed 
   return { ok: errors.length === 0, errors };
 }
 
+function evaluateOpsStatus(payload, expectedSha, thresholds) {
+  const errors = [];
+  const release = String(payload?.release || "").toLowerCase();
+  const admission = payload?.generationAdmission || {};
+  const totals = payload?.totals || {};
+
+  if (!payload?.ok) errors.push("/ops/status no respondio ok=true");
+  if (release !== expectedSha) errors.push(`/ops/status release ${release || "(vacio)"} no coincide con ${expectedSha}`);
+  if (!Array.isArray(payload?.queue)) errors.push("/ops/status no devuelve queue[]");
+  if (typeof admission.paused !== "boolean") errors.push("/ops/status no devuelve generationAdmission.paused boolean");
+  if (admission.paused === true) errors.push("/ops/status reporta admision de generaciones pausada");
+  if (!Number.isFinite(Number(admission.retryAfter))) errors.push("/ops/status no devuelve generationAdmission.retryAfter numerico");
+  for (const key of ["queued", "running", "failed", "oldestQueuedSeconds"]) {
+    if (!Number.isFinite(Number(totals[key]))) errors.push(`/ops/status totals.${key} no es numerico`);
+  }
+  errors.push(...evaluateQueue({
+    queued: Number(totals.queued || 0),
+    running: Number(totals.running || 0),
+    failed: Number(totals.failed || 0),
+    oldestQueuedSeconds: Number(totals.oldestQueuedSeconds || 0)
+  }, thresholds).errors.map((error) => `/ops/status ${error}`));
+
+  return { ok: errors.length === 0, errors };
+}
+
 async function fetchReady(appUrl, expectedSha, timeoutMs = 15000) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
@@ -101,6 +134,31 @@ async function fetchReady(appUrl, expectedSha, timeoutMs = 15000) {
       throw new Error(`/ready respondio HTTP ${response.status}: ${text.slice(0, 200)}`);
     }
     const evaluation = evaluateReady(payload, expectedSha);
+    return { payload, evaluation };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function fetchOpsStatus(appUrl, token, expectedSha, thresholds, timeoutMs = 15000) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(`${appUrl}/ops/status`, {
+      headers: { Authorization: `Bearer ${token}` },
+      signal: controller.signal
+    });
+    const text = await response.text();
+    let payload;
+    try {
+      payload = JSON.parse(text);
+    } catch {
+      throw new Error(`/ops/status no devolvio JSON valido: ${text.slice(0, 120)}`);
+    }
+    if (!response.ok) {
+      throw new Error(`/ops/status respondio HTTP ${response.status}: ${text.slice(0, 200)}`);
+    }
+    const evaluation = evaluateOpsStatus(payload, expectedSha, thresholds);
     return { payload, evaluation };
   } finally {
     clearTimeout(timeout);
@@ -127,24 +185,28 @@ async function main() {
   }
 
   const expectedSha = assertExpectedSha(process.env.EXPECTED_RELEASE_SHA);
+  const opsStatusToken = assertOpsStatusToken(process.env.OPS_STATUS_TOKEN);
   const appUrl = normalizeAppUrl(process.env.STAGING_APP_URL || DEFAULT_STAGING_URL);
   const maxOldestQueuedSeconds = integer(process.env.OPS_MAX_OLDEST_JOB_SECONDS, 600, 1, 86400, "OPS_MAX_OLDEST_JOB_SECONDS");
   const maxRunning = integer(process.env.OPS_MAX_RUNNING_JOBS, 500, 0, 100000, "OPS_MAX_RUNNING_JOBS");
   const maxFailed = integer(process.env.OPS_MAX_FAILED_JOBS, 1000, 0, 100000, "OPS_MAX_FAILED_JOBS");
+  const thresholds = { maxOldestQueuedSeconds, maxRunning, maxFailed };
   const databaseUrl = process.env.OPERATIONS_DATABASE_URL || process.env.TEST_WORKER_DATABASE_URL;
 
   const ready = await fetchReady(appUrl, expectedSha);
   const queue = await readQueueSummary(databaseUrl);
-  const queueEvaluation = evaluateQueue(queue.summary, { maxOldestQueuedSeconds, maxRunning, maxFailed });
-  const errors = [...ready.evaluation.errors, ...queueEvaluation.errors];
+  const queueEvaluation = evaluateQueue(queue.summary, thresholds);
+  const opsStatus = await fetchOpsStatus(appUrl, opsStatusToken, expectedSha, thresholds);
+  const errors = [...ready.evaluation.errors, ...queueEvaluation.errors, ...opsStatus.evaluation.errors];
   const result = {
     event: "ops_readiness_staging",
     ok: errors.length === 0,
     appUrl,
     expectedRelease: expectedSha,
     ready: ready.payload,
+    opsStatus: opsStatus.payload,
     queue: queue.summary,
-    thresholds: { maxOldestQueuedSeconds, maxRunning, maxFailed },
+    thresholds,
     errors
   };
 
@@ -163,9 +225,12 @@ if (require.main === module) {
 
 module.exports = {
   CONFIRMATION,
+  assertOpsStatusToken,
   assertExpectedSha,
+  evaluateOpsStatus,
   evaluateQueue,
   evaluateReady,
+  fetchOpsStatus,
   integer,
   normalizeAppUrl,
   summarizeQueue

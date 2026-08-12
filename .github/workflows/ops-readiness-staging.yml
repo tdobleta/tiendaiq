@@ -59,6 +59,7 @@ jobs:
           EXPECTED_RELEASE_SHA: ${{ inputs.release_sha }}
           STAGING_APP_URL: https://tiendaiq-staging-web.onrender.com
           OPERATIONS_DATABASE_URL: ${{ secrets.STAGING_WORKER_DATABASE_URL }}
+          OPS_STATUS_TOKEN: ${{ secrets.STAGING_OPS_STATUS_TOKEN }}
           PG_CA_CERT: ${{ secrets.STAGING_PG_CA_CERT }}
           PG_POOL_MAX: "3"
           OPS_MAX_OLDEST_JOB_SECONDS: "600"

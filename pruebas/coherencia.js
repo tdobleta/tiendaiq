@@ -255,13 +255,14 @@ if (/environment:\s*staging/.test(opsReadinessWorkflow) &&
     /CHECK_STAGING_OPS_READINESS/.test(opsReadinessWorkflow) &&
     /EXPECTED_RELEASE_SHA/.test(opsReadinessWorkflow) &&
     /STAGING_WORKER_DATABASE_URL/.test(opsReadinessWorkflow) &&
+    /STAGING_OPS_STATUS_TOKEN/.test(opsReadinessWorkflow) &&
     /npm run ops:readiness/.test(opsReadinessWorkflow) &&
     !/STAGING_MIGRATION_DATABASE_URL/.test(opsReadinessWorkflow)) {
-  ok("la readiness operativa de staging usa commit revisado y credencial worker");
+  ok("la readiness operativa de staging usa commit revisado, credencial worker y token de ops");
 } else {
   mal(
-    "la readiness operativa de staging usa commit revisado y credencial worker",
-    "el workflow debe validar /ready, cola durable y SHA sin usar la credencial migradora"
+    "la readiness operativa de staging usa commit revisado, credencial worker y token de ops",
+    "el workflow debe validar /ready, /ops/status, cola durable y SHA sin usar la credencial migradora"
   );
 }
 
@@ -283,6 +284,18 @@ if (!/key:\s*ANTHROPIC_API_KEY/.test(renderWebService)) {
   mal(
     "la web no recibe la credencial de generacion de IA",
     "server.js solo debe admitir y encolar; ANTHROPIC_API_KEY pertenece al worker"
+  );
+}
+
+if (!/editarTexto/.test(leer("server.js")) &&
+    !/TEXT_EDIT_CONCURRENCY/.test(renderWebService) &&
+    /\/api\/texto\/editar/.test(leer("server.js")) &&
+    /temporalmente deshabilitada mientras se migra al worker/.test(leer("server.js"))) {
+  ok("la edicion IA directa queda fuera del runtime web");
+} else {
+  mal(
+    "la edicion IA directa queda fuera del runtime web",
+    "web no debe importar editarTexto ni tener concurrencia propia de IA; esa capacidad debe migrar a worker"
   );
 }
 

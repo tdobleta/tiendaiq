@@ -21,11 +21,10 @@
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
-const { listarProductos, editarTexto } = require("./adaptador");
+const { listarProductos } = require("./adaptador");
 const { despublicarPagina } = require("./publicar");
 const { env, sesionDeEnv } = require("./shopify");
 const { sesionDe, borrarTienda } = require("./tiendas");
-const { createConcurrencyGate } = require("./src/capacity/concurrency-gate");
 const { createSyntheticLoadHandler, safeEqual } = require("./src/capacity/synthetic-load-endpoints");
 const {
   guardarPaginaDB,
@@ -89,10 +88,6 @@ const DIR_WIDGETS = path.join(__dirname, "extensions", "tiendaiq-widgets", "asse
 // La URL pública por la que Shopify nos alcanza. En producción es la de Render;
 // en local, el túnel. Sin esto el OAuth no puede volver.
 const URL_APP = (env.APP_URL || `http://localhost:${PUERTO}`).replace(/\/$/, "");
-const textEditGate = createConcurrencyGate({
-  globalLimit: Math.max(1, Number(env.TEXT_EDIT_CONCURRENCY) || 4),
-  perKeyLimit: 1
-});
 const publicBundlesCache = new Map();
 const PUBLIC_BUNDLES_CACHE_MS = Math.max(5000, Number(env.PUBLIC_BUNDLES_CACHE_MS) || 60000);
 const GENERATION_QUEUE_MAX_PER_TENANT = Math.max(1, Number(env.GENERATION_QUEUE_MAX_PER_TENANT) || 2);
@@ -652,21 +647,14 @@ async function api(req, res, url) {
     return p ? json(res, 200, p) : json(res, 404, { error: "No existe esa página" });
   }
 
-  // POST /api/texto/editar — asistente puntual del editor de páginas.
+  // POST /api/texto/editar — no corre IA en el proceso web. La edición asistida
+  // debe entrar por cola durable/worker para conservar aislamiento, costos y
+  // observabilidad.
   if (req.method === "POST" && ruta === "/api/texto/editar") {
-    const { texto = "", instrucciones = "", modo = "rewrite", idioma = "es", contexto = "" } = await leerCuerpo(req);
-    if (String(texto).length > 12000) return json(res, 400, { error: "El texto es demasiado largo para editarlo en una sola vez." });
-    const release = textEditGate.tryAcquire(sesion.tienda);
-    if (!release) {
-      res.setHeader("Retry-After", "5");
-      return json(res, 429, { error: "El asistente esta ocupado. Reintenta en unos segundos." });
-    }
-    try {
-      const salida = await editarTexto({ texto, instrucciones, modo, idioma, contexto });
-      return json(res, 200, { texto: salida });
-    } finally {
-      release();
-    }
+    res.setHeader("Retry-After", "3600");
+    return json(res, 503, {
+      error: "La edicion asistida esta temporalmente deshabilitada mientras se migra al worker."
+    });
   }
 
   // POST /api/imagen — sube una imagen a Files de la tienda (genérico). Lo usa

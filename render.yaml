@@ -44,10 +44,6 @@ services:
         value: "10"
       - key: SHOPIFY_OAUTH_TIMEOUT_MS
         value: "15000"
-      - key: ANTHROPIC_TIMEOUT_MS
-        value: "120000"
-      - key: TEXT_EDIT_CONCURRENCY
-        value: "4"
       - key: PUBLIC_BUNDLES_CACHE_MS
         value: "60000"
       - key: GENERATION_QUEUE_MAX_PER_TENANT

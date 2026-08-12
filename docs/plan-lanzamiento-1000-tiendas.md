@@ -188,7 +188,10 @@ La credencial `STAGING_MIGRATION_DATABASE_URL` vive solo en el entorno protegido
 de GitHub Actions. El workflow manual migra primero y dispara los deploy hooks
 de staging despues; web y worker no reciben una credencial propietaria. El
 rollout sigue requiriendo migraciones expand/contract porque Render despliega
-los dos procesos como servicios independientes.
+los dos procesos como servicios independientes. La readiness operativa ademas
+requiere `STAGING_OPS_STATUS_TOKEN` en GitHub y `OPS_STATUS_TOKEN` en Render web;
+ambos deben tener el mismo valor fuerte y se usan solo para leer metricas
+agregadas de `/ops/status`.
 
 ## Operacion del primer dia
 

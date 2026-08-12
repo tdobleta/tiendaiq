@@ -304,3 +304,16 @@ test("los jobs quedan aislados y el claim exige capacidad PostgreSQL de worker",
   assert.doesNotMatch(rolesSql, /current_setting\('app\.worker_id'/);
   assert.match(repository, /set_config\('app\.worker_id', \$1, true\)/);
 });
+
+test("el estado operativo de jobs sale de una funcion agregada sin capacidad worker", () => {
+  const sql = fs.readFileSync(path.join(__dirname, "..", "db", "migrations", "0012_operational_queue_status.sql"), "utf8");
+  const repository = fs.readFileSync(path.join(__dirname, "..", "src", "platform", "postgres", "job-repository.js"), "utf8");
+
+  assert.match(sql, /CREATE OR REPLACE FUNCTION control_plane\.operational_queue_status\(\)/);
+  assert.match(sql, /SECURITY DEFINER/);
+  assert.match(sql, /RETURNS TABLE \([\s\S]*type text[\s\S]*queued integer[\s\S]*oldest_queued_seconds double precision/);
+  assert.match(sql, /GRANT EXECUTE ON FUNCTION control_plane\.operational_queue_status\(\)[\s\S]*TO tiendaiq_web_runtime, tiendaiq_worker_runtime/);
+  assert.doesNotMatch(sql, /\btenant_id\b|\bidempotency_key\b|\blast_error\b/);
+  assert.doesNotMatch(sql, /jobs\.payload/);
+  assert.match(repository, /SELECT \* FROM control_plane\.operational_queue_status\(\)/);
+});

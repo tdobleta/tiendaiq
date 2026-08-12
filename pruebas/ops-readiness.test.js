@@ -3,7 +3,9 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const {
+  assertOpsStatusToken,
   assertExpectedSha,
+  evaluateOpsStatus,
   evaluateQueue,
   evaluateReady,
   integer,
@@ -16,6 +18,12 @@ const SHA = "95a81bccac219b9355cf9adb4861a696d9b5caf3";
 test("valida el SHA completo que debe responder staging", () => {
   assert.equal(assertExpectedSha(SHA.toUpperCase()), SHA);
   assert.throws(() => assertExpectedSha("95a81b"), /SHA completo/);
+});
+
+test("exige token fuerte para consultar /ops/status", () => {
+  const token = "ops-status-token-humo-123456789012";
+  assert.equal(assertOpsStatusToken(` ${token} `), token);
+  assert.throws(() => assertOpsStatusToken("corto"), /al menos 32 caracteres/);
 });
 
 test("normaliza la URL de staging sin aceptar protocolos raros", () => {
@@ -41,6 +49,38 @@ test("evalua /ready con Postgres, release y aislamiento RLS", () => {
   assert.deepEqual(evaluateReady(ready, SHA), { ok: true, errors: [] });
   assert.equal(evaluateReady({ ...ready, release: "0".repeat(40) }, SHA).ok, false);
   assert.equal(evaluateReady({ ...ready, aislamiento: { ...ready.aislamiento, workerCapability: true } }, SHA).ok, false);
+});
+
+test("evalua /ops/status con release, admission control y cola agregada", () => {
+  const opsStatus = {
+    ok: true,
+    release: SHA,
+    generationAdmission: { paused: false, retryAfter: 120 },
+    queue: [
+      { type: "generate-page", queued: 2, running: 1, failed: 0, oldestQueuedSeconds: 30 }
+    ],
+    totals: { queued: 2, running: 1, failed: 0, oldestQueuedSeconds: 30 }
+  };
+  const thresholds = {
+    maxOldestQueuedSeconds: 600,
+    maxRunning: 10,
+    maxFailed: 10
+  };
+
+  assert.deepEqual(evaluateOpsStatus(opsStatus, SHA, thresholds), { ok: true, errors: [] });
+  assert.equal(evaluateOpsStatus({ ...opsStatus, release: "0".repeat(40) }, SHA, thresholds).ok, false);
+  assert.equal(evaluateOpsStatus({
+    ...opsStatus,
+    totals: { ...opsStatus.totals, oldestQueuedSeconds: 601 }
+  }, SHA, thresholds).ok, false);
+  assert.equal(evaluateOpsStatus({
+    ...opsStatus,
+    generationAdmission: { paused: "no", retryAfter: 120 }
+  }, SHA, thresholds).ok, false);
+  assert.equal(evaluateOpsStatus({
+    ...opsStatus,
+    generationAdmission: { paused: true, retryAfter: 120 }
+  }, SHA, thresholds).ok, false);
 });
 
 test("resume la cola durable y aplica umbrales operativos", () => {
