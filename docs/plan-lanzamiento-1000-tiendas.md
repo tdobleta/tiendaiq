@@ -106,6 +106,16 @@ y el gate de cola durable sintetica de staging para 1.000/1.000. No cierra los
 gates de Anthropic perfil 50/500, Shopify E2E, billing real ni alertas
 automaticas.
 
+El gate `Anthropic capacity staging #4` con perfil 50 corrio sobre
+`e3040961d1a47cc836ab2bca0398b49149540501` y quedo **NO-GO**. Una
+reproduccion local controlada con el mismo contrato, techo de presupuesto y
+concurrencia confirmo la causa: Anthropic rechazo la ejecucion por saldo
+insuficiente de la cuenta. El proveedor devolvio `invalid_request_error` con el
+mensaje de saldo bajo antes de consumir tokens en la muestra reducida. No es un
+fallo de RLS, Render, PostgreSQL ni del worker; bloquea exclusivamente los
+gates de capacidad IA 50/500 hasta cargar credito o corregir billing en
+Anthropic.
+
 ## Criterios de salida
 
 El lanzamiento recibe **GO** solamente si se cumplen todos estos puntos:
@@ -154,7 +164,7 @@ No hace falta comprar una suscripcion para continuar el desarrollo local. Antes
 de abrir al publico, una persona con acceso a las cuentas debe:
 
 1. Confirmar o ampliar la cuota de Anthropic para el perfil de ocho generaciones
-   concurrentes.
+   concurrentes y cargar credito suficiente antes de repetir perfiles 50/500.
 2. Crear el entorno de staging en Render/PostgreSQL, cargar los secretos y
    habilitar metricas y alertas.
 3. Ejecutar el QA de billing con `PLAN_TEST=1` y cambiarlo a `0` solo despues de
