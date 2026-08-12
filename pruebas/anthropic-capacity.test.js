@@ -7,6 +7,7 @@ const {
   classifyError,
   configuration,
   runCapacityProbe,
+  sanitizeErrorSample,
   summarize,
   tokenUsage,
   usageCostUsd
@@ -82,8 +83,17 @@ test("clasifica rate limit y resume errores contra los umbrales", () => {
   const config = configuration(env());
   const result = summarize([
     { ok: true, latencyMs: 10, usage: { input_tokens: 1, output_tokens: 1 }, warnings: 0 },
-    { ok: false, latencyMs: 20, usage: {}, errorType: "rate_limit" }
+    { ok: false, latencyMs: 20, usage: {}, errorType: "rate_limit", errorSample: "429 Too Many Requests" }
   ], config);
   assert.equal(result.passed, false);
   assert.equal(result.errorTypes.rate_limit, 1);
+  assert.deepEqual(result.errorSamples.rate_limit, ["429 Too Many Requests"]);
+});
+
+test("sanitiza muestras de error sin exponer credenciales", () => {
+  const sample = sanitizeErrorSample(new Error("fallo con Bearer secret-token y sk-ant-api03-real"));
+  assert.equal(sample.includes("secret-token"), false);
+  assert.equal(sample.includes("sk-ant-api03-real"), false);
+  assert.match(sample, /Bearer \[redacted\]/);
+  assert.match(sample, /\[redacted_anthropic_key\]/);
 });

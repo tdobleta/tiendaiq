@@ -79,6 +79,22 @@ function classifyError(error) {
   return status ? `http_${status}` : "provider_error";
 }
 
+function sanitizeErrorSample(error) {
+  const text = String(
+    error?.message ||
+    error?.error?.message ||
+    error?.response?.data?.error?.message ||
+    error?.body?.error?.message ||
+    error?.body ||
+    error
+  );
+  return text
+    .replace(/sk-ant-[A-Za-z0-9_-]+/g, "[redacted_anthropic_key]")
+    .replace(/Bearer\s+[A-Za-z0-9._-]+/gi, "Bearer [redacted]")
+    .replace(/\s+/g, " ")
+    .slice(0, 240);
+}
+
 async function parallelMap(count, concurrency, work) {
   let cursor = 0;
   const results = new Array(count);
@@ -108,6 +124,7 @@ async function measuredCall(generate) {
       ok: false,
       latencyMs: performance.now() - started,
       errorType: classifyError(error),
+      errorSample: sanitizeErrorSample(error),
       usage: {}
     };
   }
@@ -121,6 +138,13 @@ function summarize(records, config) {
   const costUsd = successful.reduce((total, record) => total + usageCostUsd(record.usage, config), 0);
   const errorTypes = {};
   for (const failure of failures) errorTypes[failure.errorType] = (errorTypes[failure.errorType] || 0) + 1;
+  const errorSamples = {};
+  for (const failure of failures) {
+    if (!failure.errorSample) continue;
+    const samples = errorSamples[failure.errorType] || [];
+    if (samples.length < 3 && !samples.includes(failure.errorSample)) samples.push(failure.errorSample);
+    errorSamples[failure.errorType] = samples;
+  }
   const errorRate = records.length ? failures.length / records.length : 1;
   const latencies = records.map((record) => record.latencyMs);
   const p95Ms = percentile(latencies, 0.95);
@@ -145,6 +169,7 @@ function summarize(records, config) {
     warnings: successful.reduce((total, record) => total + record.warnings, 0),
     estimatedCostUsd: costUsd,
     errorTypes,
+    errorSamples,
     violations
   };
 }
@@ -240,6 +265,7 @@ module.exports = {
   parallelMap,
   percentile,
   runCapacityProbe,
+  sanitizeErrorSample,
   summarize,
   tokenUsage,
   usageCostUsd
