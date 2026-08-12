@@ -90,9 +90,21 @@ separadas despues de agregar la compuerta operativa de pausa de generaciones:
   drenaje en 81,09 s, 12,33 jobs/s, `oldestQueuedSeconds=40,12`, picos de
   pool `web=10` y `worker=10`, limpieza completa 1.000/1.000/1.000.
 
-Esta evidencia cierra el gate de cola durable sintetica de staging para
-1.000/1.000. No cierra los gates de Anthropic, Shopify E2E, billing real ni
-alertas automaticas.
+El gate `Anthropic capacity staging` quedo habilitado despues de cargar
+`STAGING_ANTHROPIC_API_KEY` en el environment protegido `staging`. La ejecucion
+oficial `Anthropic capacity staging #3` corrio sobre
+`3aeb762d142a20fc117a21a39679abdcd5241db8` con perfil 8 y paso:
+
+- 8 llamadas reales, 8 exitosas, 0 fallidas;
+- error rate `0`;
+- p95 `39,33 s`, p99 `39,33 s`;
+- 47.104 tokens de entrada y 26.207 tokens de salida;
+- costo estimado `USD 0,8907`, bajo el techo `USD 5`.
+
+Esta evidencia cierra el gate inicial de acceso y concurrencia Anthropic 8/8,
+y el gate de cola durable sintetica de staging para 1.000/1.000. No cierra los
+gates de Anthropic perfil 50/500, Shopify E2E, billing real ni alertas
+automaticas.
 
 ## Criterios de salida
 
