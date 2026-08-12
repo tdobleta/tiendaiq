@@ -912,6 +912,7 @@ const servidor = http.createServer(async (req, res) => {
       const almacenamiento = await verificarAlmacenamientoDB();
       return json(res, 200, {
         ok: true,
+        release: process.env.RENDER_GIT_COMMIT || null,
         almacenamiento: almacenamiento.tipo,
         aislamiento: almacenamiento.aislamiento || null,
         ts: new Date().toISOString()

@@ -179,6 +179,35 @@ if (/RENDER_STAGING_WEB_DEPLOY_HOOK/.test(releaseWorkflow) && /RENDER_STAGING_WO
   mal("web y worker se despliegan solo después de la migración de staging", "el workflow debe disparar ambos deploy hooks después de migrar");
 }
 
+if (/release_sha:/.test(releaseWorkflow) &&
+    /DEPLOY_REVIEWED_STAGING/.test(releaseWorkflow) &&
+    /\^\[a-f0-9\]\{40\}\$/.test(releaseWorkflow) &&
+    /git rev-parse origin\/main/.test(releaseWorkflow) &&
+    /data-urlencode "ref=\$\{\{ steps\.release\.outputs\.sha \}\}"/.test(releaseWorkflow) &&
+    /tiendaiq-staging-web\.onrender\.com\/ready/.test(releaseWorkflow) &&
+    /ready\.release===process\.env\.EXPECTED_SHA/.test(releaseWorkflow) &&
+    /RENDER_GIT_COMMIT/.test(leer("server.js"))) {
+  ok("el release fija el SHA revisado y espera readiness de staging");
+} else {
+  mal(
+    "el release fija el SHA revisado y espera readiness de staging",
+    "debe validar un SHA completo en main, desplegar ese ref y esperar /ready"
+  );
+}
+
+const workerSource = leer("worker.js");
+if (/await Promise\.race/.test(workerSource) &&
+    /verificarWorkerDB/.test(workerSource) &&
+    workerSource.indexOf("verificar()") < workerSource.indexOf("crearRuntime()") &&
+    /Worker detenido por preflight fallido/.test(workerSource)) {
+  ok("el worker falla cerrado antes de iniciar sus runners");
+} else {
+  mal(
+    "el worker falla cerrado antes de iniciar sus runners",
+    "debe verificar PostgreSQL y el rol worker antes de crear el runtime"
+  );
+}
+
 if (/environment:\s*staging/.test(capacityWorkflow) &&
     /ref:\s*\$\{\{ github\.sha \}\}/.test(capacityWorkflow) &&
     /STAGING_WEB_DATABASE_URL/.test(capacityWorkflow) &&

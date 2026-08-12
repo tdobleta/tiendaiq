@@ -100,5 +100,7 @@ services:
         value: "1000"
       - key: JOB_LEASE_SECONDS
         value: "300"
+      - key: WORKER_PREFLIGHT_TIMEOUT_MS
+        value: "15000"
       - key: DEV_MODE
         value: "0"

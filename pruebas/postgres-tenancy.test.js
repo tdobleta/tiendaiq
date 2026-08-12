@@ -9,7 +9,7 @@ const { TenantContext } = require("../src/tenancy/tenant-context");
 const { createPageRepository } = require("../src/platform/postgres/page-repository");
 const { createPostgresPool } = require("../src/platform/postgres/create-pool");
 const { runMigrations } = require("../src/platform/postgres/migration-runner");
-const { PROTECTED_TABLES, verifyTenantIsolation } = require("../src/platform/postgres/verify-tenancy");
+const { PROTECTED_TABLES, verifyTenantIsolation, verifyWorkerIsolation } = require("../src/platform/postgres/verify-tenancy");
 
 test("Postgres remoto exige una CA y nunca desactiva la validación TLS", () => {
   class FakePool {
@@ -192,7 +192,7 @@ describe("readiness de aislamiento", () => {
   test("acepta RLS forzado con un rol sin bypass", async () => {
     const responses = [
       { rows: [{ enabled: true, forced: true, all_present: true, owns_protected_table: false }] },
-      { rows: [{ superuser: false, bypass_rls: false, inherits_roles: false, worker_capability: false }] }
+      { rows: [{ current_role: "tiendaiq_web_runtime", superuser: false, bypass_rls: false, inherits_roles: false, worker_capability: false }] }
     ];
     const result = await verifyTenantIsolation({ async query() { return responses.shift(); } });
     assert.deepEqual(result, {
@@ -215,7 +215,7 @@ describe("readiness de aislamiento", () => {
   test("rechaza un rol que puede saltarse RLS", async () => {
     const responses = [
       { rows: [{ enabled: true, forced: true, all_present: true, owns_protected_table: false }] },
-      { rows: [{ superuser: false, bypass_rls: true, worker_capability: false }] }
+      { rows: [{ current_role: "tiendaiq_web_runtime", superuser: false, bypass_rls: true, worker_capability: false }] }
     ];
     await assert.rejects(
       verifyTenantIsolation({ async query() { return responses.shift(); } }),
@@ -226,7 +226,7 @@ describe("readiness de aislamiento", () => {
   test("rechaza un rol web que hereda privilegios de proveedor", async () => {
     const responses = [
       { rows: [{ enabled: true, forced: true, all_present: true, owns_protected_table: false }] },
-      { rows: [{ superuser: false, bypass_rls: false, inherits_roles: true, worker_capability: false }] }
+      { rows: [{ current_role: "tiendaiq_web_runtime", superuser: false, bypass_rls: false, inherits_roles: true, worker_capability: false }] }
     ];
     await assert.rejects(
       verifyTenantIsolation({ async query() { return responses.shift(); } }),
@@ -241,18 +241,39 @@ describe("readiness de aislamiento", () => {
           return { rows: [{ enabled: true, forced: true, all_present: true, owns_protected_table: true }] };
         }
       }),
-      /no puede ser dueño/
+      /no puede ser dueno/
     );
   });
 
   test("rechaza que web herede la capacidad transversal del worker", async () => {
     const responses = [
       { rows: [{ enabled: true, forced: true, all_present: true, owns_protected_table: false }] },
-      { rows: [{ superuser: false, bypass_rls: false, worker_capability: true }] }
+      { rows: [{ current_role: "tiendaiq_web_runtime", superuser: false, bypass_rls: false, inherits_roles: false, worker_capability: true }] }
     ];
     await assert.rejects(
       verifyTenantIsolation({ async query() { return responses.shift(); } }),
       /capacidad de worker/
+    );
+  });
+
+  test("acepta exclusivamente el rol worker con su capacidad transversal", async () => {
+    const responses = [
+      { rows: [{ enabled: true, forced: true, all_present: true, owns_protected_table: false }] },
+      { rows: [{ current_role: "tiendaiq_worker_runtime", superuser: false, bypass_rls: false, inherits_roles: false, worker_capability: true }] }
+    ];
+    const result = await verifyWorkerIsolation({ async query() { return responses.shift(); } });
+    assert.equal(result.workerCapability, true);
+    assert.equal(result.protectedTables, 12);
+  });
+
+  test("rechaza un worker conectado con el rol web", async () => {
+    const responses = [
+      { rows: [{ enabled: true, forced: true, all_present: true, owns_protected_table: false }] },
+      { rows: [{ current_role: "tiendaiq_web_runtime", superuser: false, bypass_rls: false, inherits_roles: false, worker_capability: false }] }
+    ];
+    await assert.rejects(
+      verifyWorkerIsolation({ async query() { return responses.shift(); } }),
+      /se esperaba el rol tiendaiq_worker_runtime/
     );
   });
 });

@@ -19,7 +19,7 @@ const { TenantContext, requireTenantContext, assertTenant } = require("./src/ten
 const { createPostgresPool } = require("./src/platform/postgres/create-pool");
 const { withTenantTransaction } = require("./src/platform/postgres/with-tenant-transaction");
 const { createPageRepository } = require("./src/platform/postgres/page-repository");
-const { verifyTenantIsolation } = require("./src/platform/postgres/verify-tenancy");
+const { verifyTenantIsolation, verifyWorkerIsolation } = require("./src/platform/postgres/verify-tenancy");
 const { createJobRepository } = require("./src/platform/postgres/job-repository");
 const { createGenerationRepository } = require("./src/platform/postgres/generation-repository");
 const { createInboxRepository } = require("./src/platform/postgres/inbox-repository");
@@ -833,7 +833,16 @@ async function verificarAlmacenamientoDB() {
   if (!USA_PG) return { tipo: "archivos" };
   const p = await pg();
   await p.query("SELECT 1");
-  const aislamiento = await verifyTenantIsolation(p);
+  const aislamiento = await verifyTenantIsolation(p, { expectedRole: env.PG_RUNTIME_ROLE || "tiendaiq_web_runtime" });
+  return { tipo: "postgres", aislamiento };
+}
+
+async function verificarWorkerDB() {
+  if (!USA_PG) throw new Error("El worker requiere DATABASE_URL; no puede usar almacenamiento por archivos");
+  if (!env.PG_RUNTIME_ROLE) throw new Error("El worker requiere PG_RUNTIME_ROLE");
+  const p = await pg();
+  await p.query("SELECT 1");
+  const aislamiento = await verifyWorkerIsolation(p, { expectedRole: env.PG_RUNTIME_ROLE });
   return { tipo: "postgres", aislamiento };
 }
 
@@ -859,5 +868,5 @@ module.exports = {
   encolarGeneracionDB, leerReservaGeneracionDB, finalizarGeneracionDB, liberarReservaGeneracionDB,
   recibirWebhookDB, reclamarWebhookDB, completarWebhookDB, fallarWebhookDB,
   redactarInboxTiendaDB, registrarPrivacidadWebhookDB, depurarInboxDB,
-  verificarAlmacenamientoDB, cerrarAlmacenamientoDB
+  verificarAlmacenamientoDB, verificarWorkerDB, cerrarAlmacenamientoDB
 };
