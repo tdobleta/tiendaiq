@@ -36,6 +36,32 @@ Las pruebas locales ejecutadas el 10 de agosto de 2026 demostraron:
 Los scripts y su modelo de seguridad estan documentados en
 `docs/pruebas-carga-local.md`.
 
+### Evidencia de staging real - 11 de agosto de 2026
+
+El release revisado `9a82f36a7e930a3c281285244ae3b271ea94e008` fue promovido
+por el workflow protegido `Release staging #11`. El endpoint publico de
+readiness respondio:
+
+- `ok=true`;
+- `release=9a82f36a7e930a3c281285244ae3b271ea94e008`;
+- almacenamiento `postgres`;
+- RLS habilitado y forzado sobre 12 tablas protegidas;
+- rol web sin `BYPASSRLS`, sin herencia y sin capacidad worker.
+
+La cola durable de staging fue validada con credenciales runtime separadas:
+
+- `Capacity staging #4`, `runId=7e6ca3bf63f8`: 100 tenants y 100 jobs,
+  drenaje en 4,45 s, 22,49 jobs/s, limpieza completa 100/100/100.
+- `Capacity staging #5`, `runId=bde757a91bf6`: 500 tenants y 500 jobs,
+  drenaje en 42,26 s, 11,83 jobs/s, limpieza completa 500/500/500.
+- `Capacity staging #6`, `runId=812166fb8a91`: 1.000 tenants y 1.000 jobs,
+  drenaje en 37,39 s, 26,74 jobs/s, limpieza completa 1.000/1.000/1.000.
+
+El gate `Anthropic capacity staging #1` con perfil 8 quedo **NO-GO** por
+configuracion: el workflow fallo antes de invocar al proveedor con
+`Falta ANTHROPIC_API_KEY`. Para repetirlo se debe cargar el secreto
+`STAGING_ANTHROPIC_API_KEY` en el environment protegido `staging` de GitHub.
+
 La admision de generacion esta limitada a dos jobs activos por tienda y 120 en
 total. El conteo global se resuelve mediante una funcion PostgreSQL que devuelve
 solo agregados; el rol web no obtiene acceso a filas de otros tenants. Al llegar
