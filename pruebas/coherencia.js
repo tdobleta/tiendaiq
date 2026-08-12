@@ -303,6 +303,19 @@ if (/key:\s*GENERATION_ADMISSION_PAUSED\s+value:\s*"0"/.test(render) &&
   );
 }
 
+const serverSource = leer("server.js");
+if (/key:\s*OPS_STATUS_TOKEN\s+sync:\s*false/.test(renderWebService) &&
+    /url\.pathname === "\/ops\/status"/.test(serverSource) &&
+    /estadoColaDB\("ops-status"\)/.test(serverSource) &&
+    /safeEqual\(req\.headers\.authorization/.test(serverSource)) {
+  ok("la web expone estado operativo agregado solo con token");
+} else {
+  mal(
+    "la web expone estado operativo agregado solo con token",
+    "Render debe declarar OPS_STATUS_TOKEN y server.js debe proteger /ops/status antes de devolver cola"
+  );
+}
+
 // ---------- salida operativa ----------
 
 const puntosOla1 = [
@@ -313,7 +326,7 @@ const puntosOla1 = [
   ["capacidad real de Anthropic", /Anthropic capacity staging[\s\S]*perfil 8[\s\S]*perfil 50/i],
   ["Shopify E2E con billing y privacidad", /Shopify OAuth[\s\S]*billing[\s\S]*webhooks de privacidad/i],
   ["canary por olas", /50 tiendas[\s\S]*200 tiendas[\s\S]*1\.000 tiendas/i],
-  ["alertas automaticas", /Alertas obligatorias[\s\S]*\/ready[\s\S]*Conexiones PostgreSQL[\s\S]*Anthropic[\s\S]*Shopify/i],
+  ["alertas automaticas", /Alertas obligatorias[\s\S]*\/ready[\s\S]*\/ops\/status[\s\S]*Conexiones PostgreSQL[\s\S]*Anthropic[\s\S]*Shopify/i],
   ["demanda excedente sin cobro indebido", /Demanda excedente[\s\S]*Retry-After[\s\S]*No se reserva cupo ni se cobra/i],
   ["pausa por cola vieja", /Pausar nuevas generaciones[\s\S]*10 minutos/i],
   ["registro de evidencia", /Registro de evidencia[\s\S]*SHA[\s\S]*Workflow[\s\S]*Resultado/i]

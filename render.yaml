@@ -60,6 +60,10 @@ services:
         value: "0"
       - key: GENERATION_ADMISSION_RETRY_AFTER_SECONDS
         value: "300"
+      # Token bearer para /ops/status. Sirve a monitores externos; no contiene
+      # datos de tenants y debe rotarse como cualquier secreto operativo.
+      - key: OPS_STATUS_TOKEN
+        sync: false
       - key: DEV_MODE
         value: "0"
       - key: PAGINAS_GRATIS

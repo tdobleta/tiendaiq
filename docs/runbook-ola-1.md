@@ -57,6 +57,13 @@ para:
 Cada alerta debe tener receptor, severidad, enlace al dashboard y accion
 primaria. Si falta una alerta de esta lista, la decision es NO-GO.
 
+La fuente minima de salud de web es `/ready`: confirma release, Postgres y
+aislamiento. La fuente minima para cola/admission control es `/ops/status`,
+llamado con `Authorization: Bearer $OPS_STATUS_TOKEN`. Ese endpoint devuelve
+solo metricas agregadas (`queue`, `totals`, `generationAdmission`) y no expone
+tiendas, prompts, respuestas ni tokens. Las alertas de cola vieja, jobs fallidos
+y pausa de admision deben leer de ahi antes de Ola 1.
+
 El workflow manual `Ops readiness staging` es el preflight barato antes de
 mirar capacidad externa: valida `/ready`, el SHA desplegado, aislamiento y
 antiguedad de cola sin consumir Anthropic ni tocar Shopify. No reemplaza las

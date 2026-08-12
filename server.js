@@ -26,7 +26,7 @@ const { despublicarPagina } = require("./publicar");
 const { env, sesionDeEnv } = require("./shopify");
 const { sesionDe, borrarTienda } = require("./tiendas");
 const { createConcurrencyGate } = require("./src/capacity/concurrency-gate");
-const { createSyntheticLoadHandler } = require("./src/capacity/synthetic-load-endpoints");
+const { createSyntheticLoadHandler, safeEqual } = require("./src/capacity/synthetic-load-endpoints");
 const {
   guardarPaginaDB,
   leerPaginaDB,
@@ -35,6 +35,7 @@ const {
   encolarGeneracionDB,
   recibirWebhookDB,
   leerJobDB,
+  estadoColaDB,
   verificarAlmacenamientoDB
 } = require("./db");
 const { iniciarInstalacion, terminarInstalacion, tiendaDelPase } = require("./auth");
@@ -193,8 +194,8 @@ async function verificarUrlViva(url, fresh = false) {
 
 // ---------- helpers HTTP ----------
 
-const json = (res, codigo, cuerpo) => {
-  res.writeHead(codigo, { "Content-Type": "application/json; charset=utf-8" });
+const json = (res, codigo, cuerpo, headers = {}) => {
+  res.writeHead(codigo, { "Content-Type": "application/json; charset=utf-8", ...headers });
   res.end(JSON.stringify(cuerpo));
 };
 
@@ -278,6 +279,50 @@ const syntheticLoadHandler = createSyntheticLoadHandler({
   expiresAt: env.SYNTHETIC_LOAD_EXPIRES_AT,
   readJson: leerCuerpo
 });
+
+async function estadoOperativo(req, res) {
+  const token = String(env.OPS_STATUS_TOKEN || "");
+  if (token.length < 32) return json(res, 404, { error: "not_found" });
+
+  if (!safeEqual(req.headers.authorization, `Bearer ${token}`)) {
+    return json(res, 401, { error: "unauthorized" }, { "WWW-Authenticate": "Bearer" });
+  }
+
+  if (req.method !== "GET") {
+    return json(res, 405, { error: "method_not_allowed" }, { Allow: "GET" });
+  }
+
+  const cola = await estadoColaDB("ops-status");
+  const totales = cola.reduce(
+    (acc, item) => {
+      acc.queued += Number(item.queued) || 0;
+      acc.running += Number(item.running) || 0;
+      acc.failed += Number(item.failed) || 0;
+      acc.oldestQueuedSeconds = Math.max(acc.oldestQueuedSeconds, Number(item.oldestQueuedSeconds) || 0);
+      return acc;
+    },
+    { queued: 0, running: 0, failed: 0, oldestQueuedSeconds: 0 }
+  );
+  const admision = generationAdmissionPause(env);
+
+  return json(res, 200, {
+    ok: true,
+    release: process.env.RENDER_GIT_COMMIT || null,
+    generationAdmission: {
+      paused: admision.paused,
+      retryAfter: admision.retryAfter
+    },
+    queue: cola.map((item) => ({
+      type: item.type,
+      queued: Number(item.queued) || 0,
+      running: Number(item.running) || 0,
+      failed: Number(item.failed) || 0,
+      oldestQueuedSeconds: Number(item.oldestQueuedSeconds) || 0
+    })),
+    totals: totales,
+    ts: new Date().toISOString()
+  }, { "Cache-Control": "no-store" });
+}
 
 const TIPOS = {
   ".html": "text/html; charset=utf-8",
@@ -925,6 +970,7 @@ const servidor = http.createServer(async (req, res) => {
         ts: new Date().toISOString()
       });
     }
+    if (url.pathname === "/ops/status") return await estadoOperativo(req, res);
     if (await syntheticLoadHandler(req, res, url)) return;
 
     if (url.pathname === "/auth") return await iniciarInstalacion(res, url, URL_APP);
