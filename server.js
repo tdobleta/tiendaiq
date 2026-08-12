@@ -43,6 +43,7 @@ const { estadoPlan, crearSuscripcion, mesActual } = require("./facturacion");
 const { reportarError, metrica } = require("./monitoreo");
 const { TenantContext } = require("./src/tenancy/tenant-context");
 const { verifyAndNormalizeWebhook } = require("./src/webhooks/verify-and-normalize");
+const { generationAdmissionPause } = require("./src/generation/admission-control");
 const {
   leerConfigBundles,
   guardarConfigBundles,
@@ -727,6 +728,12 @@ async function api(req, res, url) {
     if (!producto_id) return json(res, 400, { error: "Falta producto_id" });
     if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(request_id || "")) {
       return json(res, 400, { error: "Falta un request_id válido para generar de forma segura" });
+    }
+
+    const admissionPause = generationAdmissionPause(env);
+    if (admissionPause.paused) {
+      res.setHeader("Retry-After", String(admissionPause.retryAfter));
+      return json(res, 503, { error: admissionPause.message, code: admissionPause.code });
     }
 
     const plan = await estadoPlan(sesion);
