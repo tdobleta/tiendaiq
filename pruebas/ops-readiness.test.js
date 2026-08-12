@@ -5,6 +5,7 @@ const assert = require("node:assert/strict");
 const {
   assertOpsStatusToken,
   assertExpectedSha,
+  booleanFlag,
   evaluateOpsStatus,
   evaluateQueue,
   evaluateReady,
@@ -55,6 +56,8 @@ test("evalua /ops/status con release, admission control y cola agregada", () => 
   const opsStatus = {
     ok: true,
     release: SHA,
+    billing: { planTest: true },
+    legal: { complete: true, missing: [] },
     generationAdmission: { paused: false, retryAfter: 120 },
     queue: [
       { type: "generate-page", queued: 2, running: 1, failed: 0, oldestQueuedSeconds: 30 }
@@ -68,6 +71,12 @@ test("evalua /ops/status con release, admission control y cola agregada", () => 
   };
 
   assert.deepEqual(evaluateOpsStatus(opsStatus, SHA, thresholds), { ok: true, errors: [] });
+  assert.equal(evaluateOpsStatus(opsStatus, SHA, thresholds, { requireRealBilling: true }).ok, false);
+  assert.equal(evaluateOpsStatus({
+    ...opsStatus,
+    billing: { planTest: false },
+    legal: { complete: false, missing: ["email de soporte"] }
+  }, SHA, thresholds, { requireLegalComplete: true }).ok, false);
   assert.equal(evaluateOpsStatus({ ...opsStatus, release: "0".repeat(40) }, SHA, thresholds).ok, false);
   assert.equal(evaluateOpsStatus({
     ...opsStatus,
@@ -111,4 +120,12 @@ test("parsea enteros de entorno con limites explicitos", () => {
   assert.equal(integer("", 600, 1, 1000, "X"), 600);
   assert.throws(() => integer("0", 600, 1, 1000, "X"), /X debe ser/);
   assert.throws(() => integer("1.5", 600, 1, 1000, "X"), /X debe ser/);
+});
+
+test("parsea banderas booleanas de GO estricto", () => {
+  assert.equal(booleanFlag("1"), true);
+  assert.equal(booleanFlag("true"), true);
+  assert.equal(booleanFlag("si"), true);
+  assert.equal(booleanFlag("0"), false);
+  assert.equal(booleanFlag(""), false);
 });

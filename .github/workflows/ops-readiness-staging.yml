@@ -11,6 +11,18 @@ on:
         description: CHECK_STAGING_OPS_READINESS
         required: true
         type: string
+      require_real_billing:
+        description: Exigir PLAN_TEST=0 reportado por /ops/status
+        required: true
+        default: "0"
+        type: choice
+        options: ["0", "1"]
+      require_legal_complete:
+        description: Exigir legales completas reportadas por /ops/status
+        required: true
+        default: "0"
+        type: choice
+        options: ["0", "1"]
 
 permissions:
   contents: read
@@ -65,4 +77,6 @@ jobs:
           OPS_MAX_OLDEST_JOB_SECONDS: "600"
           OPS_MAX_RUNNING_JOBS: "500"
           OPS_MAX_FAILED_JOBS: "1000"
+          OPS_REQUIRE_REAL_BILLING: ${{ inputs.require_real_billing }}
+          OPS_REQUIRE_LEGAL_COMPLETE: ${{ inputs.require_legal_complete }}
         run: npm run ops:readiness

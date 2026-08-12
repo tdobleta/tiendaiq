@@ -193,6 +193,12 @@ requiere `STAGING_OPS_STATUS_TOKEN` en GitHub y `OPS_STATUS_TOKEN` en Render web
 ambos deben tener el mismo valor fuerte y se usan solo para leer metricas
 agregadas de `/ops/status`.
 
+La misma readiness tiene modo estricto para el GO: `OPS_REQUIRE_REAL_BILLING=1`
+exige que `/ops/status` reporte `billing.planTest=false`, y
+`OPS_REQUIRE_LEGAL_COMPLETE=1` exige que `legal.complete=true`. Antes de eso se
+puede correr con ambos en `0` para validar release, RLS y cola sin bloquear por
+trabajo comercial pendiente.
+
 ## Operacion del primer dia
 
 La ejecucion operativa de las olas vive en `docs/runbook-ola-1.md`. Ese

@@ -60,11 +60,11 @@ primaria. Si falta una alerta de esta lista, la decision es NO-GO.
 La fuente minima de salud de web es `/ready`: confirma release, Postgres y
 aislamiento. La fuente minima para cola/admission control es `/ops/status`,
 llamado con `Authorization: Bearer $OPS_STATUS_TOKEN`. Ese endpoint devuelve
-solo metricas agregadas (`queue`, `totals`, `generationAdmission`) y no expone
-tiendas, prompts, respuestas ni tokens. Las alertas de cola vieja, jobs fallidos
-y pausa de admision deben leer de ahi antes de Ola 1. La cola que ve web sale de
-una funcion PostgreSQL agregada con `SECURITY DEFINER`; web no recibe capacidad
-worker ni acceso a filas de jobs.
+solo metricas agregadas (`queue`, `totals`, `generationAdmission`, `billing`,
+`legal`) y no expone tiendas, prompts, respuestas ni tokens. Las alertas de
+cola vieja, jobs fallidos y pausa de admision deben leer de ahi antes de Ola 1.
+La cola que ve web sale de una funcion PostgreSQL agregada con
+`SECURITY DEFINER`; web no recibe capacidad worker ni acceso a filas de jobs.
 
 El workflow manual `Ops readiness staging` es el preflight barato antes de
 mirar capacidad externa: valida `/ready`, el SHA desplegado, aislamiento y
@@ -73,6 +73,15 @@ runtime del worker y consulta `/ops/status` con `STAGING_OPS_STATUS_TOKEN`. No
 consume Anthropic ni toca Shopify. No reemplaza las alertas automaticas de
 Render/Sentry; sirve para dejar evidencia reproducible y para separar ruido de
 deploy de una senal operativa real.
+
+Para la corrida final de GO, ejecutar el workflow con:
+
+- `require_real_billing=1`: falla si `/ops/status` reporta `billing.planTest=true`.
+- `require_legal_complete=1`: falla si `/ops/status` reporta legales incompletas.
+
+Para corridas tecnicas previas, ambos switches pueden quedar en `0`; eso permite
+probar cola, release y aislamiento sin fingir que billing o legales ya estan
+cerrados.
 
 ## Demanda excedente
 
@@ -155,8 +164,9 @@ Registrar cada ejecucion con este formato:
 | 2026-08-12 | 1 | `3aeb762d142a20fc117a21a39679abdcd5241db8` | Anthropic capacity staging #3 perfil 8 | OK | 8/8 llamadas reales, error rate 0, p95 39,33 s, costo estimado USD 0,8907 bajo techo USD 5 |
 | 2026-08-12 | 1 | `e3040961d1a47cc836ab2bca0398b49149540501` | Anthropic capacity staging #4 perfil 50 | NO-GO | fallo confirmado por saldo insuficiente en Anthropic; no repetir 50/500 hasta cargar credito o corregir billing del proveedor |
 | pendiente | 1 | pendiente | Ops readiness staging | NO-GO | correr despues de promover el proximo SHA estable a staging |
+| pendiente | 1 | pendiente | Ops readiness staging estricta | NO-GO | correr con `require_real_billing=1` y `require_legal_complete=1` antes del GO |
 | pendiente | 1 | pendiente | Anthropic profile 50/500 | NO-GO | repetir despues de resolver credito/cuota Anthropic |
-| pendiente | 1 | pendiente | Shopify E2E billing/webhooks | NO-GO | falta ejecutar |
+| pendiente | 1 | pendiente | Shopify E2E billing/webhooks | NO-GO | falta ejecutar; `PLAN_TEST=0` solo tras aprobar billing con cargo real |
 
 No borrar filas fallidas. Una falla con causa y correccion es mejor evidencia
 que un historial limpio incompleto.

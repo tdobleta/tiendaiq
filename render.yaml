@@ -67,6 +67,12 @@ services:
       # Mantener en 1 hasta terminar el QA de billing en la dev store.
       - key: PLAN_TEST
         value: "1"
+      - key: EMAIL_SOPORTE
+        sync: false
+      - key: RAZON_SOCIAL
+        sync: false
+      - key: DOMICILIO
+        sync: false
 
   - type: worker
     name: tiendaiq-worker

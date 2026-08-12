@@ -40,6 +40,10 @@ function assertOpsStatusToken(value) {
   return token;
 }
 
+function booleanFlag(value) {
+  return ["1", "true", "yes", "si", "y"].includes(String(value || "").trim().toLowerCase());
+}
+
 function summarizeQueue(rows) {
   const totals = {
     types: 0,
@@ -93,14 +97,25 @@ function evaluateQueue(summary, { maxOldestQueuedSeconds, maxRunning, maxFailed 
   return { ok: errors.length === 0, errors };
 }
 
-function evaluateOpsStatus(payload, expectedSha, thresholds) {
+function evaluateOpsStatus(payload, expectedSha, thresholds, requirements = {}) {
   const errors = [];
   const release = String(payload?.release || "").toLowerCase();
   const admission = payload?.generationAdmission || {};
   const totals = payload?.totals || {};
+  const billing = payload?.billing || {};
+  const legal = payload?.legal || {};
 
   if (!payload?.ok) errors.push("/ops/status no respondio ok=true");
   if (release !== expectedSha) errors.push(`/ops/status release ${release || "(vacio)"} no coincide con ${expectedSha}`);
+  if (typeof billing.planTest !== "boolean") errors.push("/ops/status no devuelve billing.planTest boolean");
+  if (requirements.requireRealBilling && billing.planTest === true) {
+    errors.push("/ops/status reporta billing en modo test");
+  }
+  if (typeof legal.complete !== "boolean") errors.push("/ops/status no devuelve legal.complete boolean");
+  if (!Array.isArray(legal.missing)) errors.push("/ops/status no devuelve legal.missing[]");
+  if (requirements.requireLegalComplete && legal.complete !== true) {
+    errors.push(`/ops/status reporta legales incompletas: ${(legal.missing || []).join(", ") || "desconocido"}`);
+  }
   if (!Array.isArray(payload?.queue)) errors.push("/ops/status no devuelve queue[]");
   if (typeof admission.paused !== "boolean") errors.push("/ops/status no devuelve generationAdmission.paused boolean");
   if (admission.paused === true) errors.push("/ops/status reporta admision de generaciones pausada");
@@ -140,7 +155,7 @@ async function fetchReady(appUrl, expectedSha, timeoutMs = 15000) {
   }
 }
 
-async function fetchOpsStatus(appUrl, token, expectedSha, thresholds, timeoutMs = 15000) {
+async function fetchOpsStatus(appUrl, token, expectedSha, thresholds, requirements = {}, timeoutMs = 15000) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -158,7 +173,7 @@ async function fetchOpsStatus(appUrl, token, expectedSha, thresholds, timeoutMs 
     if (!response.ok) {
       throw new Error(`/ops/status respondio HTTP ${response.status}: ${text.slice(0, 200)}`);
     }
-    const evaluation = evaluateOpsStatus(payload, expectedSha, thresholds);
+    const evaluation = evaluateOpsStatus(payload, expectedSha, thresholds, requirements);
     return { payload, evaluation };
   } finally {
     clearTimeout(timeout);
@@ -191,12 +206,16 @@ async function main() {
   const maxRunning = integer(process.env.OPS_MAX_RUNNING_JOBS, 500, 0, 100000, "OPS_MAX_RUNNING_JOBS");
   const maxFailed = integer(process.env.OPS_MAX_FAILED_JOBS, 1000, 0, 100000, "OPS_MAX_FAILED_JOBS");
   const thresholds = { maxOldestQueuedSeconds, maxRunning, maxFailed };
+  const requirements = {
+    requireRealBilling: booleanFlag(process.env.OPS_REQUIRE_REAL_BILLING),
+    requireLegalComplete: booleanFlag(process.env.OPS_REQUIRE_LEGAL_COMPLETE)
+  };
   const databaseUrl = process.env.OPERATIONS_DATABASE_URL || process.env.TEST_WORKER_DATABASE_URL;
 
   const ready = await fetchReady(appUrl, expectedSha);
   const queue = await readQueueSummary(databaseUrl);
   const queueEvaluation = evaluateQueue(queue.summary, thresholds);
-  const opsStatus = await fetchOpsStatus(appUrl, opsStatusToken, expectedSha, thresholds);
+  const opsStatus = await fetchOpsStatus(appUrl, opsStatusToken, expectedSha, thresholds, requirements);
   const errors = [...ready.evaluation.errors, ...queueEvaluation.errors, ...opsStatus.evaluation.errors];
   const result = {
     event: "ops_readiness_staging",
@@ -207,6 +226,7 @@ async function main() {
     opsStatus: opsStatus.payload,
     queue: queue.summary,
     thresholds,
+    requirements,
     errors
   };
 
@@ -227,6 +247,7 @@ module.exports = {
   CONFIRMATION,
   assertOpsStatusToken,
   assertExpectedSha,
+  booleanFlag,
   evaluateOpsStatus,
   evaluateQueue,
   evaluateReady,

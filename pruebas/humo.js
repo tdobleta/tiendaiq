@@ -187,9 +187,13 @@ async function main() {
             ? "no devolvio queue agregada"
             : !cuerpo.totals || typeof cuerpo.totals.oldestQueuedSeconds !== "number"
               ? "no devolvio totales de cola"
-              : cuerpo.generationAdmission?.paused !== false
-                ? "no informo admision activa"
-                : null;
+              : typeof cuerpo.billing?.planTest !== "boolean"
+                ? "no informo modo de billing"
+                : typeof cuerpo.legal?.complete !== "boolean"
+                  ? "no informo completitud legal"
+                  : cuerpo.generationAdmission?.paused !== false
+                    ? "no informo admision activa"
+                    : null;
         if (problema) mal("/ops/status con bearer valido responde", problema);
         else ok("/ops/status con bearer valido responde");
       }

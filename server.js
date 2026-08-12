@@ -299,10 +299,18 @@ async function estadoOperativo(req, res) {
     { queued: 0, running: 0, failed: 0, oldestQueuedSeconds: 0 }
   );
   const admision = generationAdmissionPause(env);
+  const faltanLegales = legalesIncompletos();
 
   return json(res, 200, {
     ok: true,
     release: process.env.RENDER_GIT_COMMIT || null,
+    billing: {
+      planTest: String(env.PLAN_TEST || "") === "1"
+    },
+    legal: {
+      complete: faltanLegales.length === 0,
+      missing: faltanLegales
+    },
     generationAdmission: {
       paused: admision.paused,
       retryAfter: admision.retryAfter

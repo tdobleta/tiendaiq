@@ -256,6 +256,8 @@ if (/environment:\s*staging/.test(opsReadinessWorkflow) &&
     /EXPECTED_RELEASE_SHA/.test(opsReadinessWorkflow) &&
     /STAGING_WORKER_DATABASE_URL/.test(opsReadinessWorkflow) &&
     /STAGING_OPS_STATUS_TOKEN/.test(opsReadinessWorkflow) &&
+    /OPS_REQUIRE_REAL_BILLING/.test(opsReadinessWorkflow) &&
+    /OPS_REQUIRE_LEGAL_COMPLETE/.test(opsReadinessWorkflow) &&
     /npm run ops:readiness/.test(opsReadinessWorkflow) &&
     !/STAGING_MIGRATION_DATABASE_URL/.test(opsReadinessWorkflow)) {
   ok("la readiness operativa de staging usa commit revisado, credencial worker y token de ops");
@@ -320,12 +322,26 @@ const serverSource = leer("server.js");
 if (/key:\s*OPS_STATUS_TOKEN\s+sync:\s*false/.test(renderWebService) &&
     /url\.pathname === "\/ops\/status"/.test(serverSource) &&
     /estadoColaDB\("ops-status"\)/.test(serverSource) &&
-    /safeEqual\(req\.headers\.authorization/.test(serverSource)) {
+    /safeEqual\(req\.headers\.authorization/.test(serverSource) &&
+    /billing:\s*\{\s*planTest/.test(serverSource) &&
+    /legal:\s*\{\s*complete/.test(serverSource)) {
   ok("la web expone estado operativo agregado solo con token");
 } else {
   mal(
     "la web expone estado operativo agregado solo con token",
     "Render debe declarar OPS_STATUS_TOKEN y server.js debe proteger /ops/status antes de devolver cola"
+  );
+}
+
+if (/key:\s*EMAIL_SOPORTE\s+sync:\s*false/.test(renderWebService) &&
+    /key:\s*RAZON_SOCIAL\s+sync:\s*false/.test(renderWebService) &&
+    /key:\s*DOMICILIO\s+sync:\s*false/.test(renderWebService) &&
+    /legalesIncompletos/.test(serverSource)) {
+  ok("Render declara las legales publicas requeridas por Shopify");
+} else {
+  mal(
+    "Render declara las legales publicas requeridas por Shopify",
+    "web debe recibir EMAIL_SOPORTE, RAZON_SOCIAL y DOMICILIO sin escribirlos en codigo"
   );
 }
 
