@@ -259,6 +259,17 @@ if (/type:\s*worker[\s\S]*key:\s*ANTHROPIC_API_KEY/.test(render)) {
   mal("el worker recibe la credencial de generación de IA", "falta ANTHROPIC_API_KEY en tiendaiq-worker");
 }
 
+if (/key:\s*GENERATION_ADMISSION_PAUSED\s+value:\s*"0"/.test(render) &&
+    /key:\s*GENERATION_ADMISSION_RETRY_AFTER_SECONDS\s+value:\s*"[0-9]+"/.test(render) &&
+    /generationAdmissionPause\(env\)/.test(leer("server.js"))) {
+  ok("Render declara una compuerta de pausa para nuevas generaciones");
+} else {
+  mal(
+    "Render declara una compuerta de pausa para nuevas generaciones",
+    "web debe tener GENERATION_ADMISSION_PAUSED=0, Retry-After configurable y server.js debe aplicarlo antes de encolar"
+  );
+}
+
 // ---------- salida operativa ----------
 
 const puntosOla1 = [

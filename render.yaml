@@ -56,6 +56,10 @@ services:
         value: "2"
       - key: GENERATION_QUEUE_MAX_GLOBAL
         value: "120"
+      - key: GENERATION_ADMISSION_PAUSED
+        value: "0"
+      - key: GENERATION_ADMISSION_RETRY_AFTER_SECONDS
+        value: "300"
       - key: DEV_MODE
         value: "0"
       - key: PAGINAS_GRATIS
