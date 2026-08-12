@@ -130,6 +130,11 @@ los dos procesos como servicios independientes.
 
 ## Operacion del primer dia
 
+La ejecucion operativa de las olas vive en `docs/runbook-ola-1.md`. Ese
+runbook es obligatorio antes del canary externo: define alertas, pausa,
+degradacion, demanda excedente, incidentes y registro de evidencia. Si el
+runbook o sus alertas no estan completos, el estado sigue siendo **NO-GO**.
+
 - Congelar cambios funcionales 24 horas antes.
 - Mantener una persona a cargo de producto y otra de infraestructura durante el
   pico inicial.

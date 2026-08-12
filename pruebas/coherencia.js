@@ -45,6 +45,8 @@ const releaseWorkflow = leer(".github/workflows/release-staging.yml");
 const capacityWorkflow = leer(".github/workflows/capacity-staging.yml");
 const anthropicCapacityWorkflow = leer(".github/workflows/anthropic-capacity-staging.yml");
 const verificationWorkflow = leer(".github/workflows/verificar.yml");
+const launchPlan = leer("docs/plan-lanzamiento-1000-tiendas.md");
+const ola1Runbook = leer("docs/runbook-ola-1.md");
 const principal = toml.match(/^application_url\s*=\s*"([^"]+)"/m)?.[1];
 
 if (!principal) {
@@ -255,6 +257,30 @@ if (/type:\s*worker[\s\S]*key:\s*ANTHROPIC_API_KEY/.test(render)) {
   ok("el worker recibe la credencial de generación de IA");
 } else {
   mal("el worker recibe la credencial de generación de IA", "falta ANTHROPIC_API_KEY en tiendaiq-worker");
+}
+
+// ---------- salida operativa ----------
+
+const puntosOla1 = [
+  ["release revisado y readiness", /Release staging[\s\S]*\/ready[\s\S]*release/i],
+  ["aislamiento RLS en readiness", /RLS[\s\S]*BYPASSRLS[\s\S]*capacidad worker/i],
+  ["capacidad de cola durable", /Capacity staging[\s\S]*1\.000 tenants[\s\S]*1\.000 jobs/i],
+  ["capacidad real de Anthropic", /Anthropic capacity staging[\s\S]*perfil 8[\s\S]*perfil 50/i],
+  ["Shopify E2E con billing y privacidad", /Shopify OAuth[\s\S]*billing[\s\S]*webhooks de privacidad/i],
+  ["canary por olas", /50 tiendas[\s\S]*200 tiendas[\s\S]*1\.000 tiendas/i],
+  ["alertas automaticas", /Alertas obligatorias[\s\S]*\/ready[\s\S]*Conexiones PostgreSQL[\s\S]*Anthropic[\s\S]*Shopify/i],
+  ["demanda excedente sin cobro indebido", /Demanda excedente[\s\S]*Retry-After[\s\S]*No se reserva cupo ni se cobra/i],
+  ["pausa por cola vieja", /Pausar nuevas generaciones[\s\S]*10 minutos/i],
+  ["registro de evidencia", /Registro de evidencia[\s\S]*SHA[\s\S]*Workflow[\s\S]*Resultado/i]
+];
+
+const faltanOla1 = puntosOla1.filter(([, patron]) => !patron.test(ola1Runbook)).map(([nombre]) => nombre);
+if (!launchPlan.includes("docs/runbook-ola-1.md")) {
+  mal("el plan de 1.000 tiendas referencia el runbook de Ola 1", "falta enlazar docs/runbook-ola-1.md desde el plan principal");
+} else if (faltanOla1.length) {
+  mal("el runbook de Ola 1 cubre los gates operativos", `faltan: ${faltanOla1.join(", ")}`);
+} else {
+  ok("el plan de lanzamiento tiene runbook operativo de Ola 1");
 }
 
 console.log(fallos ? `\n  ${fallos} incoherencia(s)\n` : "");
