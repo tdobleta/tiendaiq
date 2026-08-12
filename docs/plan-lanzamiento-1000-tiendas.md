@@ -106,6 +106,12 @@ y el gate de cola durable sintetica de staging para 1.000/1.000. No cierra los
 gates de Anthropic perfil 50/500, Shopify E2E, billing real ni alertas
 automaticas.
 
+El workflow manual `Ops readiness staging` queda como preflight operativo
+barato entre releases y pruebas caras: valida el SHA desplegado en `/ready`, el
+aislamiento RLS y el estado actual de la cola durable con credencial worker
+runtime. No consume Anthropic, no llama Shopify y no reemplaza las alertas
+automaticas; evita confundir ruido de deploy con evidencia de canary.
+
 El gate `Anthropic capacity staging #4` con perfil 50 corrio sobre
 `e3040961d1a47cc836ab2bca0398b49149540501` y quedo **NO-GO**. Una
 reproduccion local controlada con el mismo contrato, techo de presupuesto y

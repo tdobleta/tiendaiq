@@ -1,0 +1,67 @@
+name: Ops readiness staging
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: SHA completo que debe responder /ready
+        required: true
+        type: string
+      confirmation:
+        description: CHECK_STAGING_OPS_READINESS
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tiendaiq-staging-ops-readiness
+  cancel-in-progress: false
+
+jobs:
+  ops-readiness:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Usa el commit revisado que contiene este probe; /ready valida el SHA
+          # realmente desplegado en Render.
+          ref: ${{ github.sha }}
+
+      - name: Validate deliberate authorization
+        shell: bash
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$RELEASE_SHA" =~ ^[a-f0-9]{40}$ ]]; then
+            echo "release_sha debe ser un SHA completo de 40 caracteres" >&2
+            exit 1
+          fi
+          if [[ "$CONFIRMATION" != "CHECK_STAGING_OPS_READINESS" ]]; then
+            echo "confirmacion invalida" >&2
+            exit 1
+          fi
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - run: npm install --no-audit --no-fund
+
+      - name: Check staging readiness and durable queue state
+        env:
+          CONFIRMATION: CHECK_STAGING_OPS_READINESS
+          EXPECTED_RELEASE_SHA: ${{ inputs.release_sha }}
+          STAGING_APP_URL: https://tiendaiq-staging-web.onrender.com
+          OPERATIONS_DATABASE_URL: ${{ secrets.STAGING_WORKER_DATABASE_URL }}
+          PG_CA_CERT: ${{ secrets.STAGING_PG_CA_CERT }}
+          PG_POOL_MAX: "3"
+          OPS_MAX_OLDEST_JOB_SECONDS: "600"
+          OPS_MAX_RUNNING_JOBS: "500"
+          OPS_MAX_FAILED_JOBS: "1000"
+        run: npm run ops:readiness

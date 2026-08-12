@@ -11,6 +11,8 @@ producto y una de infraestructura registran evidencia de todos estos puntos:
 
 - `Release staging` promovio un SHA completo de `main` y `/ready` responde
   `ok=true` con el mismo `release`.
+- `Ops readiness staging` valido ese SHA contra `/ready` y reviso el estado
+  actual de la cola durable con credencial worker runtime.
 - `/ready` confirma PostgreSQL, RLS habilitado y forzado, rol web sin
   `BYPASSRLS`, sin herencia y sin capacidad worker.
 - `Capacity staging` paso 1.000 tenants y 1.000 jobs con limpieza completa.
@@ -52,6 +54,12 @@ para:
 
 Cada alerta debe tener receptor, severidad, enlace al dashboard y accion
 primaria. Si falta una alerta de esta lista, la decision es NO-GO.
+
+El workflow manual `Ops readiness staging` es el preflight barato antes de
+mirar capacidad externa: valida `/ready`, el SHA desplegado, aislamiento y
+antiguedad de cola sin consumir Anthropic ni tocar Shopify. No reemplaza las
+alertas automaticas de Render/Sentry; sirve para dejar evidencia reproducible y
+para separar ruido de deploy de una senal operativa real.
 
 ## Demanda excedente
 
@@ -128,6 +136,7 @@ Registrar cada ejecucion con este formato:
 | 2026-08-12 | 1 | `95a81bccac219b9355cf9adb4861a696d9b5caf3` | Capacity staging #9 1000/1000 | OK | `runId=bd3d9d2ef957`, drenaje 81,09 s, limpieza 1.000/1.000/1.000 |
 | 2026-08-12 | 1 | `3aeb762d142a20fc117a21a39679abdcd5241db8` | Anthropic capacity staging #3 perfil 8 | OK | 8/8 llamadas reales, error rate 0, p95 39,33 s, costo estimado USD 0,8907 bajo techo USD 5 |
 | 2026-08-12 | 1 | `e3040961d1a47cc836ab2bca0398b49149540501` | Anthropic capacity staging #4 perfil 50 | NO-GO | fallo confirmado por saldo insuficiente en Anthropic; no repetir 50/500 hasta cargar credito o corregir billing del proveedor |
+| pendiente | 1 | pendiente | Ops readiness staging | NO-GO | correr despues de promover el proximo SHA estable a staging |
 | pendiente | 1 | pendiente | Anthropic profile 50/500 | NO-GO | repetir despues de resolver credito/cuota Anthropic |
 | pendiente | 1 | pendiente | Shopify E2E billing/webhooks | NO-GO | falta ejecutar |
 

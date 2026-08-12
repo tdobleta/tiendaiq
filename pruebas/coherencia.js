@@ -44,6 +44,7 @@ const render = leer("render.yaml");
 const releaseWorkflow = leer(".github/workflows/release-staging.yml");
 const capacityWorkflow = leer(".github/workflows/capacity-staging.yml");
 const anthropicCapacityWorkflow = leer(".github/workflows/anthropic-capacity-staging.yml");
+const opsReadinessWorkflow = leer(".github/workflows/ops-readiness-staging.yml");
 const verificationWorkflow = leer(".github/workflows/verificar.yml");
 const launchPlan = leer("docs/plan-lanzamiento-1000-tiendas.md");
 const ola1Runbook = leer("docs/runbook-ola-1.md");
@@ -241,6 +242,21 @@ if (/environment:\s*staging/.test(anthropicCapacityWorkflow) &&
   );
 }
 
+if (/environment:\s*staging/.test(opsReadinessWorkflow) &&
+    /ref:\s*\$\{\{ github\.sha \}\}/.test(opsReadinessWorkflow) &&
+    /CHECK_STAGING_OPS_READINESS/.test(opsReadinessWorkflow) &&
+    /EXPECTED_RELEASE_SHA/.test(opsReadinessWorkflow) &&
+    /STAGING_WORKER_DATABASE_URL/.test(opsReadinessWorkflow) &&
+    /npm run ops:readiness/.test(opsReadinessWorkflow) &&
+    !/STAGING_MIGRATION_DATABASE_URL/.test(opsReadinessWorkflow)) {
+  ok("la readiness operativa de staging usa commit revisado y credencial worker");
+} else {
+  mal(
+    "la readiness operativa de staging usa commit revisado y credencial worker",
+    "el workflow debe validar /ready, cola durable y SHA sin usar la credencial migradora"
+  );
+}
+
 if (/Cola durable y limpieza sobre PostgreSQL real/.test(verificationWorkflow) &&
     /ALLOW_QUEUE_LOAD_TEST:\s*"1"/.test(verificationWorkflow) &&
     /TEST_WORKER_DATABASE_URL/.test(verificationWorkflow) &&
@@ -274,6 +290,7 @@ if (/key:\s*GENERATION_ADMISSION_PAUSED\s+value:\s*"0"/.test(render) &&
 
 const puntosOla1 = [
   ["release revisado y readiness", /Release staging[\s\S]*\/ready[\s\S]*release/i],
+  ["preflight operativo de staging", /Ops readiness staging[\s\S]*\/ready[\s\S]*cola durable/i],
   ["aislamiento RLS en readiness", /RLS[\s\S]*BYPASSRLS[\s\S]*capacidad worker/i],
   ["capacidad de cola durable", /Capacity staging[\s\S]*1\.000 tenants[\s\S]*1\.000 jobs/i],
   ["capacidad real de Anthropic", /Anthropic capacity staging[\s\S]*perfil 8[\s\S]*perfil 50/i],

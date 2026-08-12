@@ -23,6 +23,7 @@
     "carga:http": "node scripts/carga-local.js",
     "carga:cola": "node scripts/probar-capacidad-cola.js",
     "carga:anthropic": "node scripts/probar-capacidad-anthropic.js",
+    "ops:readiness": "node scripts/probar-readiness-operativa.js",
     "probar": "npm run verificar && npm run coherencia && npm run unidad && npm run humo"
   },
   "engines": {
