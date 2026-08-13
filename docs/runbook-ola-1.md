@@ -12,7 +12,7 @@ producto y una de infraestructura registran evidencia de todos estos puntos:
 - `Release staging` promovio un SHA completo de `main` y `/ready` responde
   `ok=true` con el mismo `release`.
 - `Ops readiness staging` valido ese SHA contra `/ready` y reviso el estado
-  actual de la cola durable con credencial worker runtime.
+  agregado de la cola durable mediante el endpoint operativo autenticado.
 - `/ready` confirma PostgreSQL, RLS habilitado y forzado, rol web sin
   `BYPASSRLS`, sin herencia y sin capacidad worker.
 - `Capacity staging` paso 1.000 tenants y 1.000 jobs con limpieza completa.
@@ -60,28 +60,30 @@ primaria. Si falta una alerta de esta lista, la decision es NO-GO.
 La fuente minima de salud de web es `/ready`: confirma release, Postgres y
 aislamiento. La fuente minima para cola/admission control es `/ops/status`,
 llamado con `Authorization: Bearer $OPS_STATUS_TOKEN`. Ese endpoint devuelve
-solo metricas agregadas (`queue`, `totals`, `generationAdmission`, `billing`,
-`legal`) y no expone tiendas, prompts, respuestas ni tokens. Las alertas de
-cola vieja, jobs fallidos y pausa de admision deben leer de ahi antes de Ola 1.
+  solo metricas agregadas (`worker`, `queue`, `totals`,
+  `generationAdmission`, `billing`, `legal`) y no expone tiendas, prompts,
+  respuestas ni tokens. Las alertas de worker ausente, cola vieja, jobs fallidos
+  y pausa de admision deben leer de ahi antes de Ola 1.
 La cola que ve web sale de una funcion PostgreSQL agregada con
 `SECURITY DEFINER`; web no recibe capacidad worker ni acceso a filas de jobs.
 
 El workflow manual `Ops readiness staging` es el preflight barato antes de
-mirar capacidad externa: valida `/ready`, el SHA desplegado, aislamiento y
-antiguedad de cola por dos caminos: consulta PostgreSQL con la credencial
-runtime del worker y consulta `/ops/status` con `STAGING_OPS_STATUS_TOKEN`. No
-consume Anthropic ni toca Shopify. No reemplaza las alertas automaticas de
-Render/Sentry; sirve para dejar evidencia reproducible y para separar ruido de
-deploy de una senal operativa real.
+mirar capacidad externa: valida `/ready`, el SHA desplegado, aislamiento, el
+heartbeat de todos los workers activos en el mismo SHA y la cola exclusivamente a traves de
+`/ops/status` con `STAGING_OPS_STATUS_TOKEN`. El workflow no recibe credenciales
+de PostgreSQL, no consume Anthropic ni toca Shopify. No reemplaza las alertas
+automaticas de Render/Sentry; sirve para dejar evidencia reproducible y para
+separar ruido de deploy de una senal operativa real.
 
-Para la corrida final de GO, ejecutar el workflow con:
+El workflow obliga a elegir un perfil que deja la evidencia sin ambiguedad:
 
-- `require_real_billing=1`: falla si `/ops/status` reporta `billing.planTest=true`.
-- `require_legal_complete=1`: falla si `/ops/status` reporta legales incompletas.
+- `technical_preflight`: valida worker, cola, release y aislamiento. Un verde
+  en este perfil no autoriza trafico externo.
+- `go`: ademas exige billing real, legales completas y admision de IA abierta.
+  Este es el unico perfil que puede respaldar una decision de lanzamiento.
 
-Para corridas tecnicas previas, ambos switches pueden quedar en `0`; eso permite
-probar cola, release y aislamiento sin fingir que billing o legales ya estan
-cerrados.
+Staging arranca con la admision pausada por defecto y solo se abre de forma
+deliberada despues de cerrar proveedor, capacidad, billing y legales.
 
 ## Demanda excedente
 
@@ -164,7 +166,7 @@ Registrar cada ejecucion con este formato:
 | 2026-08-12 | 1 | `3aeb762d142a20fc117a21a39679abdcd5241db8` | Anthropic capacity staging #3 perfil 8 | OK | 8/8 llamadas reales, error rate 0, p95 39,33 s, costo estimado USD 0,8907 bajo techo USD 5 |
 | 2026-08-12 | 1 | `e3040961d1a47cc836ab2bca0398b49149540501` | Anthropic capacity staging #4 perfil 50 | NO-GO | fallo confirmado por saldo insuficiente en Anthropic; no repetir 50/500 hasta cargar credito o corregir billing del proveedor |
 | pendiente | 1 | pendiente | Ops readiness staging | NO-GO | correr despues de promover el proximo SHA estable a staging |
-| pendiente | 1 | pendiente | Ops readiness staging estricta | NO-GO | correr con `require_real_billing=1` y `require_legal_complete=1` antes del GO |
+| pendiente | 1 | pendiente | Ops readiness staging, perfil `go` | NO-GO | completar condiciones comerciales y obtener evidencia verde con perfil `go` |
 | pendiente | 1 | pendiente | Anthropic profile 50/500 | NO-GO | repetir despues de resolver credito/cuota Anthropic |
 | pendiente | 1 | pendiente | Shopify E2E billing/webhooks | NO-GO | falta ejecutar; `PLAN_TEST=0` solo tras aprobar billing con cargo real |
 

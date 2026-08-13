@@ -113,6 +113,8 @@ function createJobRepository(pool) {
           queued: Number(row.queued || 0),
           running: Number(row.running || 0),
           failed: Number(row.failed || 0),
+          failedRecent: Number(row.failed_recent || 0),
+          staleRunning: Number(row.stale_running || 0),
           oldestQueuedSeconds: Number(row.oldest_queued_seconds || 0)
         }));
       } catch (error) {
@@ -121,6 +123,49 @@ function createJobRepository(pool) {
       } finally {
         client.release();
       }
+    },
+
+    async recordHeartbeat({ workerId, releaseSha, runtimeRole, isolationOk, capacity }) {
+      if (!workerId) throw new TypeError("El heartbeat requiere workerId");
+      if (!/^[a-f0-9]{40}$/.test(String(releaseSha || ""))) {
+        throw new TypeError("El heartbeat requiere un SHA completo");
+      }
+      if (runtimeRole !== "tiendaiq_worker_runtime") {
+        throw new TypeError("El heartbeat requiere el rol runtime aislado del worker");
+      }
+      const capacityValues = [capacity?.generations, capacity?.publications, capacity?.webhooks];
+      if (capacityValues.some((value) => !Number.isInteger(value) || value < 1 || value > 32)) {
+        throw new TypeError("El heartbeat requiere capacidades enteras entre 1 y 32");
+      }
+      if (isolationOk !== true) {
+        throw new TypeError("El heartbeat requiere aislamiento verificado");
+      }
+      await pool.query(
+        "SELECT control_plane.record_worker_heartbeat($1, $2, $3, $4, $5)",
+        [workerId, releaseSha, capacity.generations, capacity.publications, capacity.webhooks]
+      );
+    },
+
+    async workerStatus() {
+      const result = await pool.query("SELECT * FROM control_plane.operational_worker_status()");
+      const row = result.rows[0];
+      if (!row) return null;
+      return {
+        workerId: row.worker_id,
+        release: row.release_sha,
+        runtimeRole: row.runtime_role,
+        isolationOk: row.isolation_ok === true,
+        generationConcurrency: Number(row.generation_concurrency || 0),
+        publicationConcurrency: Number(row.publication_concurrency || 0),
+        webhookConcurrency: Number(row.webhook_concurrency || 0),
+        ageSeconds: Number(row.age_seconds || 0),
+        uptimeSeconds: Number(row.uptime_seconds || 0),
+        startedAt: row.started_at,
+        lastSeenAt: row.last_seen_at,
+        activeWorkers: Number(row.active_workers || 0),
+        releaseVariants: Number(row.release_variants || 0),
+        runtimeRoleVariants: Number(row.runtime_role_variants || 0)
+      };
     },
 
     async succeed(context, job, result = {}) {

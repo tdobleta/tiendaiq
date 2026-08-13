@@ -474,6 +474,20 @@ async function estadoColaDB(workerId = "queue-metrics") {
   return [...grouped.values()].sort((a, b) => a.type.localeCompare(b.type));
 }
 
+async function registrarHeartbeatWorkerDB(heartbeat) {
+  if (!USA_PG) throw new Error("El heartbeat del worker requiere PostgreSQL");
+  const p = await pg();
+  jobRepository ||= createJobRepository(p);
+  return jobRepository.recordHeartbeat(heartbeat);
+}
+
+async function estadoWorkerDB() {
+  if (!USA_PG) return null;
+  const p = await pg();
+  jobRepository ||= createJobRepository(p);
+  return jobRepository.workerStatus();
+}
+
 async function completarJobDB(context, job, result) {
   const tenant = assertTenant(context, job.tenantId);
   if (USA_PG) {
@@ -864,7 +878,7 @@ module.exports = {
   guardarPaginaDB, leerPaginaDB, listarPaginasDB,
   guardarEstadoDB, consumirEstadoDB,
   encolarJobDB, leerJobDB, reclamarJobDB, renovarLeaseJobDB, completarJobDB, fallarJobDB,
-  estadoColaDB,
+  estadoColaDB, registrarHeartbeatWorkerDB, estadoWorkerDB,
   encolarGeneracionDB, leerReservaGeneracionDB, finalizarGeneracionDB, liberarReservaGeneracionDB,
   recibirWebhookDB, reclamarWebhookDB, completarWebhookDB, fallarWebhookDB,
   redactarInboxTiendaDB, registrarPrivacidadWebhookDB, depurarInboxDB,

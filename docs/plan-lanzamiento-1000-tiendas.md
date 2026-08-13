@@ -108,8 +108,8 @@ automaticas.
 
 El workflow manual `Ops readiness staging` queda como preflight operativo
 barato entre releases y pruebas caras: valida el SHA desplegado en `/ready`, el
-aislamiento RLS y el estado actual de la cola durable con credencial worker
-runtime. No consume Anthropic, no llama Shopify y no reemplaza las alertas
+aislamiento RLS y el estado actual de la cola durable mediante el endpoint
+operativo autenticado. No consume Anthropic, no llama Shopify y no reemplaza las alertas
 automaticas; evita confundir ruido de deploy con evidencia de canary.
 
 El gate `Anthropic capacity staging #4` con perfil 50 corrio sobre
@@ -193,11 +193,12 @@ requiere `STAGING_OPS_STATUS_TOKEN` en GitHub y `OPS_STATUS_TOKEN` en Render web
 ambos deben tener el mismo valor fuerte y se usan solo para leer metricas
 agregadas de `/ops/status`.
 
-La misma readiness tiene modo estricto para el GO: `OPS_REQUIRE_REAL_BILLING=1`
-exige que `/ops/status` reporte `billing.planTest=false`, y
-`OPS_REQUIRE_LEGAL_COMPLETE=1` exige que `legal.complete=true`. Antes de eso se
-puede correr con ambos en `0` para validar release, RLS y cola sin bloquear por
-trabajo comercial pendiente.
+La misma readiness separa dos perfiles explicitos. `technical_preflight`
+valida release, RLS, worker y cola, pero no autoriza lanzamiento. `go` exige
+ademas `billing.planTest=false`, `legal.complete=true` y admision de IA abierta.
+Staging conserva la admision pausada por defecto hasta que billing, legales,
+proveedor de IA y capacidad tengan evidencia verde. Solo una corrida verde con
+perfil `go` puede respaldar la decision comercial de abrir una ola.
 
 ## Operacion del primer dia
 

@@ -8,7 +8,7 @@ const { runMigrations } = require("../src/platform/postgres/migration-runner");
 
 async function main() {
   const pool = createPostgresPool({
-    databaseUrl: env.MIGRATION_DATABASE_URL || env.DATABASE_URL,
+    databaseUrl: env.MIGRATION_DATABASE_URL,
     caCertificate: env.PG_CA_CERT,
     Pool
   });

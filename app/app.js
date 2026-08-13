@@ -619,7 +619,7 @@
                 : `<s-stack direction="block" gap="base" alignItems="center">
                      ${ico("documento")}
                      <s-heading>Todavía no generaste ninguna página</s-heading>
-                     <s-paragraph>Elegí un producto de tu tienda y armamos su página de venta con IA en segundos.</s-paragraph>
+                     <s-paragraph>Elegí un producto de tu tienda y armamos su página de venta con IA en pocos minutos.</s-paragraph>
                      <s-button variant="primary" id="vacio-crear">Crear página con IA</s-button>
                    </s-stack>`
             }
@@ -1353,12 +1353,17 @@
     localStorage.removeItem(GENERACION_PENDIENTE);
   }
 
-  async function completarGeneracionPendiente(pending) {
+  async function aceptarGeneracionPendiente(pending) {
     if (!pending.jobId) {
       const { job } = await api("/paginas", { method: "POST", body: pending.body });
       pending.jobId = job.id;
       guardarGeneracionPendiente(pending);
     }
+    return pending;
+  }
+
+  async function completarGeneracionPendiente(pending) {
+    await aceptarGeneracionPendiente(pending);
     const completed = await esperarJob(pending.jobId, { timeoutMs: 6 * 60 * 1000 });
     const pageId = completed.result?.pageId || String(pending.body.producto_id).split("/").pop();
     estado.pagina = await api(`/paginas/${pageId}`);
@@ -1379,7 +1384,6 @@
     estado.anguloFinal = angulo;
     estado.idiomaPagina = idioma;
     estado.error = null;
-    ir("generando");
 
     const body = {
       producto_id: estado.producto.id,
@@ -1396,13 +1400,18 @@
       guardarGeneracionPendiente(pending);
     }
 
-    const t0 = Date.now();
-    const reloj = setInterval(() => {
-      const r = $("reloj");
-      if (r) r.textContent = ((Date.now() - t0) / 1000).toFixed(0) + "s";
-    }, 100);
+    let reloj;
 
     try {
+      // Mostrar progreso solo despues de que la cola acepte el trabajo. Con
+      // admission control pausado, el merchant ve el error real de inmediato.
+      await aceptarGeneracionPendiente(pending);
+      ir("generando");
+      const t0 = Date.now();
+      reloj = setInterval(() => {
+        const r = $("reloj");
+        if (r) r.textContent = ((Date.now() - t0) / 1000).toFixed(0) + "s";
+      }, 100);
       estado.pagina = await completarGeneracionPendiente(pending);
       clearInterval(reloj);
       ir("preview");
@@ -1445,7 +1454,7 @@
         </ul>
         <div class="gen-nota">
           <span class="gen-nota__dot"></span>
-          <div><b>Un momento — suele tardar ~35 segundos.</b><span>La IA lee tus fotos, investiga el mercado y escribe el copy. Dejá esta pantalla abierta; abrimos el editor apenas esté lista.</span></div>
+          <div><b>Un momento — puede tardar unos minutos.</b><span>La IA lee tus fotos, investiga el mercado y escribe el copy. Dejá esta pantalla abierta; abrimos el editor apenas esté lista.</span></div>
         </div>
       </div>`;
 
@@ -1476,8 +1485,9 @@
     const pending = leerGeneracionPendiente();
     if (!pending || recuperandoGeneracion) return false;
     recuperandoGeneracion = true;
-    ir("generando");
     try {
+      await aceptarGeneracionPendiente(pending);
+      ir("generando");
       await completarGeneracionPendiente(pending);
       ir("preview");
     } catch (error) {
@@ -1530,6 +1540,7 @@
 
   // Campo de texto (o textarea si lleva filas). data-nulo: vacío se guarda
   // como null — así un autor borrado vuelve a ser tarjeta guía.
+  const EDICION_TEXTO_IA_DISPONIBLE = false;
   function campo(ruta, etiqueta, filas, nulo) {
     const v = leer(estado.pagina.data, ruta) ?? "";
     const atributos = `data-ruta="${ruta}"${nulo ? ` data-nulo="1"` : ""}`;
@@ -1537,7 +1548,7 @@
       ? `<s-text-area label="${esc(etiqueta)}" rows="${filas}" ${atributos} value="${esc(v)}"></s-text-area>`
       : `<s-text-field label="${esc(etiqueta)}" ${atributos} value="${esc(v)}"></s-text-field>`;
     const admiteIA = Boolean(filas) || /título|texto|nombre|beneficio|titular|subtítulo|contenido|llamada|botón|caption/i.test(etiqueta);
-    return `<div class="sp-field">${campoHTML}${admiteIA ? `<button type="button" class="sp-ai-trigger" data-ai-text="${esc(ruta)}">${ico("chispa")} Editar con IA</button>` : ""}</div>`;
+    return `<div class="sp-field">${campoHTML}${EDICION_TEXTO_IA_DISPONIBLE && admiteIA ? `<button type="button" class="sp-ai-trigger" data-ai-text="${esc(ruta)}">${ico("chispa")} Editar con IA</button>` : ""}</div>`;
   }
 
   function campoNumero(ruta, etiqueta) {

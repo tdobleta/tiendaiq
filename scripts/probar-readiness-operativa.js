@@ -44,12 +44,22 @@ function booleanFlag(value) {
   return ["1", "true", "yes", "si", "y"].includes(String(value || "").trim().toLowerCase());
 }
 
+function readinessProfile(value) {
+  const profile = String(value || "technical_preflight").trim().toLowerCase();
+  if (!["technical_preflight", "go"].includes(profile)) {
+    throw new Error("OPS_READINESS_PROFILE debe ser technical_preflight o go");
+  }
+  return profile;
+}
+
 function summarizeQueue(rows) {
   const totals = {
     types: 0,
     queued: 0,
     running: 0,
     failed: 0,
+    failedRecent: 0,
+    staleRunning: 0,
     oldestQueuedSeconds: 0
   };
   for (const row of rows || []) {
@@ -57,6 +67,8 @@ function summarizeQueue(rows) {
     totals.queued += Number(row.queued || 0);
     totals.running += Number(row.running || 0);
     totals.failed += Number(row.failed || 0);
+    totals.failedRecent += Number(row.failedRecent || 0);
+    totals.staleRunning += Number(row.staleRunning || 0);
     totals.oldestQueuedSeconds = Math.max(
       totals.oldestQueuedSeconds,
       Number(row.oldestQueuedSeconds || 0)
@@ -83,16 +95,28 @@ function evaluateReady(payload, expectedSha) {
   return { ok: errors.length === 0, errors };
 }
 
-function evaluateQueue(summary, { maxOldestQueuedSeconds, maxRunning, maxFailed }) {
+function evaluateQueue(summary, {
+  maxQueued,
+  maxOldestQueuedSeconds,
+  maxRunning,
+  maxFailedRecent,
+  maxStaleRunning
+}) {
   const errors = [];
+  if (summary.queued > maxQueued) {
+    errors.push(`jobs queued fuera de umbral: ${summary.queued} > ${maxQueued}`);
+  }
   if (summary.oldestQueuedSeconds > maxOldestQueuedSeconds) {
     errors.push(`cola vieja: ${summary.oldestQueuedSeconds.toFixed(2)}s > ${maxOldestQueuedSeconds}s`);
   }
   if (summary.running > maxRunning) {
     errors.push(`jobs running fuera de umbral: ${summary.running} > ${maxRunning}`);
   }
-  if (summary.failed > maxFailed) {
-    errors.push(`jobs failed fuera de umbral: ${summary.failed} > ${maxFailed}`);
+  if (summary.failedRecent > maxFailedRecent) {
+    errors.push(`jobs fallidos recientes: ${summary.failedRecent} > ${maxFailedRecent}`);
+  }
+  if (summary.staleRunning > maxStaleRunning) {
+    errors.push(`leases estancados: ${summary.staleRunning} > ${maxStaleRunning}`);
   }
   return { ok: errors.length === 0, errors };
 }
@@ -104,6 +128,7 @@ function evaluateOpsStatus(payload, expectedSha, thresholds, requirements = {}) 
   const totals = payload?.totals || {};
   const billing = payload?.billing || {};
   const legal = payload?.legal || {};
+  const worker = payload?.worker;
 
   if (!payload?.ok) errors.push("/ops/status no respondio ok=true");
   if (release !== expectedSha) errors.push(`/ops/status release ${release || "(vacio)"} no coincide con ${expectedSha}`);
@@ -118,15 +143,51 @@ function evaluateOpsStatus(payload, expectedSha, thresholds, requirements = {}) 
   }
   if (!Array.isArray(payload?.queue)) errors.push("/ops/status no devuelve queue[]");
   if (typeof admission.paused !== "boolean") errors.push("/ops/status no devuelve generationAdmission.paused boolean");
-  if (admission.paused === true) errors.push("/ops/status reporta admision de generaciones pausada");
+  if (requirements.requireAdmissionOpen && admission.paused === true) {
+    errors.push("/ops/status reporta admision de generaciones pausada");
+  }
   if (!Number.isFinite(Number(admission.retryAfter))) errors.push("/ops/status no devuelve generationAdmission.retryAfter numerico");
-  for (const key of ["queued", "running", "failed", "oldestQueuedSeconds"]) {
+  if (!worker || typeof worker !== "object") {
+    errors.push("/ops/status no reporta heartbeat del worker");
+  } else {
+    if (String(worker.release || "").toLowerCase() !== expectedSha) errors.push("el worker no ejecuta el SHA esperado");
+    if (worker.runtimeRole !== "tiendaiq_worker_runtime") errors.push("el worker no usa el rol runtime aislado");
+    if (worker.isolationOk !== true) errors.push("el worker no confirma aislamiento RLS");
+    if (!Number.isInteger(Number(worker.activeWorkers)) || Number(worker.activeWorkers) < 1) {
+      errors.push("no hay workers activos confirmados");
+    }
+    if (Number(worker.releaseVariants) !== 1) errors.push("los workers activos no comparten un unico SHA");
+    if (Number(worker.runtimeRoleVariants) !== 1) errors.push("los workers activos no comparten un unico rol runtime");
+    if (!Number.isFinite(Number(worker.ageSeconds)) || Number(worker.ageSeconds) > thresholds.maxWorkerAgeSeconds) {
+      errors.push(`heartbeat del worker vencido: ${worker?.ageSeconds ?? "ausente"}s`);
+    }
+    if (!Number.isFinite(Number(worker.uptimeSeconds)) || Number(worker.uptimeSeconds) < thresholds.minWorkerUptimeSeconds) {
+      errors.push(`worker sin estabilidad minima: ${worker?.uptimeSeconds ?? "ausente"}s`);
+    }
+    const capacity = {
+      generations: Number(worker.generationConcurrency),
+      publications: Number(worker.publicationConcurrency),
+      webhooks: Number(worker.webhookConcurrency)
+    };
+    if (!Number.isInteger(capacity.generations) || capacity.generations < thresholds.minGenerationConcurrency) {
+      errors.push(`capacidad de generacion insuficiente: ${worker.generationConcurrency ?? "ausente"}`);
+    }
+    if (!Number.isInteger(capacity.publications) || capacity.publications < thresholds.minPublicationConcurrency) {
+      errors.push(`capacidad de publicacion insuficiente: ${worker.publicationConcurrency ?? "ausente"}`);
+    }
+    if (!Number.isInteger(capacity.webhooks) || capacity.webhooks < thresholds.minWebhookConcurrency) {
+      errors.push(`capacidad de webhooks insuficiente: ${worker.webhookConcurrency ?? "ausente"}`);
+    }
+  }
+  for (const key of ["queued", "running", "failed", "failedRecent", "staleRunning", "oldestQueuedSeconds"]) {
     if (!Number.isFinite(Number(totals[key]))) errors.push(`/ops/status totals.${key} no es numerico`);
   }
   errors.push(...evaluateQueue({
     queued: Number(totals.queued || 0),
     running: Number(totals.running || 0),
     failed: Number(totals.failed || 0),
+    failedRecent: Number(totals.failedRecent || 0),
+    staleRunning: Number(totals.staleRunning || 0),
     oldestQueuedSeconds: Number(totals.oldestQueuedSeconds || 0)
   }, thresholds).errors.map((error) => `/ops/status ${error}`));
 
@@ -180,20 +241,6 @@ async function fetchOpsStatus(appUrl, token, expectedSha, thresholds, requiremen
   }
 }
 
-async function readQueueSummary(databaseUrl) {
-  if (!databaseUrl) throw new Error("OPERATIONS_DATABASE_URL o TEST_WORKER_DATABASE_URL es obligatorio");
-
-  process.env.DATABASE_URL = databaseUrl;
-  process.env.PG_RUNTIME_ROLE = process.env.PG_RUNTIME_ROLE || "tiendaiq_worker_runtime";
-  const { estadoColaDB, cerrarAlmacenamientoDB } = require("../db");
-  try {
-    const rows = await estadoColaDB("ops-readiness");
-    return { rows, summary: summarizeQueue(rows) };
-  } finally {
-    await cerrarAlmacenamientoDB();
-  }
-}
-
 async function main() {
   if (process.env.CONFIRMATION !== CONFIRMATION) {
     throw new Error(`CONFIRMATION debe ser ${CONFIRMATION}`);
@@ -202,29 +249,47 @@ async function main() {
   const expectedSha = assertExpectedSha(process.env.EXPECTED_RELEASE_SHA);
   const opsStatusToken = assertOpsStatusToken(process.env.OPS_STATUS_TOKEN);
   const appUrl = normalizeAppUrl(process.env.STAGING_APP_URL || DEFAULT_STAGING_URL);
-  const maxOldestQueuedSeconds = integer(process.env.OPS_MAX_OLDEST_JOB_SECONDS, 600, 1, 86400, "OPS_MAX_OLDEST_JOB_SECONDS");
-  const maxRunning = integer(process.env.OPS_MAX_RUNNING_JOBS, 500, 0, 100000, "OPS_MAX_RUNNING_JOBS");
-  const maxFailed = integer(process.env.OPS_MAX_FAILED_JOBS, 1000, 0, 100000, "OPS_MAX_FAILED_JOBS");
-  const thresholds = { maxOldestQueuedSeconds, maxRunning, maxFailed };
-  const requirements = {
-    requireRealBilling: booleanFlag(process.env.OPS_REQUIRE_REAL_BILLING),
-    requireLegalComplete: booleanFlag(process.env.OPS_REQUIRE_LEGAL_COMPLETE)
+  const maxQueued = integer(process.env.OPS_MAX_QUEUED_JOBS, 20, 0, 100000, "OPS_MAX_QUEUED_JOBS");
+  const maxOldestQueuedSeconds = integer(process.env.OPS_MAX_OLDEST_JOB_SECONDS, 300, 1, 86400, "OPS_MAX_OLDEST_JOB_SECONDS");
+  const maxRunning = integer(process.env.OPS_MAX_RUNNING_JOBS, 16, 0, 100000, "OPS_MAX_RUNNING_JOBS");
+  const maxFailedRecent = integer(process.env.OPS_MAX_FAILED_RECENT_JOBS, 0, 0, 100000, "OPS_MAX_FAILED_RECENT_JOBS");
+  const maxStaleRunning = integer(process.env.OPS_MAX_STALE_RUNNING_JOBS, 0, 0, 100000, "OPS_MAX_STALE_RUNNING_JOBS");
+  const maxWorkerAgeSeconds = integer(process.env.OPS_MAX_WORKER_AGE_SECONDS, 60, 5, 3600, "OPS_MAX_WORKER_AGE_SECONDS");
+  const minWorkerUptimeSeconds = integer(process.env.OPS_MIN_WORKER_UPTIME_SECONDS, 30, 5, 3600, "OPS_MIN_WORKER_UPTIME_SECONDS");
+  const minGenerationConcurrency = integer(process.env.OPS_MIN_GENERATION_CONCURRENCY, 8, 1, 32, "OPS_MIN_GENERATION_CONCURRENCY");
+  const minPublicationConcurrency = integer(process.env.OPS_MIN_PUBLICATION_CONCURRENCY, 4, 1, 32, "OPS_MIN_PUBLICATION_CONCURRENCY");
+  const minWebhookConcurrency = integer(process.env.OPS_MIN_WEBHOOK_CONCURRENCY, 2, 1, 32, "OPS_MIN_WEBHOOK_CONCURRENCY");
+  const profile = readinessProfile(process.env.OPS_READINESS_PROFILE);
+  const thresholds = {
+    maxQueued,
+    maxOldestQueuedSeconds,
+    maxRunning,
+    maxFailedRecent,
+    maxStaleRunning,
+    maxWorkerAgeSeconds,
+    minWorkerUptimeSeconds,
+    minGenerationConcurrency,
+    minPublicationConcurrency,
+    minWebhookConcurrency
   };
-  const databaseUrl = process.env.OPERATIONS_DATABASE_URL || process.env.TEST_WORKER_DATABASE_URL;
+  const requirements = {
+    requireRealBilling: profile === "go",
+    requireLegalComplete: profile === "go",
+    requireAdmissionOpen: profile === "go"
+  };
 
   const ready = await fetchReady(appUrl, expectedSha);
-  const queue = await readQueueSummary(databaseUrl);
-  const queueEvaluation = evaluateQueue(queue.summary, thresholds);
   const opsStatus = await fetchOpsStatus(appUrl, opsStatusToken, expectedSha, thresholds, requirements);
-  const errors = [...ready.evaluation.errors, ...queueEvaluation.errors, ...opsStatus.evaluation.errors];
+  const errors = [...ready.evaluation.errors, ...opsStatus.evaluation.errors];
   const result = {
     event: "ops_readiness_staging",
     ok: errors.length === 0,
+    profile,
     appUrl,
     expectedRelease: expectedSha,
     ready: ready.payload,
     opsStatus: opsStatus.payload,
-    queue: queue.summary,
+    queue: opsStatus.payload?.totals || null,
     thresholds,
     requirements,
     errors
@@ -254,5 +319,6 @@ module.exports = {
   fetchOpsStatus,
   integer,
   normalizeAppUrl,
+  readinessProfile,
   summarizeQueue
 };

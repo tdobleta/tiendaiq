@@ -191,8 +191,10 @@ async function main() {
                 ? "no informo modo de billing"
                 : typeof cuerpo.legal?.complete !== "boolean"
                   ? "no informo completitud legal"
-                  : cuerpo.generationAdmission?.paused !== false
-                    ? "no informo admision activa"
+                  : cuerpo.generationAdmission?.paused !== true
+                    ? "no informo admision pausada por defecto"
+                    : !Number.isInteger(cuerpo.generationAdmission?.retryAfter) || cuerpo.generationAdmission.retryAfter < 1
+                      ? "no informo Retry-After para demanda excedente"
                     : null;
         if (problema) mal("/ops/status con bearer valido responde", problema);
         else ok("/ops/status con bearer valido responde");

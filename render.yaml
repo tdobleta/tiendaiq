@@ -17,7 +17,8 @@ services:
     name: tiendaiq
     runtime: node
     plan: starter
-    buildCommand: npm install
+    autoDeployTrigger: off
+    buildCommand: npm ci
     startCommand: node server.js
     healthCheckPath: /ready
     envVars:
@@ -50,10 +51,9 @@ services:
         value: "2"
       - key: GENERATION_QUEUE_MAX_GLOBAL
         value: "120"
-      # Si Anthropic no tiene saldo, cuota confirmada o esta en incidente,
-      # cambiar este valor a "1" en Render antes de abrir trafico.
+      # Fail-closed: abrir solo despues de confirmar saldo, cuota y capacidad.
       - key: GENERATION_ADMISSION_PAUSED
-        value: "0"
+        value: "1"
       - key: GENERATION_ADMISSION_RETRY_AFTER_SECONDS
         value: "300"
       # Token bearer para /ops/status. Sirve a monitores externos; no contiene
@@ -78,7 +78,8 @@ services:
     name: tiendaiq-worker
     runtime: node
     plan: starter
-    buildCommand: npm install
+    autoDeployTrigger: off
+    buildCommand: npm ci
     startCommand: npm run worker
     envVars:
       # URL interna del usuario tiendaiq_worker.
@@ -111,6 +112,8 @@ services:
       - key: JOB_LEASE_SECONDS
         value: "300"
       - key: WORKER_PREFLIGHT_TIMEOUT_MS
+        value: "15000"
+      - key: WORKER_HEARTBEAT_MS
         value: "15000"
       - key: DEV_MODE
         value: "0"

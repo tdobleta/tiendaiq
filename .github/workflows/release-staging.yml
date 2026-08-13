@@ -22,6 +22,7 @@ concurrency:
 jobs:
   migrate-and-deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 40
     environment: staging
     steps:
       - uses: actions/checkout@v4
@@ -49,7 +50,7 @@ jobs:
         with:
           node-version: "20"
 
-      - run: npm install --no-audit --no-fund
+      - run: npm ci --no-audit --no-fund
 
       - name: Prepare isolated runtime roles
         env:
@@ -78,14 +79,35 @@ jobs:
           EXPECTED_SHA: ${{ steps.release.outputs.sha }}
         run: |
           set -euo pipefail
-          for attempt in $(seq 1 90); do
-            if curl --fail --silent --show-error --max-time 10 https://tiendaiq-staging-web.onrender.com/ready \
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent --show-error --max-time 5 https://tiendaiq-staging-web.onrender.com/ready \
               | node -e 'let body="";process.stdin.on("data",c=>body+=c).on("end",()=>{const ready=JSON.parse(body);process.exit(ready.ok===true&&ready.release===process.env.EXPECTED_SHA?0:1)})'; then
               echo "Staging web aprobo /ready con el SHA esperado"
               exit 0
             fi
-            echo "Esperando readiness de staging ($attempt/90)"
+            echo "Esperando readiness de staging ($attempt/60)"
             sleep 10
           done
-          echo "Staging no aprobo /ready dentro de 15 minutos" >&2
+          echo "Staging no aprobo /ready dentro de 10 minutos" >&2
+          exit 1
+
+      - name: Wait for the isolated worker heartbeat
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ steps.release.outputs.sha }}
+          OPS_STATUS_TOKEN: ${{ secrets.STAGING_OPS_STATUS_TOKEN }}
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent --show-error --max-time 5 \
+              --header "Authorization: Bearer $OPS_STATUS_TOKEN" \
+              https://tiendaiq-staging-web.onrender.com/ops/status \
+              | node -e 'let body="";process.stdin.on("data",c=>body+=c).on("end",()=>{const ops=JSON.parse(body);const w=ops.worker||{};const ok=ops.ok===true&&w.release===process.env.EXPECTED_SHA&&w.runtimeRole==="tiendaiq_worker_runtime"&&w.isolationOk===true&&Number(w.activeWorkers)>=1&&Number(w.releaseVariants)===1&&Number(w.runtimeRoleVariants)===1&&Number(w.ageSeconds)<=60&&Number(w.uptimeSeconds)>=30&&Number(w.generationConcurrency)>=8&&Number(w.publicationConcurrency)>=4&&Number(w.webhookConcurrency)>=2;process.exit(ok?0:1)})'; then
+              echo "Staging worker aprobo heartbeat con el SHA esperado"
+              exit 0
+            fi
+            echo "Esperando heartbeat del worker ($attempt/60)"
+            sleep 10
+          done
+          echo "El worker no aprobo su heartbeat dentro de 10 minutos" >&2
           exit 1

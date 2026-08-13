@@ -11,18 +11,12 @@ on:
         description: CHECK_STAGING_OPS_READINESS
         required: true
         type: string
-      require_real_billing:
-        description: Exigir PLAN_TEST=0 reportado por /ops/status
+      certification_mode:
+        description: technical_preflight valida infraestructura; go exige condiciones comerciales completas
         required: true
-        default: "0"
+        default: technical_preflight
         type: choice
-        options: ["0", "1"]
-      require_legal_complete:
-        description: Exigir legales completas reportadas por /ops/status
-        required: true
-        default: "0"
-        type: choice
-        options: ["0", "1"]
+        options: [technical_preflight, go]
 
 permissions:
   contents: read
@@ -39,15 +33,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          # Usa el commit revisado que contiene este probe; /ready valida el SHA
-          # realmente desplegado en Render.
-          ref: ${{ github.sha }}
+          ref: ${{ inputs.release_sha }}
+          fetch-depth: 0
 
       - name: Validate deliberate authorization
         shell: bash
         env:
           RELEASE_SHA: ${{ inputs.release_sha }}
           CONFIRMATION: ${{ inputs.confirmation }}
+          CERTIFICATION_MODE: ${{ inputs.certification_mode }}
         run: |
           set -euo pipefail
           if [[ ! "$RELEASE_SHA" =~ ^[a-f0-9]{40}$ ]]; then
@@ -58,25 +52,35 @@ jobs:
             echo "confirmacion invalida" >&2
             exit 1
           fi
+          if [[ "$CERTIFICATION_MODE" != "technical_preflight" && "$CERTIFICATION_MODE" != "go" ]]; then
+            echo "certification_mode invalido" >&2
+            exit 1
+          fi
+          [[ "$(git rev-parse HEAD)" == "$RELEASE_SHA" ]] || { echo "checkout distinto al SHA solicitado" >&2; exit 1; }
+          git fetch origin main --depth=1
+          [[ "$(git rev-parse origin/main)" == "$RELEASE_SHA" ]] || { echo "el SHA debe ser HEAD de main" >&2; exit 1; }
 
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
 
-      - run: npm install --no-audit --no-fund
+      - run: npm ci --no-audit --no-fund
 
       - name: Check staging readiness and durable queue state
         env:
           CONFIRMATION: CHECK_STAGING_OPS_READINESS
           EXPECTED_RELEASE_SHA: ${{ inputs.release_sha }}
           STAGING_APP_URL: https://tiendaiq-staging-web.onrender.com
-          OPERATIONS_DATABASE_URL: ${{ secrets.STAGING_WORKER_DATABASE_URL }}
           OPS_STATUS_TOKEN: ${{ secrets.STAGING_OPS_STATUS_TOKEN }}
-          PG_CA_CERT: ${{ secrets.STAGING_PG_CA_CERT }}
-          PG_POOL_MAX: "3"
-          OPS_MAX_OLDEST_JOB_SECONDS: "600"
-          OPS_MAX_RUNNING_JOBS: "500"
-          OPS_MAX_FAILED_JOBS: "1000"
-          OPS_REQUIRE_REAL_BILLING: ${{ inputs.require_real_billing }}
-          OPS_REQUIRE_LEGAL_COMPLETE: ${{ inputs.require_legal_complete }}
+          OPS_MAX_QUEUED_JOBS: "20"
+          OPS_MAX_OLDEST_JOB_SECONDS: "300"
+          OPS_MAX_RUNNING_JOBS: "16"
+          OPS_MAX_FAILED_RECENT_JOBS: "0"
+          OPS_MAX_STALE_RUNNING_JOBS: "0"
+          OPS_MAX_WORKER_AGE_SECONDS: "60"
+          OPS_MIN_WORKER_UPTIME_SECONDS: "30"
+          OPS_MIN_GENERATION_CONCURRENCY: "8"
+          OPS_MIN_PUBLICATION_CONCURRENCY: "4"
+          OPS_MIN_WEBHOOK_CONCURRENCY: "2"
+          OPS_READINESS_PROFILE: ${{ inputs.certification_mode }}
         run: npm run ops:readiness

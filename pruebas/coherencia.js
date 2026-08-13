@@ -197,6 +197,10 @@ if (/release_sha:/.test(releaseWorkflow) &&
     /data-urlencode "ref=\$\{\{ steps\.release\.outputs\.sha \}\}"/.test(releaseWorkflow) &&
     /tiendaiq-staging-web\.onrender\.com\/ready/.test(releaseWorkflow) &&
     /ready\.release===process\.env\.EXPECTED_SHA/.test(releaseWorkflow) &&
+    /Wait for the isolated worker heartbeat/.test(releaseWorkflow) &&
+    /w\.release===process\.env\.EXPECTED_SHA/.test(releaseWorkflow) &&
+    /--header "Authorization: Bearer \$OPS_STATUS_TOKEN"/.test(releaseWorkflow) &&
+    /timeout-minutes:\s*40/.test(releaseWorkflow) &&
     /RENDER_GIT_COMMIT/.test(leer("server.js"))) {
   ok("el release fija el SHA revisado y espera readiness de staging");
 } else {
@@ -209,7 +213,9 @@ if (/release_sha:/.test(releaseWorkflow) &&
 const workerSource = leer("worker.js");
 if (/await Promise\.race/.test(workerSource) &&
     /verificarWorkerDB/.test(workerSource) &&
-    workerSource.indexOf("verificar()") < workerSource.indexOf("crearRuntime()") &&
+    workerSource.indexOf("verificar()") < workerSource.indexOf("crearRuntime({") &&
+    workerSource.indexOf("crearRuntime({") < workerSource.indexOf("activeRuntime.start()") &&
+    workerSource.indexOf("activeRuntime.start()") < workerSource.indexOf("registrarHeartbeat(heartbeat)") &&
     /Worker detenido por preflight fallido/.test(workerSource)) {
   ok("el worker falla cerrado antes de iniciar sus runners");
 } else {
@@ -251,20 +257,22 @@ if (/environment:\s*staging/.test(anthropicCapacityWorkflow) &&
 }
 
 if (/environment:\s*staging/.test(opsReadinessWorkflow) &&
-    /ref:\s*\$\{\{ github\.sha \}\}/.test(opsReadinessWorkflow) &&
+    /ref:\s*\$\{\{ inputs\.release_sha \}\}/.test(opsReadinessWorkflow) &&
     /CHECK_STAGING_OPS_READINESS/.test(opsReadinessWorkflow) &&
     /EXPECTED_RELEASE_SHA/.test(opsReadinessWorkflow) &&
-    /STAGING_WORKER_DATABASE_URL/.test(opsReadinessWorkflow) &&
     /STAGING_OPS_STATUS_TOKEN/.test(opsReadinessWorkflow) &&
-    /OPS_REQUIRE_REAL_BILLING/.test(opsReadinessWorkflow) &&
-    /OPS_REQUIRE_LEGAL_COMPLETE/.test(opsReadinessWorkflow) &&
+    /OPS_MAX_WORKER_AGE_SECONDS/.test(opsReadinessWorkflow) &&
+    /certification_mode/.test(opsReadinessWorkflow) &&
+    /technical_preflight/.test(opsReadinessWorkflow) &&
+    /OPS_READINESS_PROFILE/.test(opsReadinessWorkflow) &&
     /npm run ops:readiness/.test(opsReadinessWorkflow) &&
+    !/STAGING_WORKER_DATABASE_URL/.test(opsReadinessWorkflow) &&
     !/STAGING_MIGRATION_DATABASE_URL/.test(opsReadinessWorkflow)) {
-  ok("la readiness operativa de staging usa commit revisado, credencial worker y token de ops");
+  ok("la readiness operativa de staging usa commit revisado y el endpoint operativo autenticado");
 } else {
   mal(
     "la readiness operativa de staging usa commit revisado, credencial worker y token de ops",
-    "el workflow debe validar /ready, /ops/status, cola durable y SHA sin usar la credencial migradora"
+    "el workflow debe validar /ready, /ops/status, cola durable, worker y SHA sin credenciales de base"
   );
 }
 
@@ -307,14 +315,14 @@ if (/key:\s*ANTHROPIC_API_KEY/.test(renderWorkerService)) {
   mal("el worker recibe la credencial de generación de IA", "falta ANTHROPIC_API_KEY en tiendaiq-worker");
 }
 
-if (/key:\s*GENERATION_ADMISSION_PAUSED\s+value:\s*"0"/.test(render) &&
+if (/key:\s*GENERATION_ADMISSION_PAUSED\s+value:\s*"1"/.test(render) &&
     /key:\s*GENERATION_ADMISSION_RETRY_AFTER_SECONDS\s+value:\s*"[0-9]+"/.test(render) &&
     /generationAdmissionPause\(env\)/.test(leer("server.js"))) {
   ok("Render declara una compuerta de pausa para nuevas generaciones");
 } else {
   mal(
     "Render declara una compuerta de pausa para nuevas generaciones",
-    "web debe tener GENERATION_ADMISSION_PAUSED=0, Retry-After configurable y server.js debe aplicarlo antes de encolar"
+    "web debe arrancar con GENERATION_ADMISSION_PAUSED=1, Retry-After configurable y server.js debe aplicarlo antes de encolar"
   );
 }
 

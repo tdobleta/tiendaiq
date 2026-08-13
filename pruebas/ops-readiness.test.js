@@ -11,6 +11,7 @@ const {
   evaluateReady,
   integer,
   normalizeAppUrl,
+  readinessProfile,
   summarizeQueue
 } = require("../scripts/probar-readiness-operativa");
 
@@ -59,15 +60,35 @@ test("evalua /ops/status con release, admission control y cola agregada", () => 
     billing: { planTest: true },
     legal: { complete: true, missing: [] },
     generationAdmission: { paused: false, retryAfter: 120 },
+    worker: {
+      release: SHA,
+      runtimeRole: "tiendaiq_worker_runtime",
+      isolationOk: true,
+      generationConcurrency: 8,
+      publicationConcurrency: 4,
+      webhookConcurrency: 2,
+      ageSeconds: 10,
+      uptimeSeconds: 40,
+      activeWorkers: 1,
+      releaseVariants: 1,
+      runtimeRoleVariants: 1
+    },
     queue: [
-      { type: "generate-page", queued: 2, running: 1, failed: 0, oldestQueuedSeconds: 30 }
+      { type: "generate-page", queued: 2, running: 1, failed: 0, failedRecent: 0, staleRunning: 0, oldestQueuedSeconds: 30 }
     ],
-    totals: { queued: 2, running: 1, failed: 0, oldestQueuedSeconds: 30 }
+    totals: { queued: 2, running: 1, failed: 0, failedRecent: 0, staleRunning: 0, oldestQueuedSeconds: 30 }
   };
   const thresholds = {
+    maxQueued: 20,
     maxOldestQueuedSeconds: 600,
     maxRunning: 10,
-    maxFailed: 10
+    maxFailedRecent: 0,
+    maxStaleRunning: 0,
+    maxWorkerAgeSeconds: 60,
+    minWorkerUptimeSeconds: 30,
+    minGenerationConcurrency: 8,
+    minPublicationConcurrency: 4,
+    minWebhookConcurrency: 2
   };
 
   assert.deepEqual(evaluateOpsStatus(opsStatus, SHA, thresholds), { ok: true, errors: [] });
@@ -89,30 +110,56 @@ test("evalua /ops/status con release, admission control y cola agregada", () => 
   assert.equal(evaluateOpsStatus({
     ...opsStatus,
     generationAdmission: { paused: true, retryAfter: 120 }
+  }, SHA, thresholds).ok, true);
+  assert.equal(evaluateOpsStatus({
+    ...opsStatus,
+    generationAdmission: { paused: true, retryAfter: 120 }
+  }, SHA, thresholds, { requireAdmissionOpen: true }).ok, false);
+  assert.equal(evaluateOpsStatus({
+    ...opsStatus,
+    worker: { ...opsStatus.worker, ageSeconds: 61 }
+  }, SHA, thresholds).ok, false);
+  assert.equal(evaluateOpsStatus({
+    ...opsStatus,
+    worker: { ...opsStatus.worker, uptimeSeconds: 29 }
+  }, SHA, thresholds).ok, false);
+  assert.equal(evaluateOpsStatus({
+    ...opsStatus,
+    worker: { ...opsStatus.worker, generationConcurrency: 0 }
+  }, SHA, thresholds).ok, false);
+  assert.equal(evaluateOpsStatus({
+    ...opsStatus,
+    worker: { ...opsStatus.worker, activeWorkers: 2, releaseVariants: 2 }
   }, SHA, thresholds).ok, false);
 });
 
 test("resume la cola durable y aplica umbrales operativos", () => {
   const summary = summarizeQueue([
-    { type: "generate-page", queued: 3, running: 2, failed: 1, oldestQueuedSeconds: 42.5 },
-    { type: "publish-page", queued: 1, running: 0, failed: 0, oldestQueuedSeconds: 12 }
+    { type: "generate-page", queued: 3, running: 2, failed: 1, failedRecent: 0, staleRunning: 0, oldestQueuedSeconds: 42.5 },
+    { type: "publish-page", queued: 1, running: 0, failed: 0, failedRecent: 0, staleRunning: 0, oldestQueuedSeconds: 12 }
   ]);
   assert.deepEqual(summary, {
     types: 2,
     queued: 4,
     running: 2,
     failed: 1,
+    failedRecent: 0,
+    staleRunning: 0,
     oldestQueuedSeconds: 42.5
   });
   assert.deepEqual(evaluateQueue(summary, {
+    maxQueued: 20,
     maxOldestQueuedSeconds: 600,
     maxRunning: 10,
-    maxFailed: 10
+    maxFailedRecent: 0,
+    maxStaleRunning: 0
   }), { ok: true, errors: [] });
   assert.equal(evaluateQueue(summary, {
+    maxQueued: 20,
     maxOldestQueuedSeconds: 10,
     maxRunning: 10,
-    maxFailed: 10
+    maxFailedRecent: 0,
+    maxStaleRunning: 0
   }).ok, false);
 });
 
@@ -128,4 +175,10 @@ test("parsea banderas booleanas de GO estricto", () => {
   assert.equal(booleanFlag("si"), true);
   assert.equal(booleanFlag("0"), false);
   assert.equal(booleanFlag(""), false);
+});
+
+test("el perfil de readiness separa preflight tecnico de certificacion GO", () => {
+  assert.equal(readinessProfile(""), "technical_preflight");
+  assert.equal(readinessProfile("go"), "go");
+  assert.throws(() => readinessProfile("casi-go"), /technical_preflight o go/);
 });

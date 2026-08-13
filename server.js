@@ -35,7 +35,9 @@ const {
   recibirWebhookDB,
   leerJobDB,
   estadoColaDB,
-  verificarAlmacenamientoDB
+  estadoWorkerDB,
+  verificarAlmacenamientoDB,
+  cerrarAlmacenamientoDB
 } = require("./db");
 const { iniciarInstalacion, terminarInstalacion, tiendaDelPase } = require("./auth");
 const { nubeServible, urlVideo, urlPoster } = require("./inspiracion-nube");
@@ -287,16 +289,21 @@ async function estadoOperativo(req, res) {
     return json(res, 405, { error: "method_not_allowed" }, { Allow: "GET" });
   }
 
-  const cola = await estadoColaDB("ops-status");
+  const [cola, worker] = await Promise.all([
+    estadoColaDB("ops-status"),
+    estadoWorkerDB()
+  ]);
   const totales = cola.reduce(
     (acc, item) => {
       acc.queued += Number(item.queued) || 0;
       acc.running += Number(item.running) || 0;
       acc.failed += Number(item.failed) || 0;
+      acc.failedRecent += Number(item.failedRecent) || 0;
+      acc.staleRunning += Number(item.staleRunning) || 0;
       acc.oldestQueuedSeconds = Math.max(acc.oldestQueuedSeconds, Number(item.oldestQueuedSeconds) || 0);
       return acc;
     },
-    { queued: 0, running: 0, failed: 0, oldestQueuedSeconds: 0 }
+    { queued: 0, running: 0, failed: 0, failedRecent: 0, staleRunning: 0, oldestQueuedSeconds: 0 }
   );
   const admision = generationAdmissionPause(env);
   const faltanLegales = legalesIncompletos();
@@ -315,11 +322,14 @@ async function estadoOperativo(req, res) {
       paused: admision.paused,
       retryAfter: admision.retryAfter
     },
+    worker,
     queue: cola.map((item) => ({
       type: item.type,
       queued: Number(item.queued) || 0,
       running: Number(item.running) || 0,
       failed: Number(item.failed) || 0,
+      failedRecent: Number(item.failedRecent) || 0,
+      staleRunning: Number(item.staleRunning) || 0,
       oldestQueuedSeconds: Number(item.oldestQueuedSeconds) || 0
     })),
     totals: totales,
@@ -1053,14 +1063,33 @@ if (env.DEV_MODE === "1" && env.DATABASE_URL) {
   process.exit(1);
 }
 
-// Una promesa rechazada fuera de un try/catch tumba el proceso Node entero.
-// En Render eso es caída silenciosa: se loguea y se sigue viviendo.
-process.on("unhandledRejection", (e) => {
-  reportarError(e, { tipo: "unhandledRejection" });
-});
-process.on("uncaughtException", (e) => {
-  reportarError(e, { tipo: "uncaughtException" });
-});
+// Un fallo no controlado deja el estado del proceso indeterminado. Se reporta,
+// se drenan los recursos y se termina para que Render reemplace la instancia.
+let cerrandoPorFallo = false;
+async function cerrarPorFallo(error, tipo) {
+  reportarError(error, { tipo });
+  if (cerrandoPorFallo) return;
+  cerrandoPorFallo = true;
+  process.exitCode = 1;
+
+  const forceExit = setTimeout(() => process.exit(1), 10000);
+  forceExit.unref?.();
+  try {
+    await new Promise((resolve) => {
+      if (!servidor.listening) return resolve();
+      servidor.close(resolve);
+    });
+    if (servidor._tiendaiqWorker) await servidor._tiendaiqWorker.stop();
+    await cerrarAlmacenamientoDB();
+  } catch (closeError) {
+    reportarError(closeError, { tipo: `${tipo}-shutdown` });
+  } finally {
+    process.exit(1);
+  }
+}
+
+process.on("unhandledRejection", (error) => void cerrarPorFallo(error, "unhandledRejection"));
+process.on("uncaughtException", (error) => void cerrarPorFallo(error, "uncaughtException"));
 
 servidor.listen(PUERTO, async () => {
   const { USA_PG } = require("./db");

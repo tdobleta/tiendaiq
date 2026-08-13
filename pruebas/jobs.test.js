@@ -8,6 +8,7 @@ const { TenantContext } = require("../src/tenancy/tenant-context");
 const { createJobRunner } = require("../src/jobs/job-runner");
 const { boundedInteger } = require("../src/jobs/runtime");
 const { createPublishPageHandler } = require("../src/jobs/publish-page-handler");
+const { createJobRepository } = require("../src/platform/postgres/job-repository");
 
 test("el runtime del worker forma parte del artefacto versionado", () => {
   const runtimePath = path.join(__dirname, "..", "src", "jobs", "runtime.js");
@@ -316,4 +317,88 @@ test("el estado operativo de jobs sale de una funcion agregada sin capacidad wor
   assert.doesNotMatch(sql, /\btenant_id\b|\bidempotency_key\b|\blast_error\b/);
   assert.doesNotMatch(sql, /jobs\.payload/);
   assert.match(repository, /SELECT \* FROM control_plane\.operational_queue_status\(\)/);
+});
+
+test("el heartbeat operativo no expone datos tenant y restringe escritura al worker", () => {
+  const sql = fs.readFileSync(
+    path.join(__dirname, "..", "db", "migrations", "0013_worker_heartbeat_and_queue_health.sql"),
+    "utf8"
+  );
+
+  assert.match(sql, /CREATE TABLE IF NOT EXISTS control_plane\.worker_heartbeats/);
+  assert.match(sql, /count\(DISTINCT active\.release_sha\)/);
+  assert.match(sql, /last_seen_at >= statement_timestamp\(\) - interval '60 seconds'/);
+  assert.match(sql, /SECURITY DEFINER[\s\S]*SET search_path = pg_catalog, control_plane/);
+  assert.match(sql, /REVOKE ALL ON TABLE control_plane\.worker_heartbeats[\s\S]*tiendaiq_worker_runtime/);
+  assert.match(sql, /CREATE OR REPLACE FUNCTION control_plane\.record_worker_heartbeat\(/);
+  assert.match(sql, /GRANT EXECUTE ON FUNCTION control_plane\.record_worker_heartbeat\(text, text, integer, integer, integer\)[\s\S]*TO tiendaiq_worker_runtime/);
+  assert.doesNotMatch(sql, /GRANT (?:SELECT|INSERT|UPDATE|DELETE)[^;]*worker_heartbeats/);
+  assert.match(sql, /GRANT EXECUTE ON FUNCTION control_plane\.operational_worker_status\(\)[\s\S]*TO tiendaiq_web_runtime, tiendaiq_worker_runtime/);
+  assert.doesNotMatch(sql, /\btenant_id\b|\bshop\b|\bpayload\b/);
+});
+
+test("el repositorio persiste y proyecta heartbeat sin contexto tenant", async () => {
+  const queries = [];
+  const client = {
+    async query(text, values) { queries.push({ text, values }); return { rows: [] }; },
+    release() {}
+  };
+  const pool = {
+    async connect() { return client; },
+    async query(text, values) {
+      queries.push({ text, values });
+      return { rows: [{
+        worker_id: "worker-1",
+        release_sha: "a".repeat(40),
+        runtime_role: "tiendaiq_worker_runtime",
+        isolation_ok: true,
+        generation_concurrency: 8,
+        publication_concurrency: 4,
+        webhook_concurrency: 2,
+        age_seconds: 7,
+        uptime_seconds: 40,
+        active_workers: 1,
+        release_variants: 1,
+        runtime_role_variants: 1
+      }] };
+    }
+  };
+  const repository = createJobRepository(pool);
+  await repository.recordHeartbeat({
+    workerId: "worker-1",
+    releaseSha: "a".repeat(40),
+    runtimeRole: "tiendaiq_worker_runtime",
+    isolationOk: true,
+    capacity: { generations: 8, publications: 4, webhooks: 2 }
+  });
+  const heartbeat = queries.find(({ text }) => /record_worker_heartbeat/.test(text));
+  assert.deepEqual(heartbeat.values, ["worker-1", "a".repeat(40), 8, 4, 2]);
+  assert.doesNotMatch(heartbeat.text, /tenant_id|payload|INSERT|DELETE|UPDATE/);
+
+  const status = await repository.workerStatus();
+  assert.equal(status.release, "a".repeat(40));
+  assert.equal(status.runtimeRole, "tiendaiq_worker_runtime");
+  assert.equal(status.ageSeconds, 7);
+  assert.equal(status.uptimeSeconds, 40);
+  assert.equal(status.activeWorkers, 1);
+  assert.equal(status.releaseVariants, 1);
+  assert.equal(status.runtimeRoleVariants, 1);
+});
+
+test("el repositorio rechaza un heartbeat ambiguo antes de abrir una conexion", async () => {
+  let connections = 0;
+  const repository = createJobRepository({
+    async connect() { connections += 1; throw new Error("no debe conectar"); }
+  });
+  await assert.rejects(
+    repository.recordHeartbeat({
+      workerId: "worker-1",
+      releaseSha: "main",
+      runtimeRole: "tiendaiq_worker_runtime",
+      isolationOk: true,
+      capacity: { generations: 8, publications: 4, webhooks: 2 }
+    }),
+    /SHA completo/
+  );
+  assert.equal(connections, 0);
 });
