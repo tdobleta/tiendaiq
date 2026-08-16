@@ -441,6 +441,7 @@ test("el bootstrap crea roles propios y no intenta modificar credenciales gestio
   assert.match(source, /const WEB_LOGIN_ROLE = "tiendaiq_web"/);
   assert.match(source, /const WEB_RUNTIME_ROLE = "tiendaiq_web_runtime"/);
   assert.match(source, /const WORKER_RUNTIME_ROLE = "tiendaiq_worker_runtime"/);
+  assert.match(source, /const WORKER_CAPABILITY = "tiendaiq_worker_capability_v2"/);
   assert.match(source, /CREATE ROLE \$\{quoteIdentifier\(role\)\} NOLOGIN/);
   assert.match(source, /GRANT \$\{quoteIdentifier\(WEB_RUNTIME_ROLE\)\} TO \$\{quoteIdentifier\(WEB_LOGIN_ROLE\)\}/);
   assert.match(source, /GRANT \$\{quoteIdentifier\(WORKER_RUNTIME_ROLE\)\} TO \$\{quoteIdentifier\(WORKER_LOGIN_ROLE\)\}/);
@@ -487,6 +488,8 @@ test("el fixture y los probes de PostgreSQL usan los roles runtime efectivos", (
 
   assert.match(fixture, /webRuntime: "tiendaiq_web_runtime"/);
   assert.match(fixture, /workerRuntime: "tiendaiq_worker_runtime"/);
+  assert.match(fixture, /legacyCapability: "tiendaiq_worker_capability"/);
+  assert.match(fixture, /capability: "tiendaiq_worker_capability_v2"/);
   assert.match(fixture, /GRANT \$\{quoteIdentifier\(EXPECTED_ROLES\.webRuntime\)\} TO/);
   assert.match(fixture, /GRANT \$\{quoteIdentifier\(EXPECTED_ROLES\.workerRuntime\)\} TO/);
   assert.match(fixture, /FROM pg_auth_members membership/);
@@ -508,6 +511,26 @@ test("la migracion de roles gestionados mueve privilegios y capacidad al rol efe
   assert.match(sql, /TO tiendaiq_web_runtime, tiendaiq_worker_runtime/);
   assert.match(sql, /pg_has_role\(current_user, 'tiendaiq_worker_capability', 'member'\)/);
   assert.doesNotMatch(sql, /pg_has_role\(session_user/);
+});
+
+test("la capacidad worker activa rota sin depender del grant legacy administrado por Render", () => {
+  const sql = fs.readFileSync(
+    path.join(__dirname, "..", "db", "migrations", "0018_rotate_worker_capability.sql"),
+    "utf8"
+  );
+
+  for (const policy of [
+    "jobs_worker_claim",
+    "inbox_events_worker",
+    "privacy_requests_worker",
+    "outbox_worker_dispatch"
+  ]) {
+    assert.match(sql, new RegExp(`DROP POLICY IF EXISTS ${policy}`));
+    assert.match(sql, new RegExp(`CREATE POLICY ${policy}`));
+  }
+  assert.match(sql, /pg_has_role\(current_user, 'tiendaiq_worker_capability_v2', 'member'\)/);
+  assert.doesNotMatch(sql, /pg_has_role\(current_user, 'tiendaiq_worker_capability', 'member'\)/);
+  assert.doesNotMatch(sql, /\bREVOKE\b[\s\S]*tiendaiq_worker_capability\s+FROM\s+tiendaiq_staging_user/);
 });
 
 test("el diagnostico de roles solo inspecciona privilegios y membresias", () => {
