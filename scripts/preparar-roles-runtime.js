@@ -123,8 +123,13 @@ async function main() {
       [OWNED_ROLES, WORKER_CAPABILITY, WEB_LOGIN_ROLE, WEB_RUNTIME_ROLE, WORKER_LOGIN_ROLE, WORKER_RUNTIME_ROLE]
     );
     const actualPaths = new Set(paths.rows.map(({ member, parent }) => `${member}->${parent}`));
-    if (actualPaths.size !== expectedPaths.size || [...expectedPaths].some((path) => !actualPaths.has(path))) {
-      throw new Error("Grafo de membresias invalido para los roles runtime");
+    const missingPaths = [...expectedPaths].filter((path) => !actualPaths.has(path));
+    const unexpectedPaths = [...actualPaths].filter((path) => !expectedPaths.has(path));
+    if (missingPaths.length || unexpectedPaths.length) {
+      throw new Error(
+        `Grafo de membresias invalido para los roles runtime; faltantes=[${missingPaths.join(", ")}]; ` +
+        `inesperadas=[${unexpectedPaths.join(", ")}]`
+      );
     }
     const loginEdges = paths.rows.filter(({ member, parent }) =>
       (member === WEB_LOGIN_ROLE && parent === WEB_RUNTIME_ROLE) ||
