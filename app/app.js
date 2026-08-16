@@ -3445,6 +3445,28 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     return normalizar(texto) !== normalizar(pregunta);
   }
 
+  function claveEdicionAi(ruta) {
+    const shop = (new URLSearchParams(location.search).get("shop") || "local").toLowerCase();
+    return `tiq_edicion_ai:${shop}:${estado.pagina?.id || "sin-pagina"}:${ruta}`;
+  }
+
+  function leerEdicionAiPendiente(ruta) {
+    try {
+      const pending = JSON.parse(localStorage.getItem(claveEdicionAi(ruta)) || "null");
+      return pending?.requestId ? pending : null;
+    } catch {
+      return null;
+    }
+  }
+
+  function guardarEdicionAiPendiente(ruta, pending) {
+    localStorage.setItem(claveEdicionAi(ruta), JSON.stringify(pending));
+  }
+
+  function limpiarEdicionAiPendiente(ruta) {
+    localStorage.removeItem(claveEdicionAi(ruta));
+  }
+
   async function enviarAiText(ruta) {
     const p = document.getElementById("sec-panel");
     const send = p?.querySelector("#sp-ai-send");
@@ -3456,26 +3478,45 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     send.setAttribute("disabled", "");
     send.textContent = "Procesando…";
     try {
-      const r = await api("/texto/editar", {
-        method: "POST",
-        body: {
-          texto: original,
-          instrucciones,
-          modo: mode,
-          idioma: estado.idiomaPagina || estado.pagina.data.global?.idioma || "es",
-          contexto: JSON.stringify(contextoAi(ruta))
-        }
-      });
-      if (!salidaAiValida(ruta, r.texto)) {
+      let pending = leerEdicionAiPendiente(ruta);
+      if (!pending) {
+        pending = { requestId: crypto.randomUUID() };
+        guardarEdicionAiPendiente(ruta, pending);
+      }
+      if (!pending.jobId) {
+        const { job } = await api("/texto/editar", {
+          method: "POST",
+          body: {
+            texto: original,
+            instrucciones,
+            modo: mode,
+            idioma: estado.idiomaPagina || estado.pagina.data.global?.idioma || "es",
+            contexto: JSON.stringify(contextoAi(ruta)),
+            request_id: pending.requestId
+          }
+        });
+        pending.jobId = job.id;
+        guardarEdicionAiPendiente(ruta, pending);
+      }
+      const completed = await esperarJob(pending.jobId, { timeoutMs: 3 * 60 * 1000 });
+      const texto = completed.result?.texto;
+      if (!texto) throw Object.assign(new Error("La edición terminó sin texto."), { terminal: true });
+      // El job ya terminó: cualquier validación local posterior debe permitir
+      // una intención nueva, nunca reabrir indefinidamente el mismo resultado.
+      limpiarEdicionAiPendiente(ruta);
+      if (!salidaAiValida(ruta, texto)) {
         throw new Error("La IA devolvió la pregunta en lugar de responderla. No se aplicó el cambio.");
       }
-      fijar(estado.pagina.data, ruta, r.texto);
+      fijar(estado.pagina.data, ruta, texto);
       marcarSucio();
       repintarPreview();
       cerrarAiText();
       refrescarPanelSeccion();
       toast("Texto actualizado");
     } catch (e) {
+      if (e?.terminal === true || e?.status === 404 || e?.status === 409) {
+        limpiarEdicionAiPendiente(ruta);
+      }
       send.removeAttribute("disabled");
       send.textContent = textoOriginal || "Aplicar";
       p.insertAdjacentHTML("afterbegin", `<div class="sp-ai-error">${ico("x")} ${esc(e.message)}</div>`);

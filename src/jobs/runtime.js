@@ -31,13 +31,14 @@ const {
 const { sesionDe, borrarTienda } = require("../../tiendas");
 const billing = require("../../facturacion");
 const { publicarPagina, despublicarPagina } = require("../../publicar");
-const { crearPagina } = require("../../adaptador");
+const { crearPagina, editarTexto } = require("../../adaptador");
 const { reportarError, metrica } = require("../../monitoreo");
 const { createJobRunner } = require("./job-runner");
 const { createCompensationRunner } = require("./compensation-runner");
 const { createPublishPageHandler } = require("./publish-page-handler");
 const { createUnpublishPageHandler } = require("./unpublish-page-handler");
 const { createGeneratePageHandler } = require("./generate-page-handler");
+const { createEditTextHandler } = require("./edit-text-handler");
 const { createInstallNicheContentHandler } = require("./install-niche-content-handler");
 const { createCreateSubscriptionHandler } = require("./create-subscription-handler");
 const { createSyncBundlesHandler } = require("./sync-bundles-handler");
@@ -93,6 +94,7 @@ function createRuntime({
     generate: crearPagina,
     metrics: metrica
   });
+  const editText = createEditTextHandler({ edit: editarTexto, metrics: metrica });
   const installNicheContent = createInstallNicheContentHandler({
     sessions: { get: sesionDe },
     metrics: metrica
@@ -115,11 +117,11 @@ function createRuntime({
   };
   const generationRunners = Array.from({ length: generationConcurrency }, (_, index) => createJobRunner({
     workerId: `${workerId}:generate:${index + 1}`,
-    jobTypes: ["generate-page"],
+    jobTypes: ["generate-page", "edit-text"],
     leaseSeconds,
     pollMs,
     repository: jobRepository,
-    handlers: { "generate-page": generatePage },
+    handlers: { "generate-page": generatePage, "edit-text": editText },
     reportError: reportarError,
     metrics: metrica
   }));
