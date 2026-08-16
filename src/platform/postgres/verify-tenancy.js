@@ -71,7 +71,7 @@ async function verifyRuntimeRole(pool, { expectedRole, workerCapability }) {
            rolcreatedb AS can_create_db,
            rolcreaterole AS can_create_role,
            rolreplication AS can_replicate,
-           pg_has_role(current_user, 'tiendaiq_worker_capability', 'member') AS worker_capability
+           pg_has_role(current_user, 'tiendaiq_worker_capability_v2', 'member') AS worker_capability
     FROM pg_roles
     WHERE rolname = current_user
   `);
