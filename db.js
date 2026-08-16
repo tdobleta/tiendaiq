@@ -279,6 +279,146 @@ async function leerPaginaDB(context, id) {
   return fs.existsSync(r) ? JSON.parse(fs.readFileSync(r, "utf8")) : null;
 }
 
+async function marcarPublicacionFallidaDB(context, id, activeJobId, errorMessage) {
+  const tenant = requireTenantContext(context);
+  if (USA_PG) {
+    const p = await pg();
+    pageRepository ||= createPageRepository(p);
+    return pageRepository.markPublicationFailed(tenant, id, activeJobId, errorMessage);
+  }
+  const current = await leerPaginaDB(tenant, id);
+  if (!current || current.active_job_id !== activeJobId) return null;
+  current.estado = "necesita_atencion";
+  current.active_job_id = null;
+  current.last_job_error = String(errorMessage || "Fallo terminal").slice(0, 500);
+  current.actualizado = new Date().toISOString();
+  await guardarPaginaDB(tenant, id, current);
+  return current;
+}
+
+async function encolarPublicacionDB(context, id, options = {}) {
+  const tenant = requireTenantContext(context);
+  if (USA_PG) {
+    const p = await pg();
+    pageRepository ||= createPageRepository(p);
+    return pageRepository.enqueuePublication(tenant, id, options);
+  }
+
+  const page = await leerPaginaDB(tenant, id);
+  if (!page) return null;
+  if (page.active_job_id) {
+    const active = await leerJobDB(tenant, page.active_job_id);
+    if (active && ["queued", "running"].includes(active.status)) {
+      return { page, job: active, reused: true };
+    }
+  }
+  const jobIdempotency = `publish:${id}:${crypto.randomUUID()}`;
+  const job = await encolarJobDB(tenant, {
+    type: "publish-page",
+    payload: { pageId: id },
+    idempotencyKey: jobIdempotency,
+    maxAttempts: options.maxAttempts || 3
+  });
+  const updatedPage = {
+    ...page,
+    estado: "publicando",
+    active_job_id: job.id,
+    last_job_error: null
+  };
+  await guardarPaginaDB(tenant, id, updatedPage);
+  return { page: updatedPage, job, reused: false };
+}
+
+async function encolarDespublicacionDB(context, id, options = {}) {
+  const tenant = requireTenantContext(context);
+  if (USA_PG) {
+    const p = await pg();
+    pageRepository ||= createPageRepository(p);
+    return pageRepository.enqueueUnpublication(tenant, id, options);
+  }
+  const page = await leerPaginaDB(tenant, id);
+  if (!page) return null;
+  if (page.active_job_id) {
+    const active = await leerJobDB(tenant, page.active_job_id);
+    if (active && ["queued", "running"].includes(active.status)) {
+      return active.type === "unpublish-page"
+        ? { page, job: active, reused: true, conflict: false }
+        : { page, job: active, reused: false, conflict: true };
+    }
+  }
+  const job = await encolarJobDB(tenant, {
+    type: "unpublish-page",
+    payload: { pageId: id },
+    idempotencyKey: `unpublish-page:${id}:${crypto.randomUUID()}`,
+    maxAttempts: options.maxAttempts || 3
+  });
+  const updatedPage = { ...page, estado: "despublicando", active_job_id: job.id, last_job_error: null };
+  await guardarPaginaDB(tenant, id, updatedPage);
+  return { page: updatedPage, job, reused: false, conflict: false };
+}
+
+async function checkpointAvatarPublicacionDB(context, id, activeJobId, previousAvatar, uploadedAvatar) {
+  const tenant = requireTenantContext(context);
+  if (USA_PG) {
+    const p = await pg();
+    pageRepository ||= createPageRepository(p);
+    return pageRepository.checkpointPublicationAvatar(tenant, id, activeJobId, previousAvatar, uploadedAvatar);
+  }
+  const page = await leerPaginaDB(tenant, id);
+  if (!page || page.active_job_id !== activeJobId) return null;
+  const review = page.data?.facetas?.hero?.resena_destacada;
+  if (!review || review.avatar !== previousAvatar) return { page, skipped: true };
+  review.avatar = uploadedAvatar;
+  await guardarPaginaDB(tenant, id, page);
+  return { page, replayed: false };
+}
+
+async function completarPublicacionPaginaDB(context, id, activeJobId, result) {
+  const tenant = requireTenantContext(context);
+  if (USA_PG) {
+    const p = await pg();
+    pageRepository ||= createPageRepository(p);
+    return pageRepository.completePublication(tenant, id, activeJobId, result);
+  }
+  const page = await leerPaginaDB(tenant, id);
+  if (!page) return null;
+  if (page.last_completed_job_id === activeJobId) return { page, replayed: true };
+  if (page.active_job_id !== activeJobId) return null;
+  const review = page.data?.facetas?.hero?.resena_destacada;
+  if (review && result.publishedAvatar !== result.originalAvatar && review.avatar === result.originalAvatar) {
+    review.avatar = result.publishedAvatar;
+  }
+  page.estado = "publicada";
+  page.url_publica = result.url;
+  page.active_job_id = null;
+  page.last_completed_job_id = activeJobId;
+  page.last_job_error = null;
+  page.published_content_hash = result.publishedHash;
+  page.cambios_sin_publicar = crypto.createHash("sha256").update(JSON.stringify(page.data || {})).digest("hex") !== result.publishedHash;
+  await guardarPaginaDB(tenant, id, page);
+  return { page, replayed: false };
+}
+
+async function completarDespublicacionPaginaDB(context, id, activeJobId) {
+  const tenant = requireTenantContext(context);
+  if (USA_PG) {
+    const p = await pg();
+    pageRepository ||= createPageRepository(p);
+    return pageRepository.completeUnpublication(tenant, id, activeJobId);
+  }
+  const page = await leerPaginaDB(tenant, id);
+  if (!page) return null;
+  if (page.last_completed_job_id === activeJobId) return { page, replayed: true };
+  if (page.active_job_id !== activeJobId) return null;
+  page.estado = "borrador";
+  page.url_publica = null;
+  page.active_job_id = null;
+  page.last_completed_job_id = activeJobId;
+  page.last_job_error = null;
+  await guardarPaginaDB(tenant, id, page);
+  return { page, replayed: false };
+}
+
 // Devuelve un RESUMEN por página (no el JSONB `datos` entero). Una página con
 // IA pesa cientos de KB; una tienda con muchas transfería megabytes por request
 // solo para pintar una lista de títulos. Se proyectan en el SQL únicamente los
@@ -404,16 +544,41 @@ async function encolarJobDB(context, options) {
     maxAttempts: Math.max(1, Number(options.maxAttempts) || 5),
     runAfter: now,
     lockedAt: null,
+    leaseExpiresAt: null,
     lockedBy: null,
     lastError: null,
     result: null,
     idempotencyKey: options.idempotencyKey || null,
     createdAt: now,
     updatedAt: now,
-    completedAt: null
+    completedAt: null,
+    compensationStatus: null,
+    compensationAttempts: 0,
+    compensationRunAfter: null,
+    compensationLockedAt: null,
+    compensationLockedBy: null,
+    compensationLastError: null,
+    compensatedAt: null
   };
   fileGuardar(DIR_JOBS, job.id, job);
   return job;
+}
+
+async function encolarJobExclusivoDB(context, options) {
+  const tenant = requireTenantContext(context);
+  if (USA_PG) {
+    const p = await pg();
+    jobRepository ||= createJobRepository(p);
+    return jobRepository.enqueueExclusive(tenant, options);
+  }
+
+  const active = fileListar(DIR_JOBS).find((job) =>
+    job.tenantId === tenant.tenantId &&
+    job.type === options.type &&
+    ["queued", "running"].includes(job.status)
+  );
+  if (active) return active;
+  return encolarJobDB(tenant, options);
 }
 
 async function leerJobDB(context, id) {
@@ -427,6 +592,15 @@ async function leerJobDB(context, id) {
   return job?.tenantId === tenant.tenantId ? job : null;
 }
 
+function leaseVencido(expiraEn, bloqueadoEn, compatibilidadSegundos, ahora = Date.now()) {
+  const expiry = expiraEn
+    ? Date.parse(expiraEn)
+    : bloqueadoEn
+      ? Date.parse(bloqueadoEn) + compatibilidadSegundos * 1000
+      : Number.NEGATIVE_INFINITY;
+  return !Number.isFinite(expiry) || expiry < ahora;
+}
+
 async function reclamarJobDB(workerId, leaseSeconds = 300, jobTypes = null) {
   if (USA_PG) {
     const p = await pg();
@@ -434,18 +608,18 @@ async function reclamarJobDB(workerId, leaseSeconds = 300, jobTypes = null) {
     return jobRepository.claim(workerId, leaseSeconds, jobTypes);
   }
   const now = Date.now();
-  const staleBefore = now - Math.max(30, Number(leaseSeconds) || 300) * 1000;
   const candidate = fileListar(DIR_JOBS)
     .filter((job) =>
       (!Array.isArray(jobTypes) || !jobTypes.length || jobTypes.includes(job.type)) &&
       ((job.status === "queued" && Date.parse(job.runAfter) <= now) ||
-      (job.status === "running" && Date.parse(job.lockedAt) < staleBefore))
+      (job.status === "running" && leaseVencido(job.leaseExpiresAt, job.lockedAt, 300, now)))
     )
     .sort((a, b) => String(a.runAfter).localeCompare(String(b.runAfter)) || String(a.createdAt).localeCompare(String(b.createdAt)))[0];
   if (!candidate) return null;
   candidate.status = "running";
   candidate.attempts += 1;
   candidate.lockedAt = new Date().toISOString();
+  candidate.leaseExpiresAt = new Date(now + Math.max(30, Number(leaseSeconds) || 300) * 1000).toISOString();
   candidate.lockedBy = workerId;
   candidate.updatedAt = candidate.lockedAt;
   fileGuardar(DIR_JOBS, candidate.id, candidate);
@@ -464,14 +638,94 @@ async function estadoColaDB(workerId = "queue-metrics") {
   const grouped = new Map();
   const now = Date.now();
   for (const job of fileListar(DIR_JOBS).filter((item) => ["queued", "running", "failed"].includes(item.status))) {
-    const state = grouped.get(job.type) || { type: job.type, queued: 0, running: 0, failed: 0, oldestQueuedSeconds: 0 };
+    const state = grouped.get(job.type) || {
+      type: job.type,
+      queued: 0,
+      running: 0,
+      failed: 0,
+      failedRecent: 0,
+      staleRunning: 0,
+      compensationPending: 0,
+      compensationDeadLetter: 0,
+      staleCompensation: 0,
+      oldestQueuedSeconds: 0,
+      oldestCompensationSeconds: 0
+    };
     state[job.status] += 1;
     if (job.status === "queued") {
       state.oldestQueuedSeconds = Math.max(state.oldestQueuedSeconds, Math.max(0, (now - Date.parse(job.createdAt)) / 1000));
     }
+    if (["pending", "running"].includes(job.compensationStatus)) {
+      state.compensationPending += 1;
+      state.oldestCompensationSeconds = Math.max(
+        state.oldestCompensationSeconds,
+        Math.max(0, (now - Date.parse(job.completedAt || job.updatedAt || job.createdAt)) / 1000)
+      );
+    }
+    if (job.compensationStatus === "dead_letter") state.compensationDeadLetter += 1;
+    if (job.status === "running" && leaseVencido(job.leaseExpiresAt, job.lockedAt, 300, now)) {
+      state.staleRunning += 1;
+    }
+    if (job.compensationStatus === "running" && leaseVencido(
+      job.compensationLeaseExpiresAt,
+      job.compensationLockedAt,
+      300,
+      now
+    )) {
+      state.staleCompensation += 1;
+    }
     grouped.set(job.type, state);
   }
   return [...grouped.values()].sort((a, b) => a.type.localeCompare(b.type));
+}
+
+async function registrarHeartbeatWorkerDB(heartbeat) {
+  if (!USA_PG) throw new Error("El heartbeat del worker requiere PostgreSQL");
+  const p = await pg();
+  jobRepository ||= createJobRepository(p);
+  return jobRepository.recordHeartbeat(heartbeat);
+}
+
+async function estadoWorkerDB() {
+  if (!USA_PG) return null;
+  const p = await pg();
+  jobRepository ||= createJobRepository(p);
+  return jobRepository.workerStatus();
+}
+
+async function estadoInboxDB() {
+  if (USA_PG) {
+    const p = await pg();
+    inboxRepository ||= createInboxRepository(p);
+    return inboxRepository.stats();
+  }
+  const now = Date.now();
+  const status = {
+    received: 0,
+    processing: 0,
+    failed: 0,
+    failedRecent: 0,
+    staleProcessing: 0,
+    oldestReceivedSeconds: 0
+  };
+  for (const event of fileListar(DIR_INBOX)) {
+    if (event.status === "received") {
+      status.received += 1;
+      status.oldestReceivedSeconds = Math.max(
+        status.oldestReceivedSeconds,
+        Math.max(0, (now - Date.parse(event.runAfter || event.receivedAt)) / 1000)
+      );
+    }
+    if (event.status === "processing") {
+      status.processing += 1;
+      if (Date.parse(event.lockedAt) < now - 3 * 60 * 1000) status.staleProcessing += 1;
+    }
+    if (event.status === "failed") {
+      status.failed += 1;
+      if (Date.parse(event.updatedAt) >= now - 15 * 60 * 1000) status.failedRecent += 1;
+    }
+  }
+  return status;
 }
 
 async function completarJobDB(context, job, result) {
@@ -487,6 +741,7 @@ async function completarJobDB(context, job, result) {
   stored.result = result || {};
   stored.lastError = null;
   stored.lockedAt = null;
+  stored.leaseExpiresAt = null;
   stored.lockedBy = null;
   stored.completedAt = new Date().toISOString();
   stored.updatedAt = stored.completedAt;
@@ -494,12 +749,12 @@ async function completarJobDB(context, job, result) {
   return stored;
 }
 
-async function renovarLeaseJobDB(context, job) {
+async function renovarLeaseJobDB(context, job, leaseSeconds = 300) {
   const tenant = assertTenant(context, job.tenantId);
   if (USA_PG) {
     const p = await pg();
     jobRepository ||= createJobRepository(p);
-    return jobRepository.renew(tenant, job);
+    return jobRepository.renew(tenant, job, leaseSeconds);
   }
   const stored = fileLeer(DIR_JOBS, job.id);
   if (!stored || stored.tenantId !== tenant.tenantId || stored.status !== "running" || stored.lockedBy !== job.lockedBy) return null;
@@ -509,12 +764,12 @@ async function renovarLeaseJobDB(context, job) {
   return stored;
 }
 
-async function fallarJobDB(context, job, error, retryDelaySeconds) {
+async function fallarJobDB(context, job, error, retryDelaySeconds, needsCompensation = false) {
   const tenant = assertTenant(context, job.tenantId);
   if (USA_PG) {
     const p = await pg();
     jobRepository ||= createJobRepository(p);
-    return jobRepository.fail(tenant, job, error, retryDelaySeconds);
+    return jobRepository.fail(tenant, job, error, retryDelaySeconds, needsCompensation);
   }
   const stored = fileLeer(DIR_JOBS, job.id);
   if (!stored || stored.tenantId !== tenant.tenantId || stored.status !== "running" || stored.lockedBy !== job.lockedBy) return null;
@@ -525,8 +780,14 @@ async function fallarJobDB(context, job, error, retryDelaySeconds) {
     : new Date(Date.now() + Math.max(1, retryDelaySeconds) * 1000).toISOString();
   stored.lastError = String(error?.message || error).slice(0, 1000);
   stored.lockedAt = null;
+  stored.leaseExpiresAt = null;
   stored.lockedBy = null;
   stored.completedAt = terminal ? new Date().toISOString() : null;
+  if (terminal && needsCompensation === true) {
+    stored.compensationStatus = "pending";
+    stored.compensationRunAfter = new Date().toISOString();
+    stored.compensationLastError = null;
+  }
   stored.updatedAt = new Date().toISOString();
   fileGuardar(DIR_JOBS, stored.id, stored);
   return stored;
@@ -595,6 +856,7 @@ async function encolarGeneracionDB(context, options) {
     maxAttempts: Math.max(1, Number(options.maxAttempts) || 3),
     runAfter: now,
     lockedAt: null,
+    leaseExpiresAt: null,
     lockedBy: null,
     lastError: null,
     result: null,
@@ -626,15 +888,258 @@ async function encolarGeneracionDB(context, options) {
   return { job, reservation, used: current + 1 };
 }
 
-async function leerReservaGeneracionDB(context, id) {
+function withProviderState(reservation, providerState) {
+  if (!reservation) return null;
+  Object.defineProperty(reservation, "providerState", {
+    value: providerState || null,
+    enumerable: false,
+    configurable: true
+  });
+  return reservation;
+}
+
+function providerFailure(error) {
+  return {
+    code: error?.code || error?.name || null,
+    message: String(error?.message || error || "Estado ambiguo del proveedor").slice(0, 1000),
+    requestId: error?.request_id || error?.requestId || null,
+    retryAfter: Number.isFinite(Number(error?.retryAfter)) ? Number(error.retryAfter) : null
+  };
+}
+
+async function transicionarProveedorGeneracionDB(context, reservationId, command = {}) {
   const tenant = requireTenantContext(context);
+  const action = command.action;
+  if (!reservationId || !command.jobId || !action) throw new TypeError("La transición del proveedor está incompleta");
+
+  if (USA_PG) {
+    const p = await pg();
+    return withTenantTransaction(p, tenant, async (client) => {
+      const result = await client.query(
+        `SELECT r.status AS reservation_status, j.status AS job_status, j.payload
+           FROM control_plane.usage_reservations r
+           JOIN control_plane.jobs j
+             ON j.tenant_id = r.tenant_id AND j.id = r.job_id
+          WHERE r.tenant_id = $1 AND r.id = $2 AND j.id = $3
+          FOR UPDATE OF r, j`,
+        [tenant.tenantId, reservationId, command.jobId]
+      );
+      const row = result.rows[0];
+      if (!row) throw new Error("La reserva o el job de generación no existe");
+      const payload = row.payload || {};
+      const current = payload.providerAttempt || null;
+      const now = new Date().toISOString();
+
+      if (action === "begin") {
+        if (row.reservation_status !== "reserved") {
+          return { started: false, state: row.reservation_status, attemptId: current?.attemptId || null };
+        }
+        if (current?.state === "provider_in_flight") {
+          const ambiguous = {
+            ...current,
+            state: "ambiguous",
+            ambiguousAt: now,
+            failure: { code: "RECOVERED_IN_FLIGHT", message: "Se recuperó un intento sin resultado durable", requestId: null, retryAfter: null }
+          };
+          await client.query(
+            `UPDATE control_plane.jobs
+                SET payload = jsonb_set(coalesce(payload, '{}'::jsonb), '{providerAttempt}', $3::jsonb, true),
+                    updated_at = now()
+              WHERE tenant_id = $1 AND id = $2`,
+            [tenant.tenantId, command.jobId, ambiguous]
+          );
+          return { started: false, state: "ambiguous", attemptId: ambiguous.attemptId };
+        }
+        if (current?.state === "ambiguous") {
+          return { started: false, state: "ambiguous", attemptId: current.attemptId };
+        }
+        const next = {
+          state: "provider_in_flight",
+          attemptId: crypto.randomUUID(),
+          startedAt: now
+        };
+        await client.query(
+          `UPDATE control_plane.jobs
+              SET payload = jsonb_set(coalesce(payload, '{}'::jsonb), '{providerAttempt}', $3::jsonb, true),
+                  updated_at = now()
+            WHERE tenant_id = $1 AND id = $2`,
+          [tenant.tenantId, command.jobId, next]
+        );
+        return { started: true, state: next.state, attemptId: next.attemptId };
+      }
+
+      if (action === "ambiguous") {
+        if (current?.state === "ambiguous" && current.attemptId === command.attemptId) {
+          return { changed: false, state: "ambiguous", attemptId: current.attemptId };
+        }
+        if (current?.state !== "provider_in_flight" || current.attemptId !== command.attemptId) {
+          return { changed: false, state: current?.state || null, attemptId: current?.attemptId || null };
+        }
+        const ambiguous = {
+          ...current,
+          state: "ambiguous",
+          ambiguousAt: now,
+          failure: providerFailure(command.error)
+        };
+        await client.query(
+          `UPDATE control_plane.jobs
+              SET payload = jsonb_set(coalesce(payload, '{}'::jsonb), '{providerAttempt}', $3::jsonb, true),
+                  updated_at = now()
+            WHERE tenant_id = $1 AND id = $2`,
+          [tenant.tenantId, command.jobId, ambiguous]
+        );
+        return { changed: true, state: "ambiguous", attemptId: ambiguous.attemptId };
+      }
+
+      if (action === "clear") {
+        if (current?.state !== "provider_in_flight" || current.attemptId !== command.attemptId) {
+          return { changed: false, state: current?.state || null, attemptId: current?.attemptId || null };
+        }
+        await client.query(
+          `UPDATE control_plane.jobs
+              SET payload = coalesce(payload, '{}'::jsonb) - 'providerAttempt', updated_at = now()
+            WHERE tenant_id = $1 AND id = $2`,
+          [tenant.tenantId, command.jobId]
+        );
+        return { changed: true, state: null, attemptId: command.attemptId };
+      }
+
+      if (action === "authorize_retry") {
+        if (row.reservation_status !== "reserved" || current?.state !== "ambiguous") {
+          throw new Error("Solo se puede reintentar una generación reservada y ambigua");
+        }
+        if (row.job_status !== "failed") throw new Error("El job debe estar fallido antes de reconciliarlo");
+        const authorized = {
+          ...current,
+          state: "retry_authorized",
+          reconciledAt: now,
+          reconciliationReason: String(command.reason || "Reintento autorizado manualmente").slice(0, 1000)
+        };
+        await client.query(
+          `UPDATE control_plane.jobs
+              SET payload = jsonb_set(coalesce(payload, '{}'::jsonb), '{providerAttempt}', $3::jsonb, true),
+                  status = 'queued', attempts = 0, run_after = now(),
+                  locked_at = NULL, lease_expires_at = NULL, locked_by = NULL,
+                  last_error = NULL, completed_at = NULL,
+                  compensation_status = NULL, compensation_attempts = 0,
+                  compensation_run_after = NULL, compensation_locked_at = NULL,
+                  compensation_lease_expires_at = NULL, compensation_locked_by = NULL,
+                  compensation_last_error = NULL,
+                  compensated_at = NULL, updated_at = now()
+            WHERE tenant_id = $1 AND id = $2`,
+          [tenant.tenantId, command.jobId, authorized]
+        );
+        return { changed: true, state: "retry_authorized", attemptId: current.attemptId };
+      }
+
+      throw new TypeError(`Transición de proveedor desconocida: ${action}`);
+    });
+  }
+
+  const reservation = fileLeer(DIR_RESERVAS, reservationId);
+  const job = fileLeer(DIR_JOBS, command.jobId);
+  if (!reservation || reservation.tenantId !== tenant.tenantId || !job || job.tenantId !== tenant.tenantId || reservation.jobId !== job.id) {
+    throw new Error("La reserva o el job de generación no existe");
+  }
+  const current = job.payload?.providerAttempt || null;
+  const now = new Date().toISOString();
+  if (action === "begin") {
+    if (reservation.status !== "reserved") return { started: false, state: reservation.status, attemptId: current?.attemptId || null };
+    if (current?.state === "provider_in_flight") {
+      job.payload.providerAttempt = {
+        ...current,
+        state: "ambiguous",
+        ambiguousAt: now,
+        failure: { code: "RECOVERED_IN_FLIGHT", message: "Se recuperó un intento sin resultado durable", requestId: null, retryAfter: null }
+      };
+      fileGuardar(DIR_JOBS, job.id, job);
+      return { started: false, state: "ambiguous", attemptId: current.attemptId };
+    }
+    if (current?.state === "ambiguous") return { started: false, state: "ambiguous", attemptId: current.attemptId };
+    const next = { state: "provider_in_flight", attemptId: crypto.randomUUID(), startedAt: now };
+    job.payload = { ...(job.payload || {}), providerAttempt: next };
+    fileGuardar(DIR_JOBS, job.id, job);
+    return { started: true, state: next.state, attemptId: next.attemptId };
+  }
+  if (action === "ambiguous") {
+    if (current?.state === "ambiguous" && current.attemptId === command.attemptId) return { changed: false, state: "ambiguous", attemptId: current.attemptId };
+    if (current?.state !== "provider_in_flight" || current.attemptId !== command.attemptId) return { changed: false, state: current?.state || null, attemptId: current?.attemptId || null };
+    job.payload.providerAttempt = { ...current, state: "ambiguous", ambiguousAt: now, failure: providerFailure(command.error) };
+    fileGuardar(DIR_JOBS, job.id, job);
+    return { changed: true, state: "ambiguous", attemptId: current.attemptId };
+  }
+  if (action === "clear") {
+    if (current?.state !== "provider_in_flight" || current.attemptId !== command.attemptId) return { changed: false, state: current?.state || null, attemptId: current?.attemptId || null };
+    delete job.payload.providerAttempt;
+    fileGuardar(DIR_JOBS, job.id, job);
+    return { changed: true, state: null, attemptId: command.attemptId };
+  }
+  if (action === "authorize_retry") {
+    if (reservation.status !== "reserved" || current?.state !== "ambiguous") throw new Error("Solo se puede reintentar una generación reservada y ambigua");
+    if (job.status !== "failed") throw new Error("El job debe estar fallido antes de reconciliarlo");
+    job.payload.providerAttempt = {
+      ...current,
+      state: "retry_authorized",
+      reconciledAt: now,
+      reconciliationReason: String(command.reason || "Reintento autorizado manualmente").slice(0, 1000)
+    };
+    Object.assign(job, {
+      status: "queued", attempts: 0, runAfter: now, lockedAt: null, leaseExpiresAt: null,
+      lockedBy: null, lastError: null, completedAt: null,
+      compensationStatus: null, compensationAttempts: 0, compensationRunAfter: null,
+      compensationLockedAt: null, compensationLeaseExpiresAt: null,
+      compensationLockedBy: null, compensationLastError: null,
+      compensatedAt: null, updatedAt: now
+    });
+    fileGuardar(DIR_JOBS, job.id, job);
+    return { changed: true, state: "retry_authorized", attemptId: current.attemptId };
+  }
+  throw new TypeError(`Transición de proveedor desconocida: ${action}`);
+}
+
+async function leerReservaGeneracionDB(context, id, options = null) {
+  const tenant = requireTenantContext(context);
+  if (options?.providerTransition) {
+    return transicionarProveedorGeneracionDB(tenant, id, options.providerTransition);
+  }
   if (USA_PG) {
     const p = await pg();
     generationRepository ||= createGenerationRepository(p);
-    return generationRepository.getReservation(tenant, id);
+    jobRepository ||= createJobRepository(p);
+    const reservation = await generationRepository.getReservation(tenant, id);
+    if (!reservation) return null;
+    const job = await jobRepository.get(tenant, reservation.jobId);
+    return withProviderState(reservation, job?.payload?.providerAttempt);
   }
   const reservation = fileLeer(DIR_RESERVAS, id);
-  return reservation?.tenantId === tenant.tenantId ? reservation : null;
+  if (reservation?.tenantId !== tenant.tenantId) return null;
+  const job = fileLeer(DIR_JOBS, reservation.jobId);
+  return withProviderState(reservation, job?.payload?.providerAttempt);
+}
+
+async function reconciliarGeneracionAmbiguaDB(context, reservationId, { action, reason = "" } = {}) {
+  const tenant = requireTenantContext(context);
+  const reservation = await leerReservaGeneracionDB(tenant, reservationId);
+  if (!reservation) throw new Error("La reserva de generación no existe");
+  if (reservation.providerState?.state !== "ambiguous") throw new Error("La generación no está en estado ambiguo");
+
+  if (action === "release") {
+    const released = await liberarReservaGeneracionDB(
+      tenant,
+      reservationId,
+      new Error(String(reason || "Liberación autorizada tras reconciliación manual"))
+    );
+    return { action: "released", reservation: released };
+  }
+  if (action === "retry") {
+    const transition = await transicionarProveedorGeneracionDB(tenant, reservationId, {
+      action: "authorize_retry",
+      jobId: reservation.jobId,
+      reason
+    });
+    return { action: "retry_authorized", reservationId, jobId: reservation.jobId, transition };
+  }
+  throw new TypeError("La reconciliación requiere action 'release' o 'retry'");
 }
 
 async function finalizarGeneracionDB(context, { reservationId, pageId, page }) {
@@ -730,17 +1235,17 @@ async function reclamarWebhookDB(workerId, leaseSeconds = 120) {
     return inboxRepository.claim(workerId, leaseSeconds);
   }
   const now = Date.now();
-  const staleBefore = now - Math.max(30, Number(leaseSeconds) || 120) * 1000;
   const event = fileListar(DIR_INBOX)
     .filter((item) =>
       (item.status === "received" && Date.parse(item.runAfter) <= now) ||
-      (item.status === "processing" && Date.parse(item.lockedAt) < staleBefore)
+      (item.status === "processing" && leaseVencido(item.leaseExpiresAt, item.lockedAt, 180, now))
     )
     .sort((a, b) => String(a.runAfter).localeCompare(String(b.runAfter)) || String(a.receivedAt).localeCompare(String(b.receivedAt)))[0];
   if (!event) return null;
   event.status = "processing";
   event.attempts += 1;
   event.lockedAt = new Date().toISOString();
+  event.leaseExpiresAt = new Date(now + Math.max(30, Number(leaseSeconds) || 120) * 1000).toISOString();
   event.lockedBy = workerId;
   event.updatedAt = event.lockedAt;
   fileGuardar(DIR_INBOX, event.id, event);
@@ -751,18 +1256,136 @@ async function reclamarWebhookDB(workerId, leaseSeconds = 120) {
   };
 }
 
-async function completarWebhookDB(context, event) {
+async function reclamarCompensacionJobDB(workerId, leaseSeconds = 300, jobTypes = null) {
+  if (USA_PG) {
+    const p = await pg();
+    jobRepository ||= createJobRepository(p);
+    return jobRepository.claimCompensation(workerId, leaseSeconds, jobTypes);
+  }
+  if (!workerId) throw new TypeError("La compensacion requiere identidad worker");
+  const now = Date.now();
+  const candidate = fileListar(DIR_JOBS)
+    .filter((job) =>
+      job.status === "failed" &&
+      (!Array.isArray(jobTypes) || !jobTypes.length || jobTypes.includes(job.type)) &&
+      ((job.compensationStatus === "pending" && Date.parse(job.compensationRunAfter) <= now) ||
+        (job.compensationStatus === "running" && leaseVencido(
+          job.compensationLeaseExpiresAt,
+          job.compensationLockedAt,
+          300,
+          now
+        )))
+    )
+    .sort((a, b) => String(a.compensationRunAfter).localeCompare(String(b.compensationRunAfter)) ||
+      String(a.completedAt).localeCompare(String(b.completedAt)))[0];
+  if (!candidate) return null;
+  candidate.compensationStatus = "running";
+  candidate.compensationAttempts = Number(candidate.compensationAttempts || 0) + 1;
+  candidate.compensationLockedAt = new Date().toISOString();
+  candidate.compensationLeaseExpiresAt = new Date(now + Math.max(30, Number(leaseSeconds) || 300) * 1000).toISOString();
+  candidate.compensationLockedBy = workerId;
+  candidate.updatedAt = candidate.compensationLockedAt;
+  fileGuardar(DIR_JOBS, candidate.id, candidate);
+  return {
+    ...candidate,
+    tenant: TenantContext.fromShopDomain(candidate.tenantId, { source: "internal-job", requestId: candidate.id })
+  };
+}
+
+async function completarCompensacionJobDB(context, job) {
+  const tenant = assertTenant(context, job.tenantId);
+  if (USA_PG) {
+    const p = await pg();
+    jobRepository ||= createJobRepository(p);
+    return jobRepository.completeCompensation(tenant, job);
+  }
+  const stored = fileLeer(DIR_JOBS, job.id);
+  if (!stored || stored.tenantId !== tenant.tenantId || stored.status !== "failed" ||
+      stored.compensationStatus !== "running" || stored.compensationLockedBy !== job.compensationLockedBy) return null;
+  stored.compensationStatus = "succeeded";
+  stored.compensationLastError = null;
+  stored.compensationLockedAt = null;
+  stored.compensationLeaseExpiresAt = null;
+  stored.compensationLockedBy = null;
+  stored.compensatedAt = new Date().toISOString();
+  stored.updatedAt = stored.compensatedAt;
+  fileGuardar(DIR_JOBS, stored.id, stored);
+  return stored;
+}
+
+async function renovarCompensacionJobDB(context, job, leaseSeconds = 300) {
+  const tenant = assertTenant(context, job.tenantId);
+  if (USA_PG) {
+    const p = await pg();
+    jobRepository ||= createJobRepository(p);
+    return jobRepository.renewCompensation(tenant, job, leaseSeconds);
+  }
+  const stored = fileLeer(DIR_JOBS, job.id);
+  if (!stored || stored.tenantId !== tenant.tenantId || stored.status !== "failed" ||
+      stored.compensationStatus !== "running" || stored.compensationLockedBy !== job.compensationLockedBy) return null;
+  stored.compensationLockedAt = new Date().toISOString();
+  stored.compensationLeaseExpiresAt = new Date(Date.now() + Math.max(30, Number(leaseSeconds) || 300) * 1000).toISOString();
+  stored.updatedAt = stored.compensationLockedAt;
+  fileGuardar(DIR_JOBS, stored.id, stored);
+  return stored;
+}
+
+async function fallarCompensacionJobDB(context, job, error, retryDelaySeconds, terminal = false) {
+  const tenant = assertTenant(context, job.tenantId);
+  if (USA_PG) {
+    const p = await pg();
+    jobRepository ||= createJobRepository(p);
+    return jobRepository.failCompensation(tenant, job, error, retryDelaySeconds, terminal);
+  }
+  const stored = fileLeer(DIR_JOBS, job.id);
+  if (!stored || stored.tenantId !== tenant.tenantId || stored.status !== "failed" ||
+      stored.compensationStatus !== "running" || stored.compensationLockedBy !== job.compensationLockedBy) return null;
+  stored.compensationStatus = terminal === true ? "dead_letter" : "pending";
+  if (!terminal) {
+    stored.compensationRunAfter = new Date(Date.now() + Math.max(1, Number(retryDelaySeconds) || 5) * 1000).toISOString();
+  }
+  stored.compensationLastError = String(error?.message || error).slice(0, 1000);
+  stored.compensationLockedAt = null;
+  stored.compensationLeaseExpiresAt = null;
+  stored.compensationLockedBy = null;
+  stored.updatedAt = new Date().toISOString();
+  fileGuardar(DIR_JOBS, stored.id, stored);
+  return stored;
+}
+
+async function renovarLeaseWebhookDB(context, event, leaseSeconds = 120) {
+  const tenant = assertTenant(context, event.tenantId || event.shopDomain);
   if (USA_PG) {
     const p = await pg();
     inboxRepository ||= createInboxRepository(p);
-    return inboxRepository.succeed(context, event);
+    return inboxRepository.renew(tenant, event, leaseSeconds);
   }
   const stored = fileLeer(DIR_INBOX, event.id);
-  if (!stored || stored.status !== "processing" || stored.lockedBy !== event.lockedBy) return null;
+  if (!stored ||
+      stored.shopDomain !== tenant.shopDomain ||
+      stored.status !== "processing" ||
+      stored.lockedBy !== event.lockedBy) return null;
+  stored.lockedAt = new Date().toISOString();
+  stored.leaseExpiresAt = new Date(Date.now() + Math.max(30, Number(leaseSeconds) || 120) * 1000).toISOString();
+  stored.updatedAt = stored.lockedAt;
+  fileGuardar(DIR_INBOX, stored.id, stored);
+  return stored;
+}
+
+async function completarWebhookDB(context, event) {
+  const tenant = assertTenant(context, event.tenantId || event.shopDomain);
+  if (USA_PG) {
+    const p = await pg();
+    inboxRepository ||= createInboxRepository(p);
+    return inboxRepository.succeed(tenant, event);
+  }
+  const stored = fileLeer(DIR_INBOX, event.id);
+  if (!stored || stored.shopDomain !== tenant.shopDomain || stored.status !== "processing" || stored.lockedBy !== event.lockedBy) return null;
   stored.status = "processed";
   stored.processedAt = new Date().toISOString();
   stored.updatedAt = stored.processedAt;
   stored.lockedAt = null;
+  stored.leaseExpiresAt = null;
   stored.lockedBy = null;
   stored.lastError = null;
   fileGuardar(DIR_INBOX, stored.id, stored);
@@ -770,19 +1393,21 @@ async function completarWebhookDB(context, event) {
 }
 
 async function fallarWebhookDB(context, event, error, retryDelaySeconds) {
+  const tenant = assertTenant(context, event.tenantId || event.shopDomain);
   if (USA_PG) {
     const p = await pg();
     inboxRepository ||= createInboxRepository(p);
-    return inboxRepository.fail(context, event, error, retryDelaySeconds);
+    return inboxRepository.fail(tenant, event, error, retryDelaySeconds);
   }
   const stored = fileLeer(DIR_INBOX, event.id);
-  if (!stored || stored.status !== "processing" || stored.lockedBy !== event.lockedBy) return null;
+  if (!stored || stored.shopDomain !== tenant.shopDomain || stored.status !== "processing" || stored.lockedBy !== event.lockedBy) return null;
   const terminal = Number(stored.attempts) >= Number(stored.maxAttempts);
   stored.status = terminal ? "failed" : "received";
   if (!terminal) stored.runAfter = new Date(Date.now() + Math.max(1, retryDelaySeconds) * 1000).toISOString();
   stored.lastError = String(error?.message || error).slice(0, 1000);
   stored.updatedAt = new Date().toISOString();
   stored.lockedAt = null;
+  stored.leaseExpiresAt = null;
   stored.lockedBy = null;
   fileGuardar(DIR_INBOX, stored.id, stored);
   return stored;
@@ -830,7 +1455,12 @@ async function depurarInboxDB(workerId, options = {}) {
 }
 
 async function verificarAlmacenamientoDB() {
-  if (!USA_PG) return { tipo: "archivos" };
+  if (!USA_PG) {
+    if (env.DEV_MODE === "1") return { tipo: "archivos" };
+    const error = new Error("PostgreSQL es obligatorio fuera de desarrollo");
+    error.status = 503;
+    throw error;
+  }
   const p = await pg();
   await p.query("SELECT 1");
   const aislamiento = await verifyTenantIsolation(p, { expectedRole: env.PG_RUNTIME_ROLE || "tiendaiq_web_runtime" });
@@ -861,12 +1491,17 @@ module.exports = {
   USA_PG,
   guardarTiendaDB, leerTiendaDB, borrarTiendaDB, listarTiendasDB,
   incrementarUsoDB, decrementarUsoDB, actualizarCamposTiendaDB,
-  guardarPaginaDB, leerPaginaDB, listarPaginasDB,
+  guardarPaginaDB, leerPaginaDB, marcarPublicacionFallidaDB,
+  encolarPublicacionDB, encolarDespublicacionDB,
+  checkpointAvatarPublicacionDB, completarPublicacionPaginaDB, completarDespublicacionPaginaDB,
+  listarPaginasDB,
   guardarEstadoDB, consumirEstadoDB,
-  encolarJobDB, leerJobDB, reclamarJobDB, renovarLeaseJobDB, completarJobDB, fallarJobDB,
-  estadoColaDB,
+  encolarJobDB, encolarJobExclusivoDB, leerJobDB, reclamarJobDB, renovarLeaseJobDB, completarJobDB, fallarJobDB,
+  reclamarCompensacionJobDB, renovarCompensacionJobDB, completarCompensacionJobDB, fallarCompensacionJobDB,
+  estadoColaDB, registrarHeartbeatWorkerDB, estadoWorkerDB, estadoInboxDB,
   encolarGeneracionDB, leerReservaGeneracionDB, finalizarGeneracionDB, liberarReservaGeneracionDB,
-  recibirWebhookDB, reclamarWebhookDB, completarWebhookDB, fallarWebhookDB,
+  transicionarProveedorGeneracionDB, reconciliarGeneracionAmbiguaDB,
+  recibirWebhookDB, reclamarWebhookDB, renovarLeaseWebhookDB, completarWebhookDB, fallarWebhookDB,
   redactarInboxTiendaDB, registrarPrivacidadWebhookDB, depurarInboxDB,
   verificarAlmacenamientoDB, verificarWorkerDB, cerrarAlmacenamientoDB
 };

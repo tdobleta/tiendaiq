@@ -32,3 +32,27 @@ test("GraphQL de Shopify tiene timeout y clasifica el fallo como transitorio", a
   assert.equal(SHOPIFY_TIMEOUT_MS, 2500);
   assert.ok(requestOptions.signal instanceof AbortSignal);
 });
+
+test("Shopify clasifica 422 como permanente y 429 con Retry-After", async (t) => {
+  const originalFetch = global.fetch;
+  const modulePath = require.resolve("../shopify");
+  delete require.cache[modulePath];
+  const responses = [
+    new Response("invalido", { status: 422 }),
+    new Response("limite", { status: 429, headers: { "Retry-After": "17" } })
+  ];
+  global.fetch = async () => responses.shift();
+  t.after(() => {
+    global.fetch = originalFetch;
+    delete require.cache[modulePath];
+  });
+
+  const { gql } = require("../shopify");
+  const session = { tienda: "retry.myshopify.com", token: "token" };
+  await assert.rejects(gql("{ shop { id } }", {}, session), (error) => (
+    error.status === 422 && error.nonRetryable === true
+  ));
+  await assert.rejects(gql("{ shop { id } }", {}, session), (error) => (
+    error.status === 429 && error.nonRetryable === false && error.retryAfter === 17
+  ));
+});

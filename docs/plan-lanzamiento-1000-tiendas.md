@@ -106,6 +106,12 @@ y el gate de cola durable sintetica de staging para 1.000/1.000. No cierra los
 gates de Anthropic perfil 50/500, Shopify E2E, billing real ni alertas
 automaticas.
 
+El workflow manual `Ops readiness staging` queda como preflight operativo
+barato entre releases y pruebas caras: valida el SHA desplegado en `/ready`, el
+aislamiento RLS y el estado actual de la cola durable mediante el endpoint
+operativo autenticado. No consume Anthropic, no llama Shopify y no reemplaza las alertas
+automaticas; evita confundir ruido de deploy con evidencia de canary.
+
 El gate `Anthropic capacity staging #4` con perfil 50 corrio sobre
 `e3040961d1a47cc836ab2bca0398b49149540501` y quedo **NO-GO**. Una
 reproduccion local controlada con el mismo contrato, techo de presupuesto y
@@ -115,6 +121,12 @@ mensaje de saldo bajo antes de consumir tokens en la muestra reducida. No es un
 fallo de RLS, Render, PostgreSQL ni del worker; bloquea exclusivamente los
 gates de capacidad IA 50/500 hasta cargar credito o corregir billing en
 Anthropic.
+
+Mientras el balance del proveedor este agotado, la operacion correcta es dejar
+pausada la admision de nuevas generaciones con `GENERATION_ADMISSION_PAUSED=1`
+en el servicio web de Render y no ejecutar workflows de capacidad Anthropic. La
+clave de IA pertenece solamente al worker; la web no debe recibirla porque solo
+admite y encola solicitudes.
 
 ## Criterios de salida
 
@@ -164,7 +176,8 @@ No hace falta comprar una suscripcion para continuar el desarrollo local. Antes
 de abrir al publico, una persona con acceso a las cuentas debe:
 
 1. Confirmar o ampliar la cuota de Anthropic para el perfil de ocho generaciones
-   concurrentes y cargar credito suficiente antes de repetir perfiles 50/500.
+   concurrentes, cargar credito suficiente y despausar admision solo antes de
+   repetir perfiles 50/500.
 2. Crear el entorno de staging en Render/PostgreSQL, cargar los secretos y
    habilitar metricas y alertas.
 3. Ejecutar el QA de billing con `PLAN_TEST=1` y cambiarlo a `0` solo despues de
@@ -175,7 +188,17 @@ La credencial `STAGING_MIGRATION_DATABASE_URL` vive solo en el entorno protegido
 de GitHub Actions. El workflow manual migra primero y dispara los deploy hooks
 de staging despues; web y worker no reciben una credencial propietaria. El
 rollout sigue requiriendo migraciones expand/contract porque Render despliega
-los dos procesos como servicios independientes.
+los dos procesos como servicios independientes. La readiness operativa ademas
+requiere `STAGING_OPS_STATUS_TOKEN` en GitHub y `OPS_STATUS_TOKEN` en Render web;
+ambos deben tener el mismo valor fuerte y se usan solo para leer metricas
+agregadas de `/ops/status`.
+
+La misma readiness separa dos perfiles explicitos. `technical_preflight`
+valida release, RLS, worker y cola, pero no autoriza lanzamiento. `go` exige
+ademas `billing.planTest=false`, `legal.complete=true` y admision de IA abierta.
+Staging conserva la admision pausada por defecto hasta que billing, legales,
+proveedor de IA y capacidad tengan evidencia verde. Solo una corrida verde con
+perfil `go` puede respaldar la decision comercial de abrir una ola.
 
 ## Operacion del primer dia
 

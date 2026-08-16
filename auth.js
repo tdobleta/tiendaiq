@@ -88,6 +88,17 @@ function igualSeguro(a, b) {
   return A.length === B.length && crypto.timingSafeEqual(A, B);
 }
 
+const MINUTOS_ESTADO = 10;
+const SEGUNDOS_MAX_SOLICITUD_OAUTH = 5 * 60;
+const SEGUNDOS_FUTURO_SOLICITUD_OAUTH = 60;
+const COOKIE_ESTADO_OAUTH = "tiendaiq_oauth_state";
+const RUTA_COOKIE_ESTADO_OAUTH = "/auth/callback";
+
+function parametrosOAuth(params) {
+  if (params instanceof URLSearchParams) return Object.fromEntries(params);
+  return params && typeof params === "object" ? params : {};
+}
+
 // ============================================================
 // 1. INSTALACIÓN
 // ============================================================
@@ -95,7 +106,8 @@ function igualSeguro(a, b) {
 // Shopify firma sus redirects con HMAC sobre los parámetros ordenados.
 // Sin verificar esto, cualquiera puede hacernos guardar un token falso.
 function hmacValido(params) {
-  const { hmac, signature, ...resto } = params;
+  const { hmac, signature, ...resto } = parametrosOAuth(params);
+  if (!env.SHOPIFY_CLIENT_SECRET || typeof hmac !== "string" || !hmac) return false;
   const mensaje = Object.keys(resto)
     .sort()
     .map((k) => `${k}=${resto[k]}`)
@@ -107,11 +119,98 @@ function hmacValido(params) {
   return igualSeguro(esperado, hmac || "");
 }
 
+function timestampOAuthValido(params, {
+  ahoraMs = Date.now(),
+  maxEdadSegundos = SEGUNDOS_MAX_SOLICITUD_OAUTH,
+  maxFuturoSegundos = SEGUNDOS_FUTURO_SOLICITUD_OAUTH
+} = {}) {
+  const valor = String(parametrosOAuth(params).timestamp || "");
+  if (!/^\d+$/.test(valor)) return false;
+  const timestamp = Number(valor);
+  if (!Number.isSafeInteger(timestamp) || timestamp <= 0) return false;
+  const edad = Math.floor(Number(ahoraMs) / 1000) - timestamp;
+  return edad >= -Math.max(0, Number(maxFuturoSegundos) || 0) &&
+    edad <= Math.max(0, Number(maxEdadSegundos) || 0);
+}
+
+function validarSolicitudOAuthInicial(params, opciones) {
+  return hmacValido(params) && timestampOAuthValido(params, opciones);
+}
+
+function esProduccionOAuth() {
+  return env.DEV_MODE !== "1" && (!!env.DATABASE_URL || process.env.NODE_ENV === "production");
+}
+
+// El acceso directo /auth?shop=... se conserva solo para desarrollo local.
+// En produccion, o si la URL afirma venir firmada, HMAC y timestamp son
+// obligatorios. Asi una firma incompleta tampoco cae silenciosamente al modo dev.
+function solicitudInicialOAuthPermitida(params, {
+  produccion = esProduccionOAuth(),
+  ahoraMs = Date.now()
+} = {}) {
+  const valores = parametrosOAuth(params);
+  const traeFirma = Object.hasOwn(valores, "hmac") || Object.hasOwn(valores, "timestamp");
+  if (!produccion && !traeFirma) return true;
+  return validarSolicitudOAuthInicial(valores, { ahoraMs });
+}
+
+function firmaCookieEstadoOAuth(estado) {
+  if (!env.SHOPIFY_CLIENT_SECRET || typeof estado !== "string" || !estado) return null;
+  return crypto
+    .createHmac("sha256", env.SHOPIFY_CLIENT_SECRET)
+    .update(`oauth-state-cookie:${estado}`)
+    .digest("base64url");
+}
+
+function crearCookieEstadoOAuth(estado, { maxAge = MINUTOS_ESTADO * 60 } = {}) {
+  const firma = firmaCookieEstadoOAuth(estado);
+  if (!firma) throw new Error("SHOPIFY_CLIENT_SECRET es obligatorio para emitir el estado OAuth");
+  return `${COOKIE_ESTADO_OAUTH}=${estado}.${firma}; Max-Age=${Math.max(0, Number(maxAge) || 0)}; Path=${RUTA_COOKIE_ESTADO_OAUTH}; HttpOnly; Secure; SameSite=Lax`;
+}
+
+function cookiePorNombre(cookieHeader, nombre) {
+  for (const parte of String(cookieHeader || "").split(";")) {
+    const indice = parte.indexOf("=");
+    if (indice < 0 || parte.slice(0, indice).trim() !== nombre) continue;
+    try {
+      return decodeURIComponent(parte.slice(indice + 1).trim());
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+function verificarCookieEstadoOAuth(cookieHeader, estadoEsperado) {
+  if (typeof estadoEsperado !== "string" || !estadoEsperado) return false;
+  const valor = cookiePorNombre(cookieHeader, COOKIE_ESTADO_OAUTH);
+  if (!valor) return false;
+  const separador = valor.lastIndexOf(".");
+  if (separador <= 0) return false;
+  const estado = valor.slice(0, separador);
+  const firma = valor.slice(separador + 1);
+  const esperada = firmaCookieEstadoOAuth(estado);
+  return !!esperada && igualSeguro(firma, esperada) && igualSeguro(estado, estadoEsperado);
+}
+
+function agregarSetCookie(res, cookie) {
+  const existentes = typeof res.getHeader === "function" ? res.getHeader("Set-Cookie") : null;
+  const valores = existentes == null ? [] : Array.isArray(existentes) ? existentes : [String(existentes)];
+  res.setHeader("Set-Cookie", [...valores, cookie]);
+}
+
+function consumirCookieEstadoOAuth(res, estadoEsperado, cookieHeader = res?.req?.headers?.cookie) {
+  const valida = verificarCookieEstadoOAuth(cookieHeader, estadoEsperado);
+  agregarSetCookie(
+    res,
+    `${COOKIE_ESTADO_OAUTH}=; Max-Age=0; Path=${RUTA_COOKIE_ESTADO_OAUTH}; HttpOnly; Secure; SameSite=Lax`
+  );
+  return valida;
+}
+
 // Un `state` de un solo uso ata el callback a un inicio nuestro. Vive en la
 // base (no en memoria): el proceso se reinicia y puede haber más de una
 // instancia, y el callback tiene que poder caer en cualquiera de ellas.
-const MINUTOS_ESTADO = 10;
-
 async function nuevoEstado(tienda) {
   const s = crypto.randomBytes(16).toString("hex");
   await guardarEstadoDB(s, tienda, Date.now() + MINUTOS_ESTADO * 60 * 1000);
@@ -126,12 +225,21 @@ async function iniciarInstalacion(res, url, urlApp) {
     return;
   }
 
+  const params = Object.fromEntries(url.searchParams);
+  if (!solicitudInicialOAuthPermitida(params)) {
+    res.writeHead(401, { "Content-Type": "text/plain; charset=utf-8" }).end("Solicitud de instalacion invalida o vencida");
+    return;
+  }
+
+  const estado = await nuevoEstado(tienda);
+  agregarSetCookie(res, crearCookieEstadoOAuth(estado));
+
   const destino =
     `https://${tienda}/admin/oauth/authorize` +
     `?client_id=${env.SHOPIFY_CLIENT_ID}` +
     `&scope=${encodeURIComponent(ALCANCES)}` +
     `&redirect_uri=${encodeURIComponent(`${urlApp}/auth/callback`)}` +
-    `&state=${await nuevoEstado(tienda)}`;
+    `&state=${estado}`;
 
   res.writeHead(302, { Location: destino }).end();
 }
@@ -143,6 +251,13 @@ async function terminarInstalacion(res, url) {
 
   if (!esDominioValido(tienda)) return void res.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" }).end("shop inválido");
   if (!hmacValido(params)) return void res.writeHead(401, { "Content-Type": "text/plain; charset=utf-8" }).end("Firma inválida — el pedido no vino de Shopify");
+
+  // La cookie liga el state al navegador que inicio el flujo. Se elimina aun
+  // si esta alterada para que nunca sobreviva a un callback firmado.
+  if (!consumirCookieEstadoOAuth(res, params.state)) {
+    return void res.writeHead(401, { "Content-Type": "text/plain; charset=utf-8" })
+      .end("state inválido o vencido — volvé a empezar la instalación");
+  }
 
   // El state tiene que existir, no haber vencido, y ser el que emitimos para
   // ESTA tienda: si no se compara, un state válido de una tienda sirve para
@@ -259,8 +374,15 @@ module.exports = {
   terminarInstalacion,
   tiendaDelPase,
   hmacValido,
+  timestampOAuthValido,
+  validarSolicitudOAuthInicial,
+  solicitudInicialOAuthPermitida,
+  crearCookieEstadoOAuth,
+  verificarCookieEstadoOAuth,
+  consumirCookieEstadoOAuth,
   alcancesFaltantes,
   registrarWebhooksOperativos,
   ALCANCES,
-  TOPICOS_OPERATIVOS
+  TOPICOS_OPERATIVOS,
+  COOKIE_ESTADO_OAUTH
 };

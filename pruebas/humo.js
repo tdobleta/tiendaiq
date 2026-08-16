@@ -15,6 +15,7 @@ const path = require("path");
 
 const PUERTO = 4488;
 const BASE = `http://localhost:${PUERTO}`;
+const OPS_STATUS_TOKEN_HUMO = "ops-status-token-humo-123456789012";
 
 let fallos = 0;
 const ok = (nombre) => console.log(`  ✓ ${nombre}`);
@@ -45,14 +46,18 @@ const CASOS = [
     espera: 200
   },
   {
-    nombre: "/ready comprueba el almacenamiento",
+    nombre: "/ready falla cerrado sin PostgreSQL fuera de desarrollo",
     ruta: "/ready",
-    espera: 200,
-    revisar: (cuerpo) => JSON.parse(cuerpo).almacenamiento ? null : "no informó el almacenamiento"
+    espera: 503
   },
   {
     nombre: "/api/* sin pase de sesión es 401 (no filtra datos de tiendas)",
     ruta: "/api/productos",
+    espera: 401
+  },
+  {
+    nombre: "/ops/status sin bearer rechaza",
+    ruta: "/ops/status",
     espera: 401
   },
   {
@@ -118,6 +123,7 @@ async function main() {
       DEV_MODE: "",
       // El callback debe rechazar una firma inválida, no fallar por falta de
       // configuración Shopify en el proceso aislado de esta prueba.
+      OPS_STATUS_TOKEN: OPS_STATUS_TOKEN_HUMO,
       SHOPIFY_CLIENT_SECRET: "secreto-humo"
     },
     stdio: ["ignore", "pipe", "pipe"]
@@ -164,6 +170,47 @@ async function main() {
       } catch (e) {
         mal(c.nombre, e.message);
       }
+    }
+    try {
+      const r = await fetch(`${BASE}/ops/status`, {
+        headers: { Authorization: `Bearer ${OPS_STATUS_TOKEN_HUMO}` },
+        redirect: "manual"
+      });
+      if (r.status !== 200) {
+        mal("/ops/status con bearer valido responde", `esperaba 200, vino ${r.status}`);
+      } else {
+        const cuerpo = await r.json();
+        const problema = cuerpo.ok !== true
+          ? "no marco ok=true"
+          : !Array.isArray(cuerpo.queue)
+            ? "no devolvio queue agregada"
+            : !cuerpo.totals || typeof cuerpo.totals.oldestQueuedSeconds !== "number" ||
+                typeof cuerpo.totals.compensationPending !== "number" ||
+                typeof cuerpo.totals.compensationDeadLetter !== "number" ||
+                typeof cuerpo.totals.staleCompensation !== "number" ||
+                typeof cuerpo.totals.oldestCompensationSeconds !== "number"
+              ? "no devolvio totales de cola"
+              : !cuerpo.inbox || typeof cuerpo.inbox.received !== "number" ||
+                  typeof cuerpo.inbox.processing !== "number" ||
+                  typeof cuerpo.inbox.failed !== "number" ||
+                  typeof cuerpo.inbox.failedRecent !== "number" ||
+                  typeof cuerpo.inbox.staleProcessing !== "number" ||
+                  typeof cuerpo.inbox.oldestReceivedSeconds !== "number"
+                ? "no devolvio salud agregada del inbox"
+              : typeof cuerpo.billing?.planTest !== "boolean"
+                ? "no informo modo de billing"
+                : typeof cuerpo.legal?.complete !== "boolean"
+                  ? "no informo completitud legal"
+                  : cuerpo.generationAdmission?.paused !== true
+                    ? "no informo admision pausada por defecto"
+                    : !Number.isInteger(cuerpo.generationAdmission?.retryAfter) || cuerpo.generationAdmission.retryAfter < 1
+                      ? "no informo Retry-After para demanda excedente"
+                    : null;
+        if (problema) mal("/ops/status con bearer valido responde", problema);
+        else ok("/ops/status con bearer valido responde");
+      }
+    } catch (e) {
+      mal("/ops/status con bearer valido responde", e.message);
     }
   } finally {
     await matar();

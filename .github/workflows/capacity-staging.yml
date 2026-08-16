@@ -3,6 +3,10 @@ name: Capacity staging
 on:
   workflow_dispatch:
     inputs:
+      release_sha:
+        description: SHA completo revisado, presente en main y desplegado en staging
+        required: true
+        type: string
       mode:
         description: Ejecutar la prueba o limpiar un run interrumpido
         required: true
@@ -52,11 +56,12 @@ jobs:
     timeout-minutes: 30
     environment: staging
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # The environment only allows main. github.sha preserves the exact
-          # reviewed commit selected when the manual run starts.
-          ref: ${{ github.sha }}
+          # Bind the workload to a reviewed main commit, never the mutable
+          # workflow-dispatch ref.
+          ref: ${{ inputs.release_sha }}
+          fetch-depth: 0
 
       - name: Validate deliberate authorization
         shell: bash
@@ -64,8 +69,13 @@ jobs:
           MODE: ${{ inputs.mode }}
           CONFIRMATION: ${{ inputs.confirmation }}
           CLEANUP_RUN_ID: ${{ inputs.cleanup_run_id }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
         run: |
           set -euo pipefail
+          [[ "$RELEASE_SHA" =~ ^[a-f0-9]{40}$ ]]
+          [[ "$(git rev-parse HEAD)" == "$RELEASE_SHA" ]]
+          git fetch origin main --depth=1
+          [[ "$(git rev-parse origin/main)" == "$RELEASE_SHA" ]]
           if [[ "$MODE" == "run" && "$CONFIRMATION" == "RUN_STAGING_QUEUE_CAPACITY" ]]; then
             exit 0
           fi
@@ -75,11 +85,27 @@ jobs:
           echo "Confirmacion o runId invalidos para el modo seleccionado" >&2
           exit 1
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: "20"
 
-      - run: npm install --no-audit --no-fund
+      - run: npm ci --no-audit --no-fund
+
+      - name: Verify staging web runs the reviewed SHA
+        shell: bash
+        env:
+          EXPECTED_RELEASE_SHA: ${{ inputs.release_sha }}
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent --show-error --max-time 5 https://tiendaiq-staging-web.onrender.com/ready \
+              | node -e 'let body="";process.stdin.on("data",(chunk)=>body+=chunk).on("end",()=>{const ready=JSON.parse(body);process.exit(ready.ok===true&&ready.release===process.env.EXPECTED_RELEASE_SHA?0:1)})'; then
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Staging web no confirma el SHA revisado" >&2
+          exit 1
 
       - name: Exercise durable PostgreSQL queue with runtime credentials
         shell: bash

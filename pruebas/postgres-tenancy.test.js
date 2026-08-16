@@ -64,6 +64,7 @@ test("Postgres remoto exige una CA y nunca desactiva la validación TLS", () => 
 
 function rlsPool() {
   const rows = new Map();
+  const jobs = new Map();
   const calls = [];
   let activeTenant = null;
 
@@ -90,12 +91,53 @@ function rlsPool() {
         const data = rows.get(`${activeTenant}:${values[1]}`);
         return { rows: data ? [{ datos: data }] : [] };
       }
+      if (normalized.startsWith("SELECT * FROM control_plane.jobs")) {
+        assert.equal(values[0], activeTenant);
+        const existing = jobs.get(`${activeTenant}:${values[1]}`);
+        return { rows: existing && ["queued", "running"].includes(existing.status) ? [existing] : [] };
+      }
+      if (normalized.startsWith("INSERT INTO control_plane.jobs")) {
+        assert.equal(values[1], activeTenant);
+        const inserted = {
+          id: values[0],
+          tenant_id: values[1],
+          type: values[2],
+          payload: values[3],
+          status: "queued",
+          attempts: 0,
+          max_attempts: values[4],
+          idempotency_key: values[5]
+        };
+        jobs.set(`${activeTenant}:${inserted.id}`, inserted);
+        return { rows: [inserted] };
+      }
+      if (normalized.startsWith("UPDATE public.paginas SET datos = $3")) {
+        assert.equal(values[0], activeTenant);
+        const key = `${activeTenant}:${values[1]}`;
+        if (!rows.has(key)) return { rows: [] };
+        rows.set(key, values[2]);
+        return { rows: [] };
+      }
+      if (normalized.startsWith("UPDATE public.paginas SET datos = jsonb_set")) {
+        assert.equal(values[0], activeTenant);
+        const key = `${activeTenant}:${values[1]}`;
+        const current = rows.get(key);
+        if (!current || current.active_job_id !== values[2]) return { rows: [] };
+        const updated = {
+          ...current,
+          estado: "necesita_atencion",
+          active_job_id: null,
+          last_job_error: values[3]
+        };
+        rows.set(key, updated);
+        return { rows: [{ datos: updated }] };
+      }
       return { rows: [] };
     },
     release() { calls.push({ sql: "RELEASE", values: [] }); }
   };
 
-  return { calls, async connect() { return client; } };
+  return { calls, jobs, async connect() { return client; } };
 }
 
 describe("PageRepository protegido por TenantContext", () => {
@@ -134,6 +176,67 @@ describe("PageRepository protegido por TenantContext", () => {
       "COMMIT",
       "RELEASE"
     ]);
+  });
+
+  test("una compensacion tardia no pisa el job activo de publicacion", async () => {
+    const pool = rlsPool();
+    const repository = createPageRepository(pool);
+    const tenant = TenantContext.fromShopDomain("a.myshopify.com");
+    await repository.save(tenant, "p1", {
+      estado: "publicando",
+      active_job_id: "job-nuevo"
+    });
+
+    assert.equal(
+      await repository.markPublicationFailed(tenant, "p1", "job-viejo", "fallo tardio"),
+      null
+    );
+    assert.deepEqual(await repository.findById(tenant, "p1"), {
+      estado: "publicando",
+      active_job_id: "job-nuevo"
+    });
+
+    assert.deepEqual(
+      await repository.markPublicationFailed(tenant, "p1", "job-nuevo", "Shopify rechazo la publicacion"),
+      {
+        estado: "necesita_atencion",
+        active_job_id: null,
+        last_job_error: "Shopify rechazo la publicacion"
+      }
+    );
+  });
+
+  test("encola y marca la publicacion en una sola transaccion, y reutiliza el job activo", async () => {
+    const pool = rlsPool();
+    const repository = createPageRepository(pool);
+    const tenant = TenantContext.fromShopDomain("a.myshopify.com");
+    await repository.save(tenant, "p1", { id: "p1", estado: "borrador" });
+
+    const first = await repository.enqueuePublication(tenant, "p1", { maxAttempts: 4 });
+    const second = await repository.enqueuePublication(tenant, "p1", { maxAttempts: 4 });
+
+    assert.equal(first.reused, false);
+    assert.equal(first.page.estado, "publicando");
+    assert.equal(first.page.active_job_id, first.job.id);
+    assert.equal(first.job.maxAttempts, 4);
+    assert.equal(second.reused, true);
+    assert.equal(second.job.id, first.job.id);
+    assert.equal(pool.jobs.size, 1);
+    assert.equal(
+      pool.calls.filter((call) => call.sql.startsWith("INSERT INTO control_plane.jobs")).length,
+      1
+    );
+  });
+
+  test("no permite encolar una pagina perteneciente a otro tenant", async () => {
+    const pool = rlsPool();
+    const repository = createPageRepository(pool);
+    const tenantA = TenantContext.fromShopDomain("a.myshopify.com");
+    const tenantB = TenantContext.fromShopDomain("b.myshopify.com");
+    await repository.save(tenantA, "p1", { id: "p1", estado: "borrador" });
+
+    assert.equal(await repository.enqueuePublication(tenantB, "p1"), null);
+    assert.equal(pool.jobs.size, 0);
   });
 });
 
@@ -198,7 +301,7 @@ describe("readiness de aislamiento", () => {
     assert.deepEqual(result, {
       enabled: true,
       forced: true,
-      protectedTables: 12,
+      protectedTables: 13,
       roleBypassesRls: false,
       inheritsRoles: false,
       workerCapability: false
@@ -234,6 +337,17 @@ describe("readiness de aislamiento", () => {
     );
   });
 
+  test("rechaza un rol runtime con LOGIN o atributos administrativos", async () => {
+    const responses = [
+      { rows: [{ enabled: true, forced: true, all_present: true, owns_protected_table: false }] },
+      { rows: [{ current_role: "tiendaiq_web_runtime", superuser: false, bypass_rls: false, inherits_roles: false, can_login: true, worker_capability: false }] }
+    ];
+    await assert.rejects(
+      verifyTenantIsolation({ async query() { return responses.shift(); } }),
+      /atributos administrativos o LOGIN/
+    );
+  });
+
   test("rechaza que web sea dueño de una tabla protegida", async () => {
     await assert.rejects(
       verifyTenantIsolation({
@@ -263,7 +377,7 @@ describe("readiness de aislamiento", () => {
     ];
     const result = await verifyWorkerIsolation({ async query() { return responses.shift(); } });
     assert.equal(result.workerCapability, true);
-    assert.equal(result.protectedTables, 12);
+    assert.equal(result.protectedTables, 13);
   });
 
   test("rechaza un worker conectado con el rol web", async () => {
@@ -289,6 +403,7 @@ test("readiness inventaria todo el registro tenant y el control plane", () => {
     ["control_plane", "outbox_events"],
     ["control_plane", "privacy_requests"],
     ["control_plane", "usage_reservations"],
+    ["control_plane", "compensation_recovery_audit"],
     ["app_data", "pages"],
     ["app_data", "page_versions"],
     ["app_data", "publications"]
@@ -327,13 +442,40 @@ test("el bootstrap crea roles propios y no intenta modificar credenciales gestio
   assert.match(source, /const WEB_RUNTIME_ROLE = "tiendaiq_web_runtime"/);
   assert.match(source, /const WORKER_RUNTIME_ROLE = "tiendaiq_worker_runtime"/);
   assert.match(source, /CREATE ROLE \$\{quoteIdentifier\(role\)\} NOLOGIN/);
-  assert.match(source, /WHERE parent\.rolname = \$1 AND member\.rolname <> \$2/);
   assert.match(source, /GRANT \$\{quoteIdentifier\(WEB_RUNTIME_ROLE\)\} TO \$\{quoteIdentifier\(WEB_LOGIN_ROLE\)\}/);
   assert.match(source, /GRANT \$\{quoteIdentifier\(WORKER_RUNTIME_ROLE\)\} TO \$\{quoteIdentifier\(WORKER_LOGIN_ROLE\)\}/);
-  assert.match(source, /REVOKE \$\{quoteIdentifier\(WORKER_CAPABILITY\)\} FROM \$\{quoteIdentifier\(member\)\}/);
   assert.match(source, /GRANT \$\{quoteIdentifier\(WORKER_CAPABILITY\)\} TO \$\{quoteIdentifier\(WORKER_RUNTIME_ROLE\)\}/);
+  assert.match(source, /rolcanlogin/);
+  assert.match(source, /rolcreatedb/);
+  assert.match(source, /rolcreaterole/);
+  assert.match(source, /rolreplication/);
+  assert.match(source, /Grafo de membresias invalido/);
+  assert.match(source, /client\.query\("BEGIN"\)/);
+  assert.match(source, /client\.query\("COMMIT"\)/);
+  assert.match(source, /client\.query\("ROLLBACK"\)/);
+  assert.match(source, /member\.rolname = ANY\(\$1::text\[\]\)/);
+  assert.match(source, /\[OWNED_ROLES\]/);
+  assert.doesNotMatch(source, /const controlledRoles = \[\.\.\.OWNED_ROLES, \.\.\.LOGIN_ROLES\]/);
+  assert.match(source, /REVOKE \$\{quoteIdentifier\(parent\)\} FROM \$\{quoteIdentifier\(member\)\}/);
+  assert.match(source, /parent\.rolname = \$1 AND member\.rolname <> \$2/);
+  assert.match(source, /WITH INHERIT FALSE, SET TRUE/);
+  assert.match(source, /membership\.inherit_option, membership\.set_option/);
+  assert.match(source, /edge\.inherit_option !== false \|\| edge\.set_option !== true/);
+  assert.match(source, /pg_has_role\(login\.rolname, \$2, 'USAGE'\)/);
+  assert.match(source, /has_table_privilege\(/);
+  assert.match(source, /has_schema_privilege\(/);
+  assert.match(source, /conserva privilegios efectivos despues de RESET ROLE/);
   assert.doesNotMatch(source, /ALTER ROLE/);
-  assert.doesNotMatch(source, /REVOKE \$\{quoteIdentifier\(parent\)\}/);
+});
+
+test("readiness descubre tablas tenant-owned nuevas ademas del inventario minimo", () => {
+  const source = fs.readFileSync(path.join(__dirname, "..", "src", "platform", "postgres", "verify-tenancy.js"), "utf8");
+
+  assert.match(source, /pg_attribute/);
+  assert.match(source, /a\.attname IN \('tenant_id', 'shop_domain', 'tienda', 'dominio'\)/);
+  assert.match(source, /relrowsecurity/);
+  assert.match(source, /relforcerowsecurity/);
+  assert.match(source, /protected_count/);
 });
 
 test("el fixture y los probes de PostgreSQL usan los roles runtime efectivos", () => {
@@ -371,6 +513,8 @@ test("el diagnostico de roles solo inspecciona privilegios y membresias", () => 
 
   assert.match(source, /pg_auth_members/);
   assert.match(source, /rolbypassrls/);
+  assert.match(source, /tiendaiq_web_runtime/);
+  assert.match(source, /tiendaiq_worker_runtime/);
   assert.doesNotMatch(source, /\b(?:ALTER|CREATE|DELETE|DROP|GRANT|INSERT|REVOKE|UPDATE)\b/);
 });
 

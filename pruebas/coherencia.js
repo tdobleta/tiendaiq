@@ -44,10 +44,21 @@ const render = leer("render.yaml");
 const releaseWorkflow = leer(".github/workflows/release-staging.yml");
 const capacityWorkflow = leer(".github/workflows/capacity-staging.yml");
 const anthropicCapacityWorkflow = leer(".github/workflows/anthropic-capacity-staging.yml");
+const opsReadinessWorkflow = leer(".github/workflows/ops-readiness-staging.yml");
+const opsReadinessScript = leer("scripts/probar-readiness-operativa.js");
 const verificationWorkflow = leer(".github/workflows/verificar.yml");
 const launchPlan = leer("docs/plan-lanzamiento-1000-tiendas.md");
 const ola1Runbook = leer("docs/runbook-ola-1.md");
+const appFrontend = leer("app/app.js");
 const principal = toml.match(/^application_url\s*=\s*"([^"]+)"/m)?.[1];
+
+function servicioRender(nombre) {
+  const escaped = nombre.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return render.match(new RegExp(`- type:\\s*(?:web|worker)[\\s\\S]*?name:\\s*${escaped}[\\s\\S]*?(?=\\n\\s*- type:|\\n\\s*databases:|\\n\\s*$)`))?.[0] || "";
+}
+
+const renderWebService = servicioRender("tiendaiq");
+const renderWorkerService = servicioRender("tiendaiq-worker");
 
 if (!principal) {
   mal("shopify.app.toml declara application_url", "no se encontró la línea application_url");
@@ -188,6 +199,12 @@ if (/release_sha:/.test(releaseWorkflow) &&
     /data-urlencode "ref=\$\{\{ steps\.release\.outputs\.sha \}\}"/.test(releaseWorkflow) &&
     /tiendaiq-staging-web\.onrender\.com\/ready/.test(releaseWorkflow) &&
     /ready\.release===process\.env\.EXPECTED_SHA/.test(releaseWorkflow) &&
+    /Wait for the complete operational release gate/.test(releaseWorkflow) &&
+    /EXPECTED_RELEASE_SHA:\s*\$\{\{ steps\.release\.outputs\.sha \}\}/.test(releaseWorkflow) &&
+    /npm run ops:readiness/.test(releaseWorkflow) &&
+    /Authorization:\s*`Bearer \$\{token\}`/.test(opsReadinessScript) &&
+    /worker\.release \|\| ""/.test(opsReadinessScript) &&
+    /timeout-minutes:\s*40/.test(releaseWorkflow) &&
     /RENDER_GIT_COMMIT/.test(leer("server.js"))) {
   ok("el release fija el SHA revisado y espera readiness de staging");
 } else {
@@ -200,7 +217,9 @@ if (/release_sha:/.test(releaseWorkflow) &&
 const workerSource = leer("worker.js");
 if (/await Promise\.race/.test(workerSource) &&
     /verificarWorkerDB/.test(workerSource) &&
-    workerSource.indexOf("verificar()") < workerSource.indexOf("crearRuntime()") &&
+    workerSource.indexOf("verificar()") < workerSource.indexOf("crearRuntime({") &&
+    workerSource.indexOf("crearRuntime({") < workerSource.indexOf("activeRuntime.start()") &&
+    workerSource.indexOf("activeRuntime.start()") < workerSource.indexOf("registrarHeartbeat(heartbeat)") &&
     /Worker detenido por preflight fallido/.test(workerSource)) {
   ok("el worker falla cerrado antes de iniciar sus runners");
 } else {
@@ -211,7 +230,11 @@ if (/await Promise\.race/.test(workerSource) &&
 }
 
 if (/environment:\s*staging/.test(capacityWorkflow) &&
-    /ref:\s*\$\{\{ github\.sha \}\}/.test(capacityWorkflow) &&
+    /release_sha:/.test(capacityWorkflow) &&
+    /ref:\s*\$\{\{ inputs\.release_sha \}\}/.test(capacityWorkflow) &&
+    /git fetch origin main --depth=1/.test(capacityWorkflow) &&
+    /EXPECTED_RELEASE_SHA/.test(capacityWorkflow) &&
+    /\/ready/.test(capacityWorkflow) &&
     /STAGING_WEB_DATABASE_URL/.test(capacityWorkflow) &&
     /STAGING_WORKER_DATABASE_URL/.test(capacityWorkflow) &&
     /RUN_STAGING_QUEUE_CAPACITY/.test(capacityWorkflow) &&
@@ -221,12 +244,16 @@ if (/environment:\s*staging/.test(capacityWorkflow) &&
 } else {
   mal(
     "la capacidad de staging usa un commit revisado y credenciales runtime",
-    "el workflow manual debe fijar github.sha, exigir confirmacion y no usar la credencial migradora"
+    "el workflow manual debe fijar un SHA de main desplegado en staging, exigir confirmacion y no usar la credencial migradora"
   );
 }
 
 if (/environment:\s*staging/.test(anthropicCapacityWorkflow) &&
-    /ref:\s*\$\{\{ github\.sha \}\}/.test(anthropicCapacityWorkflow) &&
+    /release_sha:/.test(anthropicCapacityWorkflow) &&
+    /ref:\s*\$\{\{ inputs\.release_sha \}\}/.test(anthropicCapacityWorkflow) &&
+    /git fetch origin main --depth=1/.test(anthropicCapacityWorkflow) &&
+    /EXPECTED_RELEASE_SHA/.test(anthropicCapacityWorkflow) &&
+    /\/ready/.test(anthropicCapacityWorkflow) &&
     /STAGING_ANTHROPIC_API_KEY/.test(anthropicCapacityWorkflow) &&
     /AI_CAPACITY_CONCURRENCY:\s*"8"/.test(anthropicCapacityWorkflow) &&
     /AUTHORIZE_PAID_ANTHROPIC_STAGING_\$\{PROFILE\}/.test(anthropicCapacityWorkflow) &&
@@ -237,7 +264,27 @@ if (/environment:\s*staging/.test(anthropicCapacityWorkflow) &&
 } else {
   mal(
     "la capacidad de Anthropic exige staging, autorizacion paga y techo de concurrencia",
-    "el workflow debe fijar el commit, usar la clave de staging y exigir doble autorizacion sin credenciales migradoras"
+    "el workflow debe fijar un SHA de main desplegado en staging, usar la clave de staging y exigir doble autorizacion sin credenciales migradoras"
+  );
+}
+
+if (/environment:\s*staging/.test(opsReadinessWorkflow) &&
+    /ref:\s*\$\{\{ inputs\.release_sha \}\}/.test(opsReadinessWorkflow) &&
+    /CHECK_STAGING_OPS_READINESS/.test(opsReadinessWorkflow) &&
+    /EXPECTED_RELEASE_SHA/.test(opsReadinessWorkflow) &&
+    /STAGING_OPS_STATUS_TOKEN/.test(opsReadinessWorkflow) &&
+    /OPS_MAX_WORKER_AGE_SECONDS/.test(opsReadinessWorkflow) &&
+    /certification_mode/.test(opsReadinessWorkflow) &&
+    /technical_preflight/.test(opsReadinessWorkflow) &&
+    /OPS_READINESS_PROFILE/.test(opsReadinessWorkflow) &&
+    /npm run ops:readiness/.test(opsReadinessWorkflow) &&
+    !/STAGING_WORKER_DATABASE_URL/.test(opsReadinessWorkflow) &&
+    !/STAGING_MIGRATION_DATABASE_URL/.test(opsReadinessWorkflow)) {
+  ok("la readiness operativa de staging usa commit revisado y el endpoint operativo autenticado");
+} else {
+  mal(
+    "la readiness operativa de staging usa commit revisado, credencial worker y token de ops",
+    "el workflow debe validar /ready, /ops/status, cola durable, worker y SHA sin credenciales de base"
   );
 }
 
@@ -253,20 +300,102 @@ if (/Cola durable y limpieza sobre PostgreSQL real/.test(verificationWorkflow) &
   );
 }
 
-if (/type:\s*worker[\s\S]*key:\s*ANTHROPIC_API_KEY/.test(render)) {
+if (!/key:\s*ANTHROPIC_API_KEY/.test(renderWebService)) {
+  ok("la web no recibe la credencial de generacion de IA");
+} else {
+  mal(
+    "la web no recibe la credencial de generacion de IA",
+    "server.js solo debe admitir y encolar; ANTHROPIC_API_KEY pertenece al worker"
+  );
+}
+
+if (!/editarTexto/.test(leer("server.js")) &&
+    !/TEXT_EDIT_CONCURRENCY/.test(renderWebService) &&
+    /\/api\/texto\/editar/.test(leer("server.js")) &&
+    /temporalmente deshabilitada mientras se migra al worker/.test(leer("server.js"))) {
+  ok("la edicion IA directa queda fuera del runtime web");
+} else {
+  mal(
+    "la edicion IA directa queda fuera del runtime web",
+    "web no debe importar editarTexto ni tener concurrencia propia de IA; esa capacidad debe migrar a worker"
+  );
+}
+
+if (/key:\s*ANTHROPIC_API_KEY/.test(renderWorkerService)) {
   ok("el worker recibe la credencial de generación de IA");
 } else {
   mal("el worker recibe la credencial de generación de IA", "falta ANTHROPIC_API_KEY en tiendaiq-worker");
 }
 
-if (/key:\s*GENERATION_ADMISSION_PAUSED\s+value:\s*"0"/.test(render) &&
+if (/key:\s*GENERATION_ADMISSION_PAUSED\s+value:\s*"1"/.test(render) &&
     /key:\s*GENERATION_ADMISSION_RETRY_AFTER_SECONDS\s+value:\s*"[0-9]+"/.test(render) &&
     /generationAdmissionPause\(env\)/.test(leer("server.js"))) {
   ok("Render declara una compuerta de pausa para nuevas generaciones");
 } else {
   mal(
     "Render declara una compuerta de pausa para nuevas generaciones",
-    "web debe tener GENERATION_ADMISSION_PAUSED=0, Retry-After configurable y server.js debe aplicarlo antes de encolar"
+    "web debe arrancar con GENERATION_ADMISSION_PAUSED=1, Retry-After configurable y server.js debe aplicarlo antes de encolar"
+  );
+}
+
+const serverSource = leer("server.js");
+if (/key:\s*OPS_STATUS_TOKEN\s+sync:\s*false/.test(renderWebService) &&
+    /url\.pathname === "\/ops\/status"/.test(serverSource) &&
+    /estadoColaDB\("ops-status"\)/.test(serverSource) &&
+    /safeEqual\(req\.headers\.authorization/.test(serverSource) &&
+    /billing:\s*\{\s*planTest/.test(serverSource) &&
+    /legal:\s*\{\s*complete/.test(serverSource)) {
+  ok("la web expone estado operativo agregado solo con token");
+} else {
+  mal(
+    "la web expone estado operativo agregado solo con token",
+    "Render debe declarar OPS_STATUS_TOKEN y server.js debe proteger /ops/status antes de devolver cola"
+  );
+}
+
+if (/key:\s*EMAIL_SOPORTE\s+sync:\s*false/.test(renderWebService) &&
+    /key:\s*RAZON_SOCIAL\s+sync:\s*false/.test(renderWebService) &&
+    /key:\s*DOMICILIO\s+sync:\s*false/.test(renderWebService) &&
+    /legalesIncompletos/.test(serverSource)) {
+  ok("Render declara las legales publicas requeridas por Shopify");
+} else {
+  mal(
+    "Render declara las legales publicas requeridas por Shopify",
+    "web debe recibir EMAIL_SOPORTE, RAZON_SOCIAL y DOMICILIO sin escribirlos en codigo"
+  );
+}
+
+if (/SUSCRIPCION_PENDIENTE/.test(appFrontend) &&
+    /pending\.jobId/.test(appFrontend) &&
+    /body:\s*\{ request_id: pending\.requestId \}/.test(appFrontend) &&
+    /error\?\.terminal === true \|\| error\?\.status === 404/.test(appFrontend)) {
+  ok("el navegador reanuda la misma intencion durable de billing tras una recarga");
+} else {
+  mal(
+    "el navegador reanuda la misma intencion durable de billing tras una recarga",
+    "debe persistir requestId/jobId, reutilizar el job y limpiar solo ante un resultado terminal"
+  );
+}
+
+const bundlesSource = leer("bundles.js");
+const bundlesHandler = leer("src/jobs/sync-bundles-handler.js");
+const jobsRuntime = leer("src/jobs/runtime.js");
+if (/type:\s*"sync-bundles"/.test(serverSource) &&
+    /encolarJobExclusivoDB/.test(serverSource) &&
+    /actual\.sync\?\.status === "manual_review"/.test(serverSource) &&
+    /return json\(res, 423/.test(serverSource) &&
+    /configAplicadaBundles\(await leerConfigBundles/.test(serverSource) &&
+    /createSyncBundlesHandler/.test(bundlesHandler) &&
+    /"sync-bundles": syncBundles/.test(jobsRuntime) &&
+    /BUNDLES_PENDIENTE/.test(appFrontend) &&
+    /expected_version: pending\.expectedVersion/.test(appFrontend) &&
+    /sync\?\.status === "manual_review"/.test(appFrontend) &&
+    /function configAplicadaBundles/.test(bundlesSource)) {
+  ok("bundles sincroniza descuentos mediante un job durable y publica solo estado confirmado");
+} else {
+  mal(
+    "bundles sincroniza descuentos mediante un job durable y publica solo estado confirmado",
+    "web debe encolar con version/idempotencia, bloquear ambigüedad, worker debe ejecutar y storefront debe leer applied"
   );
 }
 
@@ -274,12 +403,13 @@ if (/key:\s*GENERATION_ADMISSION_PAUSED\s+value:\s*"0"/.test(render) &&
 
 const puntosOla1 = [
   ["release revisado y readiness", /Release staging[\s\S]*\/ready[\s\S]*release/i],
+  ["preflight operativo de staging", /Ops readiness staging[\s\S]*\/ready[\s\S]*cola durable/i],
   ["aislamiento RLS en readiness", /RLS[\s\S]*BYPASSRLS[\s\S]*capacidad worker/i],
   ["capacidad de cola durable", /Capacity staging[\s\S]*1\.000 tenants[\s\S]*1\.000 jobs/i],
   ["capacidad real de Anthropic", /Anthropic capacity staging[\s\S]*perfil 8[\s\S]*perfil 50/i],
   ["Shopify E2E con billing y privacidad", /Shopify OAuth[\s\S]*billing[\s\S]*webhooks de privacidad/i],
   ["canary por olas", /50 tiendas[\s\S]*200 tiendas[\s\S]*1\.000 tiendas/i],
-  ["alertas automaticas", /Alertas obligatorias[\s\S]*\/ready[\s\S]*Conexiones PostgreSQL[\s\S]*Anthropic[\s\S]*Shopify/i],
+  ["alertas automaticas", /Alertas obligatorias[\s\S]*\/ready[\s\S]*\/ops\/status[\s\S]*Conexiones PostgreSQL[\s\S]*Anthropic[\s\S]*Shopify/i],
   ["demanda excedente sin cobro indebido", /Demanda excedente[\s\S]*Retry-After[\s\S]*No se reserva cupo ni se cobra/i],
   ["pausa por cola vieja", /Pausar nuevas generaciones[\s\S]*10 minutos/i],
   ["registro de evidencia", /Registro de evidencia[\s\S]*SHA[\s\S]*Workflow[\s\S]*Resultado/i]

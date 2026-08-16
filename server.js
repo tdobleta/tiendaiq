@@ -21,25 +21,30 @@
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
-const { listarProductos, editarTexto } = require("./adaptador");
-const { despublicarPagina } = require("./publicar");
+const { listarProductos } = require("./adaptador");
 const { env, sesionDeEnv } = require("./shopify");
 const { sesionDe, borrarTienda } = require("./tiendas");
-const { createConcurrencyGate } = require("./src/capacity/concurrency-gate");
-const { createSyntheticLoadHandler } = require("./src/capacity/synthetic-load-endpoints");
+const { createSyntheticLoadHandler, safeEqual } = require("./src/capacity/synthetic-load-endpoints");
 const {
   guardarPaginaDB,
   leerPaginaDB,
   listarPaginasDB,
   encolarJobDB,
+  encolarJobExclusivoDB,
+  encolarPublicacionDB,
+  encolarDespublicacionDB,
   encolarGeneracionDB,
   recibirWebhookDB,
   leerJobDB,
-  verificarAlmacenamientoDB
+  estadoColaDB,
+  estadoWorkerDB,
+  estadoInboxDB,
+  verificarAlmacenamientoDB,
+  cerrarAlmacenamientoDB
 } = require("./db");
 const { iniciarInstalacion, terminarInstalacion, tiendaDelPase } = require("./auth");
 const { nubeServible, urlVideo, urlPoster } = require("./inspiracion-nube");
-const { estadoPlan, crearSuscripcion, mesActual } = require("./facturacion");
+const { estadoPlan, mesActual } = require("./facturacion");
 const { reportarError, metrica } = require("./monitoreo");
 const { TenantContext } = require("./src/tenancy/tenant-context");
 const { verifyAndNormalizeWebhook } = require("./src/webhooks/verify-and-normalize");
@@ -49,8 +54,7 @@ const {
   guardarConfigBundles,
   validarConfigBundles,
   bundleEsPublicable,
-  sincronizarDescuentos,
-  borrarDescuentos
+  configAplicadaBundles
 } = require("./bundles");
 
 // Render (y cualquier host) fija el puerto por env; local usa 4321.
@@ -88,21 +92,8 @@ const DIR_WIDGETS = path.join(__dirname, "extensions", "tiendaiq-widgets", "asse
 // La URL pública por la que Shopify nos alcanza. En producción es la de Render;
 // en local, el túnel. Sin esto el OAuth no puede volver.
 const URL_APP = (env.APP_URL || `http://localhost:${PUERTO}`).replace(/\/$/, "");
-const textEditGate = createConcurrencyGate({
-  globalLimit: Math.max(1, Number(env.TEXT_EDIT_CONCURRENCY) || 4),
-  perKeyLimit: 1
-});
-const publicBundlesCache = new Map();
-const PUBLIC_BUNDLES_CACHE_MS = Math.max(5000, Number(env.PUBLIC_BUNDLES_CACHE_MS) || 60000);
 const GENERATION_QUEUE_MAX_PER_TENANT = Math.max(1, Number(env.GENERATION_QUEUE_MAX_PER_TENANT) || 2);
 const GENERATION_QUEUE_MAX_GLOBAL = Math.max(1, Number(env.GENERATION_QUEUE_MAX_GLOBAL) || 120);
-
-function cachePublicBundle(shop, value) {
-  if (publicBundlesCache.size >= 2000 && !publicBundlesCache.has(shop)) {
-    publicBundlesCache.delete(publicBundlesCache.keys().next().value);
-  }
-  publicBundlesCache.set(shop, { value, expiresAt: Date.now() + PUBLIC_BUNDLES_CACHE_MS });
-}
 
 // ---------- almacén de páginas, por tienda, vía db.js ----------
 
@@ -115,25 +106,6 @@ async function guardarPagina(tenant, registro) {
 }
 const leerPagina = (tenant, id) => leerPaginaDB(tenant, id);
 const listarPaginas = (tenant) => listarPaginasDB(tenant);
-
-async function reconciliarPaginaJob(tenant, pagina) {
-  if (!pagina?.active_job_id) return pagina;
-  const job = await leerJobDB(tenant, pagina.active_job_id);
-  if (!job || ["failed", "cancelled"].includes(job.status)) {
-    pagina.estado = "necesita_atencion";
-    pagina.active_job_id = null;
-    pagina.last_job_error = "La publicación no pudo completarse. Podés reintentarla.";
-    return guardarPagina(tenant, pagina);
-  }
-  if (job.status === "succeeded") {
-    pagina.estado = "publicada";
-    pagina.url_publica = job.result?.url || pagina.url_publica;
-    pagina.active_job_id = null;
-    pagina.last_job_error = null;
-    return guardarPagina(tenant, pagina);
-  }
-  return pagina;
-}
 
 // ---------- activación en el tema (deep links; la app NO escribe el tema) ----------
 
@@ -193,8 +165,8 @@ async function verificarUrlViva(url, fresh = false) {
 
 // ---------- helpers HTTP ----------
 
-const json = (res, codigo, cuerpo) => {
-  res.writeHead(codigo, { "Content-Type": "application/json; charset=utf-8" });
+const json = (res, codigo, cuerpo, headers = {}) => {
+  res.writeHead(codigo, { "Content-Type": "application/json; charset=utf-8", ...headers });
   res.end(JSON.stringify(cuerpo));
 };
 
@@ -278,6 +250,94 @@ const syntheticLoadHandler = createSyntheticLoadHandler({
   expiresAt: env.SYNTHETIC_LOAD_EXPIRES_AT,
   readJson: leerCuerpo
 });
+
+async function estadoOperativo(req, res) {
+  const token = String(env.OPS_STATUS_TOKEN || "");
+  if (token.length < 32) return json(res, 404, { error: "not_found" });
+
+  if (!safeEqual(req.headers.authorization, `Bearer ${token}`)) {
+    return json(res, 401, { error: "unauthorized" }, { "WWW-Authenticate": "Bearer" });
+  }
+
+  if (req.method !== "GET") {
+    return json(res, 405, { error: "method_not_allowed" }, { Allow: "GET" });
+  }
+
+  const [cola, worker, inbox] = await Promise.all([
+    estadoColaDB("ops-status"),
+    estadoWorkerDB(),
+    estadoInboxDB()
+  ]);
+  const totales = cola.reduce(
+    (acc, item) => {
+      acc.queued += Number(item.queued) || 0;
+      acc.running += Number(item.running) || 0;
+      acc.failed += Number(item.failed) || 0;
+      acc.failedRecent += Number(item.failedRecent) || 0;
+      acc.staleRunning += Number(item.staleRunning) || 0;
+      acc.compensationPending += Number(item.compensationPending) || 0;
+      acc.compensationDeadLetter += Number(item.compensationDeadLetter) || 0;
+      acc.staleCompensation += Number(item.staleCompensation) || 0;
+      acc.oldestQueuedSeconds = Math.max(acc.oldestQueuedSeconds, Number(item.oldestQueuedSeconds) || 0);
+      acc.oldestCompensationSeconds = Math.max(acc.oldestCompensationSeconds, Number(item.oldestCompensationSeconds) || 0);
+      return acc;
+    },
+    {
+      queued: 0,
+      running: 0,
+      failed: 0,
+      failedRecent: 0,
+      staleRunning: 0,
+      compensationPending: 0,
+      compensationDeadLetter: 0,
+      staleCompensation: 0,
+      oldestQueuedSeconds: 0,
+      oldestCompensationSeconds: 0
+    }
+  );
+  const admision = generationAdmissionPause(env);
+  const faltanLegales = legalesIncompletos();
+
+  return json(res, 200, {
+    ok: true,
+    release: process.env.RENDER_GIT_COMMIT || null,
+    billing: {
+      planTest: String(env.PLAN_TEST || "") === "1"
+    },
+    legal: {
+      complete: faltanLegales.length === 0,
+      missing: faltanLegales
+    },
+    generationAdmission: {
+      paused: admision.paused,
+      retryAfter: admision.retryAfter
+    },
+    worker,
+    inbox: {
+      received: Number(inbox.received) || 0,
+      processing: Number(inbox.processing) || 0,
+      failed: Number(inbox.failed) || 0,
+      failedRecent: Number(inbox.failedRecent) || 0,
+      staleProcessing: Number(inbox.staleProcessing) || 0,
+      oldestReceivedSeconds: Number(inbox.oldestReceivedSeconds) || 0
+    },
+    queue: cola.map((item) => ({
+      type: item.type,
+      queued: Number(item.queued) || 0,
+      running: Number(item.running) || 0,
+      failed: Number(item.failed) || 0,
+      failedRecent: Number(item.failedRecent) || 0,
+      staleRunning: Number(item.staleRunning) || 0,
+      compensationPending: Number(item.compensationPending) || 0,
+      compensationDeadLetter: Number(item.compensationDeadLetter) || 0,
+      staleCompensation: Number(item.staleCompensation) || 0,
+      oldestQueuedSeconds: Number(item.oldestQueuedSeconds) || 0,
+      oldestCompensationSeconds: Number(item.oldestCompensationSeconds) || 0
+    })),
+    totals: totales,
+    ts: new Date().toISOString()
+  }, { "Cache-Control": "no-store" });
+}
 
 const TIPOS = {
   ".html": "text/html; charset=utf-8",
@@ -602,26 +662,18 @@ async function api(req, res, url) {
   // GET /api/paginas/:id
   const mGet = ruta.match(/^\/api\/paginas\/([^/]+)$/);
   if (req.method === "GET" && mGet) {
-    const encontrada = await leerPagina(sesion.tenant, mGet[1]);
-    const p = encontrada ? await reconciliarPaginaJob(sesion.tenant, encontrada) : null;
+    const p = await leerPagina(sesion.tenant, mGet[1]);
     return p ? json(res, 200, p) : json(res, 404, { error: "No existe esa página" });
   }
 
-  // POST /api/texto/editar — asistente puntual del editor de páginas.
+  // POST /api/texto/editar — no corre IA en el proceso web. La edición asistida
+  // debe entrar por cola durable/worker para conservar aislamiento, costos y
+  // observabilidad.
   if (req.method === "POST" && ruta === "/api/texto/editar") {
-    const { texto = "", instrucciones = "", modo = "rewrite", idioma = "es", contexto = "" } = await leerCuerpo(req);
-    if (String(texto).length > 12000) return json(res, 400, { error: "El texto es demasiado largo para editarlo en una sola vez." });
-    const release = textEditGate.tryAcquire(sesion.tienda);
-    if (!release) {
-      res.setHeader("Retry-After", "5");
-      return json(res, 429, { error: "El asistente esta ocupado. Reintenta en unos segundos." });
-    }
-    try {
-      const salida = await editarTexto({ texto, instrucciones, modo, idioma, contexto });
-      return json(res, 200, { texto: salida });
-    } finally {
-      release();
-    }
+    res.setHeader("Retry-After", "3600");
+    return json(res, 503, {
+      error: "La edicion asistida esta temporalmente deshabilitada mientras se migra al worker."
+    });
   }
 
   // POST /api/imagen — sube una imagen a Files de la tienda (genérico). Lo usa
@@ -640,46 +692,51 @@ async function api(req, res, url) {
     return json(res, 200, await leerConfigBundles(sesion.tienda));
   }
 
-  // PUT /api/bundles — guardar la config. Re-sincroniza los descuentos
-  // automáticos con reemplazo seguro y compensación ante fallos.
+  // PUT /api/bundles — registra una intención durable. El request web no toca
+  // Shopify: el worker serializa la mutación externa y solo entonces avanza la
+  // versión que consume el storefront.
   if (req.method === "PUT" && ruta === "/api/bundles") {
-    const { config } = await leerCuerpo(req);
+    const { config, request_id, expected_version } = await leerCuerpo(req);
     if (!config) return json(res, 400, { error: "Falta config" });
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(request_id || "")) {
+      return json(res, 400, { error: "Falta un request_id valido para sincronizar bundles de forma segura" });
+    }
     validarConfigBundles(config);
 
     const actual = await leerConfigBundles(sesion.tienda);
-    config.instalado = actual.instalado; // no se pisa desde el browser
-    // Los discount_ids los manda el server: arrancamos de lo guardado para
-    // poder borrar los descuentos viejos aunque el browser no los tenga.
-    config.lista = (config.lista || []).map((b) => {
-      const previo = actual.lista.find((x) => x.id === b.id);
-      return { ...b, discount_ids: previo ? previo.discount_ids : [] };
+    // Si la respuesta HTTP anterior se perdió, el navegador repite la misma
+    // intención. El estado durable permite recuperar el job sin crear otro.
+    if (actual.sync?.request_id === request_id && actual.sync?.job_id) {
+      const existente = await leerJobDB(sesion.tenant, actual.sync.job_id);
+      if (existente) return json(res, 202, { job: jobPublico(existente) });
+    }
+    if (actual.sync?.status === "manual_review") {
+      return json(res, 423, {
+        error: "Los descuentos requieren reconciliación manual antes de aceptar otro cambio"
+      });
+    }
+
+    const version = Number(expected_version);
+    if (!Number.isInteger(version) || version < 0) {
+      return json(res, 400, { error: "Falta expected_version para evitar sobrescribir cambios recientes" });
+    }
+    if (version !== Math.max(0, Number(actual.version) || 0)) {
+      return json(res, 409, { error: "La configuración cambió en otra sesión. Recargá antes de guardar." });
+    }
+
+    const idempotencyKey = `sync-bundles:${request_id}`;
+    const job = await encolarJobExclusivoDB(sesion.tenant, {
+      type: "sync-bundles",
+      payload: { config, requestId: request_id, expectedVersion: version },
+      idempotencyKey,
+      maxAttempts: 1
     });
-
-    // Bundles eliminados se convierten en limpiezas persistentes: si Shopify
-    // falla, el id queda registrado y se reintenta en el próximo guardado.
-    const limpiezaPendiente = new Set(actual.pending_cleanup_ids || []);
-    const idsQueQuedan = new Set(config.lista.map((b) => b.id));
-    for (const viejo of actual.lista) {
-      if (!idsQueQuedan.has(viejo.id) && viejo.discount_ids?.length) {
-        viejo.discount_ids.forEach((id) => limpiezaPendiente.add(id));
-      }
+    // enqueueExclusive devuelve el trabajo activo del tenant. Si pertenece a
+    // otra pestaña, no fingimos que esa operación representa este guardado.
+    if (job?.idempotencyKey !== idempotencyKey) {
+      return json(res, 409, { error: "Ya hay otra sincronización de bundles en curso. Esperá a que termine y recargá." });
     }
-    const limpieza = await borrarDescuentos(sesion, [...limpiezaPendiente]);
-    config.pending_cleanup_ids = limpieza.fallidos;
-
-    config.activo = (config.lista || []).some((b) => b.activo !== false); // master derivado
-    try {
-      await sincronizarDescuentos(sesion, config); // muta discount_ids
-    } catch (e) {
-      if (e.requierePersistencia) await guardarConfigBundles(sesion.tienda, config);
-      throw e;
-    }
-    await guardarConfigBundles(sesion.tienda, config);
-    publicBundlesCache.delete(sesion.tienda);
-    // Ya NO re-escribimos el snippet en el tema: la config viaja EN VIVO por
-    // /publico/bundles (app embed). Compliance App Store: cero escritura al tema.
-    return json(res, 200, config);
+    return json(res, 202, { job: jobPublico(job) });
   }
 
   // GET /api/bundles/metricas — uso de los descuentos que respaldan los
@@ -697,7 +754,6 @@ async function api(req, res, url) {
     const config = await leerConfigBundles(sesion.tienda);
     config.instalado = { fecha: new Date().toISOString() };
     await guardarConfigBundles(sesion.tienda, config);
-    publicBundlesCache.delete(sesion.tienda);
     config.activarUrl = linkActivarEmbed(sesion.tienda, "bundle");
     return json(res, 200, config);
   }
@@ -707,8 +763,17 @@ async function api(req, res, url) {
   // use el pase de sesión de App Bridge: la tienda sale del pase firmado, no
   // de un ?shop= con el secreto de la app en la URL.
   if (req.method === "POST" && ruta === "/api/nicho/contenido") {
-    const { montarContenidoNicho } = require("./contenido");
-    return json(res, 200, { ok: true, resultado: await montarContenidoNicho(sesion) });
+    const { request_id } = await leerCuerpo(req);
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(request_id || "")) {
+      return json(res, 400, { error: "Falta un request_id valido para instalar contenido de forma segura" });
+    }
+    const job = await encolarJobExclusivoDB(sesion.tenant, {
+      type: "install-niche-content",
+      payload: {},
+      idempotencyKey: `install-niche-content:${request_id}`,
+      maxAttempts: 5
+    });
+    return json(res, 202, { job: jobPublico(job) });
   }
 
   // GET /api/plan — estado del plan para la UI
@@ -718,8 +783,20 @@ async function api(req, res, url) {
 
   // POST /api/plan/suscribir — devuelve la URL de confirmación de Shopify
   if (req.method === "POST" && ruta === "/api/plan/suscribir") {
-    const urlConfirmacion = await crearSuscripcion(sesion, URL_APP);
-    return json(res, 200, { url: urlConfirmacion });
+    const { request_id } = await leerCuerpo(req);
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(request_id || "")) {
+      return json(res, 400, { error: "Falta un request_id valido para iniciar la suscripcion de forma segura" });
+    }
+    // Shopify no ofrece idempotency key para appSubscriptionCreate. Una llave
+    // por request evita replays del mismo cliente, pero dos pestañas generan
+    // llaves distintas; el bloqueo por tenant deja una única intención activa.
+    const job = await encolarJobExclusivoDB(sesion.tenant, {
+      type: "create-subscription",
+      payload: { urlApp: URL_APP },
+      idempotencyKey: `create-subscription:${request_id}`,
+      maxAttempts: 2
+    });
+    return json(res, 202, { job: jobPublico(job) });
   }
 
   // POST /api/paginas — el botón "Crear página con IA"
@@ -816,30 +893,12 @@ async function api(req, res, url) {
   // POST /api/paginas/:id/publicar
   const mPub = ruta.match(/^\/api\/paginas\/([^/]+)\/publicar$/);
   if (req.method === "POST" && mPub) {
-    const encontrada = await leerPagina(sesion.tenant, mPub[1]);
-    const registro = encontrada ? await reconciliarPaginaJob(sesion.tenant, encontrada) : null;
+    const registro = await leerPagina(sesion.tenant, mPub[1]);
     if (!registro) return json(res, 404, { error: "No existe esa página" });
-    if (registro.active_job_id) {
-      const active = await leerJobDB(sesion.tenant, registro.active_job_id);
-      if (active && ["queued", "running"].includes(active.status)) {
-        return json(res, 202, { job: jobPublico(active) });
-      }
-    }
-
-    const idempotencyKey = `publish:${registro.id}:${registro.actualizado || "initial"}`;
-    const job = await encolarJobDB(sesion.tenant, {
-      type: "publish-page",
-      payload: { pageId: registro.id },
-      idempotencyKey,
-      maxAttempts: 3
-    });
-    if (["queued", "running"].includes(job.status)) {
-      registro.estado = "publicando";
-      registro.active_job_id = job.id;
-      registro.last_job_error = null;
-      await guardarPagina(sesion.tenant, registro);
-    }
-    return json(res, 202, { job: jobPublico(job) });
+    const publication = await encolarPublicacionDB(sesion.tenant, registro.id, { maxAttempts: 3 });
+    if (!publication) return json(res, 404, { error: "No existe esa página" });
+    if (publication.conflict) return json(res, 409, { error: "La pagina tiene otra operacion en curso." });
+    return json(res, 202, { job: jobPublico(publication.job) });
   }
 
   // POST /api/paginas/:id/despublicar — vuelve el producto a su página nativa
@@ -848,12 +907,9 @@ async function api(req, res, url) {
   if (req.method === "POST" && mDespub) {
     const registro = await leerPagina(sesion.tenant, mDespub[1]);
     if (!registro) return json(res, 404, { error: "No existe esa página" });
-    await despublicarPagina(registro.data, sesion);
-    registro.estado = "borrador";
-    registro.url_publica = null;
-    await guardarPagina(sesion.tenant, registro);
-    metrica("pagina_despublicada", { tienda: sesion.tienda });
-    return json(res, 200, registro);
+    const publication = await encolarDespublicacionDB(sesion.tenant, registro.id, { maxAttempts: 3 });
+    if (publication.conflict) return json(res, 409, { error: "La pagina tiene otra operacion en curso." });
+    return json(res, 202, { job: jobPublico(publication.job) });
   }
 
   return json(res, 404, { error: "Ruta desconocida" });
@@ -874,7 +930,7 @@ async function bundlesPublico(req, res, url) {
   const responder = (codigo, cuerpo) => {
     res.writeHead(codigo, {
       "Content-Type": "application/json; charset=utf-8",
-      "Cache-Control": "public, max-age=60",
+      "Cache-Control": "public, max-age=5, stale-while-revalidate=10",
       ...CORS_PUB
     });
     res.end(JSON.stringify(cuerpo));
@@ -882,20 +938,16 @@ async function bundlesPublico(req, res, url) {
   try {
     const tienda = String(url.searchParams.get("shop") || "").toLowerCase().replace(/[^a-z0-9.\-]/g, "");
     if (!/^[a-z0-9-]+\.myshopify\.com$/.test(tienda)) return responder(400, { activo: false, lista: [] });
-    const cached = publicBundlesCache.get(tienda);
-    if (cached && cached.expiresAt > Date.now()) return responder(200, cached.value);
-    if (cached) publicBundlesCache.delete(tienda);
-    const cfg = await leerConfigBundles(tienda);
+    const cfg = configAplicadaBundles(await leerConfigBundles(tienda));
     const publicables = (cfg.lista || []).filter(bundleEsPublicable);
     const publico = {
       // El master activo se deriva de que haya al menos un bundle activo.
       activo: publicables.length > 0,
       lista: publicables.map((b) => {
-        const { discount_ids, ...resto } = b;
+        const { discount_ids, sync_status, sync_error, ...resto } = b;
         return resto;
       })
     };
-    cachePublicBundle(tienda, publico);
     return responder(200, publico);
   } catch (e) {
     return responder(200, { activo: false, lista: [] });
@@ -925,6 +977,7 @@ const servidor = http.createServer(async (req, res) => {
         ts: new Date().toISOString()
       });
     }
+    if (url.pathname === "/ops/status") return await estadoOperativo(req, res);
     if (await syntheticLoadHandler(req, res, url)) return;
 
     if (url.pathname === "/auth") return await iniciarInstalacion(res, url, URL_APP);
@@ -1011,14 +1064,33 @@ if (env.DEV_MODE === "1" && env.DATABASE_URL) {
   process.exit(1);
 }
 
-// Una promesa rechazada fuera de un try/catch tumba el proceso Node entero.
-// En Render eso es caída silenciosa: se loguea y se sigue viviendo.
-process.on("unhandledRejection", (e) => {
-  reportarError(e, { tipo: "unhandledRejection" });
-});
-process.on("uncaughtException", (e) => {
-  reportarError(e, { tipo: "uncaughtException" });
-});
+// Un fallo no controlado deja el estado del proceso indeterminado. Se reporta,
+// se drenan los recursos y se termina para que Render reemplace la instancia.
+let cerrandoPorFallo = false;
+async function cerrarPorFallo(error, tipo) {
+  reportarError(error, { tipo });
+  if (cerrandoPorFallo) return;
+  cerrandoPorFallo = true;
+  process.exitCode = 1;
+
+  const forceExit = setTimeout(() => process.exit(1), 10000);
+  forceExit.unref?.();
+  try {
+    await new Promise((resolve) => {
+      if (!servidor.listening) return resolve();
+      servidor.close(resolve);
+    });
+    if (servidor._tiendaiqWorker) await servidor._tiendaiqWorker.stop();
+    await cerrarAlmacenamientoDB();
+  } catch (closeError) {
+    reportarError(closeError, { tipo: `${tipo}-shutdown` });
+  } finally {
+    process.exit(1);
+  }
+}
+
+process.on("unhandledRejection", (error) => void cerrarPorFallo(error, "unhandledRejection"));
+process.on("uncaughtException", (error) => void cerrarPorFallo(error, "uncaughtException"));
 
 servidor.listen(PUERTO, async () => {
   const { USA_PG } = require("./db");
@@ -1033,7 +1105,8 @@ servidor.listen(PUERTO, async () => {
   }
 
   if (!env.APP_URL) console.log(`  ⚠ falta APP_URL en .env — el OAuth no va a poder volver\n`);
-  else console.log(`  instalar: ${URL_APP}/auth?shop=TIENDA.myshopify.com\n`);
+  else if (env.DEV_MODE === "1") console.log(`  instalar local: ${URL_APP}/auth?shop=TIENDA.myshopify.com\n`);
+  else console.log("  instalacion: iniciar desde Shopify Admin o el enlace oficial de Shopify\n");
 
   // En desarrollo por archivos no levantamos un segundo proceso: el mismo
   // server ejecuta el worker. Producción usa el servicio worker de Render.

@@ -1,6 +1,6 @@
 "use strict";
 
-const { TenantContext, normalizeShopDomain } = require("../../tenancy/tenant-context");
+const { TenantContext, normalizeShopDomain, assertTenant } = require("../../tenancy/tenant-context");
 
 function mapInboxEvent(row) {
   if (!row) return null;
@@ -16,6 +16,7 @@ function mapInboxEvent(row) {
     maxAttempts: Number(row.max_attempts || 8),
     runAfter: row.run_after,
     lockedAt: row.locked_at,
+    leaseExpiresAt: row.lease_expires_at,
     lockedBy: row.locked_by,
     lastError: row.last_error,
     apiVersion: row.api_version,
@@ -44,7 +45,28 @@ function createInboxRepository(pool) {
     }
   }
 
+  function assertInboxTenant(context, event) {
+    const tenant = assertTenant(context, event.tenantId || event.shopDomain);
+    if (tenant.shopDomain !== normalizeShopDomain(event.shopDomain)) {
+      throw new Error("Intento de acceso cruzado entre tiendas del inbox");
+    }
+    return tenant;
+  }
+
   return Object.freeze({
+    async stats() {
+      const result = await pool.query("SELECT * FROM control_plane.operational_inbox_status()");
+      const row = result.rows[0] || {};
+      return {
+        received: Number(row.received || 0),
+        processing: Number(row.processing || 0),
+        failed: Number(row.failed || 0),
+        failedRecent: Number(row.failed_recent || 0),
+        staleProcessing: Number(row.stale_processing || 0),
+        oldestReceivedSeconds: Number(row.oldest_received_seconds || 0)
+      };
+    },
+
     async receive({ id, shopDomain, topic, payloadHash, payload, apiVersion = null }) {
       const shop = normalizeShopDomain(shopDomain);
       if (!id || !shop || !topic || !payloadHash) throw new TypeError("El webhook verificado está incompleto");
@@ -90,14 +112,20 @@ function createInboxRepository(pool) {
              SELECT id
              FROM control_plane.inbox_events
              WHERE (status = 'received' AND run_after <= now())
-                OR (status = 'processing' AND locked_at < now() - ($2::int * interval '1 second'))
+                OR (status = 'processing'
+                    AND coalesce(
+                      lease_expires_at,
+                      locked_at + interval '3 minutes',
+                      '-infinity'::timestamptz
+                    ) < now())
              ORDER BY run_after, received_at
              FOR UPDATE SKIP LOCKED
              LIMIT 1
            )
            UPDATE control_plane.inbox_events e
            SET status = 'processing', attempts = attempts + 1,
-               locked_at = now(), locked_by = $1, updated_at = now()
+               locked_at = now(), lease_expires_at = now() + ($2::int * interval '1 second'),
+               locked_by = $1, updated_at = now()
            FROM candidate
            WHERE e.id = candidate.id
            RETURNING e.*`,
@@ -117,31 +145,56 @@ function createInboxRepository(pool) {
       });
     },
 
+    async renew(context, event, leaseSeconds = 120) {
+      const tenant = assertInboxTenant(context, event);
+      return workerTransaction(event.lockedBy, async (client) => {
+        const result = await client.query(
+          `UPDATE control_plane.inbox_events
+           SET locked_at = now(),
+               lease_expires_at = now() + ($5::int * interval '1 second'),
+               updated_at = now()
+           WHERE id = $1 AND shop_domain = $2
+             AND (tenant_id = $3 OR tenant_id IS NULL)
+             AND status = 'processing' AND locked_by = $4
+           RETURNING *`,
+          [event.id, tenant.shopDomain, tenant.tenantId, event.lockedBy, Math.max(30, Number(leaseSeconds) || 120)]
+        );
+        return mapInboxEvent(result.rows[0]);
+      });
+    },
+
     async succeed(context, event) {
+      const tenant = assertInboxTenant(context, event);
       return workerTransaction(event.lockedBy, async (client) => {
         const result = await client.query(
           `UPDATE control_plane.inbox_events
            SET status = 'processed', processed_at = now(), updated_at = now(),
-               locked_at = NULL, locked_by = NULL, last_error = NULL
-           WHERE id = $1 AND status = 'processing' AND locked_by = $2
+               locked_at = NULL, lease_expires_at = NULL, locked_by = NULL, last_error = NULL
+           WHERE id = $1 AND shop_domain = $2
+             AND (tenant_id = $3 OR tenant_id IS NULL)
+             AND status = 'processing' AND locked_by = $4
            RETURNING *`,
-          [event.id, event.lockedBy]
+          [event.id, tenant.shopDomain, tenant.tenantId, event.lockedBy]
         );
         return mapInboxEvent(result.rows[0]);
       });
     },
 
     async fail(context, event, error, retryDelaySeconds) {
+      const tenant = assertInboxTenant(context, event);
       const terminal = Number(event.attempts) >= Number(event.maxAttempts);
       return workerTransaction(event.lockedBy, async (client) => {
         const result = await client.query(
           `UPDATE control_plane.inbox_events
-           SET status = $2,
-               run_after = CASE WHEN $2 = 'received' THEN now() + ($3::int * interval '1 second') ELSE run_after END,
-               last_error = $4, locked_at = NULL, locked_by = NULL, updated_at = now()
-           WHERE id = $1 AND status = 'processing' AND locked_by = $5
+           SET status = $4,
+               run_after = CASE WHEN $4 = 'received' THEN now() + ($5::int * interval '1 second') ELSE run_after END,
+               last_error = $6, locked_at = NULL, lease_expires_at = NULL,
+               locked_by = NULL, updated_at = now()
+           WHERE id = $1 AND shop_domain = $2
+             AND (tenant_id = $3 OR tenant_id IS NULL)
+             AND status = 'processing' AND locked_by = $7
            RETURNING *`,
-          [event.id, terminal ? "failed" : "received", Math.max(1, retryDelaySeconds), String(error?.message || error).slice(0, 1000), event.lockedBy]
+          [event.id, tenant.shopDomain, tenant.tenantId, terminal ? "failed" : "received", Math.max(1, retryDelaySeconds), String(error?.message || error).slice(0, 1000), event.lockedBy]
         );
         return mapInboxEvent(result.rows[0]);
       });

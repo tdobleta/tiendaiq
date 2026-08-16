@@ -191,6 +191,27 @@ async function main() {
     }
     if (!ddlDenied) throw new Error("El rol web pudo alterar la protección RLS");
 
+    for (const [label, pool] of [["web", webPool], ["worker", workerPool]]) {
+      let auditDenied = false;
+      try {
+        await pool.query("SELECT id FROM control_plane.compensation_recovery_audit LIMIT 1");
+      } catch (error) {
+        auditDenied = /permission|permiso/i.test(String(error.message));
+      }
+      if (!auditDenied) throw new Error(`El rol ${label} pudo leer la auditoria de recuperacion`);
+
+      let recoveryDenied = false;
+      try {
+        await pool.query(
+          "SELECT * FROM control_plane.requeue_compensation_dead_letter($1, $2, $3, $4, $5)",
+          [crypto.randomUUID(), crypto.randomUUID(), "rls-probe", "Motivo de prueba de permisos runtime", "rls-probe"]
+        );
+      } catch (error) {
+        recoveryDenied = /permission|permiso/i.test(String(error.message));
+      }
+      if (!recoveryDenied) throw new Error(`El rol ${label} pudo ejecutar recuperacion administrativa`);
+    }
+
     const workerJobs = createJobRepository(workerPool);
     const claimed = await workerJobs.claim("rls-worker", 30);
     if (claimed?.id !== queuedJob.id) throw new Error("El rol worker no pudo reclamar el job");

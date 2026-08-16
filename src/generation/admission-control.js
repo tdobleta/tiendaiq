@@ -10,7 +10,7 @@ function retryAfterSeconds(value) {
 }
 
 function generationAdmissionPause(env = process.env) {
-  const paused = String(env.GENERATION_ADMISSION_PAUSED || "").trim() === "1";
+  const paused = String(env.GENERATION_ADMISSION_PAUSED || "").trim() !== "0";
   return {
     paused,
     retryAfter: retryAfterSeconds(env.GENERATION_ADMISSION_RETRY_AFTER_SECONDS),

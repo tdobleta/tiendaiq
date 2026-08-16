@@ -75,7 +75,7 @@ const M_SUFIJO = `mutation($product: ProductUpdateInput!) {
 
 // Publica una página en la tienda de `sesion`.
 // `log` deja que el CLI escriba a consola y el server no.
-async function publicarPagina(data, sesion, log = () => {}) {
+async function publicarPagina(data, sesion, log = () => {}, { signal, onAvatarUploaded } = {}) {
   const idProducto = data.fuente.shopify_product_id;
 
   // --- copia para la tienda: el avatar pasa a ser URL del CDN de Files ---
@@ -90,13 +90,27 @@ async function publicarPagina(data, sesion, log = () => {}) {
     const avatar = resolverAvatar(avatarActual);
     if (avatar) {
       try {
-        const { url } = await subirImagenTienda(sesion, avatar.nombre, avatar.mime, avatar.base64);
+        const { url } = await subirImagenTienda(sesion, avatar.nombre, avatar.mime, avatar.base64, { signal });
         dataTienda.facetas.hero.resena_destacada.avatar = url;
         // Persistimos la URL en el data original: la próxima publicación la reusa
         // (idempotencia — el server guarda este registro tras publicar).
         data.facetas.hero.resena_destacada.avatar = url;
+        if (onAvatarUploaded) {
+          try {
+            await onAvatarUploaded(url, avatarActual);
+          } catch (error) {
+            const { ambiguousMediaError } = require("./imagenes");
+            throw ambiguousMediaError(
+              "El avatar fue creado en Shopify pero no se pudo confirmar su checkpoint",
+              error
+            );
+          }
+        }
         log(`  avatar     · subido a Files`);
       } catch (e) {
+        if (e?.nonRetryable) throw e;
+        if (signal?.aborted) throw signal.reason || e;
+        if (!e?.allowDegraded) throw e;
         dataTienda.facetas.hero.resena_destacada.avatar = null;
         log(`  avatar     · ⚠ no se pudo subir (${e.message.slice(0, 80)}) — la página sale con silueta`);
       }
@@ -120,7 +134,8 @@ async function publicarPagina(data, sesion, log = () => {}) {
         }
       ]
     },
-    sesion
+    sesion,
+    { signal }
   );
   if (r1.metafieldsSet.userErrors.length) {
     throw new Error("Metafield: " + JSON.stringify(r1.metafieldsSet.userErrors));
@@ -131,7 +146,8 @@ async function publicarPagina(data, sesion, log = () => {}) {
   const r2 = await gql(
     M_SUFIJO,
     { product: { id: idProducto, templateSuffix: "tiendaiq" } },
-    sesion
+    sesion,
+    { signal }
   );
   if (r2.productUpdate.userErrors.length) {
     throw new Error("templateSuffix: " + JSON.stringify(r2.productUpdate.userErrors));
@@ -146,9 +162,14 @@ async function publicarPagina(data, sesion, log = () => {}) {
 // (vuelve a usar la plantilla product por defecto). NO borra el metafield: queda
 // como dato (re-publicar lo reusa sin regenerar). Escritura de PRODUCTO, no de
 // tema → permitida sin exención, igual que publicar.
-async function despublicarPagina(data, sesion) {
+async function despublicarPagina(data, sesion, { signal } = {}) {
   const idProducto = data.fuente.shopify_product_id;
-  const r = await gql(M_SUFIJO, { product: { id: idProducto, templateSuffix: null } }, sesion);
+  const r = await gql(
+    M_SUFIJO,
+    { product: { id: idProducto, templateSuffix: null } },
+    sesion,
+    { signal }
+  );
   if (r.productUpdate.userErrors.length) {
     throw new Error("templateSuffix: " + JSON.stringify(r.productUpdate.userErrors));
   }

@@ -114,7 +114,15 @@ async function asegurarMenu(sesion, { about, contact } = {}) {
 
 // Monta el contenido base del nicho: las páginas que el theme necesita y el
 // menú principal en español.
-async function montarContenidoNicho(sesion) {
+function esErrorPermisoMenu(error) {
+  const message = String(error?.message || "");
+  return /write_online_store_navigation|menu(?:create|update)?[^\n]{0,160}(?:access denied|not authorized|permission|scope)|(?:access denied|not authorized|permission|scope)[^\n]{0,160}menu/i.test(message);
+}
+
+async function montarContenidoNicho(sesion, dependencies = {}) {
+  const asegurarPaginaFn = dependencies.asegurarPagina || asegurarPagina;
+  const adoptarSiExisteFn = dependencies.adoptarSiExiste || adoptarSiExiste;
+  const asegurarMenuFn = dependencies.asegurarMenu || asegurarMenu;
   const paginas = [
     { title: "Sobre nosotros", handle: "about", templateSuffix: "about" },
     { title: "Contacto", handle: "contact", templateSuffix: "contact" }
@@ -122,25 +130,31 @@ async function montarContenidoNicho(sesion) {
   const resultado = [];
   const ids = {};
   for (const p of paginas) {
-    const r = await asegurarPagina(sesion, p);
+    const r = await asegurarPaginaFn(sesion, p);
     ids[p.handle] = r.id;
     resultado.push(r);
   }
 
   // Bridge para tiendas que ya traen otras handles enlazadas en el menú.
   for (const h of ["about-us", "sobre-nosotros"]) {
-    const a = await adoptarSiExiste(sesion, h, "about");
+    const a = await adoptarSiExisteFn(sesion, h, "about");
     if (a) resultado.push(a);
   }
 
   // El menú no debe tumbar el resto si falta el scope: se avisa y sigue.
   try {
-    resultado.push(await asegurarMenu(sesion, { about: ids.about, contact: ids.contact }));
+    resultado.push(await asegurarMenuFn(sesion, { about: ids.about, contact: ids.contact }));
   } catch (e) {
-    resultado.push({ handle: "main-menu", accion: "menú-falló", error: e.message.slice(0, 160) });
+    if (!esErrorPermisoMenu(e)) throw e;
+    resultado.push({
+      handle: "main-menu",
+      accion: "menu-fallo",
+      code: "NAVIGATION_SCOPE_UNAVAILABLE",
+      error: e.message.slice(0, 160)
+    });
   }
 
   return resultado;
 }
 
-module.exports = { montarContenidoNicho, asegurarPagina, asegurarMenu };
+module.exports = { montarContenidoNicho, asegurarPagina, asegurarMenu, esErrorPermisoMenu };

@@ -115,6 +115,13 @@ No existe una transaccion ACID entre ambos. Cada operacion se modela como saga:
 - reconciliacion periodica;
 - estado visible para soporte.
 
+Un timeout o corte de conexion posterior al envio no demuestra que el proveedor
+no haya ejecutado la operacion. Ese resultado es ambiguo y no se reintenta de
+forma automatica: el job termina con un codigo operativo estable y queda para
+reconciliacion o intervencion. Solo los fallos confirmados como transitorios y
+anteriores al efecto externo habilitan retry. Esta distincion evita una segunda
+generacion facturable o una mutacion duplicada en Shopify.
+
 ### ADR-008: migraciones controladas, no un `migrate all` al arrancar
 
 El web process no migra automaticamente todas las bases de tenants. Un rollout
@@ -277,14 +284,18 @@ reserva y contador mensual nacen en la misma transaccion bajo lock de tenant.
 La pagina y el cambio `reserved -> committed` tambien se escriben juntos. Un
 fallo terminal cambia `reserved -> released` y devuelve exactamente esas
 unidades; repetir la compensacion no vuelve a descontar. Si el worker cae
-despues del commit pero antes de completar el job, el retry encuentra la pagina
+despues de registrar el fallo terminal, la solicitud queda durable en el mismo
+job. Un carril independiente la reclama con lease y backoff, y el readiness
+operativo impide el GO mientras exista una pendiente. Si el worker cae despues
+del commit pero antes de completar el job, el retry encuentra la pagina
 y no vuelve a ejecutar la IA. Mientras una operacion externa sigue activa, el
 worker renueva `locked_at` periodicamente; el lease no puede vencer en medio de
 una generacion valida y habilitar una segunda ejecucion concurrente.
 
 ## 8. Publicacion
 
-1. crear `publication` con idempotency key;
+1. bloquear la pagina y crear o reutilizar su job de publicacion activo en la
+   misma transaccion;
 2. validar que la pagina siga en la version aprobada;
 3. escribir metafield versionado;
 4. asignar el template suffix cuando corresponda;
@@ -292,6 +303,18 @@ una generacion valida y habilitar una segunda ejecucion concurrente.
 6. marcar `published` y emitir outbox event;
 7. si un paso falla, reintentar desde el checkpoint;
 8. si queda inconsistente, compensar o marcar `needs_attention`.
+
+La pagina cambia a `publicando` y recibe `active_job_id` en la misma transaccion
+que crea el job. Dos requests concurrentes del mismo tenant reutilizan el job
+activo; no puede quedar una pagina marcada como publicando sin trabajo durable.
+Al ejecutar, el worker vuelve a comprobar bajo contexto tenant que el job sigue
+siendo el activo. Un job reemplazado termina antes de abrir una sesion Shopify.
+
+Los checkpoints solo habilitan retry cuando prueban que el siguiente efecto no
+ocurrio. Si Shopify pudo crear un media object, metafield o referencia remota y
+la respuesta se perdio, el job queda en estado de atencion manual; no repite la
+mutacion a ciegas. Los errores permanentes confirmados conservan su causa y no
+se degradan a un error ambiguo.
 
 Nunca se escribe HTML en archivos del theme. El renderer permanece en la theme
 app extension y consume el contrato versionado del metafield.

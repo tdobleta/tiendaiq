@@ -13,11 +13,35 @@ const assert = require("node:assert");
 const crypto = require("node:crypto");
 const fs = require("node:fs");
 const path = require("node:path");
-const { tiendaDelPase, alcancesFaltantes, registrarWebhooksOperativos, ALCANCES } = require("../auth");
+const {
+  tiendaDelPase,
+  hmacValido,
+  timestampOAuthValido,
+  validarSolicitudOAuthInicial,
+  solicitudInicialOAuthPermitida,
+  crearCookieEstadoOAuth,
+  verificarCookieEstadoOAuth,
+  consumirCookieEstadoOAuth,
+  alcancesFaltantes,
+  registrarWebhooksOperativos,
+  ALCANCES,
+  COOKIE_ESTADO_OAUTH
+} = require("../auth");
 
 const SECRET = process.env.SHOPIFY_CLIENT_SECRET;
 const CLIENT = process.env.SHOPIFY_CLIENT_ID;
 const ahora = () => Math.floor(Date.now() / 1000);
+
+function firmarParametrosOAuth(params) {
+  const mensaje = Object.keys(params)
+    .sort()
+    .map((key) => `${key}=${params[key]}`)
+    .join("&");
+  return {
+    ...params,
+    hmac: crypto.createHmac("sha256", SECRET).update(mensaje).digest("hex")
+  };
+}
 
 test("el callback valida permisos y webhooks antes de persistir la instalación", () => {
   const fuente = fs.readFileSync(path.join(__dirname, "..", "auth.js"), "utf8");
@@ -30,6 +54,85 @@ test("el callback valida permisos y webhooks antes de persistir la instalación"
   const guardar = callback.indexOf("guardarTienda(");
 
   assert.ok(permisos >= 0 && webhooks > permisos && guardar > webhooks);
+});
+
+test("el request inicial exige HMAC valido y timestamp reciente en produccion", () => {
+  const ahoraMs = 1_800_000_000_000;
+  const timestamp = Math.floor(ahoraMs / 1000);
+  const firmado = firmarParametrosOAuth({ shop: SHOP, timestamp: String(timestamp) });
+
+  assert.equal(hmacValido(firmado), true);
+  assert.equal(timestampOAuthValido(firmado, { ahoraMs }), true);
+  assert.equal(validarSolicitudOAuthInicial(firmado, { ahoraMs }), true);
+  assert.equal(solicitudInicialOAuthPermitida(firmado, { produccion: true, ahoraMs }), true);
+  assert.equal(solicitudInicialOAuthPermitida({ shop: SHOP }, { produccion: true, ahoraMs }), false);
+});
+
+test("el request inicial rechaza firmas alteradas y timestamps vencidos o futuros", () => {
+  const ahoraMs = 1_800_000_000_000;
+  const timestamp = Math.floor(ahoraMs / 1000);
+  const firmado = firmarParametrosOAuth({ shop: SHOP, timestamp: String(timestamp) });
+  const vencido = firmarParametrosOAuth({ shop: SHOP, timestamp: String(timestamp - 301) });
+  const futuro = firmarParametrosOAuth({ shop: SHOP, timestamp: String(timestamp + 61) });
+
+  assert.equal(validarSolicitudOAuthInicial({ ...firmado, shop: "alterada.myshopify.com" }, { ahoraMs }), false);
+  assert.equal(validarSolicitudOAuthInicial(vencido, { ahoraMs }), false);
+  assert.equal(validarSolicitudOAuthInicial(futuro, { ahoraMs }), false);
+  assert.equal(timestampOAuthValido({ timestamp: "1.5" }, { ahoraMs }), false);
+});
+
+test("el inicio directo conserva compatibilidad solo fuera de produccion", () => {
+  const sinFirma = { shop: SHOP };
+  assert.equal(solicitudInicialOAuthPermitida(sinFirma, { produccion: false }), true);
+  assert.equal(solicitudInicialOAuthPermitida(sinFirma, { produccion: true }), false);
+  assert.equal(
+    solicitudInicialOAuthPermitida({ ...sinFirma, timestamp: String(ahora()) }, { produccion: false }),
+    false,
+    "una firma incompleta no debe caer al modo compatible"
+  );
+});
+
+test("la app no fabrica enlaces OAuth sin firma para reinstalar en produccion", () => {
+  const frontend = fs.readFileSync(path.join(__dirname, "..", "app", "app.js"), "utf8");
+  const server = fs.readFileSync(path.join(__dirname, "..", "server.js"), "utf8");
+
+  assert.doesNotMatch(frontend, /location\.origin\}\/auth\?shop=/);
+  assert.match(frontend, /Volvé a abrir TiendaIQ desde Apps en Shopify Admin/);
+  assert.match(server, /else if \(env\.DEV_MODE === "1"\).*\/auth\?shop=/);
+  assert.match(server, /iniciar desde Shopify Admin o el enlace oficial de Shopify/);
+});
+
+test("la cookie OAuth liga el state, usa atributos seguros y detecta alteraciones", () => {
+  const estado = "0123456789abcdef0123456789abcdef";
+  const setCookie = crearCookieEstadoOAuth(estado);
+  const cookieHeader = setCookie.split(";")[0];
+
+  assert.match(setCookie, new RegExp(`^${COOKIE_ESTADO_OAUTH}=`));
+  assert.match(setCookie, /HttpOnly/);
+  assert.match(setCookie, /Secure/);
+  assert.match(setCookie, /SameSite=Lax/);
+  assert.match(setCookie, /Path=\/auth\/callback/);
+  assert.equal(verificarCookieEstadoOAuth(cookieHeader, estado), true);
+  assert.equal(verificarCookieEstadoOAuth(cookieHeader, `${estado}00`), false);
+  assert.equal(verificarCookieEstadoOAuth(`${cookieHeader}x`, estado), false);
+  assert.equal(verificarCookieEstadoOAuth("otra=valor", estado), false);
+});
+
+test("el callback consume la cookie OAuth y siempre ordena eliminarla", () => {
+  const estado = "abcdef0123456789abcdef0123456789";
+  const cookieHeader = crearCookieEstadoOAuth(estado).split(";")[0];
+  const headers = new Map();
+  const res = {
+    req: { headers: { cookie: cookieHeader } },
+    getHeader(name) { return headers.get(name); },
+    setHeader(name, value) { headers.set(name, value); }
+  };
+
+  assert.equal(consumirCookieEstadoOAuth(res, estado), true);
+  assert.deepEqual(headers.get("Set-Cookie"), [
+    `${COOKIE_ESTADO_OAUTH}=; Max-Age=0; Path=/auth/callback; HttpOnly; Secure; SameSite=Lax`
+  ]);
+  assert.equal(consumirCookieEstadoOAuth({ ...res, req: { headers: {} } }, estado), false);
 });
 
 const b64url = (o) =>

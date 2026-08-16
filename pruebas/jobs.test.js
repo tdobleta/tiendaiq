@@ -5,9 +5,13 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const { TenantContext } = require("../src/tenancy/tenant-context");
-const { createJobRunner } = require("../src/jobs/job-runner");
+const { LeaseLostError, createJobRunner, isNonRetryable, retryDelaySeconds } = require("../src/jobs/job-runner");
+const { createCompensationRunner } = require("../src/jobs/compensation-runner");
+const { parseRecoveryRequest } = require("../scripts/reencolar-compensacion");
 const { boundedInteger } = require("../src/jobs/runtime");
 const { createPublishPageHandler } = require("../src/jobs/publish-page-handler");
+const { createUnpublishPageHandler } = require("../src/jobs/unpublish-page-handler");
+const { createJobRepository } = require("../src/platform/postgres/job-repository");
 
 test("el runtime del worker forma parte del artefacto versionado", () => {
   const runtimePath = path.join(__dirname, "..", "src", "jobs", "runtime.js");
@@ -82,6 +86,88 @@ describe("JobRunner", () => {
     assert.ok(renewals >= 2, `se esperaban al menos dos renovaciones, hubo ${renewals}`);
   });
 
+  test("perder el lease aborta el handler y no completa ni reprograma el job", async () => {
+    const current = job();
+    const calls = [];
+    const metrics = [];
+    const runner = createJobRunner({
+      workerId: "worker-1",
+      heartbeatMs: 2,
+      repository: {
+        async claim() { return current; },
+        async renew() { calls.push("renew"); return null; },
+        async succeed() { calls.push("succeed"); return current; },
+        async fail() { calls.push("fail"); return current; }
+      },
+      handlers: {
+        "test-job": {
+          async run(claimed, { signal }) {
+            assert.equal(claimed, current);
+            await new Promise((resolve, reject) => {
+              signal.addEventListener("abort", () => reject(signal.reason), { once: true });
+            });
+          },
+          async onTerminalFailure() { calls.push("compensate"); }
+        }
+      },
+      reportError() {},
+      metrics(name) { metrics.push(name); }
+    });
+
+    assert.equal(await runner.processOnce(), true);
+    assert.deepEqual(calls, ["renew"]);
+    assert.deepEqual(metrics, ["job_lease_perdido"]);
+  });
+
+  test("una renovacion colgada vence, aborta el handler y no cierra el job", async () => {
+    const current = job();
+    const calls = [];
+    const runner = createJobRunner({
+      workerId: "worker-1",
+      heartbeatMs: 2,
+      repository: {
+        async claim() { return current; },
+        async renew() { calls.push("renew"); return new Promise(() => {}); },
+        async succeed() { calls.push("succeed"); return current; },
+        async fail() { calls.push("fail"); return current; }
+      },
+      handlers: {
+        "test-job": {
+          async run(claimed, { signal }) {
+            assert.equal(claimed, current);
+            await new Promise((resolve, reject) => {
+              signal.addEventListener("abort", () => reject(signal.reason), { once: true });
+            });
+          }
+        }
+      },
+      reportError() {}
+    });
+
+    assert.equal(await runner.processOnce(), true);
+    assert.ok(calls.length >= 1);
+    assert.ok(calls.every((call) => call === "renew"));
+  });
+
+  test("un cierre rechazado por ownership no se convierte en un retry", async () => {
+    const current = job();
+    const calls = [];
+    const runner = createJobRunner({
+      workerId: "worker-1",
+      repository: {
+        async claim() { return current; },
+        async succeed() { calls.push("succeed"); return null; },
+        async fail() { calls.push("fail"); return current; }
+      },
+      handlers: { "test-job": { async run() { return { ok: true }; } } },
+      reportError() {},
+      metrics(name) { calls.push(name); }
+    });
+
+    assert.equal(await runner.processOnce(), true);
+    assert.deepEqual(calls, ["succeed", "job_lease_perdido"]);
+  });
+
   test("reintenta con backoff antes de agotar intentos", async () => {
     const current = job({ attempts: 1, maxAttempts: 3 });
     let failed;
@@ -132,7 +218,7 @@ describe("JobRunner", () => {
     assert.equal(compensated, true);
   });
 
-  test("una compensación de cupo ocurre antes de cerrar el job terminal", async () => {
+  test("una compensación de cupo ocurre solo después de cerrar el job terminal", async () => {
     const order = [];
     const current = job({ attempts: 3, maxAttempts: 3 });
     const runner = createJobRunner({
@@ -144,7 +230,6 @@ describe("JobRunner", () => {
       },
       handlers: {
         "test-job": {
-          compensateBeforeTerminal: true,
           async run() { throw new Error("IA agotada"); },
           async onTerminalFailure() { order.push("release-usage"); }
         }
@@ -152,7 +237,77 @@ describe("JobRunner", () => {
     });
 
     await runner.processOnce();
-    assert.deepEqual(order, ["release-usage", "fail-job"]);
+    assert.deepEqual(order, ["fail-job", "release-usage"]);
+  });
+
+  test("un repositorio durable encola la compensacion sin ejecutarla en el runner primario", async () => {
+    const current = job({ attempts: 3, maxAttempts: 3 });
+    let compensated = false;
+    let requestedCompensation = false;
+    const runner = createJobRunner({
+      workerId: "worker-1",
+      repository: {
+        async claim() { return current; },
+        async succeed() {},
+        async fail(context, claimed, error, delay, needsCompensation) {
+          requestedCompensation = needsCompensation;
+          return { ...claimed, status: "failed", compensationStatus: "pending" };
+        }
+      },
+      handlers: {
+        "test-job": {
+          async run() { throw new Error("IA agotada"); },
+          async onTerminalFailure() { compensated = true; }
+        }
+      }
+    });
+
+    await runner.processOnce();
+    assert.equal(requestedCompensation, true);
+    assert.equal(compensated, false);
+  });
+
+  test("respeta Retry-After y limita esperas externas", () => {
+    assert.equal(retryDelaySeconds({ retryAfter: 42 }, 1), 42);
+    assert.equal(retryDelaySeconds({ retryAfter: 5000 }, 1), 900);
+    assert.equal(retryDelaySeconds({}, 2), 10);
+  });
+
+  test("clasifica errores HTTP permanentes sin depender del proveedor", () => {
+    assert.equal(isNonRetryable({ status: 422 }), true);
+    assert.equal(isNonRetryable({ status: 429 }), false);
+    assert.equal(isNonRetryable({ status: 503 }), false);
+  });
+
+  test("un error ambiguo puede impedir que se agende compensacion durable", async () => {
+    const current = job();
+    let requestedCompensation;
+    const runner = createJobRunner({
+      workerId: "worker-1",
+      repository: {
+        async claim() { return current; },
+        async succeed() {},
+        async fail(context, claimed, error, delay, needsCompensation) {
+          requestedCompensation = needsCompensation;
+          return { ...claimed, status: "failed" };
+        }
+      },
+      handlers: {
+        "test-job": {
+          async run() {
+            const error = new Error("resultado externo ambiguo");
+            error.nonRetryable = true;
+            error.skipCompensation = true;
+            throw error;
+          },
+          needsCompensation(claimed, error) { return !error.skipCompensation; },
+          async onTerminalFailure() { throw new Error("no debe compensar"); }
+        }
+      }
+    });
+
+    await runner.processOnce();
+    assert.equal(requestedCompensation, false);
   });
 
   test("filtra el tipo de job asignado al carril", async () => {
@@ -172,43 +327,288 @@ describe("JobRunner", () => {
     assert.deepEqual(requestedTypes, ["generate-page"]);
   });
 
-  test("stop espera a que termine el efecto externo activo", async () => {
-    let release;
+  test("stop aborta el handler activo con LeaseLostError y deja el lease recuperable", async () => {
     let started;
     let claimed = false;
+    let abortReason;
+    let succeeded = 0;
+    let failed = 0;
     const startedPromise = new Promise((resolve) => { started = resolve; });
-    const work = new Promise((resolve) => { release = resolve; });
     const runner = createJobRunner({
       workerId: "worker-drain-1",
       pollMs: 5,
+      shutdownTimeoutMs: 50,
       repository: {
         async claim() {
           if (claimed) return null;
           claimed = true;
           return job();
         },
-        async succeed(context, current) { return { ...current, status: "succeeded" }; },
+        async succeed() { succeeded += 1; },
+        async fail() { failed += 1; }
+      },
+      handlers: {
+        "test-job": {
+          async run(current, { signal }) {
+            started();
+            await new Promise((resolve) => signal.addEventListener("abort", () => {
+              abortReason = signal.reason;
+              resolve();
+            }, { once: true }));
+          }
+        }
+      },
+      reportError() {}
+    });
+
+    runner.start();
+    await startedPromise;
+    await runner.stop();
+
+    assert.ok(abortReason instanceof LeaseLostError);
+    assert.equal(abortReason.code, "JOB_LEASE_LOST");
+    assert.equal(succeeded, 0);
+    assert.equal(failed, 0);
+  });
+
+  test("stop tiene plazo finito aunque el handler ignore la cancelacion", async () => {
+    let started;
+    let reason;
+    const startedPromise = new Promise((resolve) => { started = resolve; });
+    const reports = [];
+    const runner = createJobRunner({
+      workerId: "worker-blocked-1",
+      pollMs: 5,
+      shutdownTimeoutMs: 15,
+      repository: {
+        async claim() { return job(); },
+        async succeed() { throw new Error("no debia completar"); },
         async fail() { throw new Error("no debia fallar"); }
       },
       handlers: {
         "test-job": {
-          async run() {
+          async run(current, { signal }) {
+            signal.addEventListener("abort", () => { reason = signal.reason; }, { once: true });
             started();
-            await work;
+            await new Promise(() => {});
+          }
+        }
+      },
+      reportError(error, context) { reports.push({ error, context }); }
+    });
+
+    runner.start();
+    await startedPromise;
+    const before = Date.now();
+    await runner.stop();
+
+    assert.ok(Date.now() - before < 250);
+    assert.ok(reason instanceof LeaseLostError);
+    assert.ok(reports.some(({ context }) => context.tipo === "worker-stop-timeout"));
+  });
+
+  test("stop tambien cancela una ejecucion iniciada con processOnce", async () => {
+    let started;
+    let reason;
+    const startedPromise = new Promise((resolve) => { started = resolve; });
+    const runner = createJobRunner({
+      workerId: "worker-manual-1",
+      shutdownTimeoutMs: 50,
+      repository: {
+        async claim() { return job(); },
+        async succeed() { throw new Error("no debia completar"); },
+        async fail() { throw new Error("no debia fallar"); }
+      },
+      handlers: {
+        "test-job": {
+          async run(current, { signal }) {
+            started();
+            await new Promise((resolve) => signal.addEventListener("abort", () => {
+              reason = signal.reason;
+              resolve();
+            }, { once: true }));
+          }
+        }
+      },
+      reportError() {}
+    });
+
+    const processing = runner.processOnce();
+    await startedPromise;
+    await runner.stop();
+    await processing;
+
+    assert.ok(reason instanceof LeaseLostError);
+    assert.equal(reason.code, "JOB_LEASE_LOST");
+  });
+});
+
+describe("CompensationRunner", () => {
+  test("recupera y confirma una limpieza terminal durable", async () => {
+    const current = job({
+      status: "failed",
+      compensationStatus: "running",
+      compensationAttempts: 1,
+      compensationLockedBy: "worker-1:compensate"
+    });
+    const calls = [];
+    const runner = createCompensationRunner({
+      workerId: "worker-1:compensate",
+      jobTypes: ["test-job"],
+      repository: {
+        async claimCompensation(workerId, leaseSeconds, jobTypes) {
+          calls.push({ op: "claim", workerId, leaseSeconds, jobTypes });
+          return current;
+        },
+        async renewCompensation() { return current; },
+        async completeCompensation(context, claimed) {
+          calls.push({ op: "complete", context, claimed });
+          return { ...claimed, compensationStatus: "succeeded" };
+        },
+        async failCompensation() { throw new Error("no debia reprogramar"); }
+      },
+      handlers: {
+        "test-job": {
+          async onTerminalFailure(claimed, error) {
+            calls.push({ op: "compensate", claimed, error });
           }
         }
       }
     });
 
+    assert.equal(await runner.processOnce(), true);
+    assert.deepEqual(calls.map(({ op }) => op), ["claim", "compensate", "complete"]);
+    assert.deepEqual(calls[0].jobTypes, ["test-job"]);
+    assert.match(calls[1].error.message, /Fallo terminal recuperado/);
+  });
+
+  test("reprograma con backoff una compensacion que vuelve a fallar", async () => {
+    const current = job({
+      status: "failed",
+      compensationStatus: "running",
+      compensationAttempts: 3,
+      compensationLockedBy: "worker-1:compensate"
+    });
+    let retry;
+    const runner = createCompensationRunner({
+      workerId: "worker-1:compensate",
+      repository: {
+        async claimCompensation() { return current; },
+        async renewCompensation() { return current; },
+        async completeCompensation() { throw new Error("no debia completar"); },
+        async failCompensation(context, claimed, error, delay, terminal) {
+          retry = { context, claimed, error, delay, terminal };
+          return { ...claimed, compensationStatus: "pending" };
+        }
+      },
+      handlers: {
+        "test-job": { async onTerminalFailure() { throw new Error("Postgres temporal"); } }
+      },
+      reportError() {}
+    });
+
+    assert.equal(await runner.processOnce(), true);
+    assert.match(retry.error.message, /temporal/);
+    assert.equal(retry.delay, 20);
+    assert.equal(retry.terminal, false);
+  });
+
+  test("envia a cuarentena una compensacion que agota intentos", async () => {
+    const current = job({ status: "failed", compensationStatus: "running", compensationAttempts: 4,
+      compensationLockedBy: "worker-1:compensate" });
+    let terminal;
+    const runner = createCompensationRunner({
+      workerId: "worker-1:compensate",
+      maxAttempts: 4,
+      repository: {
+        async claimCompensation() { return current; },
+        async renewCompensation() { return current; },
+        async completeCompensation() { throw new Error("no debia completar"); },
+        async failCompensation(context, claimed, error, delay, isTerminal) {
+          terminal = isTerminal;
+          return { ...claimed, compensationStatus: "dead_letter" };
+        }
+      },
+      handlers: { "test-job": { async onTerminalFailure() { throw new Error("corrupcion persistente"); } } },
+      reportError() {}
+    });
+
+    assert.equal(await runner.processOnce(), true);
+    assert.equal(terminal, true);
+  });
+
+  test("perder el lease aborta la compensacion y no confirma ni reprograma", async () => {
+    const current = job({ status: "failed", compensationStatus: "running", compensationAttempts: 1,
+      compensationLockedBy: "worker-1:compensate" });
+    let completed = 0;
+    let failed = 0;
+    const runner = createCompensationRunner({
+      workerId: "worker-1:compensate",
+      leaseSeconds: 30,
+      heartbeatMs: 1,
+      repository: {
+        async claimCompensation() { return current; },
+        async renewCompensation() { return null; },
+        async completeCompensation() { completed += 1; },
+        async failCompensation() { failed += 1; }
+      },
+      handlers: {
+        "test-job": {
+          async onTerminalFailure(claimed, error, { signal }) {
+            await new Promise((resolve) => signal.addEventListener("abort", resolve, { once: true }));
+          }
+        }
+      },
+      reportError() {}
+    });
+
+    assert.equal(await runner.processOnce(), true);
+    assert.equal(completed, 0);
+    assert.equal(failed, 0);
+  });
+
+  test("stop tiene plazo finito aunque una compensacion bloqueada ignore el aborto", async () => {
+    const current = job({ status: "failed", compensationStatus: "running", compensationAttempts: 1,
+      compensationLockedBy: "worker-stop:compensate" });
+    let started;
+    let abortReason;
+    let completed = 0;
+    let failed = 0;
+    const startedPromise = new Promise((resolve) => { started = resolve; });
+    const reports = [];
+    const runner = createCompensationRunner({
+      workerId: "worker-stop:compensate",
+      pollMs: 5,
+      shutdownTimeoutMs: 15,
+      repository: {
+        async claimCompensation() { return current; },
+        async renewCompensation() { return current; },
+        async completeCompensation() { completed += 1; },
+        async failCompensation() { failed += 1; }
+      },
+      handlers: {
+        "test-job": {
+          async onTerminalFailure(claimed, error, { signal }) {
+            signal.addEventListener("abort", () => { abortReason = signal.reason; }, { once: true });
+            started();
+            await new Promise(() => {});
+          }
+        }
+      },
+      reportError(error, context) { reports.push({ error, context }); }
+    });
+
     runner.start();
     await startedPromise;
-    let drained = false;
-    const stopping = runner.stop().then(() => { drained = true; });
-    await new Promise((resolve) => setTimeout(resolve, 5));
-    assert.equal(drained, false);
-    release();
-    await stopping;
-    assert.equal(drained, true);
+    const before = Date.now();
+    await runner.stop();
+
+    assert.ok(Date.now() - before < 250);
+    assert.ok(abortReason instanceof LeaseLostError);
+    assert.equal(abortReason.code, "JOB_LEASE_LOST");
+    assert.equal(completed, 0);
+    assert.equal(failed, 0);
+    assert.ok(reports.some(({ context }) => context.tipo === "compensation-stop-timeout"));
   });
 });
 
@@ -220,6 +620,55 @@ test("la configuracion de capacidad rechaza valores fuera de rango", () => {
 });
 
 describe("PublishPageHandler", () => {
+  test("un replay completado no vuelve a abrir sesion ni tocar Shopify", async () => {
+    let sessionReads = 0;
+    let publishCalls = 0;
+    const handler = createPublishPageHandler({
+      sessions: { async get() { sessionReads += 1; return {}; } },
+      pages: {
+        async get() {
+          return {
+            id: "42",
+            estado: "publicada",
+            active_job_id: null,
+            last_completed_job_id: "job-1",
+            url_publica: "https://jobs.myshopify.com/products/demo",
+            data: {}
+          };
+        }
+      },
+      async publish() { publishCalls += 1; return {}; }
+    });
+
+    const result = await handler.run(job({ id: "job-1", type: "publish-page", payload: { pageId: "42" } }));
+
+    assert.equal(result.replayed, true);
+    assert.equal(sessionReads, 0);
+    assert.equal(publishCalls, 0);
+  });
+
+  test("un job reemplazado se detiene antes de abrir sesion o tocar Shopify", async () => {
+    let sessionReads = 0;
+    let publishCalls = 0;
+    const handler = createPublishPageHandler({
+      sessions: { async get() { sessionReads += 1; return {}; } },
+      pages: {
+        async get() {
+          return { id: "42", estado: "publicando", active_job_id: "job-nuevo", data: {} };
+        }
+      },
+      async publish() { publishCalls += 1; return {}; }
+    });
+
+    await assert.rejects(
+      handler.run(job({ id: "job-viejo", type: "publish-page", payload: { pageId: "42" } })),
+      (error) => error.code === "PUBLISH_JOB_SUPERSEDED" && error.nonRetryable === true
+    );
+    assert.equal(sessionReads, 0);
+    assert.equal(publishCalls, 0);
+    assert.equal(handler.needsCompensation({}, { skipCompensation: true }), false);
+  });
+
   test("publica, persiste el resultado y limpia el job activo", async () => {
     const page = { id: "42", estado: "publicando", active_job_id: "job-1", data: { fuente: {} } };
     let saved;
@@ -228,7 +677,14 @@ describe("PublishPageHandler", () => {
       sessions: { async get() { return { tienda: tenant.tenantId, token: "token" }; } },
       pages: {
         async get() { return structuredClone(page); },
-        async save(context, value) { saved = { context, value }; }
+        async checkpointAvatar() {},
+        async completePublication(context, pageId, activeJobId, result) {
+          saved = {
+            context,
+            value: { ...structuredClone(page), estado: "publicada", active_job_id: null, url_publica: result.url }
+          };
+          return { page: saved.value };
+        }
       },
       async publish() { return { url: "https://jobs.myshopify.com/products/demo" }; },
       metrics(name, props) { metric = { name, props }; }
@@ -250,8 +706,12 @@ describe("PublishPageHandler", () => {
     const handler = createPublishPageHandler({
       sessions: { async get() { return { tienda: tenant.tenantId, token: "token" }; } },
       pages: {
-        async get() { return structuredClone(reads++ === 0 ? before : after); },
-        async save(context, value) { saved = value; }
+        async get() { return structuredClone(before); },
+        async checkpointAvatar() {},
+        async completePublication(context, pageId, activeJobId, result) {
+          saved = { ...structuredClone(after), estado: "publicada", active_job_id: null, url_publica: result.url, cambios_sin_publicar: true };
+          return { page: saved };
+        }
       },
       async publish(data) {
         assert.equal(data.titulo, "Original", "el efecto remoto usa un snapshot estable");
@@ -267,20 +727,134 @@ describe("PublishPageHandler", () => {
     assert.equal(saved.estado, "publicada");
   });
 
+  test("persiste la URL del avatar subida sin pisar otras ediciones", async () => {
+    const review = (avatar, title) => ({
+      facetas: { hero: { resena_destacada: { avatar, titulo: title } } }
+    });
+    const before = {
+      id: "42",
+      estado: "publicando",
+      active_job_id: "job-1",
+      data: review("data:image/png;base64,local", "Original")
+    };
+    const after = {
+      ...structuredClone(before),
+      data: review("data:image/png;base64,local", "Editado mientras publicaba")
+    };
+    let reads = 0;
+    let saved;
+    const handler = createPublishPageHandler({
+      sessions: { async get() { return { tienda: tenant.tenantId, token: "token" }; } },
+      pages: {
+        async get() { return structuredClone(before); },
+        async checkpointAvatar() {},
+        async completePublication(context, pageId, activeJobId, result) {
+          saved = structuredClone(after);
+          saved.data.facetas.hero.resena_destacada.avatar = result.publishedAvatar;
+          saved.estado = "publicada";
+          saved.active_job_id = null;
+          saved.cambios_sin_publicar = true;
+          return { page: saved };
+        }
+      },
+      async publish(data) {
+        data.facetas.hero.resena_destacada.avatar = "https://cdn.shopify.com/avatar.png";
+        return { url: "https://jobs.myshopify.com/products/demo" };
+      },
+      metrics() {}
+    });
+
+    await handler.run(job({ id: "job-1", type: "publish-page", payload: { pageId: "42" } }));
+
+    assert.equal(saved.data.facetas.hero.resena_destacada.avatar, "https://cdn.shopify.com/avatar.png");
+    assert.equal(saved.data.facetas.hero.resena_destacada.titulo, "Editado mientras publicaba");
+    assert.equal(saved.cambios_sin_publicar, true);
+  });
+
   test("el fallo terminal solo marca la página si el job sigue siendo el activo", async () => {
-    const saves = [];
+    const calls = [];
     const handler = createPublishPageHandler({
       sessions: { async get() { return {}; } },
       pages: {
-        async get() { return { id: "42", estado: "publicando", active_job_id: "otro-job" }; },
-        async save(context, value) { saves.push(value); }
+        async markPublicationFailed(context, pageId, activeJobId, message) {
+          calls.push({ context, pageId, activeJobId, message });
+          return null;
+        }
       },
       async publish() { return {}; },
       metrics() {}
     });
 
     await handler.onTerminalFailure(job({ id: "job-viejo", type: "publish-page", payload: { pageId: "42" } }), new Error("falló"));
-    assert.equal(saves.length, 0, "un worker viejo no puede pisar el estado de un job nuevo");
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].activeJobId, "job-viejo");
+    assert.equal(calls[0].pageId, "42");
+  });
+});
+
+describe("UnpublishPageHandler", () => {
+  test("despublica una vez y confirma el job activo", async () => {
+    const page = {
+      id: "42",
+      estado: "despublicando",
+      active_job_id: "job-1",
+      last_completed_job_id: null,
+      data: { shopify_product_id: "gid://shopify/Product/42" }
+    };
+    let unpublishCalls = 0;
+    let completion;
+    let metric;
+    const handler = createUnpublishPageHandler({
+      sessions: { async get() { return { tienda: tenant.tenantId, token: "token" }; } },
+      pages: {
+        async get() { return structuredClone(page); },
+        async completeUnpublication(context, pageId, activeJobId) {
+          completion = { context, pageId, activeJobId };
+          return { page: { ...page, estado: "borrador", active_job_id: null } };
+        }
+      },
+      async unpublish(data, session, options) {
+        unpublishCalls += 1;
+        assert.equal(data.shopify_product_id, "gid://shopify/Product/42");
+        assert.equal(session.token, "token");
+        assert.ok(options && Object.hasOwn(options, "signal"));
+      },
+      metrics(name, props) { metric = { name, props }; }
+    });
+
+    const result = await handler.run(job({ id: "job-1", type: "unpublish-page", payload: { pageId: "42" } }));
+
+    assert.equal(unpublishCalls, 1);
+    assert.equal(completion.pageId, "42");
+    assert.equal(completion.activeJobId, "job-1");
+    assert.equal(metric.name, "pagina_despublicada");
+    assert.equal(result.replayed, false);
+  });
+
+  test("un replay completado no vuelve a abrir sesion ni tocar Shopify", async () => {
+    let sessionReads = 0;
+    let unpublishCalls = 0;
+    const handler = createUnpublishPageHandler({
+      sessions: { async get() { sessionReads += 1; return {}; } },
+      pages: {
+        async get() {
+          return {
+            id: "42",
+            estado: "borrador",
+            active_job_id: null,
+            last_completed_job_id: "job-1",
+            data: {}
+          };
+        }
+      },
+      async unpublish() { unpublishCalls += 1; }
+    });
+
+    const result = await handler.run(job({ id: "job-1", type: "unpublish-page", payload: { pageId: "42" } }));
+
+    assert.equal(result.replayed, true);
+    assert.equal(sessionReads, 0);
+    assert.equal(unpublishCalls, 0);
   });
 });
 
@@ -289,9 +863,68 @@ test("la migración de jobs declara idempotencia y recuperación de leases", () 
   const repository = fs.readFileSync(path.join(__dirname, "..", "src", "platform", "postgres", "job-repository.js"), "utf8");
   assert.match(sql, /jobs_tenant_idempotency_idx/);
   assert.match(repository, /FOR UPDATE SKIP LOCKED/);
-  assert.match(repository, /SET locked_at = now\(\), updated_at = now\(\)/);
+  assert.match(repository, /lease_expires_at = now\(\) \+ \(\$2::int \* interval '1 second'\)/);
+  assert.match(repository, /locked_at \+ interval '1 hour',[\s\S]*'-infinity'::timestamptz/);
   assert.match(repository, /locked_by = \$4/);
   assert.match(repository, /locked_by = \$6/);
+});
+
+test("la compensacion terminal queda durable, reclamable y observable", () => {
+  const sql = fs.readFileSync(path.join(__dirname, "..", "db", "migrations", "0014_durable_job_compensation.sql"), "utf8");
+  const repository = fs.readFileSync(path.join(__dirname, "..", "src", "platform", "postgres", "job-repository.js"), "utf8");
+  const runtime = fs.readFileSync(path.join(__dirname, "..", "src", "jobs", "runtime.js"), "utf8");
+
+  assert.match(sql, /compensation_status TEXT/);
+  assert.match(sql, /sync_legacy_job_lease_expiry/);
+  assert.match(sql, /SET lease_expires_at = locked_at \+ interval '1 hour'/);
+  assert.match(sql, /SET compensation_lease_expires_at = compensation_locked_at \+ interval '1 hour'/);
+  assert.match(sql, /'-infinity'::timestamptz/);
+  assert.match(sql, /jobs_compensation_ready_idx/);
+  assert.match(sql, /compensation_pending integer/);
+  assert.match(sql, /oldest_compensation_seconds double precision/);
+  assert.match(repository, /compensation_status = 'pending'/);
+  assert.match(repository, /compensation_locked_by = \$3/);
+  assert.match(runtime, /createCompensationRunner/);
+  assert.match(runtime, /reclamarCompensacionJobDB/);
+});
+
+test("la recuperacion de una compensacion exige identidad, motivo y confirmacion explicitos", () => {
+  const valid = {
+    MIGRATION_DATABASE_URL: "postgresql://migrator:secret@db.example/tiendaiq",
+    COMPENSATION_JOB_ID: "01234567-89ab-4def-8123-456789abcdef",
+    COMPENSATION_RECOVERY_REASON: "Proveedor recuperado; reintento aprobado por operaciones.",
+    COMPENSATION_RECOVERY_ACTOR: "operador@example.com",
+    COMPENSATION_RECOVERY_SOURCE: "https://github.com/acme/tiendaiq/actions/runs/123",
+    CONFIRMATION: "REQUEUE_ONE_COMPENSATION"
+  };
+  assert.equal(parseRecoveryRequest(valid).jobId, valid.COMPENSATION_JOB_ID);
+  assert.throws(() => parseRecoveryRequest({ ...valid, CONFIRMATION: "yes" }), /Confirmacion/);
+  assert.throws(() => parseRecoveryRequest({ ...valid, COMPENSATION_RECOVERY_REASON: "muy corto" }), /20 y 500/);
+  assert.throws(() => parseRecoveryRequest({ ...valid, COMPENSATION_JOB_ID: "todos" }), /UUID/);
+});
+
+test("la recuperacion dead-letter es atomica, auditable y exclusiva del migrador", () => {
+  const migration = fs.readFileSync(
+    path.join(__dirname, "..", "db", "migrations", "0016_compensation_recovery_audit.sql"),
+    "utf8"
+  );
+  const workflow = fs.readFileSync(
+    path.join(__dirname, "..", ".github", "workflows", "requeue-compensation-staging.yml"),
+    "utf8"
+  );
+
+  assert.match(migration, /compensation_recovery_audit ENABLE ROW LEVEL SECURITY/);
+  assert.match(migration, /compensation_recovery_audit FORCE ROW LEVEL SECURITY/);
+  assert.match(migration, /status = 'failed'[\s\S]*compensation_status = 'dead_letter'[\s\S]*FOR UPDATE/);
+  assert.match(migration, /INSERT INTO control_plane\.compensation_recovery_audit/);
+  assert.match(migration, /compensation_status = 'pending'/);
+  assert.match(migration, /compensation_attempts = 0/);
+  assert.match(migration, /GRANT EXECUTE[\s\S]*TO tiendaiq_migrator/);
+  assert.doesNotMatch(migration, /GRANT EXECUTE[\s\S]*TO tiendaiq_(?:web|worker)(?:_runtime)?/);
+  assert.match(workflow, /environment: staging/);
+  assert.match(workflow, /REQUEUE_ONE_COMPENSATION/);
+  assert.match(workflow, /STAGING_MIGRATION_DATABASE_URL/);
+  assert.doesNotMatch(workflow, /STAGING_(?:WEB|WORKER)_DATABASE_URL/);
 });
 
 test("los jobs quedan aislados y el claim exige capacidad PostgreSQL de worker", () => {
@@ -303,4 +936,136 @@ test("los jobs quedan aislados y el claim exige capacidad PostgreSQL de worker",
   assert.match(rolesSql, /pg_has_role\(current_user, 'tiendaiq_worker_capability', 'member'\)/);
   assert.doesNotMatch(rolesSql, /current_setting\('app\.worker_id'/);
   assert.match(repository, /set_config\('app\.worker_id', \$1, true\)/);
+});
+
+test("el estado operativo de jobs sale de una funcion agregada sin capacidad worker", () => {
+  const sql = fs.readFileSync(path.join(__dirname, "..", "db", "migrations", "0012_operational_queue_status.sql"), "utf8");
+  const repository = fs.readFileSync(path.join(__dirname, "..", "src", "platform", "postgres", "job-repository.js"), "utf8");
+
+  assert.match(sql, /CREATE OR REPLACE FUNCTION control_plane\.operational_queue_status\(\)/);
+  assert.match(sql, /SECURITY DEFINER/);
+  assert.match(sql, /RETURNS TABLE \([\s\S]*type text[\s\S]*queued integer[\s\S]*oldest_queued_seconds double precision/);
+  assert.match(sql, /GRANT EXECUTE ON FUNCTION control_plane\.operational_queue_status\(\)[\s\S]*TO tiendaiq_web_runtime, tiendaiq_worker_runtime/);
+  assert.doesNotMatch(sql, /\btenant_id\b|\bidempotency_key\b|\blast_error\b/);
+  assert.doesNotMatch(sql, /jobs\.payload/);
+  assert.match(repository, /SELECT \* FROM control_plane\.operational_queue_status\(\)/);
+});
+
+test("el heartbeat operativo no expone datos tenant y restringe escritura al worker", () => {
+  const sql = fs.readFileSync(
+    path.join(__dirname, "..", "db", "migrations", "0013_worker_heartbeat_and_queue_health.sql"),
+    "utf8"
+  );
+
+  assert.match(sql, /CREATE TABLE IF NOT EXISTS control_plane\.worker_heartbeats/);
+  assert.match(sql, /count\(DISTINCT active\.release_sha\)/);
+  assert.match(sql, /last_seen_at >= statement_timestamp\(\) - interval '60 seconds'/);
+  assert.match(sql, /SECURITY DEFINER[\s\S]*SET search_path = pg_catalog, control_plane/);
+  assert.match(sql, /REVOKE ALL ON TABLE control_plane\.worker_heartbeats[\s\S]*tiendaiq_worker_runtime/);
+  assert.match(sql, /CREATE OR REPLACE FUNCTION control_plane\.record_worker_heartbeat\(/);
+  assert.match(sql, /GRANT EXECUTE ON FUNCTION control_plane\.record_worker_heartbeat\(text, text, integer, integer, integer\)[\s\S]*TO tiendaiq_worker_runtime/);
+  assert.doesNotMatch(sql, /GRANT (?:SELECT|INSERT|UPDATE|DELETE)[^;]*worker_heartbeats/);
+  assert.match(sql, /GRANT EXECUTE ON FUNCTION control_plane\.operational_worker_status\(\)[\s\S]*TO tiendaiq_web_runtime, tiendaiq_worker_runtime/);
+  assert.doesNotMatch(sql, /\btenant_id\b|\bshop\b|\bpayload\b/);
+});
+
+test("el repositorio persiste y proyecta heartbeat sin contexto tenant", async () => {
+  const queries = [];
+  const client = {
+    async query(text, values) { queries.push({ text, values }); return { rows: [] }; },
+    release() {}
+  };
+  const pool = {
+    async connect() { return client; },
+    async query(text, values) {
+      queries.push({ text, values });
+      return { rows: [{
+        worker_id: "worker-1",
+        release_sha: "a".repeat(40),
+        runtime_role: "tiendaiq_worker_runtime",
+        isolation_ok: true,
+        generation_concurrency: 8,
+        publication_concurrency: 4,
+        webhook_concurrency: 2,
+        age_seconds: 7,
+        uptime_seconds: 40,
+        active_workers: 1,
+        release_variants: 1,
+        runtime_role_variants: 1
+      }] };
+    }
+  };
+  const repository = createJobRepository(pool);
+  await repository.recordHeartbeat({
+    workerId: "worker-1",
+    releaseSha: "a".repeat(40),
+    runtimeRole: "tiendaiq_worker_runtime",
+    isolationOk: true,
+    capacity: { generations: 8, publications: 4, webhooks: 2 }
+  });
+  const heartbeat = queries.find(({ text }) => /record_worker_heartbeat/.test(text));
+  assert.deepEqual(heartbeat.values, ["worker-1", "a".repeat(40), 8, 4, 2]);
+  assert.doesNotMatch(heartbeat.text, /tenant_id|payload|INSERT|DELETE|UPDATE/);
+
+  const status = await repository.workerStatus();
+  assert.equal(status.release, "a".repeat(40));
+  assert.equal(status.runtimeRole, "tiendaiq_worker_runtime");
+  assert.equal(status.ageSeconds, 7);
+  assert.equal(status.uptimeSeconds, 40);
+  assert.equal(status.activeWorkers, 1);
+  assert.equal(status.releaseVariants, 1);
+  assert.equal(status.runtimeRoleVariants, 1);
+});
+
+test("el repositorio rechaza un heartbeat ambiguo antes de abrir una conexion", async () => {
+  let connections = 0;
+  const repository = createJobRepository({
+    async connect() { connections += 1; throw new Error("no debe conectar"); }
+  });
+  await assert.rejects(
+    repository.recordHeartbeat({
+      workerId: "worker-1",
+      releaseSha: "main",
+      runtimeRole: "tiendaiq_worker_runtime",
+      isolationOk: true,
+      capacity: { generations: 8, publications: 4, webhooks: 2 }
+    }),
+    /SHA completo/
+  );
+  assert.equal(connections, 0);
+});
+
+test("los workflows que operan staging fijan las acciones que ejecutan", () => {
+  const workflows = [
+    "release-staging.yml",
+    "ops-readiness-staging.yml",
+    "capacity-staging.yml",
+    "anthropic-capacity-staging.yml",
+    "requeue-compensation-staging.yml"
+  ];
+
+  for (const name of workflows) {
+    const workflow = fs.readFileSync(path.join(__dirname, "..", ".github", "workflows", name), "utf8");
+    assert.match(workflow, /environment: staging/, name);
+    assert.match(workflow, /actions\/checkout@[a-f0-9]{40}/, name);
+    assert.match(workflow, /actions\/setup-node@[a-f0-9]{40}/, name);
+    assert.doesNotMatch(workflow, /actions\/(?:checkout|setup-node)@v\d/, name);
+  }
+});
+
+test("las pruebas de capacidad se atan al SHA revisado y desplegado", () => {
+  const workflows = ["capacity-staging.yml", "anthropic-capacity-staging.yml"];
+
+  for (const name of workflows) {
+    const workflow = fs.readFileSync(path.join(__dirname, "..", ".github", "workflows", name), "utf8");
+    assert.match(workflow, /release_sha:/, name);
+    assert.match(workflow, /ref: \$\{\{ inputs\.release_sha \}\}/, name);
+    assert.match(workflow, /fetch-depth: 0/, name);
+    assert.match(workflow, /git fetch origin main --depth=1/, name);
+    assert.match(workflow, /git rev-parse origin\/main/, name);
+    assert.match(workflow, /EXPECTED_RELEASE_SHA/, name);
+    assert.match(workflow, /https:\/\/tiendaiq-staging-web\.onrender\.com\/ready/, name);
+    assert.match(workflow, /ready\.ok===true&&ready\.release===process\.env\.EXPECTED_RELEASE_SHA/, name);
+    assert.match(workflow, /npm ci --no-audit --no-fund/, name);
+  }
 });

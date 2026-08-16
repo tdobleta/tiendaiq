@@ -8,6 +8,7 @@ const path = require("node:path");
 const { verifyAndNormalizeWebhook } = require("../src/webhooks/verify-and-normalize");
 const { createInboxRepository } = require("../src/platform/postgres/inbox-repository");
 const { createWebhookHandlers } = require("../src/webhooks/handlers");
+const { TenantContext } = require("../src/tenancy/tenant-context");
 
 const SECRET = "webhook-secret";
 const SHOP = "webhooks.myshopify.com";
@@ -88,6 +89,32 @@ function receivePool() {
 }
 
 describe("InboxRepository", () => {
+  test("expone solo metricas agregadas para readiness", async () => {
+    const pool = {
+      async connect() { throw new Error("stats no debe abrir una transaccion tenant"); },
+      async query(text) {
+        assert.equal(text, "SELECT * FROM control_plane.operational_inbox_status()");
+        return { rows: [{
+          received: "3",
+          processing: "2",
+          failed: "1",
+          failed_recent: "1",
+          stale_processing: "0",
+          oldest_received_seconds: "42.5"
+        }] };
+      }
+    };
+    const status = await createInboxRepository(pool).stats();
+    assert.deepEqual(status, {
+      received: 3,
+      processing: 2,
+      failed: 1,
+      failedRecent: 1,
+      staleProcessing: 0,
+      oldestReceivedSeconds: 42.5
+    });
+  });
+
   test("un retry persistido devuelve el mismo evento sin insertarlo otra vez", async () => {
     const pool = receivePool();
     const repository = createInboxRepository(pool);
@@ -160,6 +187,19 @@ describe("webhook handlers", () => {
   });
 });
 
+test("la salud operacional del inbox no filtra datos tenant y usa privilegio minimo", () => {
+  const migration = fs.readFileSync(
+    path.join(__dirname, "..", "db", "migrations", "0015_operational_inbox_health.sql"),
+    "utf8"
+  );
+  assert.match(migration, /CREATE OR REPLACE FUNCTION control_plane\.operational_inbox_status\(\)/);
+  assert.match(migration, /SECURITY DEFINER/);
+  assert.match(migration, /REVOKE ALL .* FROM PUBLIC/);
+  assert.match(migration, /GRANT EXECUTE .* TO tiendaiq_web_runtime/);
+  assert.match(migration, /GRANT EXECUTE .* TO tiendaiq_worker_runtime/);
+  assert.doesNotMatch(migration, /shop_domain|tenant_id|payload|last_error/);
+});
+
 test("el inbox durable reemplaza la deduplicación en memoria y usa leases", () => {
   const server = fs.readFileSync(path.join(__dirname, "..", "server.js"), "utf8");
   const db = fs.readFileSync(path.join(__dirname, "..", "db.js"), "utf8");
@@ -168,9 +208,99 @@ test("el inbox durable reemplaza la deduplicación en memoria y usa leases", () 
   assert.doesNotMatch(server, /WEBHOOKS_VISTOS/);
   assert.match(server, /recibirWebhookDB\(input\)/);
   assert.match(repository, /FOR UPDATE SKIP LOCKED/);
+  assert.match(repository, /locked_at \+ interval '3 minutes',[\s\S]*'-infinity'::timestamptz/);
+  assert.match(repository, /lease_expires_at = now\(\) \+ \(\$2::int \* interval '1 second'\)/);
   assert.match(repository, /processed_at < now\(\)/);
   assert.doesNotMatch(repository, /DELETE FROM control_plane\.inbox_events\s+WHERE status = 'failed'/);
   assert.doesNotMatch(db, /removeFailed|failedBefore/);
   assert.match(migration, /ON DELETE SET NULL/);
   assert.match(migration, /FORCE ROW LEVEL SECURITY/);
+  const explicitLeases = fs.readFileSync(
+    path.join(__dirname, "..", "db", "migrations", "0017_inbox_explicit_leases.sql"),
+    "utf8"
+  );
+  assert.match(explicitLeases, /ADD COLUMN IF NOT EXISTS lease_expires_at TIMESTAMPTZ/);
+  assert.match(explicitLeases, /SET lease_expires_at = locked_at \+ interval '3 minutes'/);
+  assert.match(explicitLeases, /locked_at \+ interval '3 minutes',[\s\S]*'-infinity'::timestamptz/);
+});
+
+test("el inbox renueva y finaliza leases cercados por tenant, tienda y owner", async () => {
+  const statements = [];
+  const client = {
+    async query(text, values = []) {
+      statements.push({ text, values });
+      if (/UPDATE control_plane\.inbox_events/.test(text)) {
+        return { rows: [{
+          id: WEBHOOK_ID,
+          tenant_id: SHOP,
+          shop_domain: SHOP,
+          topic: "app/uninstalled",
+          payload_hash: "hash",
+          status: "processing",
+          locked_by: "worker:webhooks"
+        }] };
+      }
+      return { rows: [] };
+    },
+    release() {}
+  };
+  const repository = createInboxRepository({ async connect() { return client; } });
+  const context = TenantContext.fromShopDomain(SHOP, { source: "webhook" });
+  const event = {
+    id: WEBHOOK_ID,
+    tenantId: SHOP,
+    shopDomain: SHOP,
+    lockedBy: "worker:webhooks"
+  };
+
+  await repository.renew(context, event, 75);
+  await repository.succeed(context, event);
+  const updates = statements.filter(({ text }) => /UPDATE control_plane\.inbox_events/.test(text));
+  assert.equal(updates.length, 2);
+  for (const { text, values } of updates) {
+    assert.match(text, /shop_domain = \$2/);
+    assert.match(text, /tenant_id = \$3/);
+    assert.match(text, /OR tenant_id IS NULL/);
+    assert.equal(values[1], SHOP);
+    assert.equal(values[2], SHOP);
+  }
+  assert.match(updates[0].text, /lease_expires_at = now\(\) \+ \(\$5::int \* interval '1 second'\)/);
+  assert.equal(updates[0].values[4], 75);
+
+  const other = TenantContext.fromShopDomain("other.myshopify.com", { source: "webhook" });
+  await assert.rejects(repository.fail(other, event, new Error("fallo"), 5), /acceso cruzado/);
+});
+
+test("un webhook destructivo puede cerrar su lease despues de anonimizar el tenant", async () => {
+  const tenantId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+  let completionSql;
+  const client = {
+    async query(text, values = []) {
+      if (/UPDATE control_plane\.inbox_events/.test(text)) {
+        completionSql = { text, values };
+        return { rows: [{
+          id: WEBHOOK_ID,
+          tenant_id: null,
+          shop_domain: SHOP,
+          topic: "shop/redact",
+          payload_hash: "hash",
+          status: "processed"
+        }] };
+      }
+      return { rows: [] };
+    },
+    release() {}
+  };
+  const repository = createInboxRepository({ async connect() { return client; } });
+  const context = TenantContext.fromShopDomain(SHOP, { tenantId, source: "webhook" });
+  const completed = await repository.succeed(context, {
+    id: WEBHOOK_ID,
+    tenantId,
+    shopDomain: SHOP,
+    lockedBy: "worker:webhooks"
+  });
+
+  assert.equal(completed.status, "processed");
+  assert.match(completionSql.text, /tenant_id = \$3 OR tenant_id IS NULL/);
+  assert.equal(completionSql.values[2], tenantId);
 });

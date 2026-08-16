@@ -22,9 +22,10 @@ concurrency:
 jobs:
   migrate-and-deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 40
     environment: staging
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.release_sha }}
           fetch-depth: 0
@@ -45,11 +46,11 @@ jobs:
           [[ "$(git rev-parse origin/main)" == "$ACTUAL_SHA" ]] || { echo "El SHA revisado debe ser el HEAD actual de main" >&2; exit 1; }
           echo "sha=$ACTUAL_SHA" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: "20"
 
-      - run: npm install --no-audit --no-fund
+      - run: npm ci --no-audit --no-fund
 
       - name: Prepare isolated runtime roles
         env:
@@ -78,14 +79,55 @@ jobs:
           EXPECTED_SHA: ${{ steps.release.outputs.sha }}
         run: |
           set -euo pipefail
-          for attempt in $(seq 1 90); do
-            if curl --fail --silent --show-error --max-time 10 https://tiendaiq-staging-web.onrender.com/ready \
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent --show-error --max-time 5 https://tiendaiq-staging-web.onrender.com/ready \
               | node -e 'let body="";process.stdin.on("data",c=>body+=c).on("end",()=>{const ready=JSON.parse(body);process.exit(ready.ok===true&&ready.release===process.env.EXPECTED_SHA?0:1)})'; then
               echo "Staging web aprobo /ready con el SHA esperado"
               exit 0
             fi
-            echo "Esperando readiness de staging ($attempt/90)"
+            echo "Esperando readiness de staging ($attempt/60)"
             sleep 10
           done
-          echo "Staging no aprobo /ready dentro de 15 minutos" >&2
+          echo "Staging no aprobo /ready dentro de 10 minutos" >&2
+          exit 1
+
+      - name: Wait for the complete operational release gate
+        shell: bash
+        env:
+          CONFIRMATION: CHECK_STAGING_OPS_READINESS
+          EXPECTED_RELEASE_SHA: ${{ steps.release.outputs.sha }}
+          STAGING_APP_URL: https://tiendaiq-staging-web.onrender.com
+          OPS_STATUS_TOKEN: ${{ secrets.STAGING_OPS_STATUS_TOKEN }}
+          OPS_MAX_QUEUED_JOBS: "20"
+          OPS_MAX_OLDEST_JOB_SECONDS: "300"
+          OPS_MAX_RUNNING_JOBS: "16"
+          OPS_MAX_FAILED_RECENT_JOBS: "0"
+          OPS_MAX_STALE_RUNNING_JOBS: "0"
+          OPS_MAX_COMPENSATION_PENDING: "0"
+          OPS_MAX_COMPENSATION_DEAD_LETTER: "0"
+          OPS_MAX_STALE_COMPENSATION: "0"
+          OPS_MAX_OLDEST_COMPENSATION_SECONDS: "300"
+          OPS_MAX_INBOX_RECEIVED: "20"
+          OPS_MAX_INBOX_PROCESSING: "8"
+          OPS_MAX_INBOX_FAILED: "0"
+          OPS_MAX_INBOX_FAILED_RECENT: "0"
+          OPS_MAX_INBOX_STALE_PROCESSING: "0"
+          OPS_MAX_OLDEST_INBOX_SECONDS: "300"
+          OPS_MAX_WORKER_AGE_SECONDS: "60"
+          OPS_MIN_WORKER_UPTIME_SECONDS: "30"
+          OPS_MIN_GENERATION_CONCURRENCY: "8"
+          OPS_MIN_PUBLICATION_CONCURRENCY: "4"
+          OPS_MIN_WEBHOOK_CONCURRENCY: "2"
+          OPS_READINESS_PROFILE: technical_preflight
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 60); do
+            if npm run ops:readiness; then
+              echo "Staging aprobo el gate operativo completo con el SHA esperado"
+              exit 0
+            fi
+            echo "Esperando convergencia operativa de staging ($attempt/60)"
+            sleep 10
+          done
+          echo "Staging no aprobo el gate operativo completo dentro de 10 minutos" >&2
           exit 1

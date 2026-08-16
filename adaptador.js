@@ -29,7 +29,53 @@ const { gql, env, sesionDeEnv } = require("./shopify");
 // que es intercambiable sin cambiar nada más. Antes de fijar uno, comparar la
 // página generada por los dos sobre el mismo producto.
 const MODELO = env.MODELO_IA || "claude-sonnet-5";
-const ANTHROPIC_TIMEOUT_MS = Math.max(30000, Number(env.ANTHROPIC_TIMEOUT_MS) || 120000);
+const ANTHROPIC_TIMEOUT_MS = Math.min(300000, Math.max(30000, Number(env.ANTHROPIC_TIMEOUT_MS) || 120000));
+
+function terminalProviderError(message, cause) {
+  const error = new Error(message, cause ? { cause } : undefined);
+  error.nonRetryable = true;
+  return error;
+}
+
+function isAmbiguousProviderError(error, operationSignal) {
+  return operationSignal?.aborted === true
+    || error instanceof Anthropic.APIConnectionError
+    || error instanceof Anthropic.APIConnectionTimeoutError
+    || error instanceof Anthropic.APIUserAbortError
+    || ["AbortError", "TimeoutError", "APIConnectionTimeoutError", "APIUserAbortError"].includes(error?.name)
+    || ["ETIMEDOUT", "ECONNRESET", "ECONNABORTED", "EPIPE", "UND_ERR_SOCKET"].includes(error?.code);
+}
+
+function headerValue(headers, name) {
+  if (!headers) return null;
+  if (typeof headers.get === "function") return headers.get(name);
+  const key = Object.keys(headers).find((candidate) => candidate.toLowerCase() === name.toLowerCase());
+  const value = key ? headers[key] : null;
+  return Array.isArray(value) ? value[0] : value;
+}
+
+function retryAfterSeconds(headers, now = Date.now()) {
+  const rawMs = headerValue(headers, "retry-after-ms");
+  const retryAfterMs = Number(rawMs);
+  if (rawMs != null && rawMs !== "" && Number.isFinite(retryAfterMs) && retryAfterMs >= 0) {
+    return Math.ceil(retryAfterMs / 1000);
+  }
+
+  const raw = headerValue(headers, "retry-after");
+  if (raw == null || raw === "") return null;
+  const seconds = Number(raw);
+  if (Number.isFinite(seconds) && seconds >= 0) return Math.ceil(seconds);
+
+  const timestamp = Date.parse(String(raw));
+  if (!Number.isFinite(timestamp)) return null;
+  return Math.max(0, Math.ceil((timestamp - now) / 1000));
+}
+
+function normalizeProviderError(error, now = Date.now()) {
+  const retryAfter = retryAfterSeconds(error?.headers, now);
+  if (retryAfter != null) error.retryAfter = retryAfter;
+  return error;
+}
 
 // Cuánto delibera el modelo antes de escribir: low | medium | high | xhigh | max.
 // La salida cuesta 5 veces más que la entrada, y el esfuerzo es lo que más la
@@ -108,8 +154,8 @@ const CONSULTA_PRODUCTO = `query($id: ID!) {
   }
 }`;
 
-async function extraer(idProducto, sesion) {
-  const { product } = await gql(CONSULTA_PRODUCTO, { id: idProducto }, sesion);
+async function extraer(idProducto, sesion, { signal } = {}) {
+  const { product } = await gql(CONSULTA_PRODUCTO, { id: idProducto }, sesion, { signal });
   if (!product) throw new Error(`Producto no encontrado: ${idProducto}`);
 
   const variantes = product.variants.edges.map((e) => e.node);
@@ -438,7 +484,7 @@ const ESQUEMA = {
   additionalProperties: false
 };
 
-async function generar(fuente, medios, { idioma = "es", angulo = "" } = {}) {
+async function generar(fuente, medios, { idioma = "es", angulo = "", signal } = {}) {
   const cliente = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
 
   // Cada imagen va precedida de su media_id para que pueda referenciarlas.
@@ -483,6 +529,9 @@ async function generar(fuente, medios, { idioma = "es", angulo = "" } = {}) {
     "claves, mismos tipos, las cantidades pedidas):\n" +
     JSON.stringify(ESQUEMA);
 
+  const generationSignal = signal
+    ? AbortSignal.any([signal, AbortSignal.timeout(ANTHROPIC_TIMEOUT_MS)])
+    : AbortSignal.timeout(ANTHROPIC_TIMEOUT_MS);
   const flujo = cliente.messages.stream({
     model: MODELO,
     max_tokens: 16000,
@@ -490,15 +539,29 @@ async function generar(fuente, medios, { idioma = "es", angulo = "" } = {}) {
     output_config: { effort: ESFUERZO },
     system: sistema,
     messages: [{ role: "user", content: contenido }]
-  }, { timeout: ANTHROPIC_TIMEOUT_MS, maxRetries: 1 });
-  const r = await flujo.finalMessage();
+  }, { timeout: ANTHROPIC_TIMEOUT_MS, maxRetries: 0, signal: generationSignal });
+  let r;
+  try {
+    r = await flujo.finalMessage();
+  } catch (error) {
+    normalizeProviderError(error);
+    if (isAmbiguousProviderError(error, generationSignal)) {
+      const ambiguous = terminalProviderError("La generación quedó en estado ambiguo; no se repetirá automáticamente", error);
+      ambiguous.code = "ANTHROPIC_AMBIGUOUS";
+      ambiguous.skipCompensation = true;
+      throw ambiguous;
+    }
+    if (Number(error?.status) === 429 || Number(error?.status) >= 500) throw error;
+    if (Number(error?.status) >= 400) throw terminalProviderError("Anthropic rechazó la generación", error);
+    throw error;
+  }
 
   if (r.stop_reason === "refusal") {
-    throw new Error(`El modelo rechazó el pedido: ${r.stop_details?.explanation ?? "sin detalle"}`);
+    throw terminalProviderError(`El modelo rechazó el pedido: ${r.stop_details?.explanation ?? "sin detalle"}`);
   }
 
   let texto = r.content.find((b) => b.type === "text")?.text;
-  if (!texto) throw new Error("El modelo no devolvió texto.");
+  if (!texto) throw terminalProviderError("El modelo no devolvió texto.");
   texto = texto.trim();
   // Robustez: sacar fences ```json…``` y quedarse con el objeto {…} si vino con ruido.
   const fence = texto.match(/```(?:json)?\s*([\s\S]*?)```/i);
@@ -511,7 +574,7 @@ async function generar(fuente, medios, { idioma = "es", angulo = "" } = {}) {
   try {
     salida = JSON.parse(texto);
   } catch (e) {
-    throw new Error("El modelo no devolvió JSON válido: " + e.message);
+    throw terminalProviderError("El modelo no devolvió JSON válido: " + e.message, e);
   }
   return { salida, uso: r.usage };
 }
@@ -764,9 +827,16 @@ async function listarProductos(sesion) {
 // El endpoint POST /paginas entero: extracción → adaptador → IA → ensamblado.
 // La sesión dice de qué tienda leer; la IA la pagamos nosotros, así que la
 // key de Anthropic es global y no viaja en la sesión.
-async function crearPagina(idProducto, sesion, { idioma = "es", angulo = "", estilo = "clasico" } = {}) {
-  const { fuente, medios } = await extraer(idProducto, sesion);
-  const { salida, uso } = await generar(fuente, medios, { idioma, angulo });
+async function crearPagina(idProducto, sesion, {
+  idioma = "es",
+  angulo = "",
+  estilo = "clasico",
+  signal,
+  beforeProviderCall
+} = {}) {
+  const { fuente, medios } = await extraer(idProducto, sesion, { signal });
+  if (typeof beforeProviderCall === "function") await beforeProviderCall();
+  const { salida, uso } = await generar(fuente, medios, { idioma, angulo, signal });
   const data = ensamblar(fuente, salida, { idioma, angulo });
   // Modelo de página elegido en la creación (el render branchea por acá).
   data.global.estilo = ["clasico", "premium", "pagepilot", "pagepilot-blue"].includes(estilo) ? estilo : "clasico";
@@ -833,7 +903,20 @@ function escribirPreview(data, urls) {
   fs.writeFileSync(path.join(__dirname, "ultima-pagina.json"), JSON.stringify(data, null, 2));
 }
 
-module.exports = { listarProductos, crearPagina, escribirPreview, extraer, generar, editarTexto, ensamblar, validar };
+module.exports = {
+  listarProductos,
+  crearPagina,
+  escribirPreview,
+  extraer,
+  generar,
+  editarTexto,
+  ensamblar,
+  isAmbiguousProviderError,
+  normalizeProviderError,
+  retryAfterSeconds,
+  terminalProviderError,
+  validar
+};
 
 // ============================================================
 // CLI

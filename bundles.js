@@ -24,7 +24,7 @@
 // ============================================================
 
 const { gql } = require("./shopify");
-const { leerTienda, guardarTienda } = require("./tiendas");
+const { leerTienda, actualizarCamposTienda } = require("./tiendas");
 
 // ---------- config ----------
 
@@ -83,7 +83,11 @@ function configDefault() {
     activo: false,
     instalado: null, // { tema, fecha } cuando se inyectó en el tema
     lista: [],       // bundle[]
-    pending_cleanup_ids: [] // descuentos de bundles borrados que Shopify no dejó limpiar todavía
+    pending_cleanup_ids: [], // descuentos de bundles borrados que Shopify no dejó limpiar todavía
+    sync: null, // estado durable del último reemplazo de descuentos
+    version: 0,
+    applied_version: 0,
+    applied: null
   };
 }
 
@@ -119,7 +123,9 @@ async function leerConfigBundles(tienda) {
 async function guardarConfigBundles(tienda, config) {
   const t = (await leerTienda(tienda)) || {};
   if (!t.token) throw new Error(`La tienda ${tienda} no está instalada`);
-  await guardarTienda(tienda, t.token, { ...t, bundles: config });
+  // Escribe solo bundles: reemplazar el documento completo puede perder un
+  // token, plan o contador actualizado por otro request.
+  await actualizarCamposTienda(tienda, { bundles: config });
   return config;
 }
 
@@ -135,8 +141,15 @@ function errorConfig(message) {
 function validarConfigBundles(config) {
   if (!config || !Array.isArray(config.lista)) throw errorConfig("La configuración de bundles no es válida.");
 
+  const ids = new Set();
+
   for (const bundle of config.lista) {
-    if (!bundle || bundle.activo === false) continue;
+    if (!bundle) throw errorConfig("La configuración contiene un bundle vacío.");
+    if (!bundle.id || ids.has(bundle.id)) {
+      throw errorConfig("Cada bundle debe tener un identificador único.");
+    }
+    ids.add(bundle.id);
+    if (bundle.activo === false) continue;
     if (!["volumen", "bxgy"].includes(bundle.tipo || "volumen")) {
       throw errorConfig("Ese tipo de bundle todavía no está disponible para publicar.");
     }
@@ -157,6 +170,65 @@ function validarConfigBundles(config) {
     }
   }
   return config;
+}
+
+// El navegador nunca decide qué descuentos existen en Shopify. Esta función
+// arma la intención que ejecutará el worker conservando exclusivamente los IDs
+// que ya conoce el servidor y registrando las limpiezas de bundles eliminados.
+function prepararConfigBundles(actual = configDefault(), propuesta) {
+  validarConfigBundles(propuesta);
+  const config = JSON.parse(JSON.stringify(propuesta));
+  const anterior = actual && typeof actual === "object" ? actual : configDefault();
+  const anterioresPorId = new Map((anterior.lista || []).map((bundle) => [bundle.id, bundle]));
+
+  // Campos de estado que el navegador no puede decidir.
+  delete config.applied;
+  delete config.applied_version;
+  delete config.version;
+  delete config.sync;
+  config.instalado = anterior.instalado || null;
+  config.lista = (config.lista || []).map((bundle) => ({
+    ...bundle,
+    discount_ids: [...new Set(anterioresPorId.get(bundle.id)?.discount_ids || [])],
+    sync_status: anterioresPorId.get(bundle.id)?.sync_status || null,
+    sync_error: null
+  }));
+
+  const pendientes = new Set(anterior.pending_cleanup_ids || []);
+  const vigentes = new Set(config.lista.map((bundle) => bundle.id));
+  for (const bundle of anterior.lista || []) {
+    if (!vigentes.has(bundle.id)) {
+      for (const id of bundle.discount_ids || []) pendientes.add(id);
+    }
+  }
+  config.pending_cleanup_ids = [...pendientes];
+  config.activo = config.lista.some((bundle) => bundle.activo !== false);
+  config.version = Math.max(0, Number(anterior.version) || 0) + 1;
+  config.applied_version = Math.max(0, Number(anterior.applied_version) || 0);
+  config.applied = anterior.applied
+    ? JSON.parse(JSON.stringify(anterior.applied))
+    : snapshotConfigBundles(anterior);
+  config.sync = null;
+  return config;
+}
+
+function snapshotConfigBundles(config = configDefault()) {
+  return {
+    activo: config.activo === true,
+    instalado: config.instalado || null,
+    lista: JSON.parse(JSON.stringify(config.lista || [])),
+    pending_cleanup_ids: [...new Set(config.pending_cleanup_ids || [])],
+    version: Math.max(0, Number(config.version) || 0)
+  };
+}
+
+// La tienda pública consume únicamente el último documento confirmado. La
+// intención nueva puede verse en el admin mientras el worker sincroniza, pero
+// no se ofrece al comprador hasta que Shopify confirmó sus descuentos.
+function configAplicadaBundles(config = configDefault()) {
+  return config.applied
+    ? JSON.parse(JSON.stringify(config.applied))
+    : snapshotConfigBundles(config);
 }
 
 function bundleEsPublicable(bundle) {
@@ -226,16 +298,17 @@ function porcentajeValido(descuento, cantidad) {
 
 // Borra los descuentos que respaldaban un bundle. Tolera ids muertos (si el
 // merchant borró el descuento a mano, el userErrors no nos frena).
-async function borrarDescuentos(sesion, ids = [], log = () => {}) {
+async function borrarDescuentos(sesion, ids = [], log = () => {}, { signal } = {}) {
   const borrados = [];
   const fallidos = [];
   for (const id of ids) {
     try {
-      const r = await gql(M_BORRAR, { id }, sesion);
+      const r = await gql(M_BORRAR, { id }, sesion, { signal });
       const errores = r.discountAutomaticDelete?.userErrors || [];
       if (errores.length) throw new Error(errores.map((e) => e.message).join(" · "));
       borrados.push(id);
     } catch (e) {
+      if (signal?.aborted) throw signal.reason || e;
       fallidos.push(id);
       log(`  aviso · no se pudo borrar ${id}: ${e.message}`);
     }
@@ -256,15 +329,15 @@ async function borrarDescuentos(sesion, ids = [], log = () => {}) {
 // (`err.creados`). Sin eso, un fallo en el segundo peldaño deja el primero
 // vivo en la tienda del merchant y sin registro: la app no lo puede borrar
 // nunca más, y cada intento siguiente suma otro huérfano encima.
-async function crearDescuentos(sesion, bundle, log = () => {}) {
+async function crearDescuentos(sesion, bundle, log = () => {}, { signal } = {}) {
   if (bundle.activo === false) return [];
-  if (bundle.tipo === "bxgy") return await crearDescuentoBxgy(sesion, bundle, log);
+  if (bundle.tipo === "bxgy") return await crearDescuentoBxgy(sesion, bundle, log, { signal });
 
   const items = itemsDelActivador(bundle.activador || { tipo: "todos" });
   const creados = [];
 
   try {
-    await crearPeldanos(sesion, bundle, items, creados, log);
+    await crearPeldanos(sesion, bundle, items, creados, log, { signal });
   } catch (e) {
     e.creados = creados;
     throw e;
@@ -284,7 +357,15 @@ function combinaDe(bundle) {
   };
 }
 
-async function crearPeldanos(sesion, bundle, items, creados, log) {
+function resultadoMutacionAmbiguo(error) {
+  if (error?.nonRetryable === true || error?.code === "TOKEN_INVALIDO") return false;
+  return ["SHOPIFY_TIMEOUT", "JOB_LEASE_LOST"].includes(error?.code)
+    || error?.name === "TypeError"
+    || !error?.status
+    || Number(error.status) >= 500;
+}
+
+async function crearPeldanos(sesion, bundle, items, creados, log, { signal } = {}) {
   for (const oferta of bundle.ofertas || []) {
     if (oferta.activo === false) continue; // nivel apagado: no crea descuento
     const tipo = oferta.tipo_desc || (Number(oferta.descuento) > 0 ? "porcentaje" : "ninguno");
@@ -306,7 +387,17 @@ async function crearPeldanos(sesion, bundle, items, creados, log) {
       combinesWith: combinaDe(bundle)
     };
 
-    const r = await gql(M_CREAR, { d }, sesion);
+    let r;
+    try {
+      r = await gql(M_CREAR, { d }, sesion, { signal });
+    } catch (error) {
+      // Sin respuesta de una mutación no podemos afirmar si Shopify alcanzó a
+      // crear el descuento. El worker debe detener reintentos ciegos.
+      if (resultadoMutacionAmbiguo(error)) {
+        error.ambiguous = true;
+      }
+      throw error;
+    }
     const errores = r.discountAutomaticBasicCreate.userErrors;
     if (errores?.length) {
       throw new Error(`Descuento ${cant}+: ${errores.map((e) => e.message).join(" · ")}`);
@@ -320,7 +411,7 @@ async function crearPeldanos(sesion, bundle, items, creados, log) {
 
 // BXGY: "comprá X y obtené Y" con un solo descuento automático nativo.
 // El activador define el scope de los dos lados. regalo_descuento 100 = gratis.
-async function crearDescuentoBxgy(sesion, bundle, log = () => {}) {
+async function crearDescuentoBxgy(sesion, bundle, log = () => {}, { signal } = {}) {
   const b = bundle.bxgy || {};
   const compra = Math.max(1, Number(b.compra_cantidad) || 1);
   const regalo = Math.max(1, Number(b.regalo_cantidad) || 1);
@@ -338,7 +429,15 @@ async function crearDescuentoBxgy(sesion, bundle, log = () => {}) {
     combinesWith: combinaDe(bundle)
   };
 
-  const r = await gql(M_CREAR_BXGY, { d }, sesion);
+  let r;
+  try {
+    r = await gql(M_CREAR_BXGY, { d }, sesion, { signal });
+  } catch (error) {
+    if (resultadoMutacionAmbiguo(error)) {
+      error.ambiguous = true;
+    }
+    throw error;
+  }
   const errores = r.discountAutomaticBxgyCreate.userErrors;
   if (errores?.length) {
     throw new Error(`BXGY: ${errores.map((e) => e.message).join(" · ")}`);
@@ -352,27 +451,27 @@ async function crearDescuentoBxgy(sesion, bundle, log = () => {}) {
 // después retira la versión anterior. Si crear falla, los descuentos viejos
 // siguen activos y cualquier creación parcial se compensa. `discount_ids`
 // conserva también las limpiezas pendientes para no dejar ids huérfanos.
-async function sincronizarDescuentos(sesion, config, log = () => {}) {
+async function sincronizarDescuentos(sesion, config, log = () => {}, { signal } = {}) {
   validarConfigBundles(config);
   for (const bundle of config.lista) {
     const anteriores = [...new Set(bundle.discount_ids || [])];
 
     if (bundle.activo === false) {
-      const limpieza = await borrarDescuentos(sesion, anteriores, log);
+      const limpieza = await borrarDescuentos(sesion, anteriores, log, { signal });
       bundle.discount_ids = limpieza.fallidos;
       bundle.sync_status = limpieza.fallidos.length ? "cleanup_pending" : "inactive";
       continue;
     }
 
     try {
-      const nuevos = await crearDescuentos(sesion, bundle, log);
+      const nuevos = await crearDescuentos(sesion, bundle, log, { signal });
       bundle.discount_ids = [...new Set([...anteriores, ...nuevos])];
-      const limpieza = await borrarDescuentos(sesion, anteriores, log);
+      const limpieza = await borrarDescuentos(sesion, anteriores, log, { signal });
       bundle.discount_ids = [...new Set([...nuevos, ...limpieza.fallidos])];
       bundle.sync_status = limpieza.fallidos.length ? "cleanup_pending" : "active";
     } catch (e) {
       const parciales = e.creados || [];
-      const compensacion = await borrarDescuentos(sesion, parciales, log);
+      const compensacion = await borrarDescuentos(sesion, parciales, log, { signal });
       bundle.discount_ids = [...new Set([...anteriores, ...compensacion.fallidos])];
       bundle.sync_status = "error";
       bundle.sync_error = e.message;
@@ -437,6 +536,9 @@ module.exports = {
   leerConfigBundles,
   guardarConfigBundles,
   validarConfigBundles,
+  prepararConfigBundles,
+  snapshotConfigBundles,
+  configAplicadaBundles,
   bundleEsPublicable,
   sincronizarDescuentos,
   borrarDescuentos,
