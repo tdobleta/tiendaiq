@@ -21,11 +21,19 @@ const MES = new Date().toISOString().slice(0, 7);
 
 // Respuestas típicas de Shopify a la consulta de suscripciones.
 const CON_SUSCRIPCION = {
-  currentAppInstallation: { activeSubscriptions: [{ name: "TiendaIQ Pro", status: "ACTIVE", test: false }] }
+  currentAppInstallation: {
+    activeSubscriptions: [{ id: "gid://shopify/AppSubscription/1", name: "TiendaIQ Pro", status: "ACTIVE", test: false }]
+  }
 };
 const SIN_SUSCRIPCION = { currentAppInstallation: { activeSubscriptions: [] } };
 const SUSCRIPCION_CANCELADA = {
   currentAppInstallation: { activeSubscriptions: [{ name: "TiendaIQ Pro", status: "CANCELLED", test: false }] }
+};
+const SUSCRIPCION_AJENA = {
+  currentAppInstallation: { activeSubscriptions: [{ id: "otra", name: "Otro plan", status: "ACTIVE", test: false }] }
+};
+const SUSCRIPCION_TEST = {
+  currentAppInstallation: { activeSubscriptions: [{ id: "test", name: "TiendaIQ Pro", status: "ACTIVE", test: true }] }
 };
 
 const hace = (horas) => new Date(Date.now() - horas * 3600 * 1000).toISOString();
@@ -160,6 +168,31 @@ describe("estadoPlan — quién tiene pro y quién no", () => {
       respuestas: [SUSCRIPCION_CANCELADA]
     });
     assert.equal((await modulo.estadoPlan(SESION)).plan, "gratis");
+  });
+
+  test("una suscripción activa de otro producto no concede Pro", async () => {
+    const { modulo } = montar("facturacion.js", {
+      tiendas: { [TIENDA]: { token: "t", plan: "pro", plan_verificado: hace(13) } },
+      respuestas: [SUSCRIPCION_AJENA]
+    });
+    assert.equal((await modulo.estadoPlan(SESION)).plan, "gratis");
+  });
+
+  test("una suscripción test no concede Pro en runtime de cobro real", async () => {
+    const { modulo } = montar("facturacion.js", {
+      tiendas: { [TIENDA]: { token: "t", plan: "pro", plan_verificado: hace(13) } },
+      respuestas: [SUSCRIPCION_TEST]
+    });
+    assert.equal((await modulo.estadoPlan(SESION)).plan, "gratis");
+  });
+
+  test("una suscripción test sí concede Pro en staging explícito", async () => {
+    const { modulo } = montar("facturacion.js", {
+      env: { PLAN_TEST: "1" },
+      tiendas: { [TIENDA]: { token: "t", plan: "gratis", uso: { [MES]: 3 } } },
+      respuestas: [SUSCRIPCION_TEST]
+    });
+    assert.equal((await modulo.estadoPlan(SESION)).plan, "pro");
   });
 
   test("el que llegó al límite y acaba de suscribir sube a pro sin esperar", async () => {
@@ -317,17 +350,22 @@ describe("consumirCupo — reserva ATÓMICA de cupo (sin regalar páginas)", () 
 });
 
 describe("actualizarPlanDesdeWebhook — la vía rápida cuando cambia el plan", () => {
-  test("ACTIVE sube a pro", async () => {
-    const { modulo, tiendas } = montar("facturacion.js", { tiendas: { [TIENDA]: { token: "t", plan: "gratis" } } });
+  test("ACTIVE sube a pro solo después de reconciliar con Shopify", async () => {
+    const { modulo, tiendas, shopify } = montar("facturacion.js", {
+      tiendas: { [TIENDA]: { token: "t", plan: "gratis" } },
+      respuestas: [CON_SUSCRIPCION]
+    });
 
     assert.equal(await modulo.actualizarPlanDesdeWebhook(TIENDA, { app_subscription: { status: "ACTIVE" } }), "pro");
     assert.equal(tiendas._almacen[TIENDA].plan, "pro");
+    assert.equal(shopify.llamadas.length, 1);
   });
 
   test("cualquier estado que no sea ACTIVE baja a gratis", async () => {
     for (const estado of ["CANCELLED", "EXPIRED", "FROZEN", "DECLINED", "PENDING"]) {
       const { modulo } = montar("facturacion.js", {
-        tiendas: { [TIENDA]: { token: "t", plan: "pro" } }
+        tiendas: { [TIENDA]: { token: "t", plan: "pro" } },
+        respuestas: [SIN_SUSCRIPCION]
       });
       assert.equal(
         await modulo.actualizarPlanDesdeWebhook(TIENDA, { app_subscription: { status: estado } }),
@@ -335,6 +373,48 @@ describe("actualizarPlanDesdeWebhook — la vía rápida cuando cambia el plan",
         `${estado} dejó el plan en pro`
       );
     }
+  });
+
+  test("un ACTIVE ajeno no puede elevar el plan", async () => {
+    const { modulo, tiendas } = montar("facturacion.js", {
+      tiendas: { [TIENDA]: { token: "t", plan: "gratis" } },
+      respuestas: [SUSCRIPCION_AJENA]
+    });
+    assert.equal(await modulo.actualizarPlanDesdeWebhook(TIENDA, { app_subscription: { status: "ACTIVE" } }), "gratis");
+    assert.equal(tiendas._almacen[TIENDA].plan, "gratis");
+  });
+
+  test("al bajar a gratis limpia la identidad de billing anterior", async () => {
+    const { modulo, tiendas } = montar("facturacion.js", {
+      tiendas: {
+        [TIENDA]: {
+          token: "t",
+          plan: "pro",
+          billing_subscription_id: "gid://shopify/AppSubscription/vieja",
+          billing_subscription_name: "TiendaIQ Pro",
+          billing_subscription_test: false
+        }
+      },
+      respuestas: [SIN_SUSCRIPCION]
+    });
+
+    await modulo.actualizarPlanDesdeWebhook(TIENDA, { app_subscription: { status: "CANCELLED" } });
+    const t = tiendas._almacen[TIENDA];
+    assert.equal(t.plan, "gratis");
+    assert.equal(t.billing_subscription_id, null);
+    assert.equal(t.billing_subscription_name, null);
+    assert.equal(t.billing_subscription_test, null);
+  });
+
+  test("un webhook de cancelación no degrada si la suscripción correcta sigue activa", async () => {
+    const { modulo } = montar("facturacion.js", {
+      tiendas: { [TIENDA]: { token: "t", plan: "pro" } },
+      respuestas: [CON_SUSCRIPCION]
+    });
+    assert.equal(
+      await modulo.actualizarPlanDesdeWebhook(TIENDA, { app_subscription: { status: "CANCELLED" } }),
+      "pro"
+    );
   });
 
   test("un payload sin estado no toca nada", async () => {
@@ -352,11 +432,17 @@ describe("actualizarPlanDesdeWebhook — la vía rápida cuando cambia el plan",
   });
 
   test("guarda la fecha de verificación para que la revalidación cuente desde ahora", async () => {
-    const { modulo, tiendas } = montar("facturacion.js", { tiendas: { [TIENDA]: { token: "t" } } });
+    const { modulo, tiendas } = montar("facturacion.js", {
+      tiendas: { [TIENDA]: { token: "t" } },
+      respuestas: [CON_SUSCRIPCION]
+    });
 
     await modulo.actualizarPlanDesdeWebhook(TIENDA, { app_subscription: { status: "ACTIVE" } });
     const t = tiendas._almacen[TIENDA];
     assert.ok(t.plan_verificado, "sin fecha, la próxima lectura revalida al pedo");
     assert.ok(Date.now() - Date.parse(t.plan_verificado) < 5000);
+    assert.equal(t.billing_subscription_id, "gid://shopify/AppSubscription/1");
+    assert.equal(t.billing_subscription_name, "TiendaIQ Pro");
+    assert.equal(t.billing_subscription_test, false);
   });
 });
