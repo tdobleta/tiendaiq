@@ -101,9 +101,11 @@ Cuando una tienda queda fuera del cupo de la ola vigente:
 - La interfaz debe explicar que la generacion quedo en espera o fue limitada
   temporalmente; no debe prometer ejecucion inmediata.
 - No se reserva cupo ni se cobra consumo de IA si la solicitud no entra a cola.
-- La edicion IA puntual del editor (`/api/texto/editar`) queda fuera del GO
-  mientras no use cola durable y worker; si se intenta usar durante el canary,
-  debe degradar de forma controlada sin llamar Anthropic desde web.
+- La edicion IA puntual del editor (`/api/texto/editar`) usa cola durable y el
+  mismo carril de proveedor del worker. Un lease recuperado no repite una
+  llamada ambigua. La bandera visual permanece apagada hasta certificar este
+  flujo en staging con admision, cuota y costo observados; web nunca recibe la
+  credencial de Anthropic.
 
 El objetivo no es esconder el limite, sino proteger reputacion y datos mientras
 el sistema absorbe demanda real.

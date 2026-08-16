@@ -846,7 +846,14 @@ async function crearPagina(idProducto, sesion, {
 
 // Asistente puntual del editor de páginas: reescribe / acorta / amplía el
 // texto de UN campo, con el contexto de su sección. No inventa hechos.
-async function editarTexto({ texto = "", instrucciones = "", modo = "rewrite", idioma = "es", contexto = "" } = {}) {
+async function editarTexto({
+  texto = "",
+  instrucciones = "",
+  modo = "rewrite",
+  idioma = "es",
+  contexto = "",
+  signal
+} = {}) {
   const cliente = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
   let contextoEditor = contexto;
   try {
@@ -879,12 +886,31 @@ async function editarTexto({ texto = "", instrucciones = "", modo = "rewrite", i
     `Texto actual:\n${String(texto).trim() || "(vacío)"}`,
     instrucciones.trim() ? `Indicaciones del comerciante:\n${instrucciones.trim()}` : ""
   ].filter(Boolean).join("\n\n");
-  const r = await cliente.messages.create({
-    model: MODELO,
-    max_tokens: 900,
-    system: sistema,
-    messages: [{ role: "user", content: prompt }]
-  }, { timeout: ANTHROPIC_TIMEOUT_MS, maxRetries: 1 });
+  const operationSignal = signal
+    ? AbortSignal.any([signal, AbortSignal.timeout(ANTHROPIC_TIMEOUT_MS)])
+    : AbortSignal.timeout(ANTHROPIC_TIMEOUT_MS);
+  let r;
+  try {
+    r = await cliente.messages.create({
+      model: MODELO,
+      max_tokens: 900,
+      system: sistema,
+      messages: [{ role: "user", content: prompt }]
+    }, { timeout: ANTHROPIC_TIMEOUT_MS, maxRetries: 0, signal: operationSignal });
+  } catch (error) {
+    normalizeProviderError(error);
+    if (isAmbiguousProviderError(error, operationSignal)) {
+      const ambiguous = terminalProviderError(
+        "La edición quedó en estado ambiguo; no se repetirá automáticamente",
+        error
+      );
+      ambiguous.code = "ANTHROPIC_EDIT_AMBIGUOUS";
+      throw ambiguous;
+    }
+    if (Number(error?.status) === 429 || Number(error?.status) >= 500) throw error;
+    if (Number(error?.status) >= 400) throw terminalProviderError("Anthropic rechazó la edición", error);
+    throw error;
+  }
   const salida = r.content?.find((b) => b.type === "text")?.text?.trim();
   if (!salida) throw new Error("La IA no devolvió un texto para este campo.");
   return salida.replace(/^```(?:text|markdown)?\s*/i, "").replace(/\s*```$/i, "").trim();

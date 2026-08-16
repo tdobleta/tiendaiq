@@ -666,14 +666,46 @@ async function api(req, res, url) {
     return p ? json(res, 200, p) : json(res, 404, { error: "No existe esa página" });
   }
 
-  // POST /api/texto/editar — no corre IA en el proceso web. La edición asistida
-  // debe entrar por cola durable/worker para conservar aislamiento, costos y
-  // observabilidad.
+  // POST /api/texto/editar — registra una intención durable. Anthropic se llama
+  // exclusivamente desde el worker y una intención ambigua nunca se repite.
   if (req.method === "POST" && ruta === "/api/texto/editar") {
-    res.setHeader("Retry-After", "3600");
-    return json(res, 503, {
-      error: "La edicion asistida esta temporalmente deshabilitada mientras se migra al worker."
+    const {
+      texto = "",
+      instrucciones = "",
+      modo = "rewrite",
+      idioma = "es",
+      contexto = "",
+      request_id
+    } = await leerCuerpo(req, 40_000);
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(request_id || "")) {
+      return json(res, 400, { error: "Falta un request_id válido para editar de forma segura" });
+    }
+    if (String(texto).length > 10_000 || String(instrucciones).length > 2_000 || String(contexto).length > 15_000) {
+      return json(res, 413, { error: "El contenido de edición supera el límite permitido" });
+    }
+    if (!["rewrite", "shorter", "longer"].includes(String(modo))) {
+      return json(res, 400, { error: "El modo de edición no es válido" });
+    }
+    if (!/^[a-z]{2,3}(?:-[a-z0-9]{2,8})?$/i.test(String(idioma))) {
+      return json(res, 400, { error: "El idioma de edición no es válido" });
+    }
+    const admissionPause = generationAdmissionPause(env);
+    if (admissionPause.paused) {
+      res.setHeader("Retry-After", String(admissionPause.retryAfter));
+      return json(res, 503, { error: admissionPause.message, code: admissionPause.code });
+    }
+
+    const idempotencyKey = `edit-text:${request_id}`;
+    const job = await encolarJobExclusivoDB(sesion.tenant, {
+      type: "edit-text",
+      payload: { texto, instrucciones, modo, idioma, contexto },
+      idempotencyKey,
+      maxAttempts: 1
     });
+    if (job?.idempotencyKey !== idempotencyKey) {
+      return json(res, 409, { error: "Ya hay otra edición asistida en curso. Esperá a que termine." });
+    }
+    return json(res, 202, { job: jobPublico(job) });
   }
 
   // POST /api/imagen — sube una imagen a Files de la tienda (genérico). Lo usa
