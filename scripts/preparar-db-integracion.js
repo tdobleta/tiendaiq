@@ -9,7 +9,8 @@ const EXPECTED_ROLES = Object.freeze({
   worker: "tiendaiq_worker",
   webRuntime: "tiendaiq_web_runtime",
   workerRuntime: "tiendaiq_worker_runtime",
-  capability: "tiendaiq_worker_capability"
+  legacyCapability: "tiendaiq_worker_capability",
+  capability: "tiendaiq_worker_capability_v2"
 });
 const LOCAL_HOSTS = new Set(["127.0.0.1", "localhost", "[::1]"]);
 
@@ -110,14 +111,24 @@ async function main() {
       });
     }
 
-    const capability = await admin.query("SELECT 1 FROM pg_roles WHERE rolname = $1", [EXPECTED_ROLES.capability]);
-    if (!capability.rowCount) {
-      await admin.query(
-        `CREATE ROLE ${quoteIdentifier(EXPECTED_ROLES.capability)} NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS`
-      );
+    for (const role of [EXPECTED_ROLES.legacyCapability, EXPECTED_ROLES.capability]) {
+      const capability = await admin.query("SELECT 1 FROM pg_roles WHERE rolname = $1", [role]);
+      if (!capability.rowCount) {
+        await admin.query(
+          `CREATE ROLE ${quoteIdentifier(role)} NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS`
+        );
+      }
     }
-    for (const role of [EXPECTED_ROLES.migration, EXPECTED_ROLES.web, EXPECTED_ROLES.worker]) {
-      await admin.query(`REVOKE ${quoteIdentifier(EXPECTED_ROLES.capability)} FROM ${quoteIdentifier(role)}`);
+    for (const member of [
+      EXPECTED_ROLES.migration,
+      EXPECTED_ROLES.web,
+      EXPECTED_ROLES.worker,
+      EXPECTED_ROLES.webRuntime,
+      EXPECTED_ROLES.workerRuntime
+    ]) {
+      for (const capability of [EXPECTED_ROLES.legacyCapability, EXPECTED_ROLES.capability]) {
+        await admin.query(`REVOKE ${quoteIdentifier(capability)} FROM ${quoteIdentifier(member)}`);
+      }
     }
     await admin.query(
       `GRANT ${quoteIdentifier(EXPECTED_ROLES.webRuntime)} TO ${quoteIdentifier(EXPECTED_ROLES.web)}`
