@@ -41,6 +41,22 @@ function suscripcionSerializable(suscripcion) {
   };
 }
 
+// Shopify puede devolver varias suscripciones activas de la app. El acceso a
+// TiendaIQ Pro no se concede por la mera presencia de "alguna" suscripcion:
+// debe coincidir con el producto que vendemos y una suscripcion test nunca
+// habilita el runtime de cobro real.
+function esSuscripcionElegible(suscripcion) {
+  if (!suscripcion || suscripcion.status !== "ACTIVE" || suscripcion.name !== PLAN_NOMBRE) {
+    return false;
+  }
+  return suscripcion.test !== true || env.PLAN_TEST === "1";
+}
+
+async function suscripcionElegibleActiva(sesion, opciones) {
+  return (await consultarSuscripcionesActivas(sesion, opciones))
+    .find(esSuscripcionElegible) || null;
+}
+
 // Consulta autoritativa y reutilizable para iniciar o reconciliar billing.
 async function consultarSuscripcionesActivas(sesion, { signal } = {}) {
   const d = await gql(
@@ -54,11 +70,6 @@ async function consultarSuscripcionesActivas(sesion, { signal } = {}) {
     .map(suscripcionSerializable);
 }
 
-// ¿Tiene una suscripción activa en Shopify? (fuente de verdad)
-async function suscripcionActiva(sesion, opciones) {
-  return (await consultarSuscripcionesActivas(sesion, opciones)).length > 0;
-}
-
 // Estado de plan para la UI y para el chequeo de cupo.
 async function estadoPlan(sesion, { confirmar = false } = {}) {
   const t = (await leerTienda(sesion.tienda)) || {};
@@ -70,12 +81,18 @@ async function estadoPlan(sesion, { confirmar = false } = {}) {
   }
 
   let plan = t.plan === "pro" ? "pro" : "gratis";
-  // Escritura PARCIAL (solo plan/plan_verificado): no reescribe el registro
-  // entero, así no pisa el contador `uso` ni el token (antes, escribir el plan
-  // desde este GET podía "devolver" páginas gratis por lost update).
-  const marcar = async (nuevo) => {
+  // Escritura PARCIAL: no reescribe el registro entero, así no pisa el contador
+  // `uso` ni el token (antes, escribir el plan desde este GET podía "devolver"
+  // páginas gratis por lost update).
+  const marcar = async (nuevo, suscripcion = null) => {
     plan = nuevo;
-    await actualizarCamposTienda(sesion.tienda, { plan: nuevo, plan_verificado: new Date().toISOString() });
+    await actualizarCamposTienda(sesion.tienda, {
+      plan: nuevo,
+      plan_verificado: new Date().toISOString(),
+      billing_subscription_id: suscripcion?.id || null,
+      billing_subscription_name: suscripcion?.name || null,
+      billing_subscription_test: suscripcion ? suscripcion.test === true : null
+    });
   };
 
   if (plan === "pro") {
@@ -83,12 +100,14 @@ async function estadoPlan(sesion, { confirmar = false } = {}) {
     // si el merchant canceló, dejó de pagar o venció, baja a gratis.
     const ultima = t.plan_verificado ? Date.parse(t.plan_verificado) : 0;
     if (Date.now() - ultima > HORAS_REVALIDAR * 3600 * 1000) {
-      await marcar((await suscripcionActiva(sesion)) ? "pro" : "gratis");
+      const suscripcion = await suscripcionElegibleActiva(sesion);
+      await marcar(suscripcion ? "pro" : "gratis", suscripcion);
     }
   } else if (confirmar || usadas >= PAGINAS_GRATIS) {
     // Al límite: re-chequear por si suscribió recién.
-    if (await suscripcionActiva(sesion)) {
-      await marcar("pro");
+    const suscripcion = await suscripcionElegibleActiva(sesion);
+    if (suscripcion) {
+      await marcar("pro", suscripcion);
       if (confirmar) metrica("suscripcion_confirmada", { tienda: sesion.tienda });
     }
   }
@@ -104,8 +123,18 @@ async function actualizarPlanDesdeWebhook(tienda, payload) {
   if (!estado) return null;
   const t = (await leerTienda(tienda)) || {};
   if (!t.token) return null;
-  const plan = estado === "ACTIVE" ? "pro" : "gratis";
-  await actualizarCamposTienda(tienda, { plan, plan_verificado: new Date().toISOString() });
+  // El payload solo despierta la reconciliacion. No es prueba suficiente para
+  // elevar ni degradar el plan: puede pertenecer a otra suscripcion o llegar
+  // fuera de orden. currentAppInstallation es la fuente autoritativa.
+  const suscripcion = await suscripcionElegibleActiva({ tienda, token: t.token });
+  const plan = suscripcion ? "pro" : "gratis";
+  await actualizarCamposTienda(tienda, {
+    plan,
+    plan_verificado: new Date().toISOString(),
+    billing_subscription_id: suscripcion?.id || null,
+    billing_subscription_name: suscripcion?.name || null,
+    billing_subscription_test: suscripcion ? suscripcion.test === true : null
+  });
   return plan;
 }
 
@@ -188,9 +217,8 @@ function isAmbiguousSubscriptionError(error, signal) {
 }
 
 async function reconciliarSuscripcionActiva(sesion, { signal, reconciled = false } = {}) {
-  const activas = await consultarSuscripcionesActivas(sesion, { signal });
-  if (!activas.length) return null;
-  const subscription = activas.find((item) => item.name === PLAN_NOMBRE) || activas[0];
+  const subscription = await suscripcionElegibleActiva(sesion, { signal });
+  if (!subscription) return null;
   return {
     status: "active",
     alreadyActive: true,
@@ -283,5 +311,6 @@ module.exports = {
   estadoPlan, exigirCupo, consumirCupo, revertirCupo, crearSuscripcion, actualizarPlanDesdeWebhook,
   consultarSuscripcionesActivas, crearSuscripcionRemota, errorSuscripcionAmbigua,
   iniciarSuscripcion, isAmbiguousSubscriptionError, reconciliarSuscripcionActiva,
+  esSuscripcionElegible, suscripcionElegibleActiva,
   PAGINAS_GRATIS, PLAN_PRECIO, PLAN_NOMBRE, mesActual
 };

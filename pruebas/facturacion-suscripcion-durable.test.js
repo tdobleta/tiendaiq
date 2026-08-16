@@ -60,6 +60,39 @@ test("no crea otro cargo cuando Shopify ya informa una suscripción activa", asy
   assert.match(shopify.llamadas[0].query, /activeSubscriptions/);
 });
 
+test("una suscripción activa ajena no resuelve la intención de TiendaIQ Pro", async () => {
+  const { modulo, shopify } = montar("facturacion.js", {
+    respuestas: [{
+      currentAppInstallation: {
+        activeSubscriptions: [{ id: "otro", name: "Plan legado", status: "ACTIVE", test: false }]
+      }
+    }, {
+      appSubscriptionCreate: {
+        appSubscription: { id: "pro", name: "TiendaIQ Pro", status: "PENDING", test: false },
+        confirmationUrl: "https://shopify.example/confirm/pro",
+        userErrors: []
+      }
+    }]
+  });
+
+  const result = await modulo.iniciarSuscripcion(SESION, "https://tiendaiq.example");
+
+  assert.equal(result.status, "pending_confirmation");
+  assert.equal(shopify.llamadas.filter((call) => /appSubscriptionCreate/.test(call.query)).length, 1);
+});
+
+test("una suscripción test no resuelve billing de producción", async () => {
+  const { modulo } = montar("facturacion.js", {
+    respuestas: [{
+      currentAppInstallation: {
+        activeSubscriptions: [{ id: "test", name: "TiendaIQ Pro", status: "ACTIVE", test: true }]
+      }
+    }]
+  });
+
+  assert.equal(await modulo.reconciliarSuscripcionActiva(SESION), null);
+});
+
 test("crea una sola vez y devuelve un resultado serializable con confirmationUrl", async () => {
   const { modulo, shopify } = montar("facturacion.js", {
     respuestas: [NINGUNA, {

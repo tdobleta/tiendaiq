@@ -311,13 +311,19 @@ if (!/key:\s*ANTHROPIC_API_KEY/.test(renderWebService)) {
 
 if (!/editarTexto/.test(leer("server.js")) &&
     !/TEXT_EDIT_CONCURRENCY/.test(renderWebService) &&
-    /\/api\/texto\/editar/.test(leer("server.js")) &&
-    /temporalmente deshabilitada mientras se migra al worker/.test(leer("server.js"))) {
-  ok("la edicion IA directa queda fuera del runtime web");
+    /type:\s*"edit-text"/.test(leer("server.js")) &&
+    /maxAttempts:\s*1/.test(leer("server.js")) &&
+    /createEditTextHandler/.test(leer("src/jobs/runtime.js")) &&
+    /"edit-text": editText/.test(leer("src/jobs/runtime.js")) &&
+    /Number\(job\.attempts\) > 1/.test(leer("src/jobs/edit-text-handler.js")) &&
+    /request_id: pending\.requestId/.test(appFrontend) &&
+    /esperarJob\(pending\.jobId/.test(appFrontend) &&
+    /const EDICION_TEXTO_IA_DISPONIBLE = false/.test(appFrontend)) {
+  ok("la edicion IA es durable, costo-segura y permanece oculta hasta certificar staging");
 } else {
   mal(
-    "la edicion IA directa queda fuera del runtime web",
-    "web no debe importar editarTexto ni tener concurrencia propia de IA; esa capacidad debe migrar a worker"
+    "la edicion IA es durable, costo-segura y permanece oculta hasta certificar staging",
+    "web solo debe encolar con idempotencia; worker ejecuta un intento y el navegador espera el job con la bandera apagada"
   );
 }
 
