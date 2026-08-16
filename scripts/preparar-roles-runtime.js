@@ -10,7 +10,9 @@ const WEB_LOGIN_ROLE = "tiendaiq_web";
 const WORKER_LOGIN_ROLE = "tiendaiq_worker";
 const WEB_RUNTIME_ROLE = "tiendaiq_web_runtime";
 const WORKER_RUNTIME_ROLE = "tiendaiq_worker_runtime";
-const WORKER_CAPABILITY = "tiendaiq_worker_capability";
+// Version the capability identity so provider-managed legacy grants can remain
+// present without carrying authority in current RLS policies.
+const WORKER_CAPABILITY = "tiendaiq_worker_capability_v2";
 const LOGIN_ROLES = [WEB_LOGIN_ROLE, WORKER_LOGIN_ROLE];
 const RUNTIME_ROLES = [WEB_RUNTIME_ROLE, WORKER_RUNTIME_ROLE];
 const OWNED_ROLES = [...RUNTIME_ROLES, WORKER_CAPABILITY];
