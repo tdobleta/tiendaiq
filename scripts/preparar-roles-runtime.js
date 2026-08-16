@@ -19,6 +19,13 @@ function quoteIdentifier(value) {
   return `"${String(value).replaceAll('"', '""')}"`;
 }
 
+async function revokeMembership(client, { parent, member, grantor }) {
+  await client.query(
+    `REVOKE ${quoteIdentifier(parent)} FROM ${quoteIdentifier(member)} ` +
+    `GRANTED BY ${quoteIdentifier(grantor)}`
+  );
+}
+
 async function ensureRuntimeRole(client, role) {
   const existing = await client.query("SELECT 1 FROM pg_roles WHERE rolname = $1", [role]);
   if (!existing.rowCount) {
@@ -54,31 +61,33 @@ async function main() {
       `${WORKER_RUNTIME_ROLE}->${WORKER_CAPABILITY}`
     ]);
     const existingPaths = await client.query(
-      `SELECT member.rolname AS member, parent.rolname AS parent
+      `SELECT member.rolname AS member, parent.rolname AS parent, grantor.rolname AS grantor
        FROM pg_auth_members AS membership
        JOIN pg_roles AS member ON member.oid = membership.member
        JOIN pg_roles AS parent ON parent.oid = membership.roleid
+       JOIN pg_roles AS grantor ON grantor.oid = membership.grantor
        WHERE member.rolname = ANY($1::text[])`,
       [OWNED_ROLES]
     );
-    for (const { member, parent } of existingPaths.rows) {
+    for (const { member, parent, grantor } of existingPaths.rows) {
       if (!expectedPaths.has(`${member}->${parent}`)) {
-        await client.query(`REVOKE ${quoteIdentifier(parent)} FROM ${quoteIdentifier(member)}`);
+        await revokeMembership(client, { parent, member, grantor });
       }
     }
 
     // The capability role is ours even when Render owns the member role. It
     // must never remain attached to a provider role or to the web path.
     const unexpectedCapabilityMembers = await client.query(
-      `SELECT member.rolname AS member
+      `SELECT member.rolname AS member, parent.rolname AS parent, grantor.rolname AS grantor
        FROM pg_auth_members AS membership
        JOIN pg_roles AS member ON member.oid = membership.member
        JOIN pg_roles AS parent ON parent.oid = membership.roleid
+       JOIN pg_roles AS grantor ON grantor.oid = membership.grantor
        WHERE parent.rolname = $1 AND member.rolname <> $2`,
       [WORKER_CAPABILITY, WORKER_RUNTIME_ROLE]
     );
-    for (const { member } of unexpectedCapabilityMembers.rows) {
-      await client.query(`REVOKE ${quoteIdentifier(WORKER_CAPABILITY)} FROM ${quoteIdentifier(member)}`);
+    for (const { member, parent, grantor } of unexpectedCapabilityMembers.rows) {
+      await revokeMembership(client, { parent, member, grantor });
     }
 
     // Render's LOGIN roles use INHERIT. Per-membership inheritance must be
