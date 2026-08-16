@@ -77,7 +77,6 @@ function createCompensationRunner({
           })
           .catch(loseLease);
       }, everyMs);
-      heartbeatTimer.unref?.();
     }
 
     async function stopHeartbeat() {

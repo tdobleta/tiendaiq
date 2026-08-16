@@ -103,7 +103,6 @@ function createJobRunner({
           })
           .catch((error) => loseLease(error));
       }, everyMs);
-      heartbeatTimer.unref?.();
     }
 
     async function stopHeartbeat() {
