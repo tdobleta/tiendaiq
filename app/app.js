@@ -4202,7 +4202,9 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     await cargarWidget("/widgets/tiendaiq-bundle.css", "css");
     if (!estado.bundles) {
       try {
-        estado.bundles = { config: await api("/bundles"), vista: "lista", editIdx: null, tab: "ofertas", sucio: false, previewProd: null, metricas: null };
+        vista.innerHTML = `<div class="cargando">Comprobando la sincronización de bundles…</div>`;
+        const config = await resolverBundlesPendientes() || await api("/bundles");
+        estado.bundles = { config, vista: "lista", editIdx: null, tab: "ofertas", sucio: false, previewProd: null, metricas: null };
       } catch (e) {
         vista.innerHTML = `<div class="error">${ico("x","ico--banner")} No se pudo leer los bundles: ${esc(e.message)}</div>`;
         return;
@@ -4355,6 +4357,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   function pintarDashboardBundles() {
     const lista = estado.bundles.config.lista || [];
     const inst = estado.bundles.config.instalado;
+    const sync = estado.bundles.config.sync || null;
 
     const filtro = estado.bundles.filtro || "todas";
     const sel = estado.bundles.sel || (estado.bundles.sel = []); // ids seleccionados (bulk)
@@ -4435,6 +4438,20 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
          </s-banner>`
       : "";
 
+    const syncEstado = sync?.status === "manual_review"
+      ? `<s-banner tone="critical">
+           <s-heading>Sincronización detenida</s-heading>
+           <s-paragraph>Shopify no confirmó el resultado. Tu tienda conserva la última versión verificada. No vuelvas a guardar hasta que soporte reconcilie los descuentos.</s-paragraph>
+         </s-banner>`
+      : sync?.status === "failed"
+        ? `<s-banner tone="warning">
+             <s-heading>Los últimos cambios no se aplicaron</s-heading>
+             <s-paragraph>La tienda conserva la versión anterior. Revisá la configuración y volvé a guardar.</s-paragraph>
+           </s-banner>`
+        : sync?.status === "running"
+          ? `<s-banner tone="info"><s-paragraph>Los cambios se están sincronizando con Shopify.</s-paragraph></s-banner>`
+          : "";
+
     const pasoOnb = (hecho, texto, accion) =>
       `<div class="bdl-paso ${hecho ? "is-ok" : ""}"><span class="bdl-paso__c">${hecho ? ico("check") : ""}</span><span class="bdl-paso__t">${texto}</span><span class="bdl-paso__a">${hecho ? "Listo" : accion}</span></div>`;
     const nHechos = inst ? 1 : 0;
@@ -4498,6 +4515,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       </style>
       <s-page heading="Bundles, upsells y regalos" inlineSize="large">
         <s-button slot="primary-action" variant="primary" id="bdl-nuevo">Crear bundle</s-button>
+        ${syncEstado}
         ${widgetEstado}
         ${lista.length ? bloqueMetricas() + tabsHTML + bulkBar + cuerpoTabla : onboarding}
       </s-page>`;
@@ -5920,6 +5938,57 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     saveBar.show({ onSave: () => guardarBundles(), onDiscard: () => descartarBundles() });
   }
 
+  const BUNDLES_PENDIENTE = `tiq_bundles_pendiente:${(
+    new URLSearchParams(location.search).get("shop") || "local"
+  ).toLowerCase()}`;
+
+  function leerBundlesPendientes() {
+    try {
+      const pending = JSON.parse(localStorage.getItem(BUNDLES_PENDIENTE) || "null");
+      return pending?.requestId ? pending : null;
+    } catch {
+      return null;
+    }
+  }
+
+  function guardarBundlesPendientes(pending) {
+    localStorage.setItem(BUNDLES_PENDIENTE, JSON.stringify(pending));
+  }
+
+  function limpiarBundlesPendientes() {
+    localStorage.removeItem(BUNDLES_PENDIENTE);
+  }
+
+  async function resolverBundlesPendientes(pending = leerBundlesPendientes(), onUpdate = () => {}) {
+    if (!pending) return null;
+    try {
+      if (!pending.jobId) {
+        const { job } = await api("/bundles", {
+          method: "PUT",
+          body: {
+            config: pending.config,
+            request_id: pending.requestId,
+            expected_version: pending.expectedVersion
+          }
+        });
+        pending.jobId = job.id;
+        guardarBundlesPendientes(pending);
+      }
+      const completed = await esperarJob(pending.jobId, { timeoutMs: 3 * 60 * 1000, onUpdate });
+      const config = completed.result?.config || await api("/bundles");
+      limpiarBundlesPendientes();
+      return config;
+    } catch (error) {
+      // Los timeouts conservan toda la intención para reanudar exactamente el
+      // mismo job. Solo descartamos el marcador ante un resultado definitivo o
+      // cuando el servidor demuestra que esta intención no puede continuar.
+      if (error.terminal || [404, 409, 423].includes(error.status)) {
+        limpiarBundlesPendientes();
+      }
+      throw error;
+    }
+  }
+
   // Descartar: vuelve a la última versión guardada en el server y repinta.
   async function descartarBundles() {
     try {
@@ -5937,7 +6006,20 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     if (b) { b.setAttribute("disabled", ""); b.textContent = "Guardando…"; }
     saveBar.guardando(true);
     try {
-      estado.bundles.config = await api("/bundles", { method: "PUT", body: { config: estado.bundles.config } });
+      let pending = leerBundlesPendientes();
+      if (!pending) {
+        pending = {
+          requestId: crypto.randomUUID(),
+          expectedVersion: Math.max(0, Number(estado.bundles.config.version) || 0),
+          config: JSON.parse(JSON.stringify(estado.bundles.config))
+        };
+        // Se persiste antes del request: incluso una respuesta perdida puede
+        // recuperarse sin repetir descuentos en Shopify.
+        guardarBundlesPendientes(pending);
+      }
+      estado.bundles.config = await resolverBundlesPendientes(pending, (job) => {
+        if (b) b.textContent = job.status === "running" ? "Sincronizando con Shopify…" : "En cola…";
+      });
       estado.bundles.sucio = false;
       if (b) { b.removeAttribute("disabled"); b.textContent = "Guardado"; b.setAttribute("variant", "secondary"); }
       saveBar.guardando(false);
@@ -5946,7 +6028,25 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     } catch (e) {
       if (b) { b.removeAttribute("disabled"); b.textContent = "Guardar cambios"; }
       saveBar.guardando(false);
-      vista.insertAdjacentHTML("afterbegin", `<div class="error">${ico("x","ico--banner")} No se pudo guardar: ${esc(e.message)}</div>`);
+      let sync = null;
+      if (e.terminal || e.status === 409) {
+        try {
+          estado.bundles.config = await api("/bundles");
+          sync = estado.bundles.config.sync || null;
+        } catch {}
+      }
+      if (sync?.status === "manual_review") {
+        estado.bundles.sucio = false;
+        saveBar.hide();
+        vista.insertAdjacentHTML("afterbegin", `<div class="error">${ico("x","ico--banner")} Shopify no confirmó el resultado. La tienda conserva la última versión verificada. No vuelvas a guardar hasta que soporte reconcilie los descuentos.</div>`);
+      } else if (e.status === 409 || (e.terminal && !sync)) {
+        estado.bundles.sucio = false;
+        saveBar.hide();
+        vista.insertAdjacentHTML("afterbegin", `<div class="error">${ico("x","ico--banner")} La configuración cambió en otra sesión. Cargamos la versión más reciente para evitar sobrescribirla.</div>`);
+      } else {
+        estado.bundles.sucio = true;
+        vista.insertAdjacentHTML("afterbegin", `<div class="error">${ico("x","ico--banner")} No se aplicaron los cambios: ${esc(sync?.error || e.message)}. La tienda conserva la versión anterior.</div>`);
+      }
       return false;
     }
   }
@@ -5954,7 +6054,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   // Ya no inyecta código en el tema: marca "publicado" y abre el editor de temas
   // en la sección "App embeds" para que el merchant prenda el widget (una vez).
   async function instalarBundlesTema() {
-    if (estado.bundles.sucio && !(await guardarBundles())) return;
+    if ((estado.bundles.sucio || leerBundlesPendientes()) && !(await guardarBundles())) return;
     const b = $("bdl-instalar");
     if (b) { b.disabled = true; b.textContent = "Abriendo…"; }
     try {

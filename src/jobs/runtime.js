@@ -40,6 +40,7 @@ const { createUnpublishPageHandler } = require("./unpublish-page-handler");
 const { createGeneratePageHandler } = require("./generate-page-handler");
 const { createInstallNicheContentHandler } = require("./install-niche-content-handler");
 const { createCreateSubscriptionHandler } = require("./create-subscription-handler");
+const { createSyncBundlesHandler } = require("./sync-bundles-handler");
 const { createWebhookHandlers } = require("../webhooks/handlers");
 
 function boundedInteger(value, fallback, min = 1, max = 32) {
@@ -101,6 +102,10 @@ function createRuntime({
     billing,
     metrics: metrica
   });
+  const syncBundles = createSyncBundlesHandler({
+    sessions: { get: sesionDe },
+    metrics: metrica
+  });
 
   const jobRepository = {
     claim: reclamarJobDB,
@@ -120,7 +125,7 @@ function createRuntime({
   }));
   const publicationRunners = Array.from({ length: publicationConcurrency }, (_, index) => createJobRunner({
     workerId: `${workerId}:publish:${index + 1}`,
-    jobTypes: ["publish-page", "unpublish-page", "install-niche-content", "create-subscription"],
+    jobTypes: ["publish-page", "unpublish-page", "install-niche-content", "create-subscription", "sync-bundles"],
     leaseSeconds,
     pollMs,
     repository: jobRepository,
@@ -128,7 +133,8 @@ function createRuntime({
       "publish-page": publishPage,
       "unpublish-page": unpublishPage,
       "install-niche-content": installNicheContent,
-      "create-subscription": createSubscription
+      "create-subscription": createSubscription,
+      "sync-bundles": syncBundles
     },
     reportError: reportarError,
     metrics: metrica

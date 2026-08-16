@@ -377,6 +377,28 @@ if (/SUSCRIPCION_PENDIENTE/.test(appFrontend) &&
   );
 }
 
+const bundlesSource = leer("bundles.js");
+const bundlesHandler = leer("src/jobs/sync-bundles-handler.js");
+const jobsRuntime = leer("src/jobs/runtime.js");
+if (/type:\s*"sync-bundles"/.test(serverSource) &&
+    /encolarJobExclusivoDB/.test(serverSource) &&
+    /actual\.sync\?\.status === "manual_review"/.test(serverSource) &&
+    /return json\(res, 423/.test(serverSource) &&
+    /configAplicadaBundles\(await leerConfigBundles/.test(serverSource) &&
+    /createSyncBundlesHandler/.test(bundlesHandler) &&
+    /"sync-bundles": syncBundles/.test(jobsRuntime) &&
+    /BUNDLES_PENDIENTE/.test(appFrontend) &&
+    /expected_version: pending\.expectedVersion/.test(appFrontend) &&
+    /sync\?\.status === "manual_review"/.test(appFrontend) &&
+    /function configAplicadaBundles/.test(bundlesSource)) {
+  ok("bundles sincroniza descuentos mediante un job durable y publica solo estado confirmado");
+} else {
+  mal(
+    "bundles sincroniza descuentos mediante un job durable y publica solo estado confirmado",
+    "web debe encolar con version/idempotencia, bloquear ambigüedad, worker debe ejecutar y storefront debe leer applied"
+  );
+}
+
 // ---------- salida operativa ----------
 
 const puntosOla1 = [

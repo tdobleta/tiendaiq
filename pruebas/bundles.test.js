@@ -369,6 +369,78 @@ describe("métricas — uso de descuentos sin leer pedidos", () => {
 });
 
 describe("config", () => {
+  test("el navegador no puede inventar IDs de descuentos ni campos de sincronización", () => {
+    const { modulo } = montar("bundles.js", { tiendas: { [TIENDA]: { token: "t" } } });
+    const actual = {
+      activo: true,
+      instalado: { fecha: "2026-08-01T00:00:00.000Z" },
+      lista: [bundle({ discount_ids: ["gid://servidor/1"], sync_status: "active" })],
+      pending_cleanup_ids: [],
+      version: 4,
+      applied_version: 4,
+      applied: { activo: true, lista: [bundle({ discount_ids: ["gid://servidor/1"] })], version: 4 }
+    };
+    const propuesta = {
+      activo: false,
+      instalado: { fecha: "atacante" },
+      lista: [bundle({ discount_ids: ["gid://atacante/9"], sync_status: "active" })],
+      pending_cleanup_ids: ["gid://atacante/10"],
+      version: 999,
+      applied_version: 999,
+      applied: { activo: false, lista: [] },
+      sync: { status: "succeeded" }
+    };
+
+    const preparada = modulo.prepararConfigBundles(actual, propuesta);
+
+    assert.deepEqual(preparada.lista[0].discount_ids, ["gid://servidor/1"]);
+    assert.deepEqual(preparada.instalado, actual.instalado);
+    assert.equal(preparada.version, 5);
+    assert.equal(preparada.applied_version, 4);
+    assert.deepEqual(preparada.applied, actual.applied);
+    assert.equal(preparada.sync, null);
+  });
+
+  test("un bundle eliminado deja sus descuentos en la limpieza durable", () => {
+    const { modulo } = montar("bundles.js", { tiendas: { [TIENDA]: { token: "t" } } });
+    const actual = {
+      lista: [bundle({ discount_ids: ["gid://viejo/1", "gid://viejo/2"] })],
+      pending_cleanup_ids: ["gid://pendiente/1"],
+      version: 2
+    };
+
+    const preparada = modulo.prepararConfigBundles(actual, { lista: [] });
+
+    assert.deepEqual(new Set(preparada.pending_cleanup_ids), new Set([
+      "gid://pendiente/1",
+      "gid://viejo/1",
+      "gid://viejo/2"
+    ]));
+  });
+
+  test("rechaza IDs duplicados incluso cuando los bundles están pausados", () => {
+    const { modulo } = montar("bundles.js", { tiendas: { [TIENDA]: { token: "t" } } });
+    assert.throws(
+      () => modulo.validarConfigBundles({ lista: [bundle({ activo: false }), bundle({ activo: false })] }),
+      /identificador único/i
+    );
+  });
+
+  test("el storefront conserva la última versión aplicada mientras hay un borrador nuevo", () => {
+    const { modulo } = montar("bundles.js", { tiendas: { [TIENDA]: { token: "t" } } });
+    const aplicada = { activo: true, lista: [bundle({ nombre: "Confirmado" })], version: 7 };
+    const cfg = {
+      activo: true,
+      lista: [bundle({ nombre: "Todavía procesando" })],
+      version: 8,
+      applied_version: 7,
+      applied: aplicada,
+      sync: { status: "running" }
+    };
+
+    assert.deepEqual(modulo.configAplicadaBundles(cfg), aplicada);
+  });
+
   test("rechaza capacidades visuales que no tienen operación monetaria", () => {
     const { modulo } = montar("bundles.js", { tiendas: { [TIENDA]: { token: "t" } } });
     const casos = [

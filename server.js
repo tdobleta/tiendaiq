@@ -54,8 +54,7 @@ const {
   guardarConfigBundles,
   validarConfigBundles,
   bundleEsPublicable,
-  sincronizarDescuentos,
-  borrarDescuentos
+  configAplicadaBundles
 } = require("./bundles");
 
 // Render (y cualquier host) fija el puerto por env; local usa 4321.
@@ -93,17 +92,8 @@ const DIR_WIDGETS = path.join(__dirname, "extensions", "tiendaiq-widgets", "asse
 // La URL pública por la que Shopify nos alcanza. En producción es la de Render;
 // en local, el túnel. Sin esto el OAuth no puede volver.
 const URL_APP = (env.APP_URL || `http://localhost:${PUERTO}`).replace(/\/$/, "");
-const publicBundlesCache = new Map();
-const PUBLIC_BUNDLES_CACHE_MS = Math.max(5000, Number(env.PUBLIC_BUNDLES_CACHE_MS) || 60000);
 const GENERATION_QUEUE_MAX_PER_TENANT = Math.max(1, Number(env.GENERATION_QUEUE_MAX_PER_TENANT) || 2);
 const GENERATION_QUEUE_MAX_GLOBAL = Math.max(1, Number(env.GENERATION_QUEUE_MAX_GLOBAL) || 120);
-
-function cachePublicBundle(shop, value) {
-  if (publicBundlesCache.size >= 2000 && !publicBundlesCache.has(shop)) {
-    publicBundlesCache.delete(publicBundlesCache.keys().next().value);
-  }
-  publicBundlesCache.set(shop, { value, expiresAt: Date.now() + PUBLIC_BUNDLES_CACHE_MS });
-}
 
 // ---------- almacén de páginas, por tienda, vía db.js ----------
 
@@ -702,46 +692,51 @@ async function api(req, res, url) {
     return json(res, 200, await leerConfigBundles(sesion.tienda));
   }
 
-  // PUT /api/bundles — guardar la config. Re-sincroniza los descuentos
-  // automáticos con reemplazo seguro y compensación ante fallos.
+  // PUT /api/bundles — registra una intención durable. El request web no toca
+  // Shopify: el worker serializa la mutación externa y solo entonces avanza la
+  // versión que consume el storefront.
   if (req.method === "PUT" && ruta === "/api/bundles") {
-    const { config } = await leerCuerpo(req);
+    const { config, request_id, expected_version } = await leerCuerpo(req);
     if (!config) return json(res, 400, { error: "Falta config" });
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(request_id || "")) {
+      return json(res, 400, { error: "Falta un request_id valido para sincronizar bundles de forma segura" });
+    }
     validarConfigBundles(config);
 
     const actual = await leerConfigBundles(sesion.tienda);
-    config.instalado = actual.instalado; // no se pisa desde el browser
-    // Los discount_ids los manda el server: arrancamos de lo guardado para
-    // poder borrar los descuentos viejos aunque el browser no los tenga.
-    config.lista = (config.lista || []).map((b) => {
-      const previo = actual.lista.find((x) => x.id === b.id);
-      return { ...b, discount_ids: previo ? previo.discount_ids : [] };
+    // Si la respuesta HTTP anterior se perdió, el navegador repite la misma
+    // intención. El estado durable permite recuperar el job sin crear otro.
+    if (actual.sync?.request_id === request_id && actual.sync?.job_id) {
+      const existente = await leerJobDB(sesion.tenant, actual.sync.job_id);
+      if (existente) return json(res, 202, { job: jobPublico(existente) });
+    }
+    if (actual.sync?.status === "manual_review") {
+      return json(res, 423, {
+        error: "Los descuentos requieren reconciliación manual antes de aceptar otro cambio"
+      });
+    }
+
+    const version = Number(expected_version);
+    if (!Number.isInteger(version) || version < 0) {
+      return json(res, 400, { error: "Falta expected_version para evitar sobrescribir cambios recientes" });
+    }
+    if (version !== Math.max(0, Number(actual.version) || 0)) {
+      return json(res, 409, { error: "La configuración cambió en otra sesión. Recargá antes de guardar." });
+    }
+
+    const idempotencyKey = `sync-bundles:${request_id}`;
+    const job = await encolarJobExclusivoDB(sesion.tenant, {
+      type: "sync-bundles",
+      payload: { config, requestId: request_id, expectedVersion: version },
+      idempotencyKey,
+      maxAttempts: 1
     });
-
-    // Bundles eliminados se convierten en limpiezas persistentes: si Shopify
-    // falla, el id queda registrado y se reintenta en el próximo guardado.
-    const limpiezaPendiente = new Set(actual.pending_cleanup_ids || []);
-    const idsQueQuedan = new Set(config.lista.map((b) => b.id));
-    for (const viejo of actual.lista) {
-      if (!idsQueQuedan.has(viejo.id) && viejo.discount_ids?.length) {
-        viejo.discount_ids.forEach((id) => limpiezaPendiente.add(id));
-      }
+    // enqueueExclusive devuelve el trabajo activo del tenant. Si pertenece a
+    // otra pestaña, no fingimos que esa operación representa este guardado.
+    if (job?.idempotencyKey !== idempotencyKey) {
+      return json(res, 409, { error: "Ya hay otra sincronización de bundles en curso. Esperá a que termine y recargá." });
     }
-    const limpieza = await borrarDescuentos(sesion, [...limpiezaPendiente]);
-    config.pending_cleanup_ids = limpieza.fallidos;
-
-    config.activo = (config.lista || []).some((b) => b.activo !== false); // master derivado
-    try {
-      await sincronizarDescuentos(sesion, config); // muta discount_ids
-    } catch (e) {
-      if (e.requierePersistencia) await guardarConfigBundles(sesion.tienda, config);
-      throw e;
-    }
-    await guardarConfigBundles(sesion.tienda, config);
-    publicBundlesCache.delete(sesion.tienda);
-    // Ya NO re-escribimos el snippet en el tema: la config viaja EN VIVO por
-    // /publico/bundles (app embed). Compliance App Store: cero escritura al tema.
-    return json(res, 200, config);
+    return json(res, 202, { job: jobPublico(job) });
   }
 
   // GET /api/bundles/metricas — uso de los descuentos que respaldan los
@@ -759,7 +754,6 @@ async function api(req, res, url) {
     const config = await leerConfigBundles(sesion.tienda);
     config.instalado = { fecha: new Date().toISOString() };
     await guardarConfigBundles(sesion.tienda, config);
-    publicBundlesCache.delete(sesion.tienda);
     config.activarUrl = linkActivarEmbed(sesion.tienda, "bundle");
     return json(res, 200, config);
   }
@@ -936,7 +930,7 @@ async function bundlesPublico(req, res, url) {
   const responder = (codigo, cuerpo) => {
     res.writeHead(codigo, {
       "Content-Type": "application/json; charset=utf-8",
-      "Cache-Control": "public, max-age=60",
+      "Cache-Control": "public, max-age=5, stale-while-revalidate=10",
       ...CORS_PUB
     });
     res.end(JSON.stringify(cuerpo));
@@ -944,20 +938,16 @@ async function bundlesPublico(req, res, url) {
   try {
     const tienda = String(url.searchParams.get("shop") || "").toLowerCase().replace(/[^a-z0-9.\-]/g, "");
     if (!/^[a-z0-9-]+\.myshopify\.com$/.test(tienda)) return responder(400, { activo: false, lista: [] });
-    const cached = publicBundlesCache.get(tienda);
-    if (cached && cached.expiresAt > Date.now()) return responder(200, cached.value);
-    if (cached) publicBundlesCache.delete(tienda);
-    const cfg = await leerConfigBundles(tienda);
+    const cfg = configAplicadaBundles(await leerConfigBundles(tienda));
     const publicables = (cfg.lista || []).filter(bundleEsPublicable);
     const publico = {
       // El master activo se deriva de que haya al menos un bundle activo.
       activo: publicables.length > 0,
       lista: publicables.map((b) => {
-        const { discount_ids, ...resto } = b;
+        const { discount_ids, sync_status, sync_error, ...resto } = b;
         return resto;
       })
     };
-    cachePublicBundle(tienda, publico);
     return responder(200, publico);
   } catch (e) {
     return responder(200, { activo: false, lista: [] });
