@@ -22,7 +22,6 @@ const http = require("http");
 const fs = require("fs");
 const path = require("path");
 const { listarProductos } = require("./adaptador");
-const { despublicarPagina } = require("./publicar");
 const { env, sesionDeEnv } = require("./shopify");
 const { sesionDe, borrarTienda } = require("./tiendas");
 const { createSyntheticLoadHandler, safeEqual } = require("./src/capacity/synthetic-load-endpoints");
@@ -31,17 +30,21 @@ const {
   leerPaginaDB,
   listarPaginasDB,
   encolarJobDB,
+  encolarJobExclusivoDB,
+  encolarPublicacionDB,
+  encolarDespublicacionDB,
   encolarGeneracionDB,
   recibirWebhookDB,
   leerJobDB,
   estadoColaDB,
   estadoWorkerDB,
+  estadoInboxDB,
   verificarAlmacenamientoDB,
   cerrarAlmacenamientoDB
 } = require("./db");
 const { iniciarInstalacion, terminarInstalacion, tiendaDelPase } = require("./auth");
 const { nubeServible, urlVideo, urlPoster } = require("./inspiracion-nube");
-const { estadoPlan, crearSuscripcion, mesActual } = require("./facturacion");
+const { estadoPlan, mesActual } = require("./facturacion");
 const { reportarError, metrica } = require("./monitoreo");
 const { TenantContext } = require("./src/tenancy/tenant-context");
 const { verifyAndNormalizeWebhook } = require("./src/webhooks/verify-and-normalize");
@@ -113,25 +116,6 @@ async function guardarPagina(tenant, registro) {
 }
 const leerPagina = (tenant, id) => leerPaginaDB(tenant, id);
 const listarPaginas = (tenant) => listarPaginasDB(tenant);
-
-async function reconciliarPaginaJob(tenant, pagina) {
-  if (!pagina?.active_job_id) return pagina;
-  const job = await leerJobDB(tenant, pagina.active_job_id);
-  if (!job || ["failed", "cancelled"].includes(job.status)) {
-    pagina.estado = "necesita_atencion";
-    pagina.active_job_id = null;
-    pagina.last_job_error = "La publicación no pudo completarse. Podés reintentarla.";
-    return guardarPagina(tenant, pagina);
-  }
-  if (job.status === "succeeded") {
-    pagina.estado = "publicada";
-    pagina.url_publica = job.result?.url || pagina.url_publica;
-    pagina.active_job_id = null;
-    pagina.last_job_error = null;
-    return guardarPagina(tenant, pagina);
-  }
-  return pagina;
-}
 
 // ---------- activación en el tema (deep links; la app NO escribe el tema) ----------
 
@@ -289,9 +273,10 @@ async function estadoOperativo(req, res) {
     return json(res, 405, { error: "method_not_allowed" }, { Allow: "GET" });
   }
 
-  const [cola, worker] = await Promise.all([
+  const [cola, worker, inbox] = await Promise.all([
     estadoColaDB("ops-status"),
-    estadoWorkerDB()
+    estadoWorkerDB(),
+    estadoInboxDB()
   ]);
   const totales = cola.reduce(
     (acc, item) => {
@@ -300,10 +285,25 @@ async function estadoOperativo(req, res) {
       acc.failed += Number(item.failed) || 0;
       acc.failedRecent += Number(item.failedRecent) || 0;
       acc.staleRunning += Number(item.staleRunning) || 0;
+      acc.compensationPending += Number(item.compensationPending) || 0;
+      acc.compensationDeadLetter += Number(item.compensationDeadLetter) || 0;
+      acc.staleCompensation += Number(item.staleCompensation) || 0;
       acc.oldestQueuedSeconds = Math.max(acc.oldestQueuedSeconds, Number(item.oldestQueuedSeconds) || 0);
+      acc.oldestCompensationSeconds = Math.max(acc.oldestCompensationSeconds, Number(item.oldestCompensationSeconds) || 0);
       return acc;
     },
-    { queued: 0, running: 0, failed: 0, failedRecent: 0, staleRunning: 0, oldestQueuedSeconds: 0 }
+    {
+      queued: 0,
+      running: 0,
+      failed: 0,
+      failedRecent: 0,
+      staleRunning: 0,
+      compensationPending: 0,
+      compensationDeadLetter: 0,
+      staleCompensation: 0,
+      oldestQueuedSeconds: 0,
+      oldestCompensationSeconds: 0
+    }
   );
   const admision = generationAdmissionPause(env);
   const faltanLegales = legalesIncompletos();
@@ -323,6 +323,14 @@ async function estadoOperativo(req, res) {
       retryAfter: admision.retryAfter
     },
     worker,
+    inbox: {
+      received: Number(inbox.received) || 0,
+      processing: Number(inbox.processing) || 0,
+      failed: Number(inbox.failed) || 0,
+      failedRecent: Number(inbox.failedRecent) || 0,
+      staleProcessing: Number(inbox.staleProcessing) || 0,
+      oldestReceivedSeconds: Number(inbox.oldestReceivedSeconds) || 0
+    },
     queue: cola.map((item) => ({
       type: item.type,
       queued: Number(item.queued) || 0,
@@ -330,7 +338,11 @@ async function estadoOperativo(req, res) {
       failed: Number(item.failed) || 0,
       failedRecent: Number(item.failedRecent) || 0,
       staleRunning: Number(item.staleRunning) || 0,
-      oldestQueuedSeconds: Number(item.oldestQueuedSeconds) || 0
+      compensationPending: Number(item.compensationPending) || 0,
+      compensationDeadLetter: Number(item.compensationDeadLetter) || 0,
+      staleCompensation: Number(item.staleCompensation) || 0,
+      oldestQueuedSeconds: Number(item.oldestQueuedSeconds) || 0,
+      oldestCompensationSeconds: Number(item.oldestCompensationSeconds) || 0
     })),
     totals: totales,
     ts: new Date().toISOString()
@@ -660,8 +672,7 @@ async function api(req, res, url) {
   // GET /api/paginas/:id
   const mGet = ruta.match(/^\/api\/paginas\/([^/]+)$/);
   if (req.method === "GET" && mGet) {
-    const encontrada = await leerPagina(sesion.tenant, mGet[1]);
-    const p = encontrada ? await reconciliarPaginaJob(sesion.tenant, encontrada) : null;
+    const p = await leerPagina(sesion.tenant, mGet[1]);
     return p ? json(res, 200, p) : json(res, 404, { error: "No existe esa página" });
   }
 
@@ -758,8 +769,17 @@ async function api(req, res, url) {
   // use el pase de sesión de App Bridge: la tienda sale del pase firmado, no
   // de un ?shop= con el secreto de la app en la URL.
   if (req.method === "POST" && ruta === "/api/nicho/contenido") {
-    const { montarContenidoNicho } = require("./contenido");
-    return json(res, 200, { ok: true, resultado: await montarContenidoNicho(sesion) });
+    const { request_id } = await leerCuerpo(req);
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(request_id || "")) {
+      return json(res, 400, { error: "Falta un request_id valido para instalar contenido de forma segura" });
+    }
+    const job = await encolarJobExclusivoDB(sesion.tenant, {
+      type: "install-niche-content",
+      payload: {},
+      idempotencyKey: `install-niche-content:${request_id}`,
+      maxAttempts: 5
+    });
+    return json(res, 202, { job: jobPublico(job) });
   }
 
   // GET /api/plan — estado del plan para la UI
@@ -769,8 +789,20 @@ async function api(req, res, url) {
 
   // POST /api/plan/suscribir — devuelve la URL de confirmación de Shopify
   if (req.method === "POST" && ruta === "/api/plan/suscribir") {
-    const urlConfirmacion = await crearSuscripcion(sesion, URL_APP);
-    return json(res, 200, { url: urlConfirmacion });
+    const { request_id } = await leerCuerpo(req);
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(request_id || "")) {
+      return json(res, 400, { error: "Falta un request_id valido para iniciar la suscripcion de forma segura" });
+    }
+    // Shopify no ofrece idempotency key para appSubscriptionCreate. Una llave
+    // por request evita replays del mismo cliente, pero dos pestañas generan
+    // llaves distintas; el bloqueo por tenant deja una única intención activa.
+    const job = await encolarJobExclusivoDB(sesion.tenant, {
+      type: "create-subscription",
+      payload: { urlApp: URL_APP },
+      idempotencyKey: `create-subscription:${request_id}`,
+      maxAttempts: 2
+    });
+    return json(res, 202, { job: jobPublico(job) });
   }
 
   // POST /api/paginas — el botón "Crear página con IA"
@@ -867,30 +899,12 @@ async function api(req, res, url) {
   // POST /api/paginas/:id/publicar
   const mPub = ruta.match(/^\/api\/paginas\/([^/]+)\/publicar$/);
   if (req.method === "POST" && mPub) {
-    const encontrada = await leerPagina(sesion.tenant, mPub[1]);
-    const registro = encontrada ? await reconciliarPaginaJob(sesion.tenant, encontrada) : null;
+    const registro = await leerPagina(sesion.tenant, mPub[1]);
     if (!registro) return json(res, 404, { error: "No existe esa página" });
-    if (registro.active_job_id) {
-      const active = await leerJobDB(sesion.tenant, registro.active_job_id);
-      if (active && ["queued", "running"].includes(active.status)) {
-        return json(res, 202, { job: jobPublico(active) });
-      }
-    }
-
-    const idempotencyKey = `publish:${registro.id}:${registro.actualizado || "initial"}`;
-    const job = await encolarJobDB(sesion.tenant, {
-      type: "publish-page",
-      payload: { pageId: registro.id },
-      idempotencyKey,
-      maxAttempts: 3
-    });
-    if (["queued", "running"].includes(job.status)) {
-      registro.estado = "publicando";
-      registro.active_job_id = job.id;
-      registro.last_job_error = null;
-      await guardarPagina(sesion.tenant, registro);
-    }
-    return json(res, 202, { job: jobPublico(job) });
+    const publication = await encolarPublicacionDB(sesion.tenant, registro.id, { maxAttempts: 3 });
+    if (!publication) return json(res, 404, { error: "No existe esa página" });
+    if (publication.conflict) return json(res, 409, { error: "La pagina tiene otra operacion en curso." });
+    return json(res, 202, { job: jobPublico(publication.job) });
   }
 
   // POST /api/paginas/:id/despublicar — vuelve el producto a su página nativa
@@ -899,12 +913,9 @@ async function api(req, res, url) {
   if (req.method === "POST" && mDespub) {
     const registro = await leerPagina(sesion.tenant, mDespub[1]);
     if (!registro) return json(res, 404, { error: "No existe esa página" });
-    await despublicarPagina(registro.data, sesion);
-    registro.estado = "borrador";
-    registro.url_publica = null;
-    await guardarPagina(sesion.tenant, registro);
-    metrica("pagina_despublicada", { tienda: sesion.tienda });
-    return json(res, 200, registro);
+    const publication = await encolarDespublicacionDB(sesion.tenant, registro.id, { maxAttempts: 3 });
+    if (publication.conflict) return json(res, 409, { error: "La pagina tiene otra operacion en curso." });
+    return json(res, 202, { job: jobPublico(publication.job) });
   }
 
   return json(res, 404, { error: "Ruta desconocida" });
@@ -1104,7 +1115,8 @@ servidor.listen(PUERTO, async () => {
   }
 
   if (!env.APP_URL) console.log(`  ⚠ falta APP_URL en .env — el OAuth no va a poder volver\n`);
-  else console.log(`  instalar: ${URL_APP}/auth?shop=TIENDA.myshopify.com\n`);
+  else if (env.DEV_MODE === "1") console.log(`  instalar local: ${URL_APP}/auth?shop=TIENDA.myshopify.com\n`);
+  else console.log("  instalacion: iniciar desde Shopify Admin o el enlace oficial de Shopify\n");
 
   // En desarrollo por archivos no levantamos un segundo proceso: el mismo
   // server ejecuta el worker. Producción usa el servicio worker de Render.

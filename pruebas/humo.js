@@ -46,10 +46,9 @@ const CASOS = [
     espera: 200
   },
   {
-    nombre: "/ready comprueba el almacenamiento",
+    nombre: "/ready falla cerrado sin PostgreSQL fuera de desarrollo",
     ruta: "/ready",
-    espera: 200,
-    revisar: (cuerpo) => JSON.parse(cuerpo).almacenamiento ? null : "no informó el almacenamiento"
+    espera: 503
   },
   {
     nombre: "/api/* sin pase de sesión es 401 (no filtra datos de tiendas)",
@@ -185,8 +184,19 @@ async function main() {
           ? "no marco ok=true"
           : !Array.isArray(cuerpo.queue)
             ? "no devolvio queue agregada"
-            : !cuerpo.totals || typeof cuerpo.totals.oldestQueuedSeconds !== "number"
+            : !cuerpo.totals || typeof cuerpo.totals.oldestQueuedSeconds !== "number" ||
+                typeof cuerpo.totals.compensationPending !== "number" ||
+                typeof cuerpo.totals.compensationDeadLetter !== "number" ||
+                typeof cuerpo.totals.staleCompensation !== "number" ||
+                typeof cuerpo.totals.oldestCompensationSeconds !== "number"
               ? "no devolvio totales de cola"
+              : !cuerpo.inbox || typeof cuerpo.inbox.received !== "number" ||
+                  typeof cuerpo.inbox.processing !== "number" ||
+                  typeof cuerpo.inbox.failed !== "number" ||
+                  typeof cuerpo.inbox.failedRecent !== "number" ||
+                  typeof cuerpo.inbox.staleProcessing !== "number" ||
+                  typeof cuerpo.inbox.oldestReceivedSeconds !== "number"
+                ? "no devolvio salud agregada del inbox"
               : typeof cuerpo.billing?.planTest !== "boolean"
                 ? "no informo modo de billing"
                 : typeof cuerpo.legal?.complete !== "boolean"

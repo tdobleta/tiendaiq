@@ -60,7 +60,11 @@ function summarizeQueue(rows) {
     failed: 0,
     failedRecent: 0,
     staleRunning: 0,
-    oldestQueuedSeconds: 0
+    compensationPending: 0,
+    compensationDeadLetter: 0,
+    staleCompensation: 0,
+    oldestQueuedSeconds: 0,
+    oldestCompensationSeconds: 0
   };
   for (const row of rows || []) {
     totals.types += 1;
@@ -69,9 +73,16 @@ function summarizeQueue(rows) {
     totals.failed += Number(row.failed || 0);
     totals.failedRecent += Number(row.failedRecent || 0);
     totals.staleRunning += Number(row.staleRunning || 0);
+    totals.compensationPending += Number(row.compensationPending || 0);
+    totals.compensationDeadLetter += Number(row.compensationDeadLetter || 0);
+    totals.staleCompensation += Number(row.staleCompensation || 0);
     totals.oldestQueuedSeconds = Math.max(
       totals.oldestQueuedSeconds,
       Number(row.oldestQueuedSeconds || 0)
+    );
+    totals.oldestCompensationSeconds = Math.max(
+      totals.oldestCompensationSeconds,
+      Number(row.oldestCompensationSeconds || 0)
     );
   }
   return totals;
@@ -100,7 +111,11 @@ function evaluateQueue(summary, {
   maxOldestQueuedSeconds,
   maxRunning,
   maxFailedRecent,
-  maxStaleRunning
+  maxStaleRunning,
+  maxCompensationPending,
+  maxCompensationDeadLetter,
+  maxStaleCompensation,
+  maxOldestCompensationSeconds
 }) {
   const errors = [];
   if (summary.queued > maxQueued) {
@@ -118,6 +133,48 @@ function evaluateQueue(summary, {
   if (summary.staleRunning > maxStaleRunning) {
     errors.push(`leases estancados: ${summary.staleRunning} > ${maxStaleRunning}`);
   }
+  if (summary.compensationPending > maxCompensationPending) {
+    errors.push(`compensaciones pendientes: ${summary.compensationPending} > ${maxCompensationPending}`);
+  }
+  if (summary.compensationDeadLetter > maxCompensationDeadLetter) {
+    errors.push(`compensaciones en cuarentena: ${summary.compensationDeadLetter} > ${maxCompensationDeadLetter}`);
+  }
+  if (summary.staleCompensation > maxStaleCompensation) {
+    errors.push(`leases de compensacion estancados: ${summary.staleCompensation} > ${maxStaleCompensation}`);
+  }
+  if (summary.oldestCompensationSeconds > maxOldestCompensationSeconds) {
+    errors.push(`compensacion vieja: ${summary.oldestCompensationSeconds.toFixed(2)}s > ${maxOldestCompensationSeconds}s`);
+  }
+  return { ok: errors.length === 0, errors };
+}
+
+function evaluateInbox(inbox, {
+  maxInboxReceived,
+  maxInboxProcessing,
+  maxInboxFailed,
+  maxInboxFailedRecent,
+  maxInboxStaleProcessing,
+  maxOldestInboxSeconds
+}) {
+  const errors = [];
+  if (inbox.received > maxInboxReceived) {
+    errors.push(`webhooks recibidos fuera de umbral: ${inbox.received} > ${maxInboxReceived}`);
+  }
+  if (inbox.processing > maxInboxProcessing) {
+    errors.push(`webhooks procesando fuera de umbral: ${inbox.processing} > ${maxInboxProcessing}`);
+  }
+  if (inbox.failed > maxInboxFailed) {
+    errors.push(`webhooks en cuarentena: ${inbox.failed} > ${maxInboxFailed}`);
+  }
+  if (inbox.failedRecent > maxInboxFailedRecent) {
+    errors.push(`webhooks fallidos recientes: ${inbox.failedRecent} > ${maxInboxFailedRecent}`);
+  }
+  if (inbox.staleProcessing > maxInboxStaleProcessing) {
+    errors.push(`leases de webhooks estancadas: ${inbox.staleProcessing} > ${maxInboxStaleProcessing}`);
+  }
+  if (inbox.oldestReceivedSeconds > maxOldestInboxSeconds) {
+    errors.push(`bandeja de webhooks vieja: ${inbox.oldestReceivedSeconds.toFixed(2)}s > ${maxOldestInboxSeconds}s`);
+  }
   return { ok: errors.length === 0, errors };
 }
 
@@ -129,6 +186,7 @@ function evaluateOpsStatus(payload, expectedSha, thresholds, requirements = {}) 
   const billing = payload?.billing || {};
   const legal = payload?.legal || {};
   const worker = payload?.worker;
+  const inbox = payload?.inbox || {};
 
   if (!payload?.ok) errors.push("/ops/status no respondio ok=true");
   if (release !== expectedSha) errors.push(`/ops/status release ${release || "(vacio)"} no coincide con ${expectedSha}`);
@@ -179,7 +237,7 @@ function evaluateOpsStatus(payload, expectedSha, thresholds, requirements = {}) 
       errors.push(`capacidad de webhooks insuficiente: ${worker.webhookConcurrency ?? "ausente"}`);
     }
   }
-  for (const key of ["queued", "running", "failed", "failedRecent", "staleRunning", "oldestQueuedSeconds"]) {
+  for (const key of ["queued", "running", "failed", "failedRecent", "staleRunning", "compensationPending", "compensationDeadLetter", "staleCompensation", "oldestQueuedSeconds", "oldestCompensationSeconds"]) {
     if (!Number.isFinite(Number(totals[key]))) errors.push(`/ops/status totals.${key} no es numerico`);
   }
   errors.push(...evaluateQueue({
@@ -188,7 +246,22 @@ function evaluateOpsStatus(payload, expectedSha, thresholds, requirements = {}) 
     failed: Number(totals.failed || 0),
     failedRecent: Number(totals.failedRecent || 0),
     staleRunning: Number(totals.staleRunning || 0),
-    oldestQueuedSeconds: Number(totals.oldestQueuedSeconds || 0)
+    compensationPending: Number(totals.compensationPending || 0),
+    compensationDeadLetter: Number(totals.compensationDeadLetter || 0),
+    staleCompensation: Number(totals.staleCompensation || 0),
+    oldestQueuedSeconds: Number(totals.oldestQueuedSeconds || 0),
+    oldestCompensationSeconds: Number(totals.oldestCompensationSeconds || 0)
+  }, thresholds).errors.map((error) => `/ops/status ${error}`));
+  for (const key of ["received", "processing", "failed", "failedRecent", "staleProcessing", "oldestReceivedSeconds"]) {
+    if (!Number.isFinite(Number(inbox[key]))) errors.push(`/ops/status inbox.${key} no es numerico`);
+  }
+  errors.push(...evaluateInbox({
+    received: Number(inbox.received || 0),
+    processing: Number(inbox.processing || 0),
+    failed: Number(inbox.failed || 0),
+    failedRecent: Number(inbox.failedRecent || 0),
+    staleProcessing: Number(inbox.staleProcessing || 0),
+    oldestReceivedSeconds: Number(inbox.oldestReceivedSeconds || 0)
   }, thresholds).errors.map((error) => `/ops/status ${error}`));
 
   return { ok: errors.length === 0, errors };
@@ -254,6 +327,16 @@ async function main() {
   const maxRunning = integer(process.env.OPS_MAX_RUNNING_JOBS, 16, 0, 100000, "OPS_MAX_RUNNING_JOBS");
   const maxFailedRecent = integer(process.env.OPS_MAX_FAILED_RECENT_JOBS, 0, 0, 100000, "OPS_MAX_FAILED_RECENT_JOBS");
   const maxStaleRunning = integer(process.env.OPS_MAX_STALE_RUNNING_JOBS, 0, 0, 100000, "OPS_MAX_STALE_RUNNING_JOBS");
+  const maxCompensationPending = integer(process.env.OPS_MAX_COMPENSATION_PENDING, 0, 0, 100000, "OPS_MAX_COMPENSATION_PENDING");
+  const maxCompensationDeadLetter = integer(process.env.OPS_MAX_COMPENSATION_DEAD_LETTER, 0, 0, 100000, "OPS_MAX_COMPENSATION_DEAD_LETTER");
+  const maxStaleCompensation = integer(process.env.OPS_MAX_STALE_COMPENSATION, 0, 0, 100000, "OPS_MAX_STALE_COMPENSATION");
+  const maxOldestCompensationSeconds = integer(process.env.OPS_MAX_OLDEST_COMPENSATION_SECONDS, 300, 1, 86400, "OPS_MAX_OLDEST_COMPENSATION_SECONDS");
+  const maxInboxReceived = integer(process.env.OPS_MAX_INBOX_RECEIVED, 20, 0, 100000, "OPS_MAX_INBOX_RECEIVED");
+  const maxInboxProcessing = integer(process.env.OPS_MAX_INBOX_PROCESSING, 8, 0, 100000, "OPS_MAX_INBOX_PROCESSING");
+  const maxInboxFailed = integer(process.env.OPS_MAX_INBOX_FAILED, 0, 0, 100000, "OPS_MAX_INBOX_FAILED");
+  const maxInboxFailedRecent = integer(process.env.OPS_MAX_INBOX_FAILED_RECENT, 0, 0, 100000, "OPS_MAX_INBOX_FAILED_RECENT");
+  const maxInboxStaleProcessing = integer(process.env.OPS_MAX_INBOX_STALE_PROCESSING, 0, 0, 100000, "OPS_MAX_INBOX_STALE_PROCESSING");
+  const maxOldestInboxSeconds = integer(process.env.OPS_MAX_OLDEST_INBOX_SECONDS, 300, 1, 86400, "OPS_MAX_OLDEST_INBOX_SECONDS");
   const maxWorkerAgeSeconds = integer(process.env.OPS_MAX_WORKER_AGE_SECONDS, 60, 5, 3600, "OPS_MAX_WORKER_AGE_SECONDS");
   const minWorkerUptimeSeconds = integer(process.env.OPS_MIN_WORKER_UPTIME_SECONDS, 30, 5, 3600, "OPS_MIN_WORKER_UPTIME_SECONDS");
   const minGenerationConcurrency = integer(process.env.OPS_MIN_GENERATION_CONCURRENCY, 8, 1, 32, "OPS_MIN_GENERATION_CONCURRENCY");
@@ -266,6 +349,16 @@ async function main() {
     maxRunning,
     maxFailedRecent,
     maxStaleRunning,
+    maxCompensationPending,
+    maxCompensationDeadLetter,
+    maxStaleCompensation,
+    maxOldestCompensationSeconds,
+    maxInboxReceived,
+    maxInboxProcessing,
+    maxInboxFailed,
+    maxInboxFailedRecent,
+    maxInboxStaleProcessing,
+    maxOldestInboxSeconds,
     maxWorkerAgeSeconds,
     minWorkerUptimeSeconds,
     minGenerationConcurrency,
@@ -314,6 +407,7 @@ module.exports = {
   assertExpectedSha,
   booleanFlag,
   evaluateOpsStatus,
+  evaluateInbox,
   evaluateQueue,
   evaluateReady,
   fetchOpsStatus,

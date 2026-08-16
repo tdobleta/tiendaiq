@@ -31,16 +31,32 @@ const HORAS_REVALIDAR = 12;
 
 const mesActual = () => new Date().toISOString().slice(0, 7); // "2026-07"
 
-// ¿Tiene una suscripción activa en Shopify? (fuente de verdad)
-async function suscripcionActiva(sesion) {
+function suscripcionSerializable(suscripcion) {
+  if (!suscripcion) return null;
+  return {
+    id: suscripcion.id ? String(suscripcion.id) : null,
+    name: suscripcion.name ? String(suscripcion.name) : null,
+    status: suscripcion.status ? String(suscripcion.status) : null,
+    test: suscripcion.test === true
+  };
+}
+
+// Consulta autoritativa y reutilizable para iniciar o reconciliar billing.
+async function consultarSuscripcionesActivas(sesion, { signal } = {}) {
   const d = await gql(
-    `{ currentAppInstallation { activeSubscriptions { name status test } } }`,
+    `{ currentAppInstallation { activeSubscriptions { id name status test } } }`,
     {},
-    sesion
+    sesion,
+    { signal }
   );
-  return (d.currentAppInstallation?.activeSubscriptions || []).some(
-    (s) => s.status === "ACTIVE"
-  );
+  return (d.currentAppInstallation?.activeSubscriptions || [])
+    .filter((suscripcion) => suscripcion?.status === "ACTIVE")
+    .map(suscripcionSerializable);
+}
+
+// ¿Tiene una suscripción activa en Shopify? (fuente de verdad)
+async function suscripcionActiva(sesion, opciones) {
+  return (await consultarSuscripcionesActivas(sesion, opciones)).length > 0;
 }
 
 // Estado de plan para la UI y para el chequeo de cupo.
@@ -137,12 +153,55 @@ async function revertirCupo(sesion) {
   await revertirCupoTienda(sesion.tienda, mesActual());
 }
 
-// Crea la suscripción y devuelve la URL de confirmación de Shopify.
-async function crearSuscripcion(sesion, urlApp) {
+function urlRetornoSuscripcion(sesion, urlApp) {
   const handle = sesion.tienda.replace(".myshopify.com", "");
-  const returnUrl = env.SHOPIFY_CLIENT_ID
+  return env.SHOPIFY_CLIENT_ID
     ? `https://admin.shopify.com/store/${handle}/apps/${env.SHOPIFY_CLIENT_ID}?plan=confirmado`
     : `${urlApp}/?plan=confirmado`;
+}
+
+function errorSuscripcionAmbigua(cause, reconciliationError) {
+  const error = new Error(
+    "Shopify pudo haber creado la suscripción, pero no confirmó el resultado; se requiere reconciliación antes de volver a intentar",
+    cause ? { cause } : undefined
+  );
+  error.code = "SHOPIFY_SUBSCRIPTION_AMBIGUOUS";
+  error.nonRetryable = true;
+  error.ambiguous = true;
+  error.skipCompensation = true;
+  if (reconciliationError) error.reconciliationError = reconciliationError;
+  return error;
+}
+
+function isAmbiguousSubscriptionError(error, signal) {
+  if (signal?.aborted) return true;
+  if (error?.ambiguous === true || error?.code === "SHOPIFY_SUBSCRIPTION_AMBIGUOUS") return true;
+  if (["SHOPIFY_TIMEOUT", "ETIMEDOUT", "ECONNRESET", "ECONNABORTED", "EPIPE", "UND_ERR_SOCKET"].includes(error?.code)) {
+    return true;
+  }
+  if (["AbortError", "TimeoutError", "TypeError"].includes(error?.name)) return true;
+  const status = Number(error?.status);
+  if (Number.isFinite(status)) return status === 408 || status >= 500;
+  // Un error GraphQL sin respuesta de negocio no permite demostrar que la
+  // mutación no se ejecutó. Para billing, la opción segura es reconciliar.
+  return error?.nonRetryable !== true;
+}
+
+async function reconciliarSuscripcionActiva(sesion, { signal, reconciled = false } = {}) {
+  const activas = await consultarSuscripcionesActivas(sesion, { signal });
+  if (!activas.length) return null;
+  const subscription = activas.find((item) => item.name === PLAN_NOMBRE) || activas[0];
+  return {
+    status: "active",
+    alreadyActive: true,
+    reconciled: reconciled === true,
+    confirmationUrl: null,
+    subscription
+  };
+}
+
+async function crearSuscripcionRemota(sesion, urlApp, { signal } = {}) {
+  const returnUrl = urlRetornoSuscripcion(sesion, urlApp);
   const d = await gql(
     `mutation($name: String!, $returnUrl: URL!, $test: Boolean!, $precio: Decimal!) {
       appSubscriptionCreate(
@@ -150,7 +209,11 @@ async function crearSuscripcion(sesion, urlApp) {
         lineItems: [{ plan: { appRecurringPricingDetails: {
           price: { amount: $precio, currencyCode: USD }, interval: EVERY_30_DAYS
         }}}]
-      ) { confirmationUrl userErrors { message } }
+      ) {
+        appSubscription { id name status test }
+        confirmationUrl
+        userErrors { field message }
+      }
     }`,
     {
       name: PLAN_NOMBRE,
@@ -160,17 +223,65 @@ async function crearSuscripcion(sesion, urlApp) {
       test: env.PLAN_TEST === "1",
       precio: PLAN_PRECIO
     },
-    sesion
+    sesion,
+    { signal }
   );
   const r = d.appSubscriptionCreate;
-  if (r.userErrors?.length) throw new Error("Suscripción: " + JSON.stringify(r.userErrors));
+  if (r?.userErrors?.length) {
+    const error = new Error("Suscripción: " + JSON.stringify(r.userErrors));
+    error.code = "SHOPIFY_SUBSCRIPTION_REJECTED";
+    error.nonRetryable = true;
+    throw error;
+  }
+  if (!r?.confirmationUrl) {
+    throw errorSuscripcionAmbigua();
+  }
   // Intención de suscribirse (embudo). La confirmación de revenue —el merchant
   // aprueba y vuelve por ?plan=confirmado— se trackea aparte (follow-up).
   metrica("suscripcion_iniciada", { tienda: sesion.tienda, test: env.PLAN_TEST === "1" });
-  return r.confirmationUrl;
+  return {
+    status: "pending_confirmation",
+    alreadyActive: false,
+    reconciled: false,
+    confirmationUrl: String(r.confirmationUrl),
+    subscription: suscripcionSerializable(r.appSubscription)
+  };
+}
+
+// Núcleo seguro para jobs durables. Antes de crear consulta la fuente de
+// verdad; ante un resultado remoto incierto vuelve a consultar y, si no puede
+// demostrar que ya está activo, queda terminal para revisión manual.
+async function iniciarSuscripcion(sesion, urlApp, { signal } = {}) {
+  const existente = await reconciliarSuscripcionActiva(sesion, { signal });
+  if (existente) return existente;
+
+  try {
+    return await crearSuscripcionRemota(sesion, urlApp, { signal });
+  } catch (error) {
+    if (!isAmbiguousSubscriptionError(error, signal)) throw error;
+
+    let reconciliada = null;
+    let reconciliationError = null;
+    try {
+      reconciliada = await reconciliarSuscripcionActiva(sesion, { signal, reconciled: true });
+    } catch (reconcileError) {
+      reconciliationError = reconcileError;
+    }
+    if (reconciliada) return reconciliada;
+    throw errorSuscripcionAmbigua(error, reconciliationError);
+  }
+}
+
+// Export histórico: conserva el contrato de devolver una URL para las rutas
+// existentes. La integración durable debe usar iniciarSuscripcion().
+async function crearSuscripcion(sesion, urlApp, opciones) {
+  const resultado = await crearSuscripcionRemota(sesion, urlApp, opciones);
+  return resultado.confirmationUrl;
 }
 
 module.exports = {
   estadoPlan, exigirCupo, consumirCupo, revertirCupo, crearSuscripcion, actualizarPlanDesdeWebhook,
+  consultarSuscripcionesActivas, crearSuscripcionRemota, errorSuscripcionAmbigua,
+  iniciarSuscripcion, isAmbiguousSubscriptionError, reconciliarSuscripcionActiva,
   PAGINAS_GRATIS, PLAN_PRECIO, PLAN_NOMBRE, mesActual
 };

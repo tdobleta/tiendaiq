@@ -2,7 +2,7 @@
 
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
-const { identidadWorker, iniciarWorker } = require("../worker");
+const { apagarWorker, identidadWorker, iniciarWorker } = require("../worker");
 
 const SHA = "95a81bccac219b9355cf9adb4861a696d9b5caf3";
 const RUNTIME_ENV = {
@@ -131,4 +131,24 @@ test("tres heartbeats fallidos drenan el runtime y terminan el proceso", async (
   assert.equal(closed, 1);
   assert.equal(exitCode, 1);
   await runtime.stop();
+});
+
+test("el apagado global tiene plazo finito y cierra almacenamiento aunque el runtime se bloquee", async () => {
+  let closed = 0;
+  const reports = [];
+  const before = Date.now();
+
+  await assert.rejects(
+    apagarWorker({
+      activeRuntime: { async stop() { await new Promise(() => {}); } },
+      async cerrarAlmacenamiento() { closed += 1; },
+      timeoutMs: 40,
+      reportar(error, context) { reports.push({ error, context }); }
+    }),
+    /runtime no se detuvo/
+  );
+
+  assert.ok(Date.now() - before < 250);
+  assert.equal(closed, 1);
+  assert.ok(reports.some(({ context }) => context.tipo === "worker-shutdown-runtime"));
 });

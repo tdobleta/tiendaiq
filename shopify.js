@@ -46,6 +46,29 @@ function leerEnv() {
 const env = leerEnv();
 const SHOPIFY_TIMEOUT_MS = Math.max(1000, Number(env.SHOPIFY_TIMEOUT_MS) || 30000);
 
+function isPermanentHttpStatus(status) {
+  return [400, 401, 402, 403, 404, 405, 406, 410, 411, 413, 414, 415, 422].includes(Number(status));
+}
+
+function retryAfterSeconds(value) {
+  if (!value) return null;
+  const seconds = Number(value);
+  if (Number.isFinite(seconds) && seconds >= 0) return Math.ceil(seconds);
+  const at = Date.parse(value);
+  if (!Number.isFinite(at)) return null;
+  return Math.max(0, Math.ceil((at - Date.now()) / 1000));
+}
+
+function rethrowAbort(error, signal) {
+  if (signal?.aborted) throw signal.reason || error;
+  if (error?.name === "AbortError" || error?.name === "TimeoutError") {
+    const timeout = new Error(`Shopify no respondio dentro de ${SHOPIFY_TIMEOUT_MS} ms`);
+    timeout.code = "SHOPIFY_TIMEOUT";
+    throw timeout;
+  }
+  throw error;
+}
+
 // Sesión de la tienda del .env — solo para el CLI y las pruebas locales.
 // El server nunca usa esto: resuelve la sesión del merchant que pregunta.
 function sesionDeEnv() {
@@ -56,7 +79,7 @@ function sesionDeEnv() {
   return { tienda, token: env.SHOPIFY_TOKEN };
 }
 
-async function gql(query, variables = {}, sesion) {
+async function gql(query, variables = {}, sesion, { signal } = {}) {
   if (!sesion?.tienda || !sesion?.token) {
     throw new Error("gql() necesita una sesión { tienda, token }. Sin sesión no se llama a Shopify.");
   }
@@ -70,15 +93,12 @@ async function gql(query, variables = {}, sesion) {
         "X-Shopify-Access-Token": sesion.token
       },
       body: JSON.stringify({ query, variables }),
-      signal: AbortSignal.timeout(SHOPIFY_TIMEOUT_MS)
+      signal: signal
+        ? AbortSignal.any([signal, AbortSignal.timeout(SHOPIFY_TIMEOUT_MS)])
+        : AbortSignal.timeout(SHOPIFY_TIMEOUT_MS)
     });
   } catch (error) {
-    if (error?.name === "AbortError" || error?.name === "TimeoutError") {
-      const timeout = new Error(`Shopify no respondió dentro de ${SHOPIFY_TIMEOUT_MS} ms`);
-      timeout.code = "SHOPIFY_TIMEOUT";
-      throw timeout;
-    }
-    throw error;
+    rethrowAbort(error, signal);
   }
 
   // 401 = el merchant desinstaló la app o rotó el token. Se distingue del
@@ -86,6 +106,8 @@ async function gql(query, variables = {}, sesion) {
   if (r.status === 401) {
     const e = new Error(`El token de ${sesion.tienda} ya no sirve (¿desinstalaron la app?)`);
     e.code = "TOKEN_INVALIDO";
+    e.status = 401;
+    e.nonRetryable = true;
     throw e;
   }
 
@@ -93,11 +115,23 @@ async function gql(query, variables = {}, sesion) {
   // en e.detalle (para nuestros logs) pero NO en el mensaje que sube al cliente.
   if (!r.ok) {
     const e = new Error(`Shopify respondió ${r.status}`);
-    e.detalle = (await r.text()).slice(0, 500);
+    e.status = r.status;
+    e.nonRetryable = isPermanentHttpStatus(r.status);
+    e.retryAfter = retryAfterSeconds(r.headers?.get?.("retry-after"));
+    try {
+      e.detalle = (await r.text()).slice(0, 500);
+    } catch (error) {
+      rethrowAbort(error, signal);
+    }
     throw e;
   }
 
-  const json = await r.json();
+  let json;
+  try {
+    json = await r.json();
+  } catch (error) {
+    rethrowAbort(error, signal);
+  }
   if (json.errors) {
     const e = new Error("Shopify devolvió errores de GraphQL");
     e.detalle = JSON.stringify(json.errors).slice(0, 500);
@@ -106,4 +140,12 @@ async function gql(query, variables = {}, sesion) {
   return json.data;
 }
 
-module.exports = { gql, env, API, SHOPIFY_TIMEOUT_MS, sesionDeEnv };
+module.exports = {
+  gql,
+  env,
+  API,
+  SHOPIFY_TIMEOUT_MS,
+  isPermanentHttpStatus,
+  retryAfterSeconds,
+  sesionDeEnv
+};

@@ -67,11 +67,7 @@
       e.reinstalar = cuerpo.reinstalar;
       e.actualizar = cuerpo.actualizar || r.status === 402;
       if (e.reinstalar) {
-        const shop = new URLSearchParams(location.search).get("shop") || "";
-        if (/^[a-z0-9][a-z0-9-]*\.myshopify\.com$/i.test(shop)) {
-          const destino = `${location.origin}/auth?shop=${encodeURIComponent(shop.toLowerCase())}`;
-          (window.top || window).location.assign(destino);
-        }
+        e.message = "Volvé a abrir TiendaIQ desde Apps en Shopify Admin para autorizarla.";
       }
       throw e;
     }
@@ -95,11 +91,80 @@
     throw new Error("La operación continúa en segundo plano. Podés volver a esta página en unos minutos.");
   }
 
-  // Cupo agotado → llevar al merchant a confirmar la suscripción en Shopify.
+  const SUSCRIPCION_PENDIENTE = `tiq_suscripcion_pendiente:${(
+    new URLSearchParams(location.search).get("shop") || "local"
+  ).toLowerCase()}`;
+  let suscripcionEnCurso = null;
+
+  function leerSuscripcionPendiente() {
+    try {
+      const pending = JSON.parse(localStorage.getItem(SUSCRIPCION_PENDIENTE) || "null");
+      return pending?.requestId ? pending : null;
+    } catch {
+      return null;
+    }
+  }
+
+  function guardarSuscripcionPendiente(pending) {
+    localStorage.setItem(SUSCRIPCION_PENDIENTE, JSON.stringify(pending));
+  }
+
+  function limpiarSuscripcionPendiente() {
+    localStorage.removeItem(SUSCRIPCION_PENDIENTE);
+  }
+
+  // Cupo agotado: crear una intencion durable antes de redirigir a Shopify.
   async function irASuscripcion() {
-    const { url } = await api("/plan/suscribir", { method: "POST" });
-    // La confirmación de Shopify no puede vivir en el iframe: ventana top.
-    (window.top || window).location.href = url;
+    if (suscripcionEnCurso) return suscripcionEnCurso;
+    suscripcionEnCurso = (async () => {
+      let pending = leerSuscripcionPendiente();
+      if (!pending) {
+        pending = { requestId: crypto.randomUUID() };
+        guardarSuscripcionPendiente(pending);
+      }
+
+      try {
+        if (!pending.jobId) {
+          const { job } = await api("/plan/suscribir", {
+            method: "POST",
+            body: { request_id: pending.requestId }
+          });
+          pending.jobId = job.id;
+          guardarSuscripcionPendiente(pending);
+        }
+
+        const completed = await esperarJob(pending.jobId, { timeoutMs: 90 * 1000 });
+        const result = completed.result || {};
+        if (result.status === "active") {
+          limpiarSuscripcionPendiente();
+          window.location.reload();
+          return;
+        }
+        if (!result.confirmationUrl) {
+          const error = new Error("Shopify no devolvio una URL de confirmacion valida.");
+          error.terminal = true;
+          throw error;
+        }
+        // La confirmacion de Shopify no puede vivir en el iframe. El job ya
+        // conserva el resultado durable, por lo que el navegador puede soltar
+        // su marcador local antes de abandonar la app.
+        limpiarSuscripcionPendiente();
+        (window.top || window).location.href = result.confirmationUrl;
+      } catch (error) {
+        // Un timeout conserva requestId/jobId: el siguiente intento reanuda el
+        // mismo trabajo. Solo se descarta cuando el servidor demuestra que el
+        // trabajo termino o ya no existe.
+        if (error?.terminal === true || error?.status === 404) {
+          limpiarSuscripcionPendiente();
+        }
+        throw error;
+      }
+    })();
+    try {
+      return await suscripcionEnCurso;
+    } finally {
+      suscripcionEnCurso = null;
+    }
   }
 
   const esc = (s) =>

@@ -26,6 +26,11 @@ producto y una de infraestructura registran evidencia de todos estos puntos:
 - `PLAN_TEST=0` fue decidido por direccion para el canary; si sigue en `1`, el
   lanzamiento puede probar instalacion, pero no valida cobro real.
 
+Las pruebas manuales de capacidad exigen un `release_sha` completo. Antes de
+crear datos sinteticos o llamar Anthropic verifican que ese SHA es `HEAD` de
+`main` y que `/ready` del staging activo informa exactamente el mismo release.
+Un resultado de carga que no cumple esa vinculacion no cuenta como evidencia.
+
 ## Olas
 
 | Ola | Exposicion maxima | Permanencia minima | Condicion para avanzar |
@@ -49,6 +54,8 @@ para:
 - p95 HTTP mayor a 1.000 ms durante 10 minutos.
 - Antiguedad del job pendiente mas viejo mayor a 10 minutos.
 - Jobs fallidos o abandonados creciendo durante 10 minutos.
+- Cualquier compensacion terminal pendiente o en ejecucion durante mas de 5
+  minutos.
 - Conexiones PostgreSQL mayores al 70% del limite operativo.
 - CPU sostenida mayor a 70% o memoria mayor a 75% en web o worker.
 - Respuestas `429` o `5xx` de Anthropic por encima de 1%.
@@ -132,6 +139,25 @@ Orden de degradacion:
 4. Pausar admision si `oldestJobAge` supera 10 minutos.
 5. No aumentar carriles hasta confirmar cuota externa y margen de base de datos.
 
+### Compensacion terminal pendiente
+
+Una compensacion devuelve cupo reservado o corrige el estado local despues de
+que un job termina definitivamente. El fallo y la solicitud de compensacion se
+persisten en la misma transaccion; un carril independiente la reclama con lease
+y reintentos. No se debe corregir a mano el contador de una tienda.
+
+1. Si `totals.compensationPending` es mayor que cero, pausar nuevas
+   generaciones y mantener OAuth, lectura, billing y webhooks.
+2. Confirmar en `/ops/status` el tipo afectado y
+   `oldestCompensationSeconds`; el endpoint solo muestra agregados.
+3. Revisar que el worker tenga heartbeat reciente, el mismo SHA promovido y el
+   rol `tiendaiq_worker_runtime`.
+4. Revisar `job_compensacion_fallida` y el error del proveedor o de PostgreSQL.
+   No marcar la compensacion como completada ni editar reservas manualmente.
+5. Corregir la causa y dejar que el carril durable recupere el lease. El GO
+   exige `compensationPending=0`; si la mas antigua supera 300 segundos, el
+   incidente permanece abierto aunque la cola principal este vacia.
+
 ### Proveedor de IA
 
 1. Confirmar rate limits, error rate, latencia p95 y gasto estimado.
@@ -147,6 +173,23 @@ Orden de degradacion:
 2. Validar scopes y version de API.
 3. Reconciliar cobros reales antes de aumentar exposicion.
 4. Si falla un webhook obligatorio de privacidad, NO-GO inmediato.
+5. Si un job termina con un codigo `*_AMBIGUOUS` o
+   `PUBLISH_JOB_SUPERSEDED`, no usar retry masivo. Verificar primero el estado
+   remoto, el `active_job_id` de la pagina y los checkpoints persistidos.
+
+### Efecto externo ambiguo
+
+Un timeout posterior al envio puede ocultar una operacion que Anthropic o
+Shopify ya ejecuto. Repetirla automaticamente puede duplicar costo o contenido.
+
+1. Pausar el job afectado y conservar el codigo de error y sus checkpoints.
+2. No liberar cupo ni compensar mientras el efecto real siga sin determinarse.
+3. Para Shopify, consultar por las referencias persistidas y reconciliar el
+   estado remoto antes de reencolar.
+4. Para Anthropic, registrar la ejecucion para soporte y decidir expresamente
+   entre aceptar el costo sin resultado o iniciar una generacion nueva.
+5. Reencolar solamente como una nueva decision auditada, nunca como retry
+   automatico del intento ambiguo.
 
 ### Aislamiento
 

@@ -6,13 +6,22 @@ const {
   renovarLeaseJobDB,
   completarJobDB,
   fallarJobDB,
+  reclamarCompensacionJobDB,
+  renovarCompensacionJobDB,
+  completarCompensacionJobDB,
+  fallarCompensacionJobDB,
   estadoColaDB,
   leerPaginaDB,
   guardarPaginaDB,
+  marcarPublicacionFallidaDB,
+  checkpointAvatarPublicacionDB,
+  completarPublicacionPaginaDB,
+  completarDespublicacionPaginaDB,
   leerReservaGeneracionDB,
   finalizarGeneracionDB,
   liberarReservaGeneracionDB,
   reclamarWebhookDB,
+  renovarLeaseWebhookDB,
   completarWebhookDB,
   fallarWebhookDB,
   redactarInboxTiendaDB,
@@ -20,13 +29,17 @@ const {
   depurarInboxDB
 } = require("../../db");
 const { sesionDe, borrarTienda } = require("../../tiendas");
-const { actualizarPlanDesdeWebhook } = require("../../facturacion");
-const { publicarPagina } = require("../../publicar");
+const billing = require("../../facturacion");
+const { publicarPagina, despublicarPagina } = require("../../publicar");
 const { crearPagina } = require("../../adaptador");
 const { reportarError, metrica } = require("../../monitoreo");
 const { createJobRunner } = require("./job-runner");
+const { createCompensationRunner } = require("./compensation-runner");
 const { createPublishPageHandler } = require("./publish-page-handler");
+const { createUnpublishPageHandler } = require("./unpublish-page-handler");
 const { createGeneratePageHandler } = require("./generate-page-handler");
+const { createInstallNicheContentHandler } = require("./install-niche-content-handler");
+const { createCreateSubscriptionHandler } = require("./create-subscription-handler");
 const { createWebhookHandlers } = require("../webhooks/handlers");
 
 function boundedInteger(value, fallback, min = 1, max = 32) {
@@ -50,9 +63,22 @@ function createRuntime({
         page.actualizado = new Date().toISOString();
         await guardarPaginaDB(context, page.id, page);
         return page;
-      }
+      },
+      checkpointAvatar: checkpointAvatarPublicacionDB,
+      completePublication: completarPublicacionPaginaDB,
+      markPublicationFailed: marcarPublicacionFallidaDB
     },
     publish: publicarPagina,
+    metrics: metrica
+  });
+  const unpublishPage = createUnpublishPageHandler({
+    sessions: { get: sesionDe },
+    pages: {
+      get: leerPaginaDB,
+      completeUnpublication: completarDespublicacionPaginaDB,
+      markPublicationFailed: marcarPublicacionFallidaDB
+    },
+    unpublish: despublicarPagina,
     metrics: metrica
   });
   const generatePage = createGeneratePageHandler({
@@ -64,6 +90,15 @@ function createRuntime({
     },
     pages: { get: leerPaginaDB },
     generate: crearPagina,
+    metrics: metrica
+  });
+  const installNicheContent = createInstallNicheContentHandler({
+    sessions: { get: sesionDe },
+    metrics: metrica
+  });
+  const createSubscription = createCreateSubscriptionHandler({
+    sessions: { get: sesionDe },
+    billing,
     metrics: metrica
   });
 
@@ -85,17 +120,42 @@ function createRuntime({
   }));
   const publicationRunners = Array.from({ length: publicationConcurrency }, (_, index) => createJobRunner({
     workerId: `${workerId}:publish:${index + 1}`,
-    jobTypes: ["publish-page"],
+    jobTypes: ["publish-page", "unpublish-page", "install-niche-content", "create-subscription"],
     leaseSeconds,
     pollMs,
     repository: jobRepository,
-    handlers: { "publish-page": publishPage },
+    handlers: {
+      "publish-page": publishPage,
+      "unpublish-page": unpublishPage,
+      "install-niche-content": installNicheContent,
+      "create-subscription": createSubscription
+    },
     reportError: reportarError,
     metrics: metrica
   }));
+  const compensationRunner = createCompensationRunner({
+    workerId: `${workerId}:compensate:1`,
+    jobTypes: ["generate-page", "publish-page", "unpublish-page"],
+    leaseSeconds,
+    pollMs,
+    repository: {
+      claimCompensation: reclamarCompensacionJobDB,
+      renewCompensation: renovarCompensacionJobDB,
+      completeCompensation: completarCompensacionJobDB,
+      failCompensation: fallarCompensacionJobDB
+    },
+    handlers: {
+      "generate-page": generatePage,
+      "publish-page": publishPage,
+      "unpublish-page": unpublishPage
+    },
+    reportError: reportarError,
+    metrics: metrica,
+    maxAttempts: boundedInteger(process.env.JOB_COMPENSATION_MAX_ATTEMPTS, 8, 1, 100)
+  });
   const webhookHandlers = createWebhookHandlers({
     stores: { delete: borrarTienda },
-    billing: { update: actualizarPlanDesdeWebhook },
+    billing: { update: billing.actualizarPlanDesdeWebhook },
     inbox: {
       redactShop: redactarInboxTiendaDB,
       recordPrivacy: registrarPrivacidadWebhookDB
@@ -108,6 +168,7 @@ function createRuntime({
     pollMs,
     repository: {
       claim: reclamarWebhookDB,
+      renew: renovarLeaseWebhookDB,
       succeed: completarWebhookDB,
       fail: fallarWebhookDB
     },
@@ -115,7 +176,7 @@ function createRuntime({
     reportError: reportarError,
     metrics: metrica
   }));
-  const allRunners = [...generationRunners, ...publicationRunners, ...webhookRunners];
+  const allRunners = [...generationRunners, ...publicationRunners, compensationRunner, ...webhookRunners];
 
   let maintenanceTimer = null;
   let queueMetricsTimer = null;
@@ -164,7 +225,7 @@ function createRuntime({
       await Promise.all(allRunners.map((runner) => runner.stop()));
     },
     async processJobsOnce() {
-      for (const runner of [...generationRunners, ...publicationRunners]) {
+      for (const runner of [...generationRunners, ...publicationRunners, compensationRunner]) {
         if (await runner.processOnce()) return true;
       }
       return false;

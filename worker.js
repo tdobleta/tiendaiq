@@ -12,6 +12,7 @@ const {
 
 const PREFLIGHT_TIMEOUT_MS = Math.max(1000, Number(process.env.WORKER_PREFLIGHT_TIMEOUT_MS) || 15000);
 const HEARTBEAT_MS = Math.max(5000, Number(process.env.WORKER_HEARTBEAT_MS) || 15000);
+const SHUTDOWN_TIMEOUT_MS = Math.max(1000, Number(process.env.WORKER_SHUTDOWN_TIMEOUT_MS) || 10000);
 const HEARTBEAT_FAILURE_LIMIT = 3;
 let runtime = null;
 
@@ -41,6 +42,58 @@ function identidadWorker(runtimeEnv = process.env) {
   };
 }
 
+async function esperarConPlazo(promise, timeoutMs, message) {
+  let timer;
+  try {
+    return await Promise.race([
+      Promise.resolve(promise),
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error(message)), Math.max(1, timeoutMs));
+      })
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function apagarWorker({
+  activeRuntime = runtime,
+  cerrarAlmacenamiento = cerrarAlmacenamientoDB,
+  timeoutMs = SHUTDOWN_TIMEOUT_MS,
+  reportar = reportarError
+} = {}) {
+  const totalMs = Math.max(2, Number(timeoutMs) || SHUTDOWN_TIMEOUT_MS);
+  const closeBudgetMs = Math.max(1, Math.floor(totalMs / 4));
+  const stopBudgetMs = Math.max(1, totalMs - closeBudgetMs);
+  let failure = null;
+
+  if (activeRuntime?.stop) {
+    try {
+      await esperarConPlazo(
+        activeRuntime.stop(),
+        stopBudgetMs,
+        `worker runtime no se detuvo en ${stopBudgetMs} ms`
+      );
+    } catch (error) {
+      failure = error;
+      reportar(error, { tipo: "worker-shutdown-runtime" });
+    }
+  }
+
+  try {
+    await esperarConPlazo(
+      cerrarAlmacenamiento(),
+      closeBudgetMs,
+      `el almacenamiento no cerro en ${closeBudgetMs} ms`
+    );
+  } catch (error) {
+    failure ||= error;
+    reportar(error, { tipo: "worker-shutdown-storage" });
+  }
+
+  if (failure) throw failure;
+}
+
 async function iniciarWorker({
   verificar = verificarWorkerDB,
   registrarHeartbeat = registrarHeartbeatWorkerDB,
@@ -50,6 +103,7 @@ async function iniciarWorker({
   heartbeatMs = HEARTBEAT_MS,
   setIntervalFn = setInterval,
   cerrarAlmacenamiento = cerrarAlmacenamientoDB,
+  shutdownTimeoutMs = SHUTDOWN_TIMEOUT_MS,
   terminate = (code) => process.exit(code),
   reportar = reportarError
 } = {}) {
@@ -104,21 +158,16 @@ async function iniciarWorker({
       if (heartbeatFailures < HEARTBEAT_FAILURE_LIMIT) return;
       clearInterval(heartbeatTimer);
       heartbeatTimer = null;
-      let drainTimeout;
       try {
-        await Promise.race([
-          (async () => {
-            await activeRuntime.stop();
-            await cerrarAlmacenamiento();
-          })(),
-          new Promise((_, reject) => {
-            drainTimeout = setTimeout(() => reject(new Error("worker shutdown excedio 10 segundos")), 10000);
-          })
-        ]);
+        await apagarWorker({
+          activeRuntime,
+          cerrarAlmacenamiento,
+          timeoutMs: shutdownTimeoutMs,
+          reportar
+        });
       } catch (shutdownError) {
         reportar(shutdownError, { tipo: "worker-heartbeat-shutdown" });
       } finally {
-        clearTimeout(drainTimeout);
         terminate(1);
       }
     } finally {
@@ -141,8 +190,7 @@ async function shutdown() {
   if (stopping) return;
   stopping = true;
   try {
-    if (runtime) await runtime.stop();
-    await cerrarAlmacenamientoDB();
+    await apagarWorker();
     process.exitCode = 0;
   } catch (error) {
     console.error("No se pudo cerrar el worker limpiamente:", error.message);
@@ -171,4 +219,10 @@ if (require.main === module) {
     });
 }
 
-module.exports = { HEARTBEAT_FAILURE_LIMIT, identidadWorker, iniciarWorker };
+module.exports = {
+  HEARTBEAT_FAILURE_LIMIT,
+  SHUTDOWN_TIMEOUT_MS,
+  apagarWorker,
+  identidadWorker,
+  iniciarWorker
+};

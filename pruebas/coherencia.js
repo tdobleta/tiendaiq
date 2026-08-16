@@ -45,9 +45,11 @@ const releaseWorkflow = leer(".github/workflows/release-staging.yml");
 const capacityWorkflow = leer(".github/workflows/capacity-staging.yml");
 const anthropicCapacityWorkflow = leer(".github/workflows/anthropic-capacity-staging.yml");
 const opsReadinessWorkflow = leer(".github/workflows/ops-readiness-staging.yml");
+const opsReadinessScript = leer("scripts/probar-readiness-operativa.js");
 const verificationWorkflow = leer(".github/workflows/verificar.yml");
 const launchPlan = leer("docs/plan-lanzamiento-1000-tiendas.md");
 const ola1Runbook = leer("docs/runbook-ola-1.md");
+const appFrontend = leer("app/app.js");
 const principal = toml.match(/^application_url\s*=\s*"([^"]+)"/m)?.[1];
 
 function servicioRender(nombre) {
@@ -197,9 +199,11 @@ if (/release_sha:/.test(releaseWorkflow) &&
     /data-urlencode "ref=\$\{\{ steps\.release\.outputs\.sha \}\}"/.test(releaseWorkflow) &&
     /tiendaiq-staging-web\.onrender\.com\/ready/.test(releaseWorkflow) &&
     /ready\.release===process\.env\.EXPECTED_SHA/.test(releaseWorkflow) &&
-    /Wait for the isolated worker heartbeat/.test(releaseWorkflow) &&
-    /w\.release===process\.env\.EXPECTED_SHA/.test(releaseWorkflow) &&
-    /--header "Authorization: Bearer \$OPS_STATUS_TOKEN"/.test(releaseWorkflow) &&
+    /Wait for the complete operational release gate/.test(releaseWorkflow) &&
+    /EXPECTED_RELEASE_SHA:\s*\$\{\{ steps\.release\.outputs\.sha \}\}/.test(releaseWorkflow) &&
+    /npm run ops:readiness/.test(releaseWorkflow) &&
+    /Authorization:\s*`Bearer \$\{token\}`/.test(opsReadinessScript) &&
+    /worker\.release \|\| ""/.test(opsReadinessScript) &&
     /timeout-minutes:\s*40/.test(releaseWorkflow) &&
     /RENDER_GIT_COMMIT/.test(leer("server.js"))) {
   ok("el release fija el SHA revisado y espera readiness de staging");
@@ -226,7 +230,11 @@ if (/await Promise\.race/.test(workerSource) &&
 }
 
 if (/environment:\s*staging/.test(capacityWorkflow) &&
-    /ref:\s*\$\{\{ github\.sha \}\}/.test(capacityWorkflow) &&
+    /release_sha:/.test(capacityWorkflow) &&
+    /ref:\s*\$\{\{ inputs\.release_sha \}\}/.test(capacityWorkflow) &&
+    /git fetch origin main --depth=1/.test(capacityWorkflow) &&
+    /EXPECTED_RELEASE_SHA/.test(capacityWorkflow) &&
+    /\/ready/.test(capacityWorkflow) &&
     /STAGING_WEB_DATABASE_URL/.test(capacityWorkflow) &&
     /STAGING_WORKER_DATABASE_URL/.test(capacityWorkflow) &&
     /RUN_STAGING_QUEUE_CAPACITY/.test(capacityWorkflow) &&
@@ -236,12 +244,16 @@ if (/environment:\s*staging/.test(capacityWorkflow) &&
 } else {
   mal(
     "la capacidad de staging usa un commit revisado y credenciales runtime",
-    "el workflow manual debe fijar github.sha, exigir confirmacion y no usar la credencial migradora"
+    "el workflow manual debe fijar un SHA de main desplegado en staging, exigir confirmacion y no usar la credencial migradora"
   );
 }
 
 if (/environment:\s*staging/.test(anthropicCapacityWorkflow) &&
-    /ref:\s*\$\{\{ github\.sha \}\}/.test(anthropicCapacityWorkflow) &&
+    /release_sha:/.test(anthropicCapacityWorkflow) &&
+    /ref:\s*\$\{\{ inputs\.release_sha \}\}/.test(anthropicCapacityWorkflow) &&
+    /git fetch origin main --depth=1/.test(anthropicCapacityWorkflow) &&
+    /EXPECTED_RELEASE_SHA/.test(anthropicCapacityWorkflow) &&
+    /\/ready/.test(anthropicCapacityWorkflow) &&
     /STAGING_ANTHROPIC_API_KEY/.test(anthropicCapacityWorkflow) &&
     /AI_CAPACITY_CONCURRENCY:\s*"8"/.test(anthropicCapacityWorkflow) &&
     /AUTHORIZE_PAID_ANTHROPIC_STAGING_\$\{PROFILE\}/.test(anthropicCapacityWorkflow) &&
@@ -252,7 +264,7 @@ if (/environment:\s*staging/.test(anthropicCapacityWorkflow) &&
 } else {
   mal(
     "la capacidad de Anthropic exige staging, autorizacion paga y techo de concurrencia",
-    "el workflow debe fijar el commit, usar la clave de staging y exigir doble autorizacion sin credenciales migradoras"
+    "el workflow debe fijar un SHA de main desplegado en staging, usar la clave de staging y exigir doble autorizacion sin credenciales migradoras"
   );
 }
 
@@ -350,6 +362,18 @@ if (/key:\s*EMAIL_SOPORTE\s+sync:\s*false/.test(renderWebService) &&
   mal(
     "Render declara las legales publicas requeridas por Shopify",
     "web debe recibir EMAIL_SOPORTE, RAZON_SOCIAL y DOMICILIO sin escribirlos en codigo"
+  );
+}
+
+if (/SUSCRIPCION_PENDIENTE/.test(appFrontend) &&
+    /pending\.jobId/.test(appFrontend) &&
+    /body:\s*\{ request_id: pending\.requestId \}/.test(appFrontend) &&
+    /error\?\.terminal === true \|\| error\?\.status === 404/.test(appFrontend)) {
+  ok("el navegador reanuda la misma intencion durable de billing tras una recarga");
+} else {
+  mal(
+    "el navegador reanuda la misma intencion durable de billing tras una recarga",
+    "debe persistir requestId/jobId, reutilizar el job y limpiar solo ante un resultado terminal"
   );
 }
 

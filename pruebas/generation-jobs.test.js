@@ -4,9 +4,11 @@ const { describe, test } = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
+const Anthropic = require("@anthropic-ai/sdk");
 const { TenantContext } = require("../src/tenancy/tenant-context");
 const { createGenerationRepository } = require("../src/platform/postgres/generation-repository");
 const { createGeneratePageHandler } = require("../src/jobs/generate-page-handler");
+const { isAmbiguousProviderError, normalizeProviderError, retryAfterSeconds } = require("../adaptador");
 
 const tenant = TenantContext.fromShopDomain("generation.myshopify.com", { source: "internal-job" });
 const period = "2026-08";
@@ -229,11 +231,18 @@ describe("GeneratePageHandler", () => {
       sessions: { async get() { return { tienda: tenant.tenantId, token: "token" }; } },
       generations: {
         async getReservation() { return { status: "reserved" }; },
+        async transitionProvider(context, id, command) {
+          assert.equal(command.action, "begin");
+          return { started: true, state: "provider_in_flight", attemptId: "attempt-1" };
+        },
         async finalize(context, value) { finalized = value; },
         async release() {}
       },
       pages: { async get() { return null; } },
-      async generate() { return { data: { titulo: "IA" }, urls: {}, avisos: [], uso: { input_tokens: 10 } }; },
+      async generate(productId, session, options) {
+        await options.beforeProviderCall();
+        return { data: { titulo: "IA" }, urls: {}, avisos: [], uso: { input_tokens: 10 } };
+      },
       metrics() {}
     });
 
@@ -259,6 +268,209 @@ describe("GeneratePageHandler", () => {
 
     assert.deepEqual(await handler.run(baseJob), { pageId: "42", recovered: true });
     assert.equal(generations, 0);
+  });
+
+  test("reintenta solo la confirmacion idempotente sin volver a llamar a IA", async () => {
+    let generated = 0;
+    let finalized = 0;
+    const handler = createGeneratePageHandler({
+      sessions: { async get() { return { tienda: tenant.tenantId, token: "token" }; } },
+      generations: {
+        async getReservation() { return { status: "reserved" }; },
+        async transitionProvider(context, id, command) {
+          assert.equal(command.action, "begin");
+          return { started: true, state: "provider_in_flight", attemptId: "attempt-retry" };
+        },
+        async finalize() {
+          finalized += 1;
+          if (finalized < 3) throw new Error("Postgres temporal");
+        },
+        async release() {}
+      },
+      pages: { async get() { return null; } },
+      async generate(productId, session, options) {
+        await options.beforeProviderCall();
+        generated += 1;
+        return { data: { titulo: "IA" }, urls: {}, avisos: [], uso: {} };
+      },
+      finalizeRetryMs: 1,
+      metrics() {}
+    });
+
+    const result = await handler.run(baseJob);
+    assert.equal(result.pageId, "42");
+    assert.equal(generated, 1);
+    assert.equal(finalized, 3);
+  });
+
+  test("un resultado sin confirmar queda terminal y no libera la reserva", async () => {
+    let released = 0;
+    const handler = createGeneratePageHandler({
+      sessions: { async get() { return { tienda: tenant.tenantId, token: "token" }; } },
+      generations: {
+        async getReservation() { return { status: "reserved" }; },
+        async transitionProvider(context, id, command) {
+          if (command.action === "begin") return { started: true, state: "provider_in_flight", attemptId: "attempt-finalize" };
+          assert.equal(command.action, "ambiguous");
+          return { changed: true, state: "ambiguous", attemptId: command.attemptId };
+        },
+        async finalize() { throw new Error("Postgres caido"); },
+        async release() { released += 1; }
+      },
+      pages: { async get() { return null; } },
+      async generate(productId, session, options) {
+        await options.beforeProviderCall();
+        return { data: {}, urls: {}, avisos: [], uso: {} };
+      },
+      finalizeRetryMs: 1,
+      metrics() {}
+    });
+
+    let ambiguous;
+    await assert.rejects(handler.run(baseJob), (error) => {
+      ambiguous = error;
+      return error.code === "GENERATION_FINALIZE_AMBIGUOUS"
+        && error.nonRetryable
+        && error.skipCompensation;
+    });
+    assert.equal(handler.needsCompensation(baseJob, ambiguous), false);
+    await handler.onTerminalFailure(baseJob, ambiguous);
+    assert.equal(released, 0);
+  });
+
+  test("una recuperación provider_in_flight queda ambigua y no repite Anthropic", async () => {
+    let generated = 0;
+    let sessions = 0;
+    const transitions = [];
+    const handler = createGeneratePageHandler({
+      sessions: { async get() { sessions += 1; } },
+      generations: {
+        async getReservation() {
+          return { status: "reserved", providerState: { state: "provider_in_flight", attemptId: "attempt-lost" } };
+        },
+        async transitionProvider(context, id, command) {
+          transitions.push(command);
+          return { started: false, state: "ambiguous", attemptId: "attempt-lost" };
+        },
+        async finalize() {},
+        async release() {}
+      },
+      pages: { async get() { return null; } },
+      async generate() { generated += 1; },
+      metrics() {}
+    });
+
+    await assert.rejects(
+      handler.run(baseJob),
+      (error) => error.code === "GENERATION_PROVIDER_AMBIGUOUS" && error.nonRetryable && error.skipCompensation
+    );
+    assert.equal(sessions, 0);
+    assert.equal(generated, 0);
+    assert.deepEqual(transitions.map((item) => item.action), ["begin"]);
+  });
+
+  test("APIConnectionError deja el intento ambiguo y conserva la reserva", async () => {
+    let released = 0;
+    const transitions = [];
+    const handler = createGeneratePageHandler({
+      sessions: { async get() { return { tienda: tenant.tenantId, token: "token" }; } },
+      generations: {
+        async getReservation() { return { status: "reserved" }; },
+        async transitionProvider(context, id, command) {
+          transitions.push(command);
+          if (command.action === "begin") return { started: true, state: "provider_in_flight", attemptId: "attempt-network" };
+          return { changed: true, state: command.action, attemptId: command.attemptId };
+        },
+        async finalize() {},
+        async release() { released += 1; }
+      },
+      pages: { async get() { return null; } },
+      async generate(productId, session, options) {
+        await options.beforeProviderCall();
+        const error = new Anthropic.APIConnectionError({ message: "socket cerrado" });
+        error.code = "ANTHROPIC_AMBIGUOUS";
+        error.nonRetryable = true;
+        error.skipCompensation = true;
+        throw error;
+      },
+      metrics() {}
+    });
+
+    let failure;
+    await assert.rejects(handler.run(baseJob), (error) => {
+      failure = error;
+      return error.code === "ANTHROPIC_AMBIGUOUS" && error.skipCompensation;
+    });
+    await handler.onTerminalFailure(baseJob, failure);
+    assert.equal(released, 0);
+    assert.deepEqual(transitions.map((item) => item.action), ["begin", "ambiguous"]);
+  });
+
+  test("un 429 confirmado limpia el intento y conserva Retry-After para el runner", async () => {
+    const transitions = [];
+    const handler = createGeneratePageHandler({
+      sessions: { async get() { return { tienda: tenant.tenantId, token: "token" }; } },
+      generations: {
+        async getReservation() { return { status: "reserved" }; },
+        async transitionProvider(context, id, command) {
+          transitions.push(command);
+          if (command.action === "begin") return { started: true, state: "provider_in_flight", attemptId: "attempt-429" };
+          return { changed: true, state: null, attemptId: command.attemptId };
+        },
+        async finalize() {},
+        async release() {}
+      },
+      pages: { async get() { return null; } },
+      async generate(productId, session, options) {
+        await options.beforeProviderCall();
+        const error = new Error("rate limited");
+        error.status = 429;
+        error.retryAfter = 7;
+        throw error;
+      },
+      metrics() {}
+    });
+
+    await assert.rejects(handler.run(baseJob), (error) => error.status === 429 && error.retryAfter === 7);
+    assert.deepEqual(transitions.map((item) => item.action), ["begin", "clear"]);
+  });
+
+  test("falla cerrado si el adaptador omite el checkpoint pre-proveedor", async () => {
+    const handler = createGeneratePageHandler({
+      sessions: { async get() { return { tienda: tenant.tenantId, token: "token" }; } },
+      generations: {
+        async getReservation() { return { status: "reserved" }; },
+        async transitionProvider() { throw new Error("no debe ejecutarse"); },
+        async finalize() { throw new Error("no debe confirmar"); },
+        async release() {}
+      },
+      pages: { async get() { return null; } },
+      async generate() { return { data: {}, urls: {}, avisos: [], uso: {} }; },
+      metrics() {}
+    });
+
+    await assert.rejects(
+      handler.run(baseJob),
+      (error) => error.code === "GENERATION_PROVIDER_AMBIGUOUS" && error.skipCompensation
+    );
+  });
+});
+
+describe("Contrato Anthropic", () => {
+  test("APIConnectionError se clasifica como resultado ambiguo", () => {
+    const error = new Anthropic.APIConnectionError({ message: "conexión interrumpida" });
+    assert.equal(isAmbiguousProviderError(error), true);
+  });
+
+  test("normaliza Retry-After en segundos, milisegundos y fecha HTTP", () => {
+    assert.equal(retryAfterSeconds({ "retry-after": "2.1" }), 3);
+    assert.equal(retryAfterSeconds({ "retry-after-ms": "1250" }), 2);
+    const now = Date.parse("2026-08-13T12:00:00Z");
+    assert.equal(retryAfterSeconds({ "Retry-After": "Thu, 13 Aug 2026 12:00:04 GMT" }, now), 4);
+
+    const error = { headers: new Headers({ "retry-after": "6" }) };
+    assert.equal(normalizeProviderError(error), error);
+    assert.equal(error.retryAfter, 6);
   });
 });
 

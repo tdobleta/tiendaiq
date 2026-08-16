@@ -11,6 +11,45 @@ const DSN = process.env.SENTRY_DSN || "";
 const ENTORNO = process.env.NODE_ENV || "production";
 const RELEASE = process.env.RENDER_GIT_COMMIT || process.env.GIT_COMMIT || "";
 
+const IDENTIFIER_KEYS = /^(tienda|shop|shop_domain|tenant|tenant_id|dominio|email)$/i;
+const SECRET_KEYS = /(authorization|cookie|password|secret|token|api[_-]?key|database[_-]?url|connection[_-]?string)/i;
+const CONTENT_KEYS = /^(prompt|response|respuesta|payload|body|cuerpo)$/i;
+
+function hashIdentifier(value) {
+  return crypto.createHash("sha256").update(String(value)).digest("hex").slice(0, 16);
+}
+
+function redactString(value) {
+  return String(value)
+    .replace(/\b[a-z0-9][a-z0-9-]*\.myshopify\.com\b/gi, "[shop]")
+    .replace(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, "[email]")
+    .replace(/\b(?:sk-ant-|shpat_)[A-Za-z0-9_-]+\b/g, "[secret]")
+    .replace(/\bBearer\s+[A-Za-z0-9._~+\/-]+=*\b/gi, "Bearer [secret]")
+    .replace(/postgres(?:ql)?:\/\/[^\s]+/gi, "[database-url]");
+}
+
+function sanitizeTelemetry(value, key = "", depth = 0, seen = new WeakSet()) {
+  if (value == null || typeof value === "number" || typeof value === "boolean") return value;
+  if (SECRET_KEYS.test(key) || CONTENT_KEYS.test(key)) return "[redacted]";
+  if (IDENTIFIER_KEYS.test(key)) return hashIdentifier(value);
+  if (typeof value === "string") return redactString(value);
+  if (typeof value !== "object") return redactString(value);
+  if (depth >= 6) return "[truncated]";
+  if (seen.has(value)) return "[circular]";
+  seen.add(value);
+
+  if (Array.isArray(value)) {
+    return value.slice(0, 50).map((item) => sanitizeTelemetry(item, key, depth + 1, seen));
+  }
+
+  return Object.fromEntries(
+    Object.entries(value).map(([childKey, childValue]) => [
+      childKey,
+      sanitizeTelemetry(childValue, childKey, depth + 1, seen)
+    ])
+  );
+}
+
 let sentry = null;
 if (DSN) {
   try {
@@ -47,8 +86,10 @@ function enviarSentry(payload) {
 
 // Reporta una excepción. Mantiene el console.error de siempre + Sentry si hay DSN.
 function reportarError(err, ctx = {}) {
-  const stack = err && err.stack ? err.stack : String(err);
-  console.error("✖", ctx.donde || ctx.tipo || "", (err && err.message) || err, ctx.detalle ? `· ${ctx.detalle}` : "");
+  const safeContext = sanitizeTelemetry(ctx);
+  const message = redactString((err && err.message) || err);
+  const stack = redactString(err && err.stack ? err.stack : String(err));
+  console.error("✖", safeContext.donde || safeContext.tipo || "", message, safeContext.detalle ? `· ${safeContext.detalle}` : "");
   enviarSentry({
     event_id: crypto.randomBytes(16).toString("hex"),
     timestamp: Date.now() / 1000,
@@ -58,17 +99,18 @@ function reportarError(err, ctx = {}) {
     server_name: "tiendaiq",
     environment: ENTORNO,
     release: RELEASE || undefined,
-    tags: ctx.tags || {},
-    extra: { ...ctx, stack },
-    exception: { values: [{ type: (err && err.name) || "Error", value: String((err && err.message) || err) }] }
+    tags: safeContext.tags || {},
+    extra: { ...safeContext, stack },
+    exception: { values: [{ type: (err && err.name) || "Error", value: message }] }
   });
 }
 
 // Evento de producto (AARRR): instalación, activación, publicación, suscripción.
 // Sale como línea JSON (fácil de pipear a un analytics) + breadcrumb en Sentry.
 function metrica(nombre, props = {}) {
+  const safeProps = sanitizeTelemetry(props);
   try {
-    console.log(JSON.stringify({ metrica: nombre, ts: new Date().toISOString(), ...props }));
+    console.log(JSON.stringify({ metrica: nombre, ts: new Date().toISOString(), ...safeProps }));
   } catch {}
   enviarSentry({
     event_id: crypto.randomBytes(16).toString("hex"),
@@ -79,8 +121,8 @@ function metrica(nombre, props = {}) {
     environment: ENTORNO,
     message: nombre,
     tags: { metrica: nombre },
-    extra: props
+    extra: safeProps
   });
 }
 
-module.exports = { reportarError, metrica, sentryActivo: !!sentry };
+module.exports = { reportarError, metrica, sanitizeTelemetry, sentryActivo: !!sentry };

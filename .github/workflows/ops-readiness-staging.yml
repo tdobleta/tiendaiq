@@ -31,7 +31,7 @@ jobs:
     timeout-minutes: 10
     environment: staging
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.release_sha }}
           fetch-depth: 0
@@ -60,7 +60,7 @@ jobs:
           git fetch origin main --depth=1
           [[ "$(git rev-parse origin/main)" == "$RELEASE_SHA" ]] || { echo "el SHA debe ser HEAD de main" >&2; exit 1; }
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: "20"
 
@@ -77,6 +77,16 @@ jobs:
           OPS_MAX_RUNNING_JOBS: "16"
           OPS_MAX_FAILED_RECENT_JOBS: "0"
           OPS_MAX_STALE_RUNNING_JOBS: "0"
+          OPS_MAX_COMPENSATION_PENDING: "0"
+          OPS_MAX_COMPENSATION_DEAD_LETTER: "0"
+          OPS_MAX_STALE_COMPENSATION: "0"
+          OPS_MAX_OLDEST_COMPENSATION_SECONDS: "300"
+          OPS_MAX_INBOX_RECEIVED: "20"
+          OPS_MAX_INBOX_PROCESSING: "8"
+          OPS_MAX_INBOX_FAILED: "0"
+          OPS_MAX_INBOX_FAILED_RECENT: "0"
+          OPS_MAX_INBOX_STALE_PROCESSING: "0"
+          OPS_MAX_OLDEST_INBOX_SECONDS: "300"
           OPS_MAX_WORKER_AGE_SECONDS: "60"
           OPS_MIN_WORKER_UPTIME_SECONDS: "30"
           OPS_MIN_GENERATION_CONCURRENCY: "8"

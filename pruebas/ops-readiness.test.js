@@ -6,6 +6,7 @@ const {
   assertOpsStatusToken,
   assertExpectedSha,
   booleanFlag,
+  evaluateInbox,
   evaluateOpsStatus,
   evaluateQueue,
   evaluateReady,
@@ -60,6 +61,7 @@ test("evalua /ops/status con release, admission control y cola agregada", () => 
     billing: { planTest: true },
     legal: { complete: true, missing: [] },
     generationAdmission: { paused: false, retryAfter: 120 },
+    inbox: { received: 0, processing: 0, failed: 0, failedRecent: 0, staleProcessing: 0, oldestReceivedSeconds: 0 },
     worker: {
       release: SHA,
       runtimeRole: "tiendaiq_worker_runtime",
@@ -74,9 +76,9 @@ test("evalua /ops/status con release, admission control y cola agregada", () => 
       runtimeRoleVariants: 1
     },
     queue: [
-      { type: "generate-page", queued: 2, running: 1, failed: 0, failedRecent: 0, staleRunning: 0, oldestQueuedSeconds: 30 }
+      { type: "generate-page", queued: 2, running: 1, failed: 0, failedRecent: 0, staleRunning: 0, compensationPending: 0, compensationDeadLetter: 0, staleCompensation: 0, oldestQueuedSeconds: 30, oldestCompensationSeconds: 0 }
     ],
-    totals: { queued: 2, running: 1, failed: 0, failedRecent: 0, staleRunning: 0, oldestQueuedSeconds: 30 }
+    totals: { queued: 2, running: 1, failed: 0, failedRecent: 0, staleRunning: 0, compensationPending: 0, compensationDeadLetter: 0, staleCompensation: 0, oldestQueuedSeconds: 30, oldestCompensationSeconds: 0 }
   };
   const thresholds = {
     maxQueued: 20,
@@ -84,6 +86,16 @@ test("evalua /ops/status con release, admission control y cola agregada", () => 
     maxRunning: 10,
     maxFailedRecent: 0,
     maxStaleRunning: 0,
+    maxCompensationPending: 0,
+    maxCompensationDeadLetter: 0,
+    maxStaleCompensation: 0,
+    maxOldestCompensationSeconds: 300,
+    maxInboxReceived: 20,
+    maxInboxProcessing: 8,
+    maxInboxFailed: 0,
+    maxInboxFailedRecent: 0,
+    maxInboxStaleProcessing: 0,
+    maxOldestInboxSeconds: 300,
     maxWorkerAgeSeconds: 60,
     minWorkerUptimeSeconds: 30,
     minGenerationConcurrency: 8,
@@ -102,6 +114,30 @@ test("evalua /ops/status con release, admission control y cola agregada", () => 
   assert.equal(evaluateOpsStatus({
     ...opsStatus,
     totals: { ...opsStatus.totals, oldestQueuedSeconds: 601 }
+  }, SHA, thresholds).ok, false);
+  assert.equal(evaluateOpsStatus({
+    ...opsStatus,
+    totals: { ...opsStatus.totals, compensationPending: 1, oldestCompensationSeconds: 1 }
+  }, SHA, thresholds).ok, false);
+  assert.equal(evaluateOpsStatus({
+    ...opsStatus,
+    totals: { ...opsStatus.totals, compensationDeadLetter: 1 }
+  }, SHA, thresholds).ok, false);
+  assert.equal(evaluateOpsStatus({
+    ...opsStatus,
+    totals: { ...opsStatus.totals, staleCompensation: 1 }
+  }, SHA, thresholds).ok, false);
+  assert.equal(evaluateOpsStatus({
+    ...opsStatus,
+    inbox: { ...opsStatus.inbox, failed: 1 }
+  }, SHA, thresholds).ok, false);
+  assert.equal(evaluateOpsStatus({
+    ...opsStatus,
+    inbox: { ...opsStatus.inbox, staleProcessing: 1 }
+  }, SHA, thresholds).ok, false);
+  assert.equal(evaluateOpsStatus({
+    ...opsStatus,
+    inbox: { ...opsStatus.inbox, oldestReceivedSeconds: 301 }
   }, SHA, thresholds).ok, false);
   assert.equal(evaluateOpsStatus({
     ...opsStatus,
@@ -133,10 +169,33 @@ test("evalua /ops/status con release, admission control y cola agregada", () => 
   }, SHA, thresholds).ok, false);
 });
 
+test("bloquea webhooks terminales, estancados o demasiado viejos", () => {
+  const thresholds = {
+    maxInboxReceived: 20,
+    maxInboxProcessing: 8,
+    maxInboxFailed: 0,
+    maxInboxFailedRecent: 0,
+    maxInboxStaleProcessing: 0,
+    maxOldestInboxSeconds: 300
+  };
+  const healthy = {
+    received: 2,
+    processing: 1,
+    failed: 0,
+    failedRecent: 0,
+    staleProcessing: 0,
+    oldestReceivedSeconds: 20
+  };
+  assert.deepEqual(evaluateInbox(healthy, thresholds), { ok: true, errors: [] });
+  assert.equal(evaluateInbox({ ...healthy, failedRecent: 1 }, thresholds).ok, false);
+  assert.equal(evaluateInbox({ ...healthy, processing: 9 }, thresholds).ok, false);
+  assert.equal(evaluateInbox({ ...healthy, received: 21 }, thresholds).ok, false);
+});
+
 test("resume la cola durable y aplica umbrales operativos", () => {
   const summary = summarizeQueue([
-    { type: "generate-page", queued: 3, running: 2, failed: 1, failedRecent: 0, staleRunning: 0, oldestQueuedSeconds: 42.5 },
-    { type: "publish-page", queued: 1, running: 0, failed: 0, failedRecent: 0, staleRunning: 0, oldestQueuedSeconds: 12 }
+    { type: "generate-page", queued: 3, running: 2, failed: 1, failedRecent: 0, staleRunning: 0, compensationPending: 0, compensationDeadLetter: 0, staleCompensation: 0, oldestQueuedSeconds: 42.5, oldestCompensationSeconds: 0 },
+    { type: "publish-page", queued: 1, running: 0, failed: 0, failedRecent: 0, staleRunning: 0, compensationPending: 0, compensationDeadLetter: 0, staleCompensation: 0, oldestQueuedSeconds: 12, oldestCompensationSeconds: 0 }
   ]);
   assert.deepEqual(summary, {
     types: 2,
@@ -145,21 +204,33 @@ test("resume la cola durable y aplica umbrales operativos", () => {
     failed: 1,
     failedRecent: 0,
     staleRunning: 0,
-    oldestQueuedSeconds: 42.5
+    compensationPending: 0,
+    compensationDeadLetter: 0,
+    staleCompensation: 0,
+    oldestQueuedSeconds: 42.5,
+    oldestCompensationSeconds: 0
   });
   assert.deepEqual(evaluateQueue(summary, {
     maxQueued: 20,
     maxOldestQueuedSeconds: 600,
     maxRunning: 10,
     maxFailedRecent: 0,
-    maxStaleRunning: 0
+    maxStaleRunning: 0,
+    maxCompensationPending: 0,
+    maxCompensationDeadLetter: 0,
+    maxStaleCompensation: 0,
+    maxOldestCompensationSeconds: 300
   }), { ok: true, errors: [] });
   assert.equal(evaluateQueue(summary, {
     maxQueued: 20,
     maxOldestQueuedSeconds: 10,
     maxRunning: 10,
     maxFailedRecent: 0,
-    maxStaleRunning: 0
+    maxStaleRunning: 0,
+    maxCompensationPending: 0,
+    maxCompensationDeadLetter: 0,
+    maxStaleCompensation: 0,
+    maxOldestCompensationSeconds: 300
   }).ok, false);
 });
 
