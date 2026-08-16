@@ -457,6 +457,8 @@ test("el bootstrap crea roles propios y no intenta modificar credenciales gestio
   assert.match(source, /\[OWNED_ROLES\]/);
   assert.doesNotMatch(source, /const controlledRoles = \[\.\.\.OWNED_ROLES, \.\.\.LOGIN_ROLES\]/);
   assert.match(source, /REVOKE \$\{quoteIdentifier\(parent\)\} FROM \$\{quoteIdentifier\(member\)\}/);
+  assert.match(source, /membership\.grantor/);
+  assert.match(source, /GRANTED BY \$\{quoteIdentifier\(grantor\)\}/);
   assert.match(source, /parent\.rolname = \$1 AND member\.rolname <> \$2/);
   assert.match(source, /WITH INHERIT FALSE, SET TRUE/);
   assert.match(source, /membership\.inherit_option, membership\.set_option/);
