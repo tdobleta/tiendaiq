@@ -1053,19 +1053,38 @@ test("los workflows que operan staging fijan las acciones que ejecutan", () => {
   }
 });
 
-test("los workflows de produccion fijan acciones y usan el entorno protegido", () => {
-  const workflows = ["release-production.yml", "bootstrap-runtime-logins-production.yml"];
+test("los workflows de produccion fijan acciones y usan entornos protegidos", () => {
+  const workflows = [
+    ["release-production.yml", "production"],
+    ["bootstrap-runtime-logins-production.yml", "production"],
+    ["recover-production.yml", "production-recovery"]
+  ];
 
-  for (const name of workflows) {
+  for (const [name, environment] of workflows) {
     const workflow = fs.readFileSync(path.join(__dirname, "..", ".github", "workflows", name), "utf8");
-    assert.match(workflow, /environment: production/, name);
+    assert.match(workflow, new RegExp(`environment: ${environment}`), name);
     assert.match(workflow, /actions\/checkout@[a-f0-9]{40}/, name);
     assert.match(workflow, /actions\/setup-node@[a-f0-9]{40}/, name);
     assert.doesNotMatch(workflow, /actions\/(?:checkout|setup-node)@v\d/, name);
   }
 });
 
-test("el release de produccion despliega y certifica exactamente el SHA revisado", () => {
+test("todos los workflows del candado de produccion conservan la cola pendiente", () => {
+  const workflows = [
+    "release-production.yml",
+    "recover-production.yml",
+    "bootstrap-runtime-logins-production.yml"
+  ];
+
+  for (const name of workflows) {
+    const workflow = fs.readFileSync(path.join(__dirname, "..", ".github", "workflows", name), "utf8");
+    assert.match(workflow, /group: tiendaiq-production-database-maintenance/, name);
+    assert.match(workflow, /queue: max/, name);
+    assert.match(workflow, /cancel-in-progress: false/, name);
+  }
+});
+
+test("el release de produccion persiste un rollback antes de desplegar el SHA revisado", () => {
   const workflow = fs.readFileSync(
     path.join(__dirname, "..", ".github", "workflows", "release-production.yml"),
     "utf8"
@@ -1086,26 +1105,87 @@ test("el release de produccion despliega y certifica exactamente el SHA revisado
   assert.match(workflow, /PRODUCTION_OPS_STATUS_TOKEN/);
   assert.match(workflow, /ready\.ok===true&&ready\.release===process\.env\.EXPECTED_SHA/);
   assert.match(workflow, /group: tiendaiq-production-database-maintenance/);
+  assert.match(workflow, /queue: max/);
   assert.doesNotMatch(workflow, /WEB_RUNTIME_LOGIN_PASSWORD/);
   assert.doesNotMatch(workflow, /WORKER_RUNTIME_LOGIN_PASSWORD/);
   assert.doesNotMatch(workflow, /preparar-roles-runtime/);
   assert.match(workflow, /id: previous/);
   assert.match(workflow, /steps\.previous\.outputs\.sha/);
   assert.match(workflow, /git merge-base --is-ancestor/);
-  assert.match(workflow, /Roll back web and worker after a failed production promotion/);
-  assert.match(workflow, /if: \$\{\{ failure\(\)/);
-  assert.match(workflow, /data-urlencode "ref=\$PREVIOUS_SHA"/);
+  assert.match(workflow, /Prepare the durable application rollback state/);
+  assert.match(workflow, /production-rollback-state\/state\.json/);
+  assert.match(workflow, /actions\/upload-artifact@[a-f0-9]{40}/);
+  assert.match(workflow, /name: production-rollback-state-\$\{\{ github\.run_attempt \}\}/);
+  assert.match(workflow, /run_attempt:Number\(process\.env\.RELEASE_ATTEMPT\)/);
+  assert.match(workflow, /retention-days: 1/);
+  assert.match(workflow, /--connect-timeout 5 --max-time 20/);
   assert.match(workflow, /OPS_READINESS_PROFILE: technical_preflight/);
+  assert.doesNotMatch(workflow, /rollback-production:/);
   assert.doesNotMatch(workflow, /complete production operational release gate/);
 
   const captureIndex = workflow.indexOf("id: previous");
   const migrationIndex = workflow.indexOf("Migrate production with the owner credential");
+  const rollbackStateIndex = workflow.indexOf("Prepare the durable application rollback state");
   const deployIndex = workflow.indexOf("id: deploy_web");
-  const rollbackIndex = workflow.indexOf("Roll back web and worker after a failed production promotion");
 
   assert.ok(captureIndex >= 0 && captureIndex < migrationIndex, "captura el release anterior antes de migrar");
-  assert.ok(migrationIndex < deployIndex, "migra antes de desplegar aplicaciones");
-  assert.ok(deployIndex < rollbackIndex, "el rollback queda despues del despliegue promovido");
+  assert.ok(migrationIndex < rollbackStateIndex, "migra antes de fijar el estado recuperable");
+  assert.ok(rollbackStateIndex < deployIndex, "persiste el estado antes de desplegar aplicaciones");
+});
+
+test("la recuperacion de produccion restaura y certifica web y worker fuera del release fallido", () => {
+  const workflow = fs.readFileSync(
+    path.join(__dirname, "..", ".github", "workflows", "recover-production.yml"),
+    "utf8"
+  );
+
+  assert.match(workflow, /workflow_run:/);
+  assert.match(workflow, /workflows: \["Release production"\]/);
+  assert.match(workflow, /types: \[completed\]/);
+  assert.match(workflow, /github\.event\.workflow_run\.event == 'workflow_dispatch'/);
+  assert.match(workflow, /github\.event\.workflow_run\.head_branch == 'main'/);
+  assert.match(workflow, /github\.event\.workflow_run\.conclusion == 'failure'/);
+  assert.match(workflow, /github\.event\.workflow_run\.conclusion == 'cancelled'/);
+  assert.match(workflow, /github\.event\.workflow_run\.conclusion == 'timed_out'/);
+  assert.match(workflow, /group: tiendaiq-production-database-maintenance/);
+  assert.match(workflow, /queue: max/);
+  assert.match(workflow, /environment: production-recovery/);
+  assert.match(workflow, /timeout-minutes: 25/);
+  assert.match(workflow, /actions\/download-artifact@[a-f0-9]{40}/);
+  assert.match(workflow, /name: production-rollback-state-\$\{\{ github\.event\.workflow_run\.run_attempt \}\}/);
+  assert.match(workflow, /--retry 3 --retry-delay 2 --retry-all-errors/);
+  assert.match(workflow, /jobs\?filter=latest&per_page=100/);
+  assert.match(workflow, /Deploy web after a successful migration/);
+  assert.match(workflow, /Deploy worker after a successful migration/);
+  assert.match(workflow, /un deploy de aplicacion comenzo pero falta el estado de rollback/);
+  assert.match(workflow, /No se inicio ningun deploy de aplicacion; no hay rollback que ejecutar/);
+  assert.match(workflow, /run-id: \$\{\{ github\.event\.workflow_run\.id \}\}/);
+  assert.match(workflow, /state\.release_sha !== process\.env\.TRIGGER_SHA/);
+  assert.match(workflow, /state\.run_attempt !== Number\(process\.env\.TRIGGER_ATTEMPT\)/);
+  assert.match(workflow, /Request rollback for web and worker before installing tooling/);
+  assert.match(workflow, /--connect-timeout 5 --max-time 20/);
+  assert.match(workflow, /data-urlencode "ref=\$PREVIOUS_SHA"/);
+  assert.match(workflow, /trigger_rollback web/);
+  assert.match(workflow, /trigger_rollback worker/);
+  assert.match(workflow, /web_hook_failed=0/);
+  assert.match(workflow, /worker_hook_failed=0/);
+  assert.match(workflow, /PRODUCTION_OPS_STATUS_TOKEN/);
+  assert.match(workflow, /EXPECTED_RELEASE_SHA: \$\{\{ steps\.state\.outputs\.previous_sha \}\}/);
+  assert.match(workflow, /OPS_READINESS_PROFILE: rollback/);
+  assert.match(workflow, /Rollback certificado: web y worker ejecutan \$PREVIOUS_SHA/);
+  assert.match(workflow, /ROLLBACK_READINESS_DEADLINE_SECONDS: "900"/);
+  assert.match(workflow, /deadline=\$\(\(SECONDS \+ ROLLBACK_READINESS_DEADLINE_SECONDS\)\)/);
+  assert.match(workflow, /timeout "\$\{remaining\}s" npm run ops:readiness/);
+  assert.doesNotMatch(workflow, /PRODUCTION_MIGRATION_DATABASE_URL/);
+
+  const hookIndex = workflow.indexOf("Request rollback for web and worker before installing tooling");
+  const installIndex = workflow.indexOf("npm ci --no-audit --no-fund");
+  assert.ok(hookIndex >= 0 && hookIndex < installIndex, "los hooks se disparan antes de depender de npm");
+
+  const rollbackTimeoutMinutes = Number(workflow.match(/recover-production:[\s\S]*?timeout-minutes: (\d+)/)?.[1]);
+  const readinessDeadlineSeconds = Number(workflow.match(/ROLLBACK_READINESS_DEADLINE_SECONDS: "(\d+)"/)?.[1]);
+  assert.ok(readinessDeadlineSeconds <= (rollbackTimeoutMinutes * 60) - 300,
+    "la recuperacion reserva al menos cinco minutos para hooks e instalacion");
 });
 
 test("las pruebas de capacidad se atan al SHA revisado y desplegado", () => {

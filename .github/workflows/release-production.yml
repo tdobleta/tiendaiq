@@ -25,6 +25,7 @@ permissions:
 
 concurrency:
   group: tiendaiq-production-database-maintenance
+  queue: max
   cancel-in-progress: false
 
 jobs:
@@ -90,17 +91,38 @@ jobs:
           MIGRATION_DATABASE_URL: ${{ secrets.PRODUCTION_MIGRATION_DATABASE_URL }}
         run: npm run db:migrate
 
+      - name: Prepare the durable application rollback state
+        if: ${{ steps.previous.outputs.sha != '' }}
+        shell: bash
+        env:
+          PREVIOUS_SHA: ${{ steps.previous.outputs.sha }}
+          RELEASE_SHA: ${{ steps.release.outputs.sha }}
+          RELEASE_ATTEMPT: ${{ github.run_attempt }}
+        run: |
+          set -euo pipefail
+          mkdir -p .production-rollback-state
+          node -e 'const fs=require("fs");fs.writeFileSync(".production-rollback-state/state.json",JSON.stringify({previous_sha:process.env.PREVIOUS_SHA,release_sha:process.env.RELEASE_SHA,run_attempt:Number(process.env.RELEASE_ATTEMPT)}))'
+
+      - name: Persist rollback state before deploying applications
+        if: ${{ steps.previous.outputs.sha != '' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: production-rollback-state-${{ github.run_attempt }}
+          path: .production-rollback-state/state.json
+          if-no-files-found: error
+          retention-days: 1
+
       - id: deploy_web
         name: Deploy web after a successful migration
         env:
           RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_PRODUCTION_WEB_DEPLOY_HOOK }}
-        run: curl --fail-with-body --request POST --get --data-urlencode "ref=${{ steps.release.outputs.sha }}" "$RENDER_DEPLOY_HOOK"
+        run: curl --fail-with-body --connect-timeout 5 --max-time 20 --request POST --get --data-urlencode "ref=${{ steps.release.outputs.sha }}" "$RENDER_DEPLOY_HOOK"
 
       - id: deploy_worker
         name: Deploy worker after a successful migration
         env:
           RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_PRODUCTION_WORKER_DEPLOY_HOOK }}
-        run: curl --fail-with-body --request POST --get --data-urlencode "ref=${{ steps.release.outputs.sha }}" "$RENDER_DEPLOY_HOOK"
+        run: curl --fail-with-body --connect-timeout 5 --max-time 20 --request POST --get --data-urlencode "ref=${{ steps.release.outputs.sha }}" "$RENDER_DEPLOY_HOOK"
 
       - name: Wait for the deployed production web readiness gate
         shell: bash
@@ -159,28 +181,4 @@ jobs:
             sleep 10
           done
           echo "Production no aprobo el preflight tecnico dentro de 10 minutos" >&2
-          exit 1
-
-      - name: Roll back web and worker after a failed production promotion
-        if: ${{ failure() && steps.previous.outputs.sha != '' && (steps.deploy_web.outcome != 'skipped' || steps.deploy_worker.outcome != 'skipped') }}
-        shell: bash
-        env:
-          PREVIOUS_SHA: ${{ steps.previous.outputs.sha }}
-          WEB_DEPLOY_HOOK: ${{ secrets.RENDER_PRODUCTION_WEB_DEPLOY_HOOK }}
-          WORKER_DEPLOY_HOOK: ${{ secrets.RENDER_PRODUCTION_WORKER_DEPLOY_HOOK }}
-        run: |
-          set -euo pipefail
-          echo "Restaurando web y worker al release anterior $PREVIOUS_SHA"
-          curl --fail-with-body --request POST --get --data-urlencode "ref=$PREVIOUS_SHA" "$WEB_DEPLOY_HOOK"
-          curl --fail-with-body --request POST --get --data-urlencode "ref=$PREVIOUS_SHA" "$WORKER_DEPLOY_HOOK"
-          for attempt in $(seq 1 60); do
-            if curl --fail --silent --show-error --max-time 5 https://tiendaiq.com/ready \
-              | node -e 'let body="";process.stdin.on("data",c=>body+=c).on("end",()=>{const ready=JSON.parse(body);process.exit(ready.ok===true&&ready.release===process.env.PREVIOUS_SHA?0:1)})'; then
-              echo "Rollback confirmado en el dominio canonico"
-              exit 0
-            fi
-            echo "Esperando rollback de production ($attempt/60)"
-            sleep 10
-          done
-          echo "CRITICO: no se pudo confirmar el rollback de production" >&2
           exit 1
