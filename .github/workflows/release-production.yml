@@ -1,0 +1,186 @@
+name: Release production
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: SHA completo (40 caracteres) revisado y presente en main
+        required: true
+        type: string
+      confirmation:
+        description: Escribir DEPLOY_REVIEWED_PRODUCTION
+        required: true
+        type: string
+      migration_compatibility:
+        description: Escribir MIGRATIONS_ARE_BACKWARD_COMPATIBLE
+        required: true
+        type: string
+      first_deploy_acknowledgement:
+        description: Solo si no existe release previo, escribir ALLOW_NO_PREVIOUS_RELEASE
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tiendaiq-production-database-maintenance
+  cancel-in-progress: false
+
+jobs:
+  migrate-and-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    environment: production
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.release_sha }}
+          fetch-depth: 0
+
+      - id: release
+        name: Validate the immutable reviewed production release commit
+        shell: bash
+        env:
+          REQUESTED_SHA: ${{ inputs.release_sha }}
+          CONFIRMATION: ${{ inputs.confirmation }}
+          MIGRATION_COMPATIBILITY: ${{ inputs.migration_compatibility }}
+        run: |
+          set -euo pipefail
+          [[ "$REQUESTED_SHA" =~ ^[a-f0-9]{40}$ ]] || { echo "release_sha debe ser un SHA completo" >&2; exit 1; }
+          [[ "$CONFIRMATION" == "DEPLOY_REVIEWED_PRODUCTION" ]] || { echo "Confirmacion invalida" >&2; exit 1; }
+          [[ "$MIGRATION_COMPATIBILITY" == "MIGRATIONS_ARE_BACKWARD_COMPATIBLE" ]] || { echo "Las migraciones deben ser compatibles con el release anterior" >&2; exit 1; }
+          ACTUAL_SHA="$(git rev-parse HEAD)"
+          [[ "$ACTUAL_SHA" == "$REQUESTED_SHA" ]] || { echo "El checkout no coincide con el SHA solicitado" >&2; exit 1; }
+          git fetch origin main --depth=1
+          [[ "$(git rev-parse origin/main)" == "$ACTUAL_SHA" ]] || { echo "El SHA revisado debe ser el HEAD actual de main" >&2; exit 1; }
+          echo "sha=$ACTUAL_SHA" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "20"
+
+      - run: npm ci --no-audit --no-fund
+
+      - id: previous
+        name: Capture the current production release for application rollback
+        shell: bash
+        env:
+          FIRST_DEPLOY_ACKNOWLEDGEMENT: ${{ inputs.first_deploy_acknowledgement }}
+        run: |
+          set -euo pipefail
+          body="$(curl --fail --silent --show-error --max-time 10 https://tiendaiq.com/ready || true)"
+          previous_sha="$(printf '%s' "$body" | node -e 'let body="";process.stdin.on("data",c=>body+=c).on("end",()=>{try{const ready=JSON.parse(body);if(/^[a-f0-9]{40}$/.test(ready.release||""))process.stdout.write(ready.release)}catch{}})' || true)"
+          if [[ -n "$previous_sha" ]]; then
+            git cat-file -e "$previous_sha^{commit}" || { echo "El release actual no existe en el historial revisado" >&2; exit 1; }
+            git merge-base --is-ancestor "$previous_sha" "${{ steps.release.outputs.sha }}" || { echo "El release anterior no pertenece al historial de main promovido" >&2; exit 1; }
+            echo "sha=$previous_sha" >> "$GITHUB_OUTPUT"
+            echo "Release anterior capturado para rollback: $previous_sha"
+            exit 0
+          fi
+          [[ "$FIRST_DEPLOY_ACKNOWLEDGEMENT" == "ALLOW_NO_PREVIOUS_RELEASE" ]] || {
+            echo "No se pudo capturar un release anterior; el primer deploy exige confirmacion explicita" >&2
+            exit 1
+          }
+          echo "sha=" >> "$GITHUB_OUTPUT"
+          echo "Primer deploy autorizado sin release anterior; no existe rollback de aplicacion"
+
+      - name: Migrate production with the owner credential
+        env:
+          MIGRATION_DATABASE_URL: ${{ secrets.PRODUCTION_MIGRATION_DATABASE_URL }}
+        run: npm run db:migrate
+
+      - id: deploy_web
+        name: Deploy web after a successful migration
+        env:
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_PRODUCTION_WEB_DEPLOY_HOOK }}
+        run: curl --fail-with-body --request POST --get --data-urlencode "ref=${{ steps.release.outputs.sha }}" "$RENDER_DEPLOY_HOOK"
+
+      - id: deploy_worker
+        name: Deploy worker after a successful migration
+        env:
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_PRODUCTION_WORKER_DEPLOY_HOOK }}
+        run: curl --fail-with-body --request POST --get --data-urlencode "ref=${{ steps.release.outputs.sha }}" "$RENDER_DEPLOY_HOOK"
+
+      - name: Wait for the deployed production web readiness gate
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ steps.release.outputs.sha }}
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent --show-error --max-time 5 https://tiendaiq.com/ready \
+              | node -e 'let body="";process.stdin.on("data",c=>body+=c).on("end",()=>{const ready=JSON.parse(body);process.exit(ready.ok===true&&ready.release===process.env.EXPECTED_SHA?0:1)})'; then
+              echo "Production web aprobo /ready con el SHA esperado"
+              exit 0
+            fi
+            echo "Esperando readiness de production ($attempt/60)"
+            sleep 10
+          done
+          echo "Production no aprobo /ready dentro de 10 minutos" >&2
+          exit 1
+
+      - name: Wait for the production technical preflight gate
+        shell: bash
+        env:
+          CONFIRMATION: CHECK_PRODUCTION_OPS_READINESS
+          EXPECTED_RELEASE_SHA: ${{ steps.release.outputs.sha }}
+          OPS_APP_URL: https://tiendaiq.com
+          OPS_STATUS_TOKEN: ${{ secrets.PRODUCTION_OPS_STATUS_TOKEN }}
+          OPS_MAX_QUEUED_JOBS: "20"
+          OPS_MAX_OLDEST_JOB_SECONDS: "300"
+          OPS_MAX_RUNNING_JOBS: "16"
+          OPS_MAX_FAILED_RECENT_JOBS: "0"
+          OPS_MAX_STALE_RUNNING_JOBS: "0"
+          OPS_MAX_COMPENSATION_PENDING: "0"
+          OPS_MAX_COMPENSATION_DEAD_LETTER: "0"
+          OPS_MAX_STALE_COMPENSATION: "0"
+          OPS_MAX_OLDEST_COMPENSATION_SECONDS: "300"
+          OPS_MAX_INBOX_RECEIVED: "20"
+          OPS_MAX_INBOX_PROCESSING: "8"
+          OPS_MAX_INBOX_FAILED: "0"
+          OPS_MAX_INBOX_FAILED_RECENT: "0"
+          OPS_MAX_INBOX_STALE_PROCESSING: "0"
+          OPS_MAX_OLDEST_INBOX_SECONDS: "300"
+          OPS_MAX_WORKER_AGE_SECONDS: "60"
+          OPS_MIN_WORKER_UPTIME_SECONDS: "30"
+          OPS_MIN_GENERATION_CONCURRENCY: "8"
+          OPS_MIN_PUBLICATION_CONCURRENCY: "4"
+          OPS_MIN_WEBHOOK_CONCURRENCY: "2"
+          OPS_READINESS_PROFILE: technical_preflight
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 60); do
+            if npm run ops:readiness; then
+              echo "Production aprobo el preflight tecnico con el SHA esperado"
+              exit 0
+            fi
+            echo "Esperando convergencia del preflight tecnico de production ($attempt/60)"
+            sleep 10
+          done
+          echo "Production no aprobo el preflight tecnico dentro de 10 minutos" >&2
+          exit 1
+
+      - name: Roll back web and worker after a failed production promotion
+        if: ${{ failure() && steps.previous.outputs.sha != '' && (steps.deploy_web.outcome != 'skipped' || steps.deploy_worker.outcome != 'skipped') }}
+        shell: bash
+        env:
+          PREVIOUS_SHA: ${{ steps.previous.outputs.sha }}
+          WEB_DEPLOY_HOOK: ${{ secrets.RENDER_PRODUCTION_WEB_DEPLOY_HOOK }}
+          WORKER_DEPLOY_HOOK: ${{ secrets.RENDER_PRODUCTION_WORKER_DEPLOY_HOOK }}
+        run: |
+          set -euo pipefail
+          echo "Restaurando web y worker al release anterior $PREVIOUS_SHA"
+          curl --fail-with-body --request POST --get --data-urlencode "ref=$PREVIOUS_SHA" "$WEB_DEPLOY_HOOK"
+          curl --fail-with-body --request POST --get --data-urlencode "ref=$PREVIOUS_SHA" "$WORKER_DEPLOY_HOOK"
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent --show-error --max-time 5 https://tiendaiq.com/ready \
+              | node -e 'let body="";process.stdin.on("data",c=>body+=c).on("end",()=>{const ready=JSON.parse(body);process.exit(ready.ok===true&&ready.release===process.env.PREVIOUS_SHA?0:1)})'; then
+              echo "Rollback confirmado en el dominio canonico"
+              exit 0
+            fi
+            echo "Esperando rollback de production ($attempt/60)"
+            sleep 10
+          done
+          echo "CRITICO: no se pudo confirmar el rollback de production" >&2
+          exit 1
