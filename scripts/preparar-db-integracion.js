@@ -140,6 +140,21 @@ async function main() {
       `GRANT ${quoteIdentifier(EXPECTED_ROLES.capability)} TO ${quoteIdentifier(EXPECTED_ROLES.workerRuntime)}`
     );
 
+    // PostgreSQL 16+ gives a non-superuser role creator an ADMIN-only
+    // membership in each role it creates. Render records those grants under
+    // its managed `postgres` role. Reproduce that provider-owned graph so CI
+    // exercises the same reconciliation path as staging.
+    for (const role of [
+      EXPECTED_ROLES.webRuntime,
+      EXPECTED_ROLES.workerRuntime,
+      EXPECTED_ROLES.capability
+    ]) {
+      await admin.query(
+        `GRANT ${quoteIdentifier(role)} TO ${quoteIdentifier(EXPECTED_ROLES.migration)} ` +
+        `WITH ADMIN TRUE, INHERIT FALSE, SET FALSE`
+      );
+    }
+
     const databaseResult = await admin.query(
       `SELECT pg_get_userbyid(datdba) AS owner FROM pg_database WHERE datname = $1`,
       [EXPECTED_DATABASE]
