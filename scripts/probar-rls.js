@@ -273,7 +273,8 @@ async function main() {
       event: inboxEvent,
       type: "customers_data_request",
       tenantReference: tenantA.tenantId,
-      subjectHash: suffix
+      subjectHash: suffix,
+      workerReleaseSha: TEST_RELEASE_SHA
     });
     const inboxForB = await withTenantTransaction(webPool, tenantB, (client) =>
       client.query("SELECT id FROM control_plane.inbox_events WHERE id = $1", [inboxEvent.id])
