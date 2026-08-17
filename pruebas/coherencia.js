@@ -57,7 +57,9 @@ const principal = toml.match(/^application_url\s*=\s*"([^"]+)"/m)?.[1];
 
 function servicioRender(nombre) {
   const escaped = nombre.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return render.match(new RegExp(`- type:\\s*(?:web|worker)[\\s\\S]*?name:\\s*${escaped}[\\s\\S]*?(?=\\n\\s*- type:|\\n\\s*databases:|\\n\\s*$)`))?.[0] || "";
+  return render
+    .split(/(?=^\s{2}- type:\s*(?:web|worker)\s*$)/m)
+    .find((bloque) => new RegExp(`^\\s*name:\\s*${escaped}\\s*$`, "m").test(bloque)) || "";
 }
 
 const renderWebService = servicioRender("tiendaiq");
@@ -373,6 +375,15 @@ if (!/key:\s*ANTHROPIC_API_KEY/.test(renderWebService)) {
   mal(
     "la web no recibe la credencial de generacion de IA",
     "server.js solo debe admitir y encolar; ANTHROPIC_API_KEY pertenece al worker"
+  );
+}
+
+if (!/key:\s*SHOPIFY_CLIENT_(?:ID|SECRET)/.test(renderWorkerService)) {
+  ok("el worker no recibe credenciales de la app Shopify");
+} else {
+  mal(
+    "el worker no recibe credenciales de la app Shopify",
+    "OAuth y verificacion de webhooks pertenecen a la web; el worker usa tokens de tienda cifrados"
   );
 }
 

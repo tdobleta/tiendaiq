@@ -91,10 +91,6 @@ services:
         value: "1"
       - key: PG_RUNTIME_ROLE
         value: "tiendaiq_worker_runtime"
-      - key: SHOPIFY_CLIENT_ID
-        sync: false
-      - key: SHOPIFY_CLIENT_SECRET
-        sync: false
       - key: ANTHROPIC_API_KEY
         sync: false
       - key: PG_POOL_MAX
