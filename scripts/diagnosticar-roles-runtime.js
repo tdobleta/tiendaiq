@@ -8,7 +8,8 @@ const INSPECTED_ROLES = [
   "tiendaiq_worker",
   "tiendaiq_web_runtime",
   "tiendaiq_worker_runtime",
-  "tiendaiq_worker_capability"
+  "tiendaiq_worker_capability",
+  "tiendaiq_worker_capability_v2"
 ];
 
 async function main() {
@@ -25,7 +26,8 @@ async function main() {
     const roles = await client.query(
       `SELECT rolname, rolcanlogin, rolsuper, rolbypassrls, rolinherit,
               rolcreatedb, rolcreaterole, rolreplication,
-              pg_has_role(rolname, 'tiendaiq_worker_capability', 'member') AS worker_capability
+              pg_has_role(rolname, 'tiendaiq_worker_capability_v2', 'member') AS worker_capability,
+              pg_has_role(rolname, 'tiendaiq_worker_capability', 'member') AS legacy_worker_capability
        FROM pg_roles
        WHERE rolname = ANY($1::text[])
        ORDER BY rolname`,

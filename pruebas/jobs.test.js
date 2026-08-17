@@ -929,11 +929,11 @@ test("la recuperacion dead-letter es atomica, auditable y exclusiva del migrador
 
 test("los jobs quedan aislados y el claim exige capacidad PostgreSQL de worker", () => {
   const tenantSql = fs.readFileSync(path.join(__dirname, "..", "db", "migrations", "0004_jobs_rls.sql"), "utf8");
-  const rolesSql = fs.readFileSync(path.join(__dirname, "..", "db", "migrations", "0011_render_managed_runtime_roles.sql"), "utf8");
+  const rolesSql = fs.readFileSync(path.join(__dirname, "..", "db", "migrations", "0018_rotate_worker_capability.sql"), "utf8");
   const repository = fs.readFileSync(path.join(__dirname, "..", "src", "platform", "postgres", "job-repository.js"), "utf8");
   assert.match(tenantSql, /ALTER TABLE control_plane\.jobs FORCE ROW LEVEL SECURITY/);
   assert.match(tenantSql, /tenant_id = current_setting\('app\.tenant_id', true\)/);
-  assert.match(rolesSql, /pg_has_role\(current_user, 'tiendaiq_worker_capability', 'member'\)/);
+  assert.match(rolesSql, /pg_has_role\(current_user, 'tiendaiq_worker_capability_v2', 'member'\)/);
   assert.doesNotMatch(rolesSql, /current_setting\('app\.worker_id'/);
   assert.match(repository, /set_config\('app\.worker_id', \$1, true\)/);
 });
