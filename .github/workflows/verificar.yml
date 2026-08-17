@@ -55,6 +55,12 @@ jobs:
           TEST_WORKER_DATABASE_URL: postgresql://tiendaiq_worker:worker_test@127.0.0.1:5432/tiendaiq_staging?sslmode=disable
         run: node scripts/preparar-db-integracion.js
 
+      - name: Reconciliar roles runtime con grants administrados por PostgreSQL
+        env:
+          ALLOW_ROLE_BOOTSTRAP: "1"
+          MIGRATION_DATABASE_URL: postgresql://tiendaiq_migrator:migrator_test@127.0.0.1:5432/tiendaiq_staging?sslmode=disable
+        run: node scripts/preparar-roles-runtime.js
+
       - name: Migraciones idempotentes y aislamiento RLS real
         env:
           ALLOW_RLS_TEST: "1"

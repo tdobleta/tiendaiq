@@ -22,10 +22,23 @@ function quoteIdentifier(value) {
 }
 
 async function revokeMembership(client, { parent, member, grantor }) {
-  await client.query(
-    `REVOKE ${quoteIdentifier(parent)} FROM ${quoteIdentifier(member)} ` +
-    `GRANTED BY ${quoteIdentifier(grantor)}`
-  );
+  try {
+    await client.query(
+      `REVOKE ${quoteIdentifier(parent)} FROM ${quoteIdentifier(member)} ` +
+      `GRANTED BY ${quoteIdentifier(grantor)}`
+    );
+  } catch (error) {
+    throw new Error(
+      `No se pudo revocar ${member}->${parent} otorgado por ${grantor}: ${error.message}`
+    );
+  }
+}
+
+function isBootstrapAdministrationEdge(edge, bootstrapRole) {
+  return edge.member === bootstrapRole &&
+    edge.admin_option === true &&
+    edge.inherit_option === false &&
+    edge.set_option === false;
 }
 
 async function ensureRuntimeRole(client, role) {
@@ -54,6 +67,9 @@ async function main() {
 
     await client.query("BEGIN");
 
+    const bootstrapIdentity = await client.query("SELECT current_user AS role");
+    const bootstrapRole = bootstrapIdentity.rows[0].role;
+
     for (const role of RUNTIME_ROLES) await ensureRuntimeRole(client, role);
     await ensureRuntimeRole(client, WORKER_CAPABILITY);
 
@@ -77,10 +93,14 @@ async function main() {
       }
     }
 
-    // The capability role is ours even when Render owns the member role. It
-    // must never remain attached to a provider role or to the web path.
+    // PostgreSQL 16+ grants a non-superuser role creator an administrative
+    // membership in every role it creates. Render records that edge as granted
+    // by its bootstrap `postgres` role, which our migrator cannot revoke. The
+    // exact ADMIN-only edge is harmless for runtime: it cannot be inherited or
+    // entered with SET ROLE. Every other capability member is still removed.
     const unexpectedCapabilityMembers = await client.query(
-      `SELECT member.rolname AS member, parent.rolname AS parent, grantor.rolname AS grantor
+      `SELECT member.rolname AS member, parent.rolname AS parent, grantor.rolname AS grantor,
+              membership.admin_option, membership.inherit_option, membership.set_option
        FROM pg_auth_members AS membership
        JOIN pg_roles AS member ON member.oid = membership.member
        JOIN pg_roles AS parent ON parent.oid = membership.roleid
@@ -88,8 +108,9 @@ async function main() {
        WHERE parent.rolname = $1 AND member.rolname <> $2`,
       [WORKER_CAPABILITY, WORKER_RUNTIME_ROLE]
     );
-    for (const { member, parent, grantor } of unexpectedCapabilityMembers.rows) {
-      await revokeMembership(client, { parent, member, grantor });
+    for (const edge of unexpectedCapabilityMembers.rows) {
+      if (isBootstrapAdministrationEdge(edge, bootstrapRole)) continue;
+      await revokeMembership(client, edge);
     }
 
     // Render's LOGIN roles use INHERIT. Per-membership inheritance must be
@@ -122,7 +143,7 @@ async function main() {
 
     const paths = await client.query(
       `SELECT member.rolname AS member, parent.rolname AS parent,
-              membership.inherit_option, membership.set_option
+              membership.admin_option, membership.inherit_option, membership.set_option
        FROM pg_auth_members AS membership
        JOIN pg_roles AS member ON member.oid = membership.member
        JOIN pg_roles AS parent ON parent.oid = membership.roleid
@@ -133,7 +154,10 @@ async function main() {
        ORDER BY member.rolname, parent.rolname`,
       [OWNED_ROLES, WORKER_CAPABILITY, WEB_LOGIN_ROLE, WEB_RUNTIME_ROLE, WORKER_LOGIN_ROLE, WORKER_RUNTIME_ROLE]
     );
-    const actualPaths = new Set(paths.rows.map(({ member, parent }) => `${member}->${parent}`));
+    const runtimePaths = paths.rows.filter((edge) =>
+      !isBootstrapAdministrationEdge(edge, bootstrapRole)
+    );
+    const actualPaths = new Set(runtimePaths.map(({ member, parent }) => `${member}->${parent}`));
     const missingPaths = [...expectedPaths].filter((path) => !actualPaths.has(path));
     const unexpectedPaths = [...actualPaths].filter((path) => !expectedPaths.has(path));
     if (missingPaths.length || unexpectedPaths.length) {
@@ -142,7 +166,7 @@ async function main() {
         `inesperadas=[${unexpectedPaths.join(", ")}]`
       );
     }
-    const loginEdges = paths.rows.filter(({ member, parent }) =>
+    const loginEdges = runtimePaths.filter(({ member, parent }) =>
       (member === WEB_LOGIN_ROLE && parent === WEB_RUNTIME_ROLE) ||
       (member === WORKER_LOGIN_ROLE && parent === WORKER_RUNTIME_ROLE)
     );
@@ -199,7 +223,11 @@ async function main() {
   console.log("  roles runtime listos: Render conecta y la app ejecuta con roles aislados");
 }
 
-main().catch((error) => {
-  console.error(`  preparacion de roles fallida: ${error.message}`);
-  process.exitCode = 1;
-});
+if (require.main === module) {
+  main().catch((error) => {
+    console.error(`  preparacion de roles fallida: ${error.message}`);
+    process.exitCode = 1;
+  });
+}
+
+module.exports = { isBootstrapAdministrationEdge };

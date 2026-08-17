@@ -461,6 +461,9 @@ test("el bootstrap crea roles propios y no intenta modificar credenciales gestio
   assert.match(source, /membership\.grantor/);
   assert.match(source, /GRANTED BY \$\{quoteIdentifier\(grantor\)\}/);
   assert.match(source, /parent\.rolname = \$1 AND member\.rolname <> \$2/);
+  assert.match(source, /SELECT current_user AS role/);
+  assert.match(source, /membership\.admin_option, membership\.inherit_option, membership\.set_option/);
+  assert.match(source, /isBootstrapAdministrationEdge\(edge, bootstrapRole\)/);
   assert.match(source, /WITH INHERIT FALSE, SET TRUE/);
   assert.match(source, /membership\.inherit_option, membership\.set_option/);
   assert.match(source, /edge\.inherit_option !== false \|\| edge\.set_option !== true/);
@@ -469,6 +472,35 @@ test("el bootstrap crea roles propios y no intenta modificar credenciales gestio
   assert.match(source, /has_schema_privilege\(/);
   assert.match(source, /conserva privilegios efectivos despues de RESET ROLE/);
   assert.doesNotMatch(source, /ALTER ROLE/);
+});
+
+test("el bootstrap solo tolera la arista administrativa no efectiva creada por PostgreSQL", () => {
+  const { isBootstrapAdministrationEdge } = require("../scripts/preparar-roles-runtime");
+  const administrativeEdge = {
+    member: "tiendaiq_migrator",
+    parent: "tiendaiq_worker_capability_v2",
+    grantor: "postgres",
+    admin_option: true,
+    inherit_option: false,
+    set_option: false
+  };
+
+  assert.equal(isBootstrapAdministrationEdge(administrativeEdge, "tiendaiq_migrator"), true);
+  assert.equal(isBootstrapAdministrationEdge({ ...administrativeEdge, member: "tiendaiq_web" }, "tiendaiq_migrator"), false);
+  assert.equal(isBootstrapAdministrationEdge({ ...administrativeEdge, inherit_option: true }, "tiendaiq_migrator"), false);
+  assert.equal(isBootstrapAdministrationEdge({ ...administrativeEdge, set_option: true }, "tiendaiq_migrator"), false);
+  assert.equal(isBootstrapAdministrationEdge({ ...administrativeEdge, admin_option: false }, "tiendaiq_migrator"), false);
+});
+
+test("CI reproduce y reconcilia grants administrativos de PostgreSQL antes de migrar", () => {
+  const fixture = fs.readFileSync(path.join(__dirname, "..", "scripts", "preparar-db-integracion.js"), "utf8");
+  const workflow = fs.readFileSync(path.join(__dirname, "..", ".github", "workflows", "verificar.yml"), "utf8");
+
+  assert.match(fixture, /WITH ADMIN TRUE, INHERIT FALSE, SET FALSE/);
+  assert.match(fixture, /EXPECTED_ROLES\.migration/);
+  assert.match(workflow, /Reconciliar roles runtime con grants administrados por PostgreSQL/);
+  assert.match(workflow, /ALLOW_ROLE_BOOTSTRAP: "1"/);
+  assert.match(workflow, /node scripts\/preparar-roles-runtime\.js/);
 });
 
 test("readiness descubre tablas tenant-owned nuevas ademas del inventario minimo", () => {
