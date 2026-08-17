@@ -3,6 +3,7 @@
 const { URL } = require("node:url");
 
 const CONFIRMATION = "CHECK_STAGING_OPS_READINESS";
+const PRODUCTION_CONFIRMATION = "CHECK_PRODUCTION_OPS_READINESS";
 const DEFAULT_STAGING_URL = "https://tiendaiq-staging-web.onrender.com";
 
 function integer(value, fallback, min, max, name) {
@@ -16,7 +17,7 @@ function integer(value, fallback, min, max, name) {
 function normalizeAppUrl(value = DEFAULT_STAGING_URL) {
   const url = new URL(String(value || "").trim());
   if (!["http:", "https:"].includes(url.protocol)) {
-    throw new Error("STAGING_APP_URL debe ser http o https");
+    throw new Error("OPS_APP_URL debe ser http o https");
   }
   url.pathname = url.pathname.replace(/\/+$/, "");
   url.search = "";
@@ -315,13 +316,15 @@ async function fetchOpsStatus(appUrl, token, expectedSha, thresholds, requiremen
 }
 
 async function main() {
-  if (process.env.CONFIRMATION !== CONFIRMATION) {
-    throw new Error(`CONFIRMATION debe ser ${CONFIRMATION}`);
+  if (![CONFIRMATION, PRODUCTION_CONFIRMATION].includes(process.env.CONFIRMATION)) {
+    throw new Error(`CONFIRMATION debe ser ${CONFIRMATION} o ${PRODUCTION_CONFIRMATION}`);
   }
 
   const expectedSha = assertExpectedSha(process.env.EXPECTED_RELEASE_SHA);
   const opsStatusToken = assertOpsStatusToken(process.env.OPS_STATUS_TOKEN);
-  const appUrl = normalizeAppUrl(process.env.STAGING_APP_URL || DEFAULT_STAGING_URL);
+  const appUrl = normalizeAppUrl(
+    process.env.OPS_APP_URL || process.env.STAGING_APP_URL || DEFAULT_STAGING_URL
+  );
   const maxQueued = integer(process.env.OPS_MAX_QUEUED_JOBS, 20, 0, 100000, "OPS_MAX_QUEUED_JOBS");
   const maxOldestQueuedSeconds = integer(process.env.OPS_MAX_OLDEST_JOB_SECONDS, 300, 1, 86400, "OPS_MAX_OLDEST_JOB_SECONDS");
   const maxRunning = integer(process.env.OPS_MAX_RUNNING_JOBS, 16, 0, 100000, "OPS_MAX_RUNNING_JOBS");
@@ -375,7 +378,9 @@ async function main() {
   const opsStatus = await fetchOpsStatus(appUrl, opsStatusToken, expectedSha, thresholds, requirements);
   const errors = [...ready.evaluation.errors, ...opsStatus.evaluation.errors];
   const result = {
-    event: "ops_readiness_staging",
+    event: process.env.CONFIRMATION === PRODUCTION_CONFIRMATION
+      ? "ops_readiness_production"
+      : "ops_readiness_staging",
     ok: errors.length === 0,
     profile,
     appUrl,
@@ -403,6 +408,7 @@ if (require.main === module) {
 
 module.exports = {
   CONFIRMATION,
+  PRODUCTION_CONFIRMATION,
   assertOpsStatusToken,
   assertExpectedSha,
   booleanFlag,

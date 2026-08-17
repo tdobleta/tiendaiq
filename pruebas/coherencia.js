@@ -42,6 +42,8 @@ const ARCHIVOS_CON_DOMINIO = [
 const toml = leer("shopify.app.toml");
 const render = leer("render.yaml");
 const releaseWorkflow = leer(".github/workflows/release-staging.yml");
+const productionReleaseWorkflow = leer(".github/workflows/release-production.yml");
+const productionRotationWorkflow = leer(".github/workflows/rotate-runtime-logins-production.yml");
 const capacityWorkflow = leer(".github/workflows/capacity-staging.yml");
 const anthropicCapacityWorkflow = leer(".github/workflows/anthropic-capacity-staging.yml");
 const opsReadinessWorkflow = leer(".github/workflows/ops-readiness-staging.yml");
@@ -190,6 +192,40 @@ if (/RENDER_STAGING_WEB_DEPLOY_HOOK/.test(releaseWorkflow) && /RENDER_STAGING_WO
   ok("web y worker se despliegan solo después de la migración de staging");
 } else {
   mal("web y worker se despliegan solo después de la migración de staging", "el workflow debe disparar ambos deploy hooks después de migrar");
+}
+
+if (/environment:\s*production/.test(productionReleaseWorkflow) &&
+    /DEPLOY_REVIEWED_PRODUCTION/.test(productionReleaseWorkflow) &&
+    /PRODUCTION_MIGRATION_DATABASE_URL/.test(productionReleaseWorkflow) &&
+    /RENDER_PRODUCTION_WEB_DEPLOY_HOOK/.test(productionReleaseWorkflow) &&
+    /RENDER_PRODUCTION_WORKER_DEPLOY_HOOK/.test(productionReleaseWorkflow) &&
+    /PRODUCTION_OPS_STATUS_TOKEN/.test(productionReleaseWorkflow) &&
+    /CHECK_PRODUCTION_OPS_READINESS/.test(productionReleaseWorkflow) &&
+    /https:\/\/tiendaiq\.onrender\.com\/ready/.test(productionReleaseWorkflow) &&
+    /ready\.ok===true&&ready\.release===process\.env\.EXPECTED_SHA/.test(productionReleaseWorkflow) &&
+    /git rev-parse origin\/main/.test(productionReleaseWorkflow) &&
+    /data-urlencode "ref=\$\{\{ steps\.release\.outputs\.sha \}\}"/.test(productionReleaseWorkflow)) {
+  ok("produccion se promueve por un workflow protegido, inmutable y verificable");
+} else {
+  mal(
+    "produccion se promueve por un workflow protegido, inmutable y verificable",
+    "debe migrar, desplegar ambos procesos con el SHA exacto y aprobar readiness operativo"
+  );
+}
+
+if (/environment:\s*production/.test(productionRotationWorkflow) &&
+    /ROTATE_RUNTIME_LOGINS_PRODUCTION/.test(productionRotationWorkflow) &&
+    /PRODUCTION_MIGRATION_DATABASE_URL/.test(productionRotationWorkflow) &&
+    /PRODUCTION_WEB_RUNTIME_LOGIN_PASSWORD/.test(productionRotationWorkflow) &&
+    /PRODUCTION_WORKER_RUNTIME_LOGIN_PASSWORD/.test(productionRotationWorkflow) &&
+    /git rev-parse origin\/main/.test(productionRotationWorkflow) &&
+    !/RENDER_PRODUCTION_.*DEPLOY_HOOK/.test(productionRotationWorkflow)) {
+  ok("la rotacion de produccion esta separada del despliegue");
+} else {
+  mal(
+    "la rotacion de produccion esta separada del despliegue",
+    "debe exigir el entorno production, el SHA actual de main y no desplegar servicios"
+  );
 }
 
 if (/release_sha:/.test(releaseWorkflow) &&

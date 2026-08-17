@@ -1053,6 +1053,37 @@ test("los workflows que operan staging fijan las acciones que ejecutan", () => {
   }
 });
 
+test("los workflows de produccion fijan acciones y usan el entorno protegido", () => {
+  const workflows = ["release-production.yml", "rotate-runtime-logins-production.yml"];
+
+  for (const name of workflows) {
+    const workflow = fs.readFileSync(path.join(__dirname, "..", ".github", "workflows", name), "utf8");
+    assert.match(workflow, /environment: production/, name);
+    assert.match(workflow, /actions\/checkout@[a-f0-9]{40}/, name);
+    assert.match(workflow, /actions\/setup-node@[a-f0-9]{40}/, name);
+    assert.doesNotMatch(workflow, /actions\/(?:checkout|setup-node)@v\d/, name);
+  }
+});
+
+test("el release de produccion despliega y certifica exactamente el SHA revisado", () => {
+  const workflow = fs.readFileSync(
+    path.join(__dirname, "..", ".github", "workflows", "release-production.yml"),
+    "utf8"
+  );
+
+  assert.match(workflow, /release_sha:/);
+  assert.match(workflow, /DEPLOY_REVIEWED_PRODUCTION/);
+  assert.match(workflow, /ref: \$\{\{ inputs\.release_sha \}\}/);
+  assert.match(workflow, /git rev-parse origin\/main/);
+  assert.match(workflow, /PRODUCTION_MIGRATION_DATABASE_URL/);
+  assert.match(workflow, /RENDER_PRODUCTION_WEB_DEPLOY_HOOK/);
+  assert.match(workflow, /RENDER_PRODUCTION_WORKER_DEPLOY_HOOK/);
+  assert.match(workflow, /https:\/\/tiendaiq\.onrender\.com\/ready/);
+  assert.match(workflow, /CHECK_PRODUCTION_OPS_READINESS/);
+  assert.match(workflow, /PRODUCTION_OPS_STATUS_TOKEN/);
+  assert.match(workflow, /ready\.ok===true&&ready\.release===process\.env\.EXPECTED_SHA/);
+});
+
 test("las pruebas de capacidad se atan al SHA revisado y desplegado", () => {
   const workflows = ["capacity-staging.yml", "anthropic-capacity-staging.yml"];
 
