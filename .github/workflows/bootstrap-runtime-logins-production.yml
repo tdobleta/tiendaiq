@@ -21,6 +21,7 @@ permissions:
 
 concurrency:
   group: tiendaiq-production-database-maintenance
+  queue: max
   cancel-in-progress: false
 
 jobs:

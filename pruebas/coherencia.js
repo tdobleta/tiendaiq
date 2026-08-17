@@ -43,6 +43,7 @@ const toml = leer("shopify.app.toml");
 const render = leer("render.yaml");
 const releaseWorkflow = leer(".github/workflows/release-staging.yml");
 const productionReleaseWorkflow = leer(".github/workflows/release-production.yml");
+const productionRecoveryWorkflow = leer(".github/workflows/recover-production.yml");
 const productionBootstrapWorkflow = leer(".github/workflows/bootstrap-runtime-logins-production.yml");
 const capacityWorkflow = leer(".github/workflows/capacity-staging.yml");
 const anthropicCapacityWorkflow = leer(".github/workflows/anthropic-capacity-staging.yml");
@@ -206,13 +207,35 @@ if (/environment:\s*production/.test(productionReleaseWorkflow) &&
     /git rev-parse origin\/main/.test(productionReleaseWorkflow) &&
     /data-urlencode "ref=\$\{\{ steps\.release\.outputs\.sha \}\}"/.test(productionReleaseWorkflow) &&
     /MIGRATIONS_ARE_BACKWARD_COMPATIBLE/.test(productionReleaseWorkflow) &&
-    /Roll back web and worker after a failed production promotion/.test(productionReleaseWorkflow) &&
-    /data-urlencode "ref=\$PREVIOUS_SHA"/.test(productionReleaseWorkflow)) {
+    /queue:\s*max/.test(productionReleaseWorkflow) &&
+    /--connect-timeout 5 --max-time 20/.test(productionReleaseWorkflow) &&
+    /actions\/upload-artifact@[a-f0-9]{40}/.test(productionReleaseWorkflow) &&
+    /name:\s*production-rollback-state-\$\{\{ github\.run_attempt \}\}/.test(productionReleaseWorkflow) &&
+    /run_attempt:Number\(process\.env\.RELEASE_ATTEMPT\)/.test(productionReleaseWorkflow) &&
+    /workflow_run:/.test(productionRecoveryWorkflow) &&
+    /workflows:\s*\["Release production"\]/.test(productionRecoveryWorkflow) &&
+    /queue:\s*max/.test(productionRecoveryWorkflow) &&
+    /environment:\s*production-recovery/.test(productionRecoveryWorkflow) &&
+    /actions\/download-artifact@[a-f0-9]{40}/.test(productionRecoveryWorkflow) &&
+    /run-id:\s*\$\{\{ github\.event\.workflow_run\.id \}\}/.test(productionRecoveryWorkflow) &&
+    /production-rollback-state-\$\{\{ github\.event\.workflow_run\.run_attempt \}\}/.test(productionRecoveryWorkflow) &&
+    /jobs\?filter=latest&per_page=100/.test(productionRecoveryWorkflow) &&
+    /un deploy de aplicacion comenzo pero falta el estado de rollback/.test(productionRecoveryWorkflow) &&
+    /state\.release_sha !== process\.env\.TRIGGER_SHA/.test(productionRecoveryWorkflow) &&
+    /state\.run_attempt !== Number\(process\.env\.TRIGGER_ATTEMPT\)/.test(productionRecoveryWorkflow) &&
+    /Request rollback for web and worker before installing tooling/.test(productionRecoveryWorkflow) &&
+    /--connect-timeout 5 --max-time 20/.test(productionRecoveryWorkflow) &&
+    /ROLLBACK_READINESS_DEADLINE_SECONDS:\s*"900"/.test(productionRecoveryWorkflow) &&
+    /data-urlencode "ref=\$PREVIOUS_SHA"/.test(productionRecoveryWorkflow) &&
+    /EXPECTED_RELEASE_SHA:\s*\$\{\{ steps\.state\.outputs\.previous_sha \}\}/.test(productionRecoveryWorkflow) &&
+    /OPS_READINESS_PROFILE:\s*rollback/.test(productionRecoveryWorkflow) &&
+    /Rollback certificado: web y worker/.test(productionRecoveryWorkflow) &&
+    !/PRODUCTION_MIGRATION_DATABASE_URL/.test(productionRecoveryWorkflow)) {
   ok("produccion se promueve por un workflow protegido, inmutable y verificable");
 } else {
   mal(
     "produccion se promueve por un workflow protegido, inmutable y verificable",
-    "debe migrar, desplegar ambos procesos con el SHA exacto, validar el dominio canonico y poder restaurar ambos servicios"
+    "debe migrar y desplegar el SHA exacto, persistir su rollback antes del deploy y certificar web y worker desde una recuperacion independiente"
   );
 }
 
@@ -224,6 +247,7 @@ if (/environment:\s*production/.test(productionBootstrapWorkflow) &&
     /PRODUCTION_WORKER_RUNTIME_LOGIN_PASSWORD/.test(productionBootstrapWorkflow) &&
     /git rev-parse origin\/main/.test(productionBootstrapWorkflow) &&
     /group:\s*tiendaiq-production-database-maintenance/.test(productionBootstrapWorkflow) &&
+    /queue:\s*max/.test(productionBootstrapWorkflow) &&
     !/RENDER_PRODUCTION_.*DEPLOY_HOOK/.test(productionBootstrapWorkflow) &&
     !/WEB_RUNTIME_LOGIN_PASSWORD/.test(productionReleaseWorkflow)) {
   ok("el alta prelaunch de logins esta separada y serializada con el despliegue");

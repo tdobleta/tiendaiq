@@ -1,0 +1,179 @@
+name: Recover failed production release
+
+on:
+  workflow_run:
+    workflows: ["Release production"]
+    types: [completed]
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: tiendaiq-production-database-maintenance
+  queue: max
+  cancel-in-progress: false
+
+jobs:
+  inspect-rollback-state:
+    if: ${{ github.event.workflow_run.event == 'workflow_dispatch' && github.event.workflow_run.head_branch == 'main' && (github.event.workflow_run.conclusion == 'failure' || github.event.workflow_run.conclusion == 'cancelled' || github.event.workflow_run.conclusion == 'timed_out') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      available: ${{ steps.artifact.outputs.available }}
+    steps:
+      - id: artifact
+        name: Find rollback state produced by the failed promotion
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+        run: |
+          set -euo pipefail
+          api_get() {
+            curl --fail --silent --show-error --connect-timeout 5 --max-time 20 \
+              --retry 3 --retry-delay 2 --retry-all-errors \
+              --header "Authorization: Bearer $GH_TOKEN" \
+              --header "Accept: application/vnd.github+json" \
+              --header "X-GitHub-Api-Version: 2022-11-28" "$1"
+          }
+
+          artifact_name="production-rollback-state-$RUN_ATTEMPT"
+          available=false
+          for attempt in 1 2 3; do
+            response="$(api_get "https://api.github.com/repos/$REPOSITORY/actions/runs/$RUN_ID/artifacts?per_page=100")"
+            available="$(printf '%s' "$response" | ARTIFACT_NAME="$artifact_name" node -e 'let body="";process.stdin.on("data",c=>body+=c).on("end",()=>{const data=JSON.parse(body);process.stdout.write(data.artifacts.some(a=>a.name===process.env.ARTIFACT_NAME&&!a.expired)?"true":"false")})')"
+            [[ "$available" == "true" ]] && break
+            echo "El artefacto aun no es visible ($attempt/3)" >&2
+            (( attempt < 3 )) && sleep 5
+          done
+
+          if [[ "$available" != "true" ]]; then
+            jobs="$(api_get "https://api.github.com/repos/$REPOSITORY/actions/runs/$RUN_ID/jobs?filter=latest&per_page=100")"
+            deployment_started="$(printf '%s' "$jobs" | node -e '
+              let body="";
+              process.stdin.on("data",c=>body+=c).on("end",()=>{
+                const data=JSON.parse(body);
+                const deploySteps=new Set([
+                  "Deploy web after a successful migration",
+                  "Deploy worker after a successful migration"
+                ]);
+                const started=data.jobs.flatMap(job=>job.steps||[]).some(step=>
+                  deploySteps.has(step.name) && step.conclusion && step.conclusion!=="skipped"
+                );
+                process.stdout.write(started?"true":"false");
+              });
+            ')"
+            if [[ "$deployment_started" == "true" ]]; then
+              echo "CRITICO: un deploy de aplicacion comenzo pero falta el estado de rollback" >&2
+              exit 1
+            fi
+            echo "No se inicio ningun deploy de aplicacion; no hay rollback que ejecutar"
+          fi
+          echo "available=$available" >> "$GITHUB_OUTPUT"
+
+  recover-production:
+    needs: inspect-rollback-state
+    if: ${{ needs.inspect-rollback-state.outputs.available == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment: production-recovery
+    steps:
+      - name: Download the rollback state from the failed promotion
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: production-rollback-state-${{ github.event.workflow_run.run_attempt }}
+          path: .production-rollback-state
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: ${{ github.event.workflow_run.id }}
+
+      - id: state
+        name: Validate the immutable rollback state
+        shell: bash
+        env:
+          TRIGGER_SHA: ${{ github.event.workflow_run.head_sha }}
+          TRIGGER_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+        run: |
+          set -euo pipefail
+          node - <<'NODE' >> "$GITHUB_OUTPUT"
+          const fs = require("fs");
+          const state = JSON.parse(fs.readFileSync(".production-rollback-state/state.json", "utf8"));
+          const sha = /^[a-f0-9]{40}$/;
+          if (!sha.test(state.previous_sha) || !sha.test(state.release_sha)) throw new Error("Estado de rollback invalido");
+          if (state.release_sha !== process.env.TRIGGER_SHA) throw new Error("El estado no pertenece al run fallido");
+          if (!Number.isInteger(state.run_attempt) || state.run_attempt < 1 || state.run_attempt !== Number(process.env.TRIGGER_ATTEMPT)) throw new Error("El estado no pertenece al intento fallido");
+          process.stdout.write(`previous_sha=${state.previous_sha}\nrelease_sha=${state.release_sha}\n`);
+          NODE
+
+      - name: Request rollback for web and worker before installing tooling
+        shell: bash
+        env:
+          PREVIOUS_SHA: ${{ steps.state.outputs.previous_sha }}
+          WEB_DEPLOY_HOOK: ${{ secrets.RENDER_PRODUCTION_WEB_DEPLOY_HOOK }}
+          WORKER_DEPLOY_HOOK: ${{ secrets.RENDER_PRODUCTION_WORKER_DEPLOY_HOOK }}
+        run: |
+          set -euo pipefail
+          echo "Restaurando web y worker al release anterior $PREVIOUS_SHA"
+          trigger_rollback() {
+            local service="$1"
+            local hook="$2"
+            for attempt in 1 2 3; do
+              if curl --fail-with-body --connect-timeout 5 --max-time 20 \
+                --request POST --get --data-urlencode "ref=$PREVIOUS_SHA" "$hook"; then
+                echo "Rollback solicitado para $service"
+                return 0
+              fi
+              echo "Reintentando hook de rollback para $service ($attempt/3)" >&2
+              if (( attempt < 3 )); then sleep 5; fi
+            done
+            echo "ADVERTENCIA: el hook de rollback para $service no respondio; se verificara el estado real" >&2
+            return 1
+          }
+          web_hook_failed=0
+          worker_hook_failed=0
+          trigger_rollback web "$WEB_DEPLOY_HOOK" || web_hook_failed=1
+          trigger_rollback worker "$WORKER_DEPLOY_HOOK" || worker_hook_failed=1
+          if (( web_hook_failed != 0 || worker_hook_failed != 0 )); then
+            echo "Uno o mas hooks fallaron; la certificacion conjunta decidira si production fue restaurado" >&2
+          fi
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ steps.state.outputs.release_sha }}
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "20"
+
+      - run: npm ci --no-audit --no-fund
+
+      - name: Certify the restored production web and worker
+        shell: bash
+        env:
+          PREVIOUS_SHA: ${{ steps.state.outputs.previous_sha }}
+          CONFIRMATION: CHECK_PRODUCTION_OPS_READINESS
+          EXPECTED_RELEASE_SHA: ${{ steps.state.outputs.previous_sha }}
+          OPS_APP_URL: https://tiendaiq.com
+          OPS_STATUS_TOKEN: ${{ secrets.PRODUCTION_OPS_STATUS_TOKEN }}
+          OPS_READINESS_PROFILE: rollback
+          ROLLBACK_READINESS_DEADLINE_SECONDS: "900"
+        run: |
+          set -euo pipefail
+          deadline=$((SECONDS + ROLLBACK_READINESS_DEADLINE_SECONDS))
+          attempt=0
+          while (( SECONDS < deadline )); do
+            attempt=$((attempt + 1))
+            remaining=$((deadline - SECONDS))
+            if timeout "${remaining}s" npm run ops:readiness; then
+              echo "Rollback certificado: web y worker ejecutan $PREVIOUS_SHA con aislamiento valido"
+              exit 0
+            fi
+            remaining=$((deadline - SECONDS))
+            echo "Esperando convergencia completa del rollback de production (intento $attempt, ${remaining}s restantes)"
+            if (( remaining > 10 )); then sleep 10; fi
+          done
+          echo "CRITICO: no se pudo certificar el rollback completo de web y worker dentro de 15 minutos" >&2
+          exit 1
