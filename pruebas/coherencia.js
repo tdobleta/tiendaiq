@@ -42,6 +42,8 @@ const ARCHIVOS_CON_DOMINIO = [
 const toml = leer("shopify.app.toml");
 const render = leer("render.yaml");
 const releaseWorkflow = leer(".github/workflows/release-staging.yml");
+const productionReleaseWorkflow = leer(".github/workflows/release-production.yml");
+const productionBootstrapWorkflow = leer(".github/workflows/bootstrap-runtime-logins-production.yml");
 const capacityWorkflow = leer(".github/workflows/capacity-staging.yml");
 const anthropicCapacityWorkflow = leer(".github/workflows/anthropic-capacity-staging.yml");
 const opsReadinessWorkflow = leer(".github/workflows/ops-readiness-staging.yml");
@@ -190,6 +192,46 @@ if (/RENDER_STAGING_WEB_DEPLOY_HOOK/.test(releaseWorkflow) && /RENDER_STAGING_WO
   ok("web y worker se despliegan solo después de la migración de staging");
 } else {
   mal("web y worker se despliegan solo después de la migración de staging", "el workflow debe disparar ambos deploy hooks después de migrar");
+}
+
+if (/environment:\s*production/.test(productionReleaseWorkflow) &&
+    /DEPLOY_REVIEWED_PRODUCTION/.test(productionReleaseWorkflow) &&
+    /PRODUCTION_MIGRATION_DATABASE_URL/.test(productionReleaseWorkflow) &&
+    /RENDER_PRODUCTION_WEB_DEPLOY_HOOK/.test(productionReleaseWorkflow) &&
+    /RENDER_PRODUCTION_WORKER_DEPLOY_HOOK/.test(productionReleaseWorkflow) &&
+    /PRODUCTION_OPS_STATUS_TOKEN/.test(productionReleaseWorkflow) &&
+    /CHECK_PRODUCTION_OPS_READINESS/.test(productionReleaseWorkflow) &&
+    /https:\/\/tiendaiq\.com\/ready/.test(productionReleaseWorkflow) &&
+    /ready\.ok===true&&ready\.release===process\.env\.EXPECTED_SHA/.test(productionReleaseWorkflow) &&
+    /git rev-parse origin\/main/.test(productionReleaseWorkflow) &&
+    /data-urlencode "ref=\$\{\{ steps\.release\.outputs\.sha \}\}"/.test(productionReleaseWorkflow) &&
+    /MIGRATIONS_ARE_BACKWARD_COMPATIBLE/.test(productionReleaseWorkflow) &&
+    /Roll back web and worker after a failed production promotion/.test(productionReleaseWorkflow) &&
+    /data-urlencode "ref=\$PREVIOUS_SHA"/.test(productionReleaseWorkflow)) {
+  ok("produccion se promueve por un workflow protegido, inmutable y verificable");
+} else {
+  mal(
+    "produccion se promueve por un workflow protegido, inmutable y verificable",
+    "debe migrar, desplegar ambos procesos con el SHA exacto, validar el dominio canonico y poder restaurar ambos servicios"
+  );
+}
+
+if (/environment:\s*production/.test(productionBootstrapWorkflow) &&
+    /BOOTSTRAP_RUNTIME_LOGINS_PRODUCTION/.test(productionBootstrapWorkflow) &&
+    /ACKNOWLEDGE_PRELAUNCH_DATABASE_CUTOVER/.test(productionBootstrapWorkflow) &&
+    /PRODUCTION_MIGRATION_DATABASE_URL/.test(productionBootstrapWorkflow) &&
+    /PRODUCTION_WEB_RUNTIME_LOGIN_PASSWORD/.test(productionBootstrapWorkflow) &&
+    /PRODUCTION_WORKER_RUNTIME_LOGIN_PASSWORD/.test(productionBootstrapWorkflow) &&
+    /git rev-parse origin\/main/.test(productionBootstrapWorkflow) &&
+    /group:\s*tiendaiq-production-database-maintenance/.test(productionBootstrapWorkflow) &&
+    !/RENDER_PRODUCTION_.*DEPLOY_HOOK/.test(productionBootstrapWorkflow) &&
+    !/WEB_RUNTIME_LOGIN_PASSWORD/.test(productionReleaseWorkflow)) {
+  ok("el alta prelaunch de logins esta separada y serializada con el despliegue");
+} else {
+  mal(
+    "el alta prelaunch de logins esta separada y serializada con el despliegue",
+    "debe exigir doble confirmacion, compartir el lock de mantenimiento y no mutar credenciales durante releases"
+  );
 }
 
 if (/release_sha:/.test(releaseWorkflow) &&

@@ -3,6 +3,8 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const {
+  CONFIRMATION,
+  PRODUCTION_CONFIRMATION,
   assertOpsStatusToken,
   assertExpectedSha,
   booleanFlag,
@@ -31,7 +33,14 @@ test("exige token fuerte para consultar /ops/status", () => {
 
 test("normaliza la URL de staging sin aceptar protocolos raros", () => {
   assert.equal(normalizeAppUrl("https://tiendaiq-staging-web.onrender.com/"), "https://tiendaiq-staging-web.onrender.com");
+  assert.equal(normalizeAppUrl("https://tiendaiq.onrender.com/"), "https://tiendaiq.onrender.com");
   assert.throws(() => normalizeAppUrl("file:///tmp/ready"), /http o https/);
+});
+
+test("separa las confirmaciones operativas de staging y produccion", () => {
+  assert.equal(CONFIRMATION, "CHECK_STAGING_OPS_READINESS");
+  assert.equal(PRODUCTION_CONFIRMATION, "CHECK_PRODUCTION_OPS_READINESS");
+  assert.notEqual(CONFIRMATION, PRODUCTION_CONFIRMATION);
 });
 
 test("evalua /ready con Postgres, release y aislamiento RLS", () => {

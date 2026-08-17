@@ -547,6 +547,22 @@ test("la rotacion de logins de staging exige entorno protegido y commit inmutabl
   assert.doesNotMatch(workflow, /RENDER_STAGING_.*DEPLOY_HOOK/);
 });
 
+test("el alta prelaunch de logins de produccion exige entorno protegido y commit inmutable", () => {
+  const workflow = fs.readFileSync(
+    path.join(__dirname, "..", ".github", "workflows", "bootstrap-runtime-logins-production.yml"),
+    "utf8"
+  );
+  assert.match(workflow, /environment: production/);
+  assert.match(workflow, /BOOTSTRAP_RUNTIME_LOGINS_PRODUCTION/);
+  assert.match(workflow, /ACKNOWLEDGE_PRELAUNCH_DATABASE_CUTOVER/);
+  assert.match(workflow, /git rev-parse origin\/main/);
+  assert.match(workflow, /PRODUCTION_MIGRATION_DATABASE_URL/);
+  assert.match(workflow, /PRODUCTION_WEB_RUNTIME_LOGIN_PASSWORD/);
+  assert.match(workflow, /PRODUCTION_WORKER_RUNTIME_LOGIN_PASSWORD/);
+  assert.match(workflow, /group: tiendaiq-production-database-maintenance/);
+  assert.doesNotMatch(workflow, /RENDER_PRODUCTION_.*DEPLOY_HOOK/);
+});
+
 test("readiness descubre tablas tenant-owned nuevas ademas del inventario minimo", () => {
   const source = fs.readFileSync(path.join(__dirname, "..", "src", "platform", "postgres", "verify-tenancy.js"), "utf8");
 
