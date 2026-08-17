@@ -1,7 +1,9 @@
 # Plan ejecutivo de cierre y lanzamiento
 
-Fecha de control: 2026-08-17  
-Estado inicial: **NO-GO externo**  
+Fecha de control: 2026-08-17
+
+Estado inicial: **NO-GO externo**
+
 Alcance congelado: backend, operacion, Shopify E2E y preparacion de lanzamiento.
 
 Este documento es la fuente ejecutiva canonica para terminar TiendaIQ. Los
