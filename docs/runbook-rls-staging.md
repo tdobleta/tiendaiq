@@ -14,7 +14,10 @@ privacidad, versiones y publicaciones. No mueve documentos ni cambia su formato.
 - Confirmar que el rol web de `DATABASE_URL` no es superuser, no tiene
   `BYPASSRLS`, no es dueno de tablas y no hereda la capacidad worker.
 - Confirmar que `MIGRATION_DATABASE_URL`, `DATABASE_URL` web y la URL del
-  worker son credenciales distintas. Ver `runbook-roles-postgres.md`.
+  worker son credenciales distintas. Web debe conectar como
+  `tiendaiq_web_login` y worker como `tiendaiq_worker_login`; ninguna URL
+  runtime puede pertenecer a Credential Rotation de Render. Ver
+  `runbook-roles-postgres.md`.
 - Desplegar primero en staging, nunca directamente sobre produccion.
 
 ## 2. Inspeccion previa

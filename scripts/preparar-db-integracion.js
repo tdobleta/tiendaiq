@@ -5,8 +5,10 @@ const { Client } = require("pg");
 const EXPECTED_DATABASE = "tiendaiq_staging";
 const EXPECTED_ROLES = Object.freeze({
   migration: "tiendaiq_migrator",
-  web: "tiendaiq_web",
-  worker: "tiendaiq_worker",
+  web: "tiendaiq_web_login",
+  worker: "tiendaiq_worker_login",
+  legacyWeb: "tiendaiq_web",
+  legacyWorker: "tiendaiq_worker",
   webRuntime: "tiendaiq_web_runtime",
   workerRuntime: "tiendaiq_worker_runtime",
   legacyCapability: "tiendaiq_worker_capability",
@@ -103,7 +105,17 @@ async function main() {
     await ensureLoginRole(admin, migration);
     await ensureLoginRole(admin, web);
     await ensureLoginRole(admin, worker);
-    for (const role of [EXPECTED_ROLES.webRuntime, EXPECTED_ROLES.workerRuntime]) {
+    await admin.query(`ALTER ROLE ${quoteIdentifier(EXPECTED_ROLES.migration)} CREATEROLE`);
+    // Immutable migrations 0007-0011 reference the former Render-managed role
+    // names. A fresh disposable database must reproduce those identities so it
+    // can replay the complete history; they are NOLOGIN compatibility roles
+    // and never back the runtime connections exercised by CI.
+    for (const role of [
+      EXPECTED_ROLES.legacyWeb,
+      EXPECTED_ROLES.legacyWorker,
+      EXPECTED_ROLES.webRuntime,
+      EXPECTED_ROLES.workerRuntime
+    ]) {
       await admin.query(
         `CREATE ROLE ${quoteIdentifier(role)} NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS`
       ).catch((error) => {
@@ -145,6 +157,10 @@ async function main() {
     // its managed `postgres` role. Reproduce that provider-owned graph so CI
     // exercises the same reconciliation path as staging.
     for (const role of [
+      EXPECTED_ROLES.web,
+      EXPECTED_ROLES.worker,
+      EXPECTED_ROLES.legacyWeb,
+      EXPECTED_ROLES.legacyWorker,
       EXPECTED_ROLES.webRuntime,
       EXPECTED_ROLES.workerRuntime,
       EXPECTED_ROLES.capability

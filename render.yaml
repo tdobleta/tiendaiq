@@ -1,9 +1,9 @@
 # ============================================================
 # Render - infraestructura de TiendaIQ en un archivo.
 #
-# Web y worker reciben solo URLs de usuarios separados creados en Database >
-# Credentials. La credencial propietaria queda fuera de los procesos runtime y
-# vive unicamente en el entorno protegido del workflow de release de staging.
+# Web y worker reciben URLs de logins PostgreSQL propios y mínimos, creados por
+# el workflow protegido. Las credenciales administradas por Render y la
+# credencial propietaria quedan fuera de los procesos runtime.
 # ============================================================
 
 databases:
@@ -22,7 +22,8 @@ services:
     startCommand: node server.js
     healthCheckPath: /ready
     envVars:
-      # URL interna del usuario tiendaiq_web. Nunca usar la credencial duena.
+      # URL interna del usuario tiendaiq_web_login. Nunca usar una credencial
+      # administrada por Render ni la credencial duena.
       - key: DATABASE_URL
         sync: false
       - key: APP_URL
@@ -37,8 +38,7 @@ services:
       # DATABASE_URL es interna y viaja solo por la red privada de Render.
       - key: PG_PRIVATE_NETWORK
         value: "1"
-      # The managed Render credential only opens the connection. PostgreSQL
-      # switches into this NOINHERIT role before the first application query.
+      # PostgreSQL switches into this NOINHERIT role before the first query.
       - key: PG_RUNTIME_ROLE
         value: "tiendaiq_web_runtime"
       - key: PG_POOL_MAX
@@ -82,7 +82,7 @@ services:
     buildCommand: npm ci
     startCommand: npm run worker
     envVars:
-      # URL interna del usuario tiendaiq_worker.
+      # URL interna del usuario tiendaiq_worker_login.
       - key: DATABASE_URL
         sync: false
       - key: TOKEN_ENC_KEY
