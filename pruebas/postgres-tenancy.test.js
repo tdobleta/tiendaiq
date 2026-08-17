@@ -445,7 +445,9 @@ test("el bootstrap crea logins y roles propios sin depender de credenciales gest
   assert.match(source, /const WORKER_CAPABILITY = "tiendaiq_worker_capability_v2"/);
   assert.match(source, /CREATE ROLE \$\{quoteIdentifier\(role\)\} NOLOGIN/);
   assert.match(source, /CREATE ROLE \$\{quoteIdentifier\(role\)\} LOGIN/);
-  assert.match(source, /ALTER ROLE \$\{quoteIdentifier\(role\)\} WITH LOGIN/);
+  assert.match(source, /ALTER ROLE \$\{quoteIdentifier\(role\)\} PASSWORD/);
+  assert.doesNotMatch(source, /ALTER ROLE \$\{quoteIdentifier\(role\)\} WITH LOGIN NOSUPERUSER/);
+  assert.match(source, /Atributos inseguros para \$\{role\}; requiere correccion administrativa/);
   assert.match(source, /WEB_RUNTIME_LOGIN_PASSWORD/);
   assert.match(source, /WORKER_RUNTIME_LOGIN_PASSWORD/);
   assert.match(source, /GRANT \$\{quoteIdentifier\(WEB_RUNTIME_ROLE\)\} TO \$\{quoteIdentifier\(WEB_LOGIN_ROLE\)\}/);

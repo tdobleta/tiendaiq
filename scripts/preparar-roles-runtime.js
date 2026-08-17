@@ -70,7 +70,12 @@ async function ensureRuntimeRole(client, role) {
 }
 
 async function ensureLoginRole(client, role, password) {
-  const existing = await client.query("SELECT 1 FROM pg_roles WHERE rolname = $1", [role]);
+  const existing = await client.query(
+    `SELECT rolcanlogin, rolsuper, rolbypassrls, rolinherit,
+            rolcreatedb, rolcreaterole, rolreplication
+     FROM pg_roles WHERE rolname = $1`,
+    [role]
+  );
   if (!existing.rowCount) {
     await client.query(
       `CREATE ROLE ${quoteIdentifier(role)} LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE ` +
@@ -78,9 +83,16 @@ async function ensureLoginRole(client, role, password) {
     );
     return;
   }
+  const current = existing.rows[0];
+  if (!current.rolcanlogin || current.rolsuper || current.rolbypassrls || current.rolinherit ||
+      current.rolcreatedb || current.rolcreaterole || current.rolreplication) {
+    throw new Error(`Atributos inseguros para ${role}; requiere correccion administrativa`);
+  }
+  // A CREATEROLE principal with ADMIN membership can rotate this password, but
+  // PostgreSQL reserves some attribute clauses (even their negative forms) for
+  // a superuser. The read above is the fail-closed attribute reconciliation.
   await client.query(
-    `ALTER ROLE ${quoteIdentifier(role)} WITH LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE ` +
-    `NOINHERIT NOBYPASSRLS NOREPLICATION PASSWORD ${quoteLiteral(password)}`
+    `ALTER ROLE ${quoteIdentifier(role)} PASSWORD ${quoteLiteral(password)}`
   );
 }
 
