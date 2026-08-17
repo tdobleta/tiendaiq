@@ -122,6 +122,7 @@ jobs:
           LOAD_FAKE_WORK_MS: "5"
           LOAD_MAX_DRAIN_SECONDS: "900"
           PG_POOL_MAX: "10"
+          EXPECTED_RELEASE_SHA: ${{ inputs.release_sha }}
         run: |
           set -euo pipefail
           if [[ "${{ inputs.mode }}" == "cleanup" ]]; then

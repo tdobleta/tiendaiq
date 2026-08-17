@@ -23,6 +23,7 @@ const { verifyTenantIsolation, verifyWorkerIsolation } = require("./src/platform
 const { createJobRepository } = require("./src/platform/postgres/job-repository");
 const { createGenerationRepository } = require("./src/platform/postgres/generation-repository");
 const { createInboxRepository } = require("./src/platform/postgres/inbox-repository");
+const { createShopifyCertificationRepository } = require("./src/platform/postgres/shopify-certification-repository");
 
 // El token vive dentro del JSONB `datos`. Se cifra al escribir y se descifra al
 // leer, en esta capa: el resto de la app sigue viendo el token en claro y no se
@@ -45,6 +46,7 @@ let pageRepository = null;
 let jobRepository = null;
 let generationRepository = null;
 let inboxRepository = null;
+let shopifyCertificationRepository = null;
 async function pg() {
   if (pool) return pool;
   const { Pool } = require("pg");
@@ -601,11 +603,15 @@ function leaseVencido(expiraEn, bloqueadoEn, compatibilidadSegundos, ahora = Dat
   return !Number.isFinite(expiry) || expiry < ahora;
 }
 
-async function reclamarJobDB(workerId, leaseSeconds = 300, jobTypes = null) {
+async function reclamarJobDB(workerId, releaseSha, leaseSeconds = 300, jobTypes = null) {
+  const normalizedReleaseSha = String(releaseSha || "").trim().toLowerCase();
+  if (!/^[a-f0-9]{40}$/.test(normalizedReleaseSha)) {
+    throw new TypeError("El claim requiere el SHA completo del worker");
+  }
   if (USA_PG) {
     const p = await pg();
     jobRepository ||= createJobRepository(p);
-    return jobRepository.claim(workerId, leaseSeconds, jobTypes);
+    return jobRepository.claim(workerId, normalizedReleaseSha, leaseSeconds, jobTypes);
   }
   const now = Date.now();
   const candidate = fileListar(DIR_JOBS)
@@ -621,6 +627,7 @@ async function reclamarJobDB(workerId, leaseSeconds = 300, jobTypes = null) {
   candidate.lockedAt = new Date().toISOString();
   candidate.leaseExpiresAt = new Date(now + Math.max(30, Number(leaseSeconds) || 300) * 1000).toISOString();
   candidate.lockedBy = workerId;
+  candidate.workerReleaseSha = normalizedReleaseSha;
   candidate.updatedAt = candidate.lockedAt;
   fileGuardar(DIR_JOBS, candidate.id, candidate);
   return {
@@ -736,7 +743,8 @@ async function completarJobDB(context, job, result) {
     return jobRepository.succeed(tenant, job, result);
   }
   const stored = fileLeer(DIR_JOBS, job.id);
-  if (!stored || stored.tenantId !== tenant.tenantId || stored.status !== "running" || stored.lockedBy !== job.lockedBy) return null;
+  if (!stored || stored.tenantId !== tenant.tenantId || stored.status !== "running" ||
+      stored.lockedBy !== job.lockedBy || stored.workerReleaseSha !== job.workerReleaseSha) return null;
   stored.status = "succeeded";
   stored.result = result || {};
   stored.lastError = null;
@@ -757,8 +765,10 @@ async function renovarLeaseJobDB(context, job, leaseSeconds = 300) {
     return jobRepository.renew(tenant, job, leaseSeconds);
   }
   const stored = fileLeer(DIR_JOBS, job.id);
-  if (!stored || stored.tenantId !== tenant.tenantId || stored.status !== "running" || stored.lockedBy !== job.lockedBy) return null;
+  if (!stored || stored.tenantId !== tenant.tenantId || stored.status !== "running" ||
+      stored.lockedBy !== job.lockedBy || stored.workerReleaseSha !== job.workerReleaseSha) return null;
   stored.lockedAt = new Date().toISOString();
+  stored.leaseExpiresAt = new Date(Date.now() + Math.max(30, Number(leaseSeconds) || 300) * 1000).toISOString();
   stored.updatedAt = stored.lockedAt;
   fileGuardar(DIR_JOBS, stored.id, stored);
   return stored;
@@ -772,7 +782,8 @@ async function fallarJobDB(context, job, error, retryDelaySeconds, needsCompensa
     return jobRepository.fail(tenant, job, error, retryDelaySeconds, needsCompensation);
   }
   const stored = fileLeer(DIR_JOBS, job.id);
-  if (!stored || stored.tenantId !== tenant.tenantId || stored.status !== "running" || stored.lockedBy !== job.lockedBy) return null;
+  if (!stored || stored.tenantId !== tenant.tenantId || stored.status !== "running" ||
+      stored.lockedBy !== job.lockedBy || stored.workerReleaseSha !== job.workerReleaseSha) return null;
   const terminal = Number(stored.attempts) >= Number(stored.maxAttempts);
   stored.status = terminal ? "failed" : "queued";
   stored.runAfter = terminal
@@ -782,6 +793,7 @@ async function fallarJobDB(context, job, error, retryDelaySeconds, needsCompensa
   stored.lockedAt = null;
   stored.leaseExpiresAt = null;
   stored.lockedBy = null;
+  if (!terminal) stored.workerReleaseSha = null;
   stored.completedAt = terminal ? new Date().toISOString() : null;
   if (terminal && needsCompensation === true) {
     stored.compensationStatus = "pending";
@@ -1228,11 +1240,15 @@ async function recibirWebhookDB(input) {
   return { event, inserted: true };
 }
 
-async function reclamarWebhookDB(workerId, leaseSeconds = 120) {
+async function reclamarWebhookDB(workerId, releaseSha, leaseSeconds = 120) {
+  const normalizedReleaseSha = String(releaseSha || "").trim().toLowerCase();
+  if (!/^[a-f0-9]{40}$/.test(normalizedReleaseSha)) {
+    throw new TypeError("El claim del inbox requiere el SHA completo del worker");
+  }
   if (USA_PG) {
     const p = await pg();
     inboxRepository ||= createInboxRepository(p);
-    return inboxRepository.claim(workerId, leaseSeconds);
+    return inboxRepository.claim(workerId, normalizedReleaseSha, leaseSeconds);
   }
   const now = Date.now();
   const event = fileListar(DIR_INBOX)
@@ -1247,6 +1263,7 @@ async function reclamarWebhookDB(workerId, leaseSeconds = 120) {
   event.lockedAt = new Date().toISOString();
   event.leaseExpiresAt = new Date(now + Math.max(30, Number(leaseSeconds) || 120) * 1000).toISOString();
   event.lockedBy = workerId;
+  event.workerReleaseSha = normalizedReleaseSha;
   event.updatedAt = event.lockedAt;
   fileGuardar(DIR_INBOX, event.id, event);
   return {
@@ -1364,7 +1381,8 @@ async function renovarLeaseWebhookDB(context, event, leaseSeconds = 120) {
   if (!stored ||
       stored.shopDomain !== tenant.shopDomain ||
       stored.status !== "processing" ||
-      stored.lockedBy !== event.lockedBy) return null;
+      stored.lockedBy !== event.lockedBy ||
+      stored.workerReleaseSha !== event.workerReleaseSha) return null;
   stored.lockedAt = new Date().toISOString();
   stored.leaseExpiresAt = new Date(Date.now() + Math.max(30, Number(leaseSeconds) || 120) * 1000).toISOString();
   stored.updatedAt = stored.lockedAt;
@@ -1380,7 +1398,8 @@ async function completarWebhookDB(context, event) {
     return inboxRepository.succeed(tenant, event);
   }
   const stored = fileLeer(DIR_INBOX, event.id);
-  if (!stored || stored.shopDomain !== tenant.shopDomain || stored.status !== "processing" || stored.lockedBy !== event.lockedBy) return null;
+  if (!stored || stored.shopDomain !== tenant.shopDomain || stored.status !== "processing" ||
+      stored.lockedBy !== event.lockedBy || stored.workerReleaseSha !== event.workerReleaseSha) return null;
   stored.status = "processed";
   stored.processedAt = new Date().toISOString();
   stored.updatedAt = stored.processedAt;
@@ -1400,7 +1419,8 @@ async function fallarWebhookDB(context, event, error, retryDelaySeconds) {
     return inboxRepository.fail(tenant, event, error, retryDelaySeconds);
   }
   const stored = fileLeer(DIR_INBOX, event.id);
-  if (!stored || stored.shopDomain !== tenant.shopDomain || stored.status !== "processing" || stored.lockedBy !== event.lockedBy) return null;
+  if (!stored || stored.shopDomain !== tenant.shopDomain || stored.status !== "processing" ||
+      stored.lockedBy !== event.lockedBy || stored.workerReleaseSha !== event.workerReleaseSha) return null;
   const terminal = Number(stored.attempts) >= Number(stored.maxAttempts);
   stored.status = terminal ? "failed" : "received";
   if (!terminal) stored.runAfter = new Date(Date.now() + Math.max(1, retryDelaySeconds) * 1000).toISOString();
@@ -1409,6 +1429,7 @@ async function fallarWebhookDB(context, event, error, retryDelaySeconds) {
   stored.lockedAt = null;
   stored.leaseExpiresAt = null;
   stored.lockedBy = null;
+  if (!terminal) stored.workerReleaseSha = null;
   fileGuardar(DIR_INBOX, stored.id, stored);
   return stored;
 }
@@ -1484,7 +1505,16 @@ async function cerrarAlmacenamientoDB() {
   jobRepository = null;
   generationRepository = null;
   inboxRepository = null;
+  shopifyCertificationRepository = null;
   await activePool.end();
+}
+
+async function leerEvidenciaCertificacionShopifyDB(context, since, pageId, releaseSha) {
+  const tenant = requireTenantContext(context);
+  if (!USA_PG) throw new Error("La certificacion Shopify requiere PostgreSQL real");
+  const p = await pg();
+  shopifyCertificationRepository ||= createShopifyCertificationRepository(p);
+  return shopifyCertificationRepository.read(tenant, { since, pageId, releaseSha });
 }
 
 module.exports = {
@@ -1503,5 +1533,6 @@ module.exports = {
   transicionarProveedorGeneracionDB, reconciliarGeneracionAmbiguaDB,
   recibirWebhookDB, reclamarWebhookDB, renovarLeaseWebhookDB, completarWebhookDB, fallarWebhookDB,
   redactarInboxTiendaDB, registrarPrivacidadWebhookDB, depurarInboxDB,
+  leerEvidenciaCertificacionShopifyDB,
   verificarAlmacenamientoDB, verificarWorkerDB, cerrarAlmacenamientoDB
 };

@@ -1,11 +1,5 @@
 "use strict";
 
-const crypto = require("crypto");
-
-function contentHash(data) {
-  return crypto.createHash("sha256").update(JSON.stringify(data || {})).digest("hex");
-}
-
 function createPublishPageHandler({ sessions, pages, publish, metrics }) {
   return Object.freeze({
     async run(job, { signal } = {}) {
@@ -40,12 +34,16 @@ function createPublishPageHandler({ sessions, pages, publish, metrics }) {
       const checkpointAvatar = async (avatarUrl, previousAvatar) => {
         await pages.checkpointAvatar(job.tenant, pageId, job.id, previousAvatar, avatarUrl);
       };
-      const { url } = await publish(publishedData, session, undefined, {
+      const { url, publishedHash } = await publish(publishedData, session, undefined, {
         signal,
         onAvatarUploaded: checkpointAvatar
       });
+      if (!/^[a-f0-9]{64}$/.test(publishedHash || "")) {
+        const error = new Error("La publicación no confirmó el hash exacto enviado a Shopify");
+        error.nonRetryable = true;
+        throw error;
+      }
       const publishedAvatar = publishedData?.facetas?.hero?.resena_destacada?.avatar;
-      const publishedHash = contentHash(publishedData);
 
       const completion = await pages.completePublication(job.tenant, pageId, job.id, {
         url,
@@ -82,4 +80,4 @@ function createPublishPageHandler({ sessions, pages, publish, metrics }) {
   });
 }
 
-module.exports = { createPublishPageHandler, contentHash };
+module.exports = { createPublishPageHandler };

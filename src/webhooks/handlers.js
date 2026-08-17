@@ -21,31 +21,33 @@ function createWebhookHandlers({ stores, billing, inbox, metrics }) {
     },
 
     "customers/data_request": {
-      async run(event) {
+      async run(event, execution = {}) {
         await inbox.recordPrivacy(event.lockedBy, {
           event,
           type: "customers_data_request",
           tenantReference: event.shopDomain,
-          subjectHash: event.payload?.customer_ref || null
+          subjectHash: event.payload?.customer_ref || null,
+          workerReleaseSha: execution.releaseSha
         });
         return { completed: true, storedCustomerData: false };
       }
     },
 
     "customers/redact": {
-      async run(event) {
+      async run(event, execution = {}) {
         await inbox.recordPrivacy(event.lockedBy, {
           event,
           type: "customers_redact",
           tenantReference: event.shopDomain,
-          subjectHash: event.payload?.customer_ref || null
+          subjectHash: event.payload?.customer_ref || null,
+          workerReleaseSha: execution.releaseSha
         });
         return { completed: true, storedCustomerData: false };
       }
     },
 
     "shop/redact": {
-      async run(event) {
+      async run(event, execution = {}) {
         const tenantHash = crypto.createHash("sha256").update(event.shopDomain).digest("hex");
         await stores.delete(event.shopDomain);
         await inbox.redactShop(event.lockedBy, event.shopDomain, event.id);
@@ -53,7 +55,8 @@ function createWebhookHandlers({ stores, billing, inbox, metrics }) {
           event,
           type: "shop_redact",
           tenantReference: `redacted:${tenantHash}`,
-          subjectHash: tenantHash
+          subjectHash: tenantHash,
+          workerReleaseSha: execution.releaseSha
         });
         return { completed: true, deleted: true };
       }

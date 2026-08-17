@@ -34,6 +34,14 @@ function normalizeRunId(value) {
   return runId;
 }
 
+function normalizeReleaseSha(value) {
+  const releaseSha = String(value || "").trim().toLowerCase();
+  if (!/^[a-f0-9]{40}$/.test(releaseSha)) {
+    throw new Error("EXPECTED_RELEASE_SHA debe ser el SHA completo revisado de 40 caracteres");
+  }
+  return releaseSha;
+}
+
 function errorSummary(error) {
   if (error instanceof AggregateError) {
     return error.errors.map(errorSummary).join(" | ");
@@ -151,6 +159,7 @@ async function main() {
   assertAuthorized(workerUrl, "TEST_WORKER_DATABASE_URL");
 
   const cleanupOnly = Boolean(process.env.LOAD_CLEANUP_RUN_ID);
+  const releaseSha = cleanupOnly ? null : normalizeReleaseSha(process.env.EXPECTED_RELEASE_SHA);
   const tenantsCount = integer(process.env.LOAD_TENANTS, cleanupOnly ? 2000 : 1000, 1, 2000, "LOAD_TENANTS");
   const jobsCount = integer(process.env.LOAD_JOBS, 1000, 1, 2000, "LOAD_JOBS");
   const setupConcurrency = integer(process.env.LOAD_SETUP_CONCURRENCY, 40, 1, 100, "LOAD_SETUP_CONCURRENCY");
@@ -236,7 +245,12 @@ async function main() {
       const drainStarted = performance.now();
       async function lane(index) {
         while (!processError) {
-          const current = await workerJobs.claim(`${prefix}:worker:${index}`, 120, ["capacity-probe"]);
+          const current = await workerJobs.claim(
+            `${prefix}:worker:${index}`,
+            releaseSha,
+            120,
+            ["capacity-probe"]
+          );
           if (!current) return;
           try {
             if (fakeWorkMs) await new Promise((resolve) => setTimeout(resolve, fakeWorkMs));

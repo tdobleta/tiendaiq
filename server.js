@@ -22,8 +22,8 @@ const http = require("http");
 const fs = require("fs");
 const path = require("path");
 const { listarProductos } = require("./adaptador");
-const { env, sesionDeEnv } = require("./shopify");
-const { sesionDe, borrarTienda } = require("./tiendas");
+const { env, gql, sesionDeEnv } = require("./shopify");
+const { sesionDe, borrarTienda, esDominioValido, normalizar } = require("./tiendas");
 const { createSyntheticLoadHandler, safeEqual } = require("./src/capacity/synthetic-load-endpoints");
 const {
   guardarPaginaDB,
@@ -39,16 +39,22 @@ const {
   estadoColaDB,
   estadoWorkerDB,
   estadoInboxDB,
+  leerEvidenciaCertificacionShopifyDB,
   verificarAlmacenamientoDB,
   cerrarAlmacenamientoDB
 } = require("./db");
-const { iniciarInstalacion, terminarInstalacion, tiendaDelPase } = require("./auth");
+const { iniciarInstalacion, terminarInstalacion, tiendaDelPase, ALCANCES, TOPICOS_OPERATIVOS } = require("./auth");
 const { nubeServible, urlVideo, urlPoster } = require("./inspiracion-nube");
-const { estadoPlan, mesActual } = require("./facturacion");
+const { estadoPlan, mesActual, PLAN_NOMBRE } = require("./facturacion");
 const { reportarError, metrica } = require("./monitoreo");
 const { TenantContext } = require("./src/tenancy/tenant-context");
 const { verifyAndNormalizeWebhook } = require("./src/webhooks/verify-and-normalize");
 const { generationAdmissionPause } = require("./src/generation/admission-control");
+const {
+  queryShopifyCertification,
+  queryStorefrontCertification,
+  evaluateShopifyCertification
+} = require("./src/shopify/staging-certification");
 const {
   leerConfigBundles,
   guardarConfigBundles,
@@ -83,6 +89,15 @@ const VERSION_ASSETS = (() => {
     return Date.now().toString(36);
   }
 })();
+
+let solicitudesCertificacionShopify = [];
+
+function permitirCertificacionShopify(now = Date.now()) {
+  solicitudesCertificacionShopify = solicitudesCertificacionShopify.filter((timestamp) => now - timestamp < 60_000);
+  if (solicitudesCertificacionShopify.length >= 5) return false;
+  solicitudesCertificacionShopify.push(now);
+  return true;
+}
 // Único hogar del código que corre en el storefront (widget de bundles y
 // widget de bundles). El theme app extension lo publica en el CDN de Shopify, y
 // el server sirve LOS MISMOS archivos para el preview del admin y para la
@@ -336,6 +351,77 @@ async function estadoOperativo(req, res) {
     })),
     totals: totales,
     ts: new Date().toISOString()
+  }, { "Cache-Control": "no-store" });
+}
+
+async function certificarShopifyStaging(req, res) {
+  if (String(env.SHOPIFY_CERTIFICATION_ENABLED || "") !== "1") {
+    return json(res, 404, { error: "not_found" });
+  }
+
+  const token = String(env.OPS_STATUS_TOKEN || "");
+  if (token.length < 32 || !safeEqual(req.headers.authorization, `Bearer ${token}`)) {
+    return json(res, 401, { error: "unauthorized" }, { "WWW-Authenticate": "Bearer" });
+  }
+  if (req.method !== "GET") return json(res, 405, { error: "method_not_allowed" }, { Allow: "GET" });
+  if (!permitirCertificacionShopify()) {
+    return json(res, 429, { error: "rate_limited" }, { "Retry-After": "60", "Cache-Control": "no-store" });
+  }
+
+  const shop = normalizar(env.SHOPIFY_CERTIFICATION_SHOP);
+  const pageId = String(env.SHOPIFY_CERTIFICATION_PAGE_ID || "").trim();
+  const releaseSha = String(process.env.RENDER_GIT_COMMIT || "").trim().toLowerCase();
+  if (!esDominioValido(shop) || !pageId || String(env.PLAN_TEST || "") !== "1" || !/^[a-f0-9]{40}$/.test(releaseSha)) {
+    return json(res, 503, { activeStoreOk: false, error: "certification_not_configured" });
+  }
+
+  const maxAgeHours = Math.min(168, Math.max(1, Number(env.SHOPIFY_CERTIFICATION_MAX_AGE_HOURS) || 24));
+  const since = new Date(Date.now() - maxAgeHours * 3600 * 1000);
+  const tenant = TenantContext.fromShopDomain(shop, { source: "internal-job" });
+  const session = await sesionDe(tenant);
+  const evidence = await leerEvidenciaCertificacionShopifyDB(tenant, since, pageId, releaseSha);
+  const timeoutSignal = () => typeof AbortSignal !== "undefined" && AbortSignal.timeout
+    ? AbortSignal.timeout(20_000)
+    : undefined;
+  const remote = await queryShopifyCertification(gql, session, evidence.publication?.productId || null, {
+    signal: timeoutSignal()
+  });
+  remote.storefront = null;
+  if (remote.product?.onlineStoreUrl && evidence.publication?.publicUrl) {
+    try {
+      remote.storefront = await queryStorefrontCertification(
+        fetch,
+        remote.product.onlineStoreUrl,
+        evidence.publication.publicUrl,
+        { signal: timeoutSignal() }
+      );
+    } catch {
+      remote.storefront = {
+        ok: false,
+        status: 0,
+        html: false,
+        urlMatch: false,
+        markers: { data: false, app: false, asset: false },
+        bytes: 0
+      };
+    }
+  }
+  const result = evaluateShopifyCertification({
+    requiredScopes: ALCANCES.split(","),
+    requiredTopics: TOPICOS_OPERATIVOS,
+    expectedWebhookUrl: `${URL_APP}/webhooks`,
+    planName: PLAN_NOMBRE,
+    planTest: String(env.PLAN_TEST || "") === "1",
+    releaseSha,
+    evidence,
+    remote
+  });
+
+  return json(res, result.activeStoreOk ? 200 : 503, {
+    ...result,
+    release: releaseSha,
+    maxAgeHours,
+    checkedAt: new Date().toISOString()
   }, { "Cache-Control": "no-store" });
 }
 
@@ -1010,6 +1096,7 @@ const servidor = http.createServer(async (req, res) => {
       });
     }
     if (url.pathname === "/ops/status") return await estadoOperativo(req, res);
+    if (url.pathname === "/ops/shopify-certification") return await certificarShopifyStaging(req, res);
     if (await syntheticLoadHandler(req, res, url)) return;
 
     if (url.pathname === "/auth") return await iniciarInstalacion(res, url, URL_APP);
@@ -1143,7 +1230,11 @@ servidor.listen(PUERTO, async () => {
   // En desarrollo por archivos no levantamos un segundo proceso: el mismo
   // server ejecuta el worker. Producción usa el servicio worker de Render.
   if (env.DEV_MODE === "1" && !USA_PG) {
-    servidor._tiendaiqWorker = require("./src/jobs/runtime").createRuntime({ workerId: `dev-web:${process.pid}` });
+    const localReleaseSha = "0".repeat(40);
+    servidor._tiendaiqWorker = require("./src/jobs/runtime").createRuntime({
+      workerId: `dev-web:${process.pid}`,
+      releaseSha: localReleaseSha
+    });
     servidor._tiendaiqWorker.start();
     console.log("  worker local: activo\n");
   }

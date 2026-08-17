@@ -1,0 +1,93 @@
+name: Shopify E2E staging evidence
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: SHA completo (40 caracteres) desplegado y revisado en main
+        required: true
+        type: string
+      confirmation:
+        description: Escribir VERIFY_SHOPIFY_STAGING_E2E
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tiendaiq-shopify-e2e-staging
+  cancel-in-progress: false
+
+jobs:
+  verify-active-store:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: staging
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.release_sha }}
+          fetch-depth: 0
+
+      - id: release
+        name: Validate the immutable reviewed release commit
+        shell: bash
+        env:
+          REQUESTED_SHA: ${{ inputs.release_sha }}
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          [[ "$REQUESTED_SHA" =~ ^[a-f0-9]{40}$ ]] || { echo "release_sha debe ser un SHA completo" >&2; exit 1; }
+          [[ "$CONFIRMATION" == "VERIFY_SHOPIFY_STAGING_E2E" ]] || { echo "Confirmacion invalida" >&2; exit 1; }
+          ACTUAL_SHA="$(git rev-parse HEAD)"
+          [[ "$ACTUAL_SHA" == "$REQUESTED_SHA" ]] || { echo "El checkout no coincide con el SHA solicitado" >&2; exit 1; }
+          git fetch origin main --depth=1
+          [[ "$(git rev-parse origin/main)" == "$ACTUAL_SHA" ]] || { echo "El SHA debe ser el HEAD actual de main" >&2; exit 1; }
+          echo "sha=$ACTUAL_SHA" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "20"
+
+      - run: npm ci --no-audit --no-fund
+
+      - name: Verify the deployed release
+        shell: bash
+        env:
+          EXPECTED_RELEASE_SHA: ${{ steps.release.outputs.sha }}
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --max-time 10 https://tiendaiq-staging-web.onrender.com/ready \
+            | node -e 'let body="";process.stdin.on("data",c=>body+=c).on("end",()=>{const ready=JSON.parse(body);process.exit(ready.ok===true&&ready.release===process.env.EXPECTED_RELEASE_SHA?0:1)})'
+
+      - name: Verify the operational web and worker gate
+        env:
+          CONFIRMATION: CHECK_STAGING_OPS_READINESS
+          EXPECTED_RELEASE_SHA: ${{ steps.release.outputs.sha }}
+          STAGING_APP_URL: https://tiendaiq-staging-web.onrender.com
+          OPS_STATUS_TOKEN: ${{ secrets.STAGING_OPS_STATUS_TOKEN }}
+          OPS_MAX_FAILED_RECENT_JOBS: "0"
+          OPS_MAX_STALE_RUNNING_JOBS: "0"
+          OPS_MAX_COMPENSATION_DEAD_LETTER: "0"
+          OPS_MAX_INBOX_FAILED_RECENT: "0"
+          OPS_MAX_INBOX_STALE_PROCESSING: "0"
+          OPS_MAX_WORKER_AGE_SECONDS: "60"
+          OPS_MIN_WORKER_UPTIME_SECONDS: "30"
+          OPS_MIN_GENERATION_CONCURRENCY: "8"
+          OPS_MIN_PUBLICATION_CONCURRENCY: "4"
+          OPS_MIN_WEBHOOK_CONCURRENCY: "2"
+          OPS_READINESS_PROFILE: technical_preflight
+        run: npm run ops:readiness
+
+      - name: Verify active Shopify store, durable evidence, and storefront HTML preflight
+        shell: bash
+        env:
+          EXPECTED_RELEASE_SHA: ${{ steps.release.outputs.sha }}
+          OPS_STATUS_TOKEN: ${{ secrets.STAGING_OPS_STATUS_TOKEN }}
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --silent --show-error --max-time 25 \
+            --header "Authorization: Bearer $OPS_STATUS_TOKEN" \
+            https://tiendaiq-staging-web.onrender.com/ops/shopify-certification \
+            | node scripts/verificar-certificacion-shopify-staging.js

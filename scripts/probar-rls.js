@@ -14,6 +14,7 @@ const { withTenantTransaction } = require("../src/platform/postgres/with-tenant-
 
 const WEB_RUNTIME_ROLE = "tiendaiq_web_runtime";
 const WORKER_RUNTIME_ROLE = "tiendaiq_worker_runtime";
+const TEST_RELEASE_SHA = "a".repeat(40);
 
 async function main() {
   if (env.ALLOW_RLS_TEST !== "1") {
@@ -213,7 +214,7 @@ async function main() {
     }
 
     const workerJobs = createJobRepository(workerPool);
-    const claimed = await workerJobs.claim("rls-worker", 30);
+    const claimed = await workerJobs.claim("rls-worker", TEST_RELEASE_SHA, 30);
     if (claimed?.id !== queuedJob.id) throw new Error("El rol worker no pudo reclamar el job");
     const queueStats = await workerJobs.stats("rls-worker-metrics");
     const probeStats = queueStats.find((item) => item.type === "rls-probe");

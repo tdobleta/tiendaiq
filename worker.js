@@ -133,6 +133,7 @@ async function iniciarWorker({
   }
   const activeRuntime = crearRuntime({
     workerId: identity.workerId,
+    releaseSha: identity.releaseSha,
     generationConcurrency: identity.capacity.generations,
     publicationConcurrency: identity.capacity.publications,
     webhookConcurrency: identity.capacity.webhooks

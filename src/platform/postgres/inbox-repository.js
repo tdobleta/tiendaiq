@@ -18,6 +18,7 @@ function mapInboxEvent(row) {
     lockedAt: row.locked_at,
     leaseExpiresAt: row.lease_expires_at,
     lockedBy: row.locked_by,
+    workerReleaseSha: row.worker_release_sha || null,
     lastError: row.last_error,
     apiVersion: row.api_version,
     receivedAt: row.received_at,
@@ -105,7 +106,11 @@ function createInboxRepository(pool) {
       }
     },
 
-    async claim(workerId, leaseSeconds = 120) {
+    async claim(workerId, releaseSha, leaseSeconds = 120) {
+      const normalizedReleaseSha = String(releaseSha || "").trim().toLowerCase();
+      if (!/^[a-f0-9]{40}$/.test(normalizedReleaseSha)) {
+        throw new TypeError("El claim del inbox requiere el SHA completo del worker");
+      }
       return workerTransaction(workerId, async (client) => {
         const result = await client.query(
           `WITH candidate AS (
@@ -125,11 +130,11 @@ function createInboxRepository(pool) {
            UPDATE control_plane.inbox_events e
            SET status = 'processing', attempts = attempts + 1,
                locked_at = now(), lease_expires_at = now() + ($2::int * interval '1 second'),
-               locked_by = $1, updated_at = now()
+               locked_by = $1, worker_release_sha = $3, updated_at = now()
            FROM candidate
            WHERE e.id = candidate.id
            RETURNING e.*`,
-          [workerId, Math.max(30, Number(leaseSeconds) || 120)]
+          [workerId, Math.max(30, Number(leaseSeconds) || 120), normalizedReleaseSha]
         );
         const event = mapInboxEvent(result.rows[0]);
         if (!event) return null;
@@ -156,8 +161,9 @@ function createInboxRepository(pool) {
            WHERE id = $1 AND shop_domain = $2
              AND (tenant_id = $3 OR tenant_id IS NULL)
              AND status = 'processing' AND locked_by = $4
+             AND worker_release_sha = $6
            RETURNING *`,
-          [event.id, tenant.shopDomain, tenant.tenantId, event.lockedBy, Math.max(30, Number(leaseSeconds) || 120)]
+          [event.id, tenant.shopDomain, tenant.tenantId, event.lockedBy, Math.max(30, Number(leaseSeconds) || 120), event.workerReleaseSha]
         );
         return mapInboxEvent(result.rows[0]);
       });
@@ -173,8 +179,9 @@ function createInboxRepository(pool) {
            WHERE id = $1 AND shop_domain = $2
              AND (tenant_id = $3 OR tenant_id IS NULL)
              AND status = 'processing' AND locked_by = $4
+             AND worker_release_sha = $5
            RETURNING *`,
-          [event.id, tenant.shopDomain, tenant.tenantId, event.lockedBy]
+          [event.id, tenant.shopDomain, tenant.tenantId, event.lockedBy, event.workerReleaseSha]
         );
         return mapInboxEvent(result.rows[0]);
       });
@@ -189,12 +196,15 @@ function createInboxRepository(pool) {
            SET status = $4,
                run_after = CASE WHEN $4 = 'received' THEN now() + ($5::int * interval '1 second') ELSE run_after END,
                last_error = $6, locked_at = NULL, lease_expires_at = NULL,
-               locked_by = NULL, updated_at = now()
+               locked_by = NULL,
+               worker_release_sha = CASE WHEN $4 = 'received' THEN NULL ELSE worker_release_sha END,
+               updated_at = now()
            WHERE id = $1 AND shop_domain = $2
              AND (tenant_id = $3 OR tenant_id IS NULL)
              AND status = 'processing' AND locked_by = $7
+             AND worker_release_sha = $8
            RETURNING *`,
-          [event.id, tenant.shopDomain, tenant.tenantId, terminal ? "failed" : "received", Math.max(1, retryDelaySeconds), String(error?.message || error).slice(0, 1000), event.lockedBy]
+          [event.id, tenant.shopDomain, tenant.tenantId, terminal ? "failed" : "received", Math.max(1, retryDelaySeconds), String(error?.message || error).slice(0, 1000), event.lockedBy, event.workerReleaseSha]
         );
         return mapInboxEvent(result.rows[0]);
       });
@@ -212,14 +222,19 @@ function createInboxRepository(pool) {
       ));
     },
 
-    async recordPrivacy(workerId, { event, type, tenantReference, subjectHash = null }) {
+    async recordPrivacy(workerId, { event, type, tenantReference, subjectHash = null, workerReleaseSha }) {
+      const releaseSha = String(workerReleaseSha || "").trim().toLowerCase();
+      if (!/^[a-f0-9]{40}$/.test(releaseSha)) {
+        throw new Error("La evidencia de privacidad requiere el SHA completo del worker");
+      }
       return workerTransaction(workerId, (client) => client.query(
         `INSERT INTO control_plane.privacy_requests
-           (id, tenant_id, type, status, received_at, completed_at, webhook_id, subject_hash, updated_at)
-         VALUES ($1, $2, $3, 'completed', $4, now(), $5, $6, now())
+           (id, tenant_id, type, status, received_at, completed_at, webhook_id, subject_hash, worker_release_sha, updated_at)
+         VALUES ($1, $2, $3, 'completed', $4, now(), $5, $6, $7, now())
          ON CONFLICT (webhook_id) WHERE webhook_id IS NOT NULL
-         DO UPDATE SET status = 'completed', completed_at = now(), updated_at = now(), last_error = NULL`,
-        [event.id, tenantReference, type, event.receivedAt || new Date(), event.id, subjectHash]
+         DO UPDATE SET status = 'completed', completed_at = now(), worker_release_sha = EXCLUDED.worker_release_sha,
+           updated_at = now(), last_error = NULL`,
+        [event.id, tenantReference, type, event.receivedAt || new Date(), event.id, subjectHash, releaseSha]
       ));
     },
 

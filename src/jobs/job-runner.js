@@ -32,6 +32,7 @@ function createJobRunner({
   repository,
   handlers,
   workerId,
+  releaseSha = null,
   jobTypes = null,
   leaseSeconds = 300,
   pollMs = 1000,
@@ -44,6 +45,9 @@ function createJobRunner({
     throw new TypeError("El runner requiere claim, succeed y fail");
   }
   if (!workerId) throw new TypeError("El runner requiere workerId");
+  if (!/^[a-f0-9]{40}$/.test(String(releaseSha || ""))) {
+    throw new TypeError("El runner requiere releaseSha completo");
+  }
 
   let stopped = false;
   let timer = null;
@@ -51,7 +55,7 @@ function createJobRunner({
   let activeLoseLease = null;
 
   async function executeOnce() {
-    const job = await repository.claim(workerId, leaseSeconds, jobTypes);
+    const job = await repository.claim(workerId, releaseSha, leaseSeconds, jobTypes);
     if (!job) return false;
     const startedAt = Date.now();
     const handler = handlers[job.type] || handlers["*"];
@@ -120,12 +124,15 @@ function createJobRunner({
       startHeartbeat();
       let result;
       try {
-        result = await handler.run(job, { signal: abortController.signal, workerId });
+        result = await handler.run(job, { signal: abortController.signal, workerId, releaseSha });
       } finally {
         await stopHeartbeat();
       }
       if (leaseError) throw leaseError;
-      const completed = await repository.succeed(job.tenant, job, result || {});
+      const persistedResult = releaseSha
+        ? { ...(result || {}), _execution: { releaseSha } }
+        : (result || {});
+      const completed = await repository.succeed(job.tenant, job, persistedResult);
       if (!completed) {
         throw loseLease(new LeaseLostError("El worker perdio el lease antes de completar"));
       }
