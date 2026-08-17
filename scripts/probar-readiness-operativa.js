@@ -47,8 +47,8 @@ function booleanFlag(value) {
 
 function readinessProfile(value) {
   const profile = String(value || "technical_preflight").trim().toLowerCase();
-  if (!["technical_preflight", "go"].includes(profile)) {
-    throw new Error("OPS_READINESS_PROFILE debe ser technical_preflight o go");
+  if (!["technical_preflight", "go", "rollback"].includes(profile)) {
+    throw new Error("OPS_READINESS_PROFILE debe ser technical_preflight, go o rollback");
   }
   return profile;
 }
@@ -241,6 +241,15 @@ function evaluateOpsStatus(payload, expectedSha, thresholds, requirements = {}) 
   for (const key of ["queued", "running", "failed", "failedRecent", "staleRunning", "compensationPending", "compensationDeadLetter", "staleCompensation", "oldestQueuedSeconds", "oldestCompensationSeconds"]) {
     if (!Number.isFinite(Number(totals[key]))) errors.push(`/ops/status totals.${key} no es numerico`);
   }
+  const workloadThresholds = requirements.ignoreBacklogPressure === true
+    ? {
+        ...thresholds,
+        maxQueued: Number.MAX_SAFE_INTEGER,
+        maxRunning: Number.MAX_SAFE_INTEGER,
+        maxOldestQueuedSeconds: Number.MAX_SAFE_INTEGER,
+        maxOldestCompensationSeconds: Number.MAX_SAFE_INTEGER
+      }
+    : thresholds;
   errors.push(...evaluateQueue({
     queued: Number(totals.queued || 0),
     running: Number(totals.running || 0),
@@ -252,10 +261,18 @@ function evaluateOpsStatus(payload, expectedSha, thresholds, requirements = {}) 
     staleCompensation: Number(totals.staleCompensation || 0),
     oldestQueuedSeconds: Number(totals.oldestQueuedSeconds || 0),
     oldestCompensationSeconds: Number(totals.oldestCompensationSeconds || 0)
-  }, thresholds).errors.map((error) => `/ops/status ${error}`));
+  }, workloadThresholds).errors.map((error) => `/ops/status ${error}`));
   for (const key of ["received", "processing", "failed", "failedRecent", "staleProcessing", "oldestReceivedSeconds"]) {
     if (!Number.isFinite(Number(inbox[key]))) errors.push(`/ops/status inbox.${key} no es numerico`);
   }
+  const inboxThresholds = requirements.ignoreBacklogPressure === true
+    ? {
+        ...thresholds,
+        maxInboxReceived: Number.MAX_SAFE_INTEGER,
+        maxInboxProcessing: Number.MAX_SAFE_INTEGER,
+        maxOldestInboxSeconds: Number.MAX_SAFE_INTEGER
+      }
+    : thresholds;
   errors.push(...evaluateInbox({
     received: Number(inbox.received || 0),
     processing: Number(inbox.processing || 0),
@@ -263,7 +280,7 @@ function evaluateOpsStatus(payload, expectedSha, thresholds, requirements = {}) 
     failedRecent: Number(inbox.failedRecent || 0),
     staleProcessing: Number(inbox.staleProcessing || 0),
     oldestReceivedSeconds: Number(inbox.oldestReceivedSeconds || 0)
-  }, thresholds).errors.map((error) => `/ops/status ${error}`));
+  }, inboxThresholds).errors.map((error) => `/ops/status ${error}`));
 
   return { ok: errors.length === 0, errors };
 }
@@ -371,7 +388,8 @@ async function main() {
   const requirements = {
     requireRealBilling: profile === "go",
     requireLegalComplete: profile === "go",
-    requireAdmissionOpen: profile === "go"
+    requireAdmissionOpen: profile === "go",
+    ignoreBacklogPressure: profile === "rollback"
   };
 
   const ready = await fetchReady(appUrl, expectedSha);

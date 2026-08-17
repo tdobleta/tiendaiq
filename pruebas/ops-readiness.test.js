@@ -126,6 +126,24 @@ test("evalua /ops/status con release, admission control y cola agregada", () => 
   }, SHA, thresholds).ok, false);
   assert.equal(evaluateOpsStatus({
     ...opsStatus,
+    totals: { ...opsStatus.totals, queued: 1000, oldestQueuedSeconds: 601 },
+    inbox: { ...opsStatus.inbox, received: 1000, oldestReceivedSeconds: 601 }
+  }, SHA, thresholds, { ignoreBacklogPressure: true }).ok, true);
+  assert.equal(evaluateOpsStatus({
+    ...opsStatus,
+    totals: { ...opsStatus.totals, oldestQueuedSeconds: 601 },
+    worker: { ...opsStatus.worker, release: "0".repeat(40) }
+  }, SHA, thresholds, { ignoreBacklogPressure: true }).ok, false);
+  assert.equal(evaluateOpsStatus({
+    ...opsStatus,
+    inbox: { ...opsStatus.inbox, failed: 1 }
+  }, SHA, thresholds, { ignoreBacklogPressure: true }).ok, false);
+  assert.equal(evaluateOpsStatus({
+    ...opsStatus,
+    totals: { ...opsStatus.totals, staleRunning: 1 }
+  }, SHA, thresholds, { ignoreBacklogPressure: true }).ok, false);
+  assert.equal(evaluateOpsStatus({
+    ...opsStatus,
     totals: { ...opsStatus.totals, compensationPending: 1, oldestCompensationSeconds: 1 }
   }, SHA, thresholds).ok, false);
   assert.equal(evaluateOpsStatus({
@@ -257,8 +275,9 @@ test("parsea banderas booleanas de GO estricto", () => {
   assert.equal(booleanFlag(""), false);
 });
 
-test("el perfil de readiness separa preflight tecnico de certificacion GO", () => {
+test("el perfil de readiness separa preflight, GO y certificacion de rollback", () => {
   assert.equal(readinessProfile(""), "technical_preflight");
   assert.equal(readinessProfile("go"), "go");
-  assert.throws(() => readinessProfile("casi-go"), /technical_preflight o go/);
+  assert.equal(readinessProfile("rollback"), "rollback");
+  assert.throws(() => readinessProfile("casi-go"), /technical_preflight, go o rollback/);
 });
