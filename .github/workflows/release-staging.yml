@@ -56,6 +56,8 @@ jobs:
         env:
           ALLOW_ROLE_BOOTSTRAP: "1"
           MIGRATION_DATABASE_URL: ${{ secrets.STAGING_MIGRATION_DATABASE_URL }}
+          WEB_RUNTIME_LOGIN_PASSWORD: ${{ secrets.STAGING_WEB_RUNTIME_LOGIN_PASSWORD }}
+          WORKER_RUNTIME_LOGIN_PASSWORD: ${{ secrets.STAGING_WORKER_RUNTIME_LOGIN_PASSWORD }}
         run: node scripts/preparar-roles-runtime.js
 
       - name: Migrate staging with the owner credential

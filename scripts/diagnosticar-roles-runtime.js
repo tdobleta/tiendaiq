@@ -6,6 +6,8 @@ const { createPostgresPool } = require("../src/platform/postgres/create-pool");
 const INSPECTED_ROLES = [
   "tiendaiq_web",
   "tiendaiq_worker",
+  "tiendaiq_web_login",
+  "tiendaiq_worker_login",
   "tiendaiq_web_runtime",
   "tiendaiq_worker_runtime",
   "tiendaiq_worker_capability",
@@ -34,10 +36,13 @@ async function main() {
       [INSPECTED_ROLES]
     );
     const memberships = await client.query(
-      `SELECT member.rolname AS member, parent.rolname AS parent, membership.admin_option
+      `SELECT member.rolname AS member, parent.rolname AS parent,
+              grantor.rolname AS grantor, membership.admin_option,
+              membership.inherit_option, membership.set_option
        FROM pg_auth_members AS membership
        JOIN pg_roles AS member ON member.oid = membership.member
        JOIN pg_roles AS parent ON parent.oid = membership.roleid
+       JOIN pg_roles AS grantor ON grantor.oid = membership.grantor
        WHERE member.rolname = ANY($1::text[])
           OR parent.rolname = ANY($1::text[])
        ORDER BY member.rolname, parent.rolname`,

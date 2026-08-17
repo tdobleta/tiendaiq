@@ -3,11 +3,11 @@
 const { Pool } = require("pg");
 const { createPostgresPool } = require("../src/platform/postgres/create-pool");
 
-// Render owns the LOGIN credentials and can attach provider roles to them.
-// We therefore never alter them. They only transport the connection and enter
-// our NOLOGIN runtime roles through PostgreSQL's startup SET ROLE option.
-const WEB_LOGIN_ROLE = "tiendaiq_web";
-const WORKER_LOGIN_ROLE = "tiendaiq_worker";
+// Render-managed rotation credentials inherit a provider-owned parent role and
+// can recover its privileges with RESET ROLE. Runtime therefore uses logins we
+// own; Render only stores their connection URLs as service secrets.
+const WEB_LOGIN_ROLE = "tiendaiq_web_login";
+const WORKER_LOGIN_ROLE = "tiendaiq_worker_login";
 const WEB_RUNTIME_ROLE = "tiendaiq_web_runtime";
 const WORKER_RUNTIME_ROLE = "tiendaiq_worker_runtime";
 // Version the capability identity so provider-managed legacy grants can remain
@@ -16,9 +16,28 @@ const WORKER_CAPABILITY = "tiendaiq_worker_capability_v2";
 const LOGIN_ROLES = [WEB_LOGIN_ROLE, WORKER_LOGIN_ROLE];
 const RUNTIME_ROLES = [WEB_RUNTIME_ROLE, WORKER_RUNTIME_ROLE];
 const OWNED_ROLES = [...RUNTIME_ROLES, WORKER_CAPABILITY];
+const CONTROLLED_ROLES = [...LOGIN_ROLES, ...OWNED_ROLES];
+const MINIMUM_PASSWORD_LENGTH = 32;
 
 function quoteIdentifier(value) {
   return `"${String(value).replaceAll('"', '""')}"`;
+}
+
+function quoteLiteral(value) {
+  return `'${String(value).replaceAll("'", "''")}'`;
+}
+
+function runtimePasswords(env = process.env) {
+  const passwords = new Map([
+    [WEB_LOGIN_ROLE, env.WEB_RUNTIME_LOGIN_PASSWORD],
+    [WORKER_LOGIN_ROLE, env.WORKER_RUNTIME_LOGIN_PASSWORD]
+  ]);
+  for (const [role, password] of passwords) {
+    if (!password || password.length < MINIMUM_PASSWORD_LENGTH || /[\r\n\0]/.test(password)) {
+      throw new Error(`Falta una contrasena segura de ${MINIMUM_PASSWORD_LENGTH}+ caracteres para ${role}`);
+    }
+  }
+  return passwords;
 }
 
 async function revokeMembership(client, { parent, member, grantor }) {
@@ -50,21 +69,32 @@ async function ensureRuntimeRole(client, role) {
   }
 }
 
+async function ensureLoginRole(client, role, password) {
+  const existing = await client.query("SELECT 1 FROM pg_roles WHERE rolname = $1", [role]);
+  if (!existing.rowCount) {
+    await client.query(
+      `CREATE ROLE ${quoteIdentifier(role)} LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE ` +
+      `NOINHERIT NOBYPASSRLS NOREPLICATION PASSWORD ${quoteLiteral(password)}`
+    );
+    return;
+  }
+  await client.query(
+    `ALTER ROLE ${quoteIdentifier(role)} WITH LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE ` +
+    `NOINHERIT NOBYPASSRLS NOREPLICATION PASSWORD ${quoteLiteral(password)}`
+  );
+}
+
 async function main() {
   if (process.env.ALLOW_ROLE_BOOTSTRAP !== "1") {
     throw new Error("Defini ALLOW_ROLE_BOOTSTRAP=1 para configurar roles de runtime");
   }
   const databaseUrl = process.env.MIGRATION_DATABASE_URL;
   if (!databaseUrl) throw new Error("Falta MIGRATION_DATABASE_URL");
+  const passwords = runtimePasswords();
 
   const pool = createPostgresPool({ databaseUrl, caCertificate: process.env.PG_CA_CERT, Pool });
   const client = await pool.connect();
   try {
-    const logins = await client.query("SELECT rolname FROM pg_roles WHERE rolname = ANY($1::text[])", [LOGIN_ROLES]);
-    const existing = new Set(logins.rows.map((row) => row.rolname));
-    const missing = LOGIN_ROLES.filter((role) => !existing.has(role));
-    if (missing.length) throw new Error(`Crea primero estas credenciales en Render: ${missing.join(", ")}`);
-
     await client.query("BEGIN");
 
     const bootstrapIdentity = await client.query("SELECT current_user AS role");
@@ -72,6 +102,7 @@ async function main() {
 
     for (const role of RUNTIME_ROLES) await ensureRuntimeRole(client, role);
     await ensureRuntimeRole(client, WORKER_CAPABILITY);
+    for (const role of LOGIN_ROLES) await ensureLoginRole(client, role, passwords.get(role));
 
     const expectedPaths = new Set([
       `${WEB_LOGIN_ROLE}->${WEB_RUNTIME_ROLE}`,
@@ -79,42 +110,25 @@ async function main() {
       `${WORKER_RUNTIME_ROLE}->${WORKER_CAPABILITY}`
     ]);
     const existingPaths = await client.query(
-      `SELECT member.rolname AS member, parent.rolname AS parent, grantor.rolname AS grantor
-       FROM pg_auth_members AS membership
-       JOIN pg_roles AS member ON member.oid = membership.member
-       JOIN pg_roles AS parent ON parent.oid = membership.roleid
-       JOIN pg_roles AS grantor ON grantor.oid = membership.grantor
-       WHERE member.rolname = ANY($1::text[])`,
-      [OWNED_ROLES]
-    );
-    for (const { member, parent, grantor } of existingPaths.rows) {
-      if (!expectedPaths.has(`${member}->${parent}`)) {
-        await revokeMembership(client, { parent, member, grantor });
-      }
-    }
-
-    // PostgreSQL 16+ grants a non-superuser role creator an administrative
-    // membership in every role it creates. Render records that edge as granted
-    // by its bootstrap `postgres` role, which our migrator cannot revoke. The
-    // exact ADMIN-only edge is harmless for runtime: it cannot be inherited or
-    // entered with SET ROLE. Every other capability member is still removed.
-    const unexpectedCapabilityMembers = await client.query(
       `SELECT member.rolname AS member, parent.rolname AS parent, grantor.rolname AS grantor,
               membership.admin_option, membership.inherit_option, membership.set_option
        FROM pg_auth_members AS membership
        JOIN pg_roles AS member ON member.oid = membership.member
        JOIN pg_roles AS parent ON parent.oid = membership.roleid
        JOIN pg_roles AS grantor ON grantor.oid = membership.grantor
-       WHERE parent.rolname = $1 AND member.rolname <> $2`,
-      [WORKER_CAPABILITY, WORKER_RUNTIME_ROLE]
+       WHERE member.rolname = ANY($1::text[]) OR parent.rolname = ANY($1::text[])`,
+      [CONTROLLED_ROLES]
     );
-    for (const edge of unexpectedCapabilityMembers.rows) {
+    // PostgreSQL 16+ gives a non-superuser role creator an ADMIN-only edge to
+    // each role it creates. Render records it under its bootstrap role. It is
+    // harmless only when both INHERIT and SET are false; every other edge that
+    // touches a login or authorization role we own must match our exact graph.
+    for (const edge of existingPaths.rows) {
+      if (expectedPaths.has(`${edge.member}->${edge.parent}`)) continue;
       if (isBootstrapAdministrationEdge(edge, bootstrapRole)) continue;
       await revokeMembership(client, edge);
     }
 
-    // Render's LOGIN roles use INHERIT. Per-membership inheritance must be
-    // disabled so RESET ROLE cannot recover application DML privileges.
     await client.query(
       `GRANT ${quoteIdentifier(WEB_RUNTIME_ROLE)} TO ${quoteIdentifier(WEB_LOGIN_ROLE)} WITH INHERIT FALSE, SET TRUE`
     );
@@ -141,6 +155,20 @@ async function main() {
     );
     if (invalid) throw new Error(`Privilegios invalidos para ${invalid.rolname}`);
 
+    const verifiedLogins = await client.query(
+      `SELECT rolname, rolcanlogin, rolsuper, rolbypassrls, rolinherit,
+              rolcreatedb, rolcreaterole, rolreplication
+       FROM pg_roles WHERE rolname = ANY($1::text[]) ORDER BY rolname`,
+      [LOGIN_ROLES]
+    );
+    const invalidLogin = verifiedLogins.rows.find((row) =>
+      !row.rolcanlogin || row.rolsuper || row.rolbypassrls || row.rolinherit ||
+      row.rolcreatedb || row.rolcreaterole || row.rolreplication
+    );
+    if (verifiedLogins.rowCount !== LOGIN_ROLES.length || invalidLogin) {
+      throw new Error(`Atributos inseguros para ${invalidLogin?.rolname || "un login runtime"}`);
+    }
+
     const paths = await client.query(
       `SELECT member.rolname AS member, parent.rolname AS parent,
               membership.admin_option, membership.inherit_option, membership.set_option
@@ -148,11 +176,9 @@ async function main() {
        JOIN pg_roles AS member ON member.oid = membership.member
        JOIN pg_roles AS parent ON parent.oid = membership.roleid
        WHERE member.rolname = ANY($1::text[])
-          OR parent.rolname = $2
-          OR (member.rolname = $3 AND parent.rolname = $4)
-          OR (member.rolname = $5 AND parent.rolname = $6)
+          OR parent.rolname = ANY($1::text[])
        ORDER BY member.rolname, parent.rolname`,
-      [OWNED_ROLES, WORKER_CAPABILITY, WEB_LOGIN_ROLE, WEB_RUNTIME_ROLE, WORKER_LOGIN_ROLE, WORKER_RUNTIME_ROLE]
+      [CONTROLLED_ROLES]
     );
     const runtimePaths = paths.rows.filter((edge) =>
       !isBootstrapAdministrationEdge(edge, bootstrapRole)
@@ -171,12 +197,11 @@ async function main() {
       (member === WORKER_LOGIN_ROLE && parent === WORKER_RUNTIME_ROLE)
     );
     if (loginEdges.some((edge) => edge.inherit_option !== false || edge.set_option !== true)) {
-      throw new Error("Los logins de Render deben poder SET ROLE sin heredar privilegios runtime");
+      throw new Error("Los logins runtime deben poder SET ROLE sin heredar privilegios runtime");
     }
 
-    // A managed credential can also inherit a provider-owned parent role. A
-    // correct login->runtime edge is insufficient: prove that the session
-    // login has no effective application DML after RESET ROLE.
+    // A correct login->runtime edge is insufficient: prove that RESET ROLE
+    // leaves the transport login without application authority.
     const loginIsolation = await client.query(
       `SELECT login.rolname,
               pg_has_role(login.rolname, $2, 'USAGE') AS effective_worker_capability,
@@ -208,7 +233,7 @@ async function main() {
     );
     if (unsafeLogin) {
       throw new Error(
-        `El login gestionado ${unsafeLogin.rolname} conserva privilegios efectivos despues de RESET ROLE`
+        `El login runtime ${unsafeLogin.rolname} conserva privilegios efectivos despues de RESET ROLE`
       );
     }
     await client.query("COMMIT");
@@ -220,7 +245,7 @@ async function main() {
     await pool.end();
   }
 
-  console.log("  roles runtime listos: Render conecta y la app ejecuta con roles aislados");
+  console.log("  logins y roles runtime propios listos: RESET ROLE no recupera privilegios de aplicacion");
 }
 
 if (require.main === module) {
@@ -230,4 +255,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { isBootstrapAdministrationEdge };
+module.exports = { isBootstrapAdministrationEdge, runtimePasswords };

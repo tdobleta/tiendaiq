@@ -435,14 +435,19 @@ test("el bootstrap de roles usa la misma politica TLS que las migraciones", () =
   assert.doesNotMatch(source, /ssl:\s*process\.env\.PG_CA_CERT/);
 });
 
-test("el bootstrap crea roles propios y no intenta modificar credenciales gestionadas por Render", () => {
+test("el bootstrap crea logins y roles propios sin depender de credenciales gestionadas por Render", () => {
   const source = fs.readFileSync(path.join(__dirname, "..", "scripts", "preparar-roles-runtime.js"), "utf8");
 
-  assert.match(source, /const WEB_LOGIN_ROLE = "tiendaiq_web"/);
+  assert.match(source, /const WEB_LOGIN_ROLE = "tiendaiq_web_login"/);
+  assert.match(source, /const WORKER_LOGIN_ROLE = "tiendaiq_worker_login"/);
   assert.match(source, /const WEB_RUNTIME_ROLE = "tiendaiq_web_runtime"/);
   assert.match(source, /const WORKER_RUNTIME_ROLE = "tiendaiq_worker_runtime"/);
   assert.match(source, /const WORKER_CAPABILITY = "tiendaiq_worker_capability_v2"/);
   assert.match(source, /CREATE ROLE \$\{quoteIdentifier\(role\)\} NOLOGIN/);
+  assert.match(source, /CREATE ROLE \$\{quoteIdentifier\(role\)\} LOGIN/);
+  assert.match(source, /ALTER ROLE \$\{quoteIdentifier\(role\)\} WITH LOGIN/);
+  assert.match(source, /WEB_RUNTIME_LOGIN_PASSWORD/);
+  assert.match(source, /WORKER_RUNTIME_LOGIN_PASSWORD/);
   assert.match(source, /GRANT \$\{quoteIdentifier\(WEB_RUNTIME_ROLE\)\} TO \$\{quoteIdentifier\(WEB_LOGIN_ROLE\)\}/);
   assert.match(source, /GRANT \$\{quoteIdentifier\(WORKER_RUNTIME_ROLE\)\} TO \$\{quoteIdentifier\(WORKER_LOGIN_ROLE\)\}/);
   assert.match(source, /GRANT \$\{quoteIdentifier\(WORKER_CAPABILITY\)\} TO \$\{quoteIdentifier\(WORKER_RUNTIME_ROLE\)\}/);
@@ -455,12 +460,11 @@ test("el bootstrap crea roles propios y no intenta modificar credenciales gestio
   assert.match(source, /client\.query\("COMMIT"\)/);
   assert.match(source, /client\.query\("ROLLBACK"\)/);
   assert.match(source, /member\.rolname = ANY\(\$1::text\[\]\)/);
-  assert.match(source, /\[OWNED_ROLES\]/);
-  assert.doesNotMatch(source, /const controlledRoles = \[\.\.\.OWNED_ROLES, \.\.\.LOGIN_ROLES\]/);
+  assert.match(source, /const CONTROLLED_ROLES = \[\.\.\.LOGIN_ROLES, \.\.\.OWNED_ROLES\]/);
+  assert.match(source, /\[CONTROLLED_ROLES\]/);
   assert.match(source, /REVOKE \$\{quoteIdentifier\(parent\)\} FROM \$\{quoteIdentifier\(member\)\}/);
   assert.match(source, /membership\.grantor/);
   assert.match(source, /GRANTED BY \$\{quoteIdentifier\(grantor\)\}/);
-  assert.match(source, /parent\.rolname = \$1 AND member\.rolname <> \$2/);
   assert.match(source, /SELECT current_user AS role/);
   assert.match(source, /membership\.admin_option, membership\.inherit_option, membership\.set_option/);
   assert.match(source, /isBootstrapAdministrationEdge\(edge, bootstrapRole\)/);
@@ -471,7 +475,25 @@ test("el bootstrap crea roles propios y no intenta modificar credenciales gestio
   assert.match(source, /has_table_privilege\(/);
   assert.match(source, /has_schema_privilege\(/);
   assert.match(source, /conserva privilegios efectivos despues de RESET ROLE/);
-  assert.doesNotMatch(source, /ALTER ROLE/);
+  assert.match(source, /El login runtime \$\{unsafeLogin\.rolname\}/);
+});
+
+test("las contrasenas de logins runtime son obligatorias y no aceptan valores debiles", () => {
+  const { runtimePasswords } = require("../scripts/preparar-roles-runtime");
+  assert.throws(() => runtimePasswords({}), /32\+ caracteres/);
+  assert.throws(
+    () => runtimePasswords({
+      WEB_RUNTIME_LOGIN_PASSWORD: "corta",
+      WORKER_RUNTIME_LOGIN_PASSWORD: "w".repeat(40)
+    }),
+    /tiendaiq_web_login/
+  );
+  const passwords = runtimePasswords({
+    WEB_RUNTIME_LOGIN_PASSWORD: "v".repeat(40),
+    WORKER_RUNTIME_LOGIN_PASSWORD: "w".repeat(40)
+  });
+  assert.equal(passwords.get("tiendaiq_web_login"), "v".repeat(40));
+  assert.equal(passwords.get("tiendaiq_worker_login"), "w".repeat(40));
 });
 
 test("el bootstrap solo tolera la arista administrativa no efectiva creada por PostgreSQL", () => {
@@ -497,10 +519,27 @@ test("CI reproduce y reconcilia grants administrativos de PostgreSQL antes de mi
   const workflow = fs.readFileSync(path.join(__dirname, "..", ".github", "workflows", "verificar.yml"), "utf8");
 
   assert.match(fixture, /WITH ADMIN TRUE, INHERIT FALSE, SET FALSE/);
+  assert.match(fixture, /ALTER ROLE \$\{quoteIdentifier\(EXPECTED_ROLES\.migration\)\} CREATEROLE/);
   assert.match(fixture, /EXPECTED_ROLES\.migration/);
   assert.match(workflow, /Reconciliar roles runtime con grants administrados por PostgreSQL/);
   assert.match(workflow, /ALLOW_ROLE_BOOTSTRAP: "1"/);
+  assert.match(workflow, /WEB_RUNTIME_LOGIN_PASSWORD/);
+  assert.match(workflow, /WORKER_RUNTIME_LOGIN_PASSWORD/);
   assert.match(workflow, /node scripts\/preparar-roles-runtime\.js/);
+});
+
+test("la rotacion de logins de staging exige entorno protegido y commit inmutable", () => {
+  const workflow = fs.readFileSync(
+    path.join(__dirname, "..", ".github", "workflows", "rotate-runtime-logins-staging.yml"),
+    "utf8"
+  );
+  assert.match(workflow, /environment: staging/);
+  assert.match(workflow, /ROTATE_RUNTIME_LOGINS_STAGING/);
+  assert.match(workflow, /git rev-parse origin\/main/);
+  assert.match(workflow, /STAGING_MIGRATION_DATABASE_URL/);
+  assert.match(workflow, /STAGING_WEB_RUNTIME_LOGIN_PASSWORD/);
+  assert.match(workflow, /STAGING_WORKER_RUNTIME_LOGIN_PASSWORD/);
+  assert.doesNotMatch(workflow, /RENDER_STAGING_.*DEPLOY_HOOK/);
 });
 
 test("readiness descubre tablas tenant-owned nuevas ademas del inventario minimo", () => {

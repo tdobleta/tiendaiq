@@ -29,8 +29,8 @@ elimina todas sus filas al finalizar:
 
 ```powershell
 $env:ALLOW_QUEUE_LOAD_TEST = "1"
-$env:TEST_DATABASE_URL = "postgresql://tiendaiq_web@127.0.0.1:55433/tiendaiq_staging?sslmode=disable"
-$env:TEST_WORKER_DATABASE_URL = "postgresql://tiendaiq_worker@127.0.0.1:55433/tiendaiq_staging?sslmode=disable"
+$env:TEST_DATABASE_URL = "postgresql://tiendaiq_web_login@127.0.0.1:55433/tiendaiq_staging?sslmode=disable"
+$env:TEST_WORKER_DATABASE_URL = "postgresql://tiendaiq_worker_login@127.0.0.1:55433/tiendaiq_staging?sslmode=disable"
 npm run carga:cola
 ```
 
@@ -50,8 +50,8 @@ commit exacto desde el que fue invocado. Requiere dos secretos adicionales en
 ese entorno de GitHub:
 
 ```text
-STAGING_WEB_DATABASE_URL=<URL externa de la credencial tiendaiq_web>
-STAGING_WORKER_DATABASE_URL=<URL externa de la credencial tiendaiq_worker>
+STAGING_WEB_DATABASE_URL=<URL externa del login propio tiendaiq_web_login>
+STAGING_WORKER_DATABASE_URL=<URL externa del login propio tiendaiq_worker_login>
 ```
 
 Estas URLs no se escriben en el repositorio, no se pasan al runtime contrario y

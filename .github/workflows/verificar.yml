@@ -5,7 +5,7 @@
 # no arranca llega a las tiendas de los merchants y el rollback es a mano.
 #
 # Ejecuta sintaxis, coherencia, unidad, humo y aislamiento real sobre una base
-# PostgreSQL 17 desechable antes de permitir que un cambio llegue a producción.
+# PostgreSQL 16 desechable antes de permitir que un cambio llegue a producción.
 # ============================================================
 
 name: verificar
@@ -51,30 +51,32 @@ jobs:
           ALLOW_DB_BOOTSTRAP: "1"
           TEST_DATABASE_ADMIN_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable
           TEST_MIGRATION_DATABASE_URL: postgresql://tiendaiq_migrator:migrator_test@127.0.0.1:5432/tiendaiq_staging?sslmode=disable
-          TEST_DATABASE_URL: postgresql://tiendaiq_web:web_test@127.0.0.1:5432/tiendaiq_staging?sslmode=disable
-          TEST_WORKER_DATABASE_URL: postgresql://tiendaiq_worker:worker_test@127.0.0.1:5432/tiendaiq_staging?sslmode=disable
+          TEST_DATABASE_URL: postgresql://tiendaiq_web_login:web_runtime_password_for_ci_123456@127.0.0.1:5432/tiendaiq_staging?sslmode=disable
+          TEST_WORKER_DATABASE_URL: postgresql://tiendaiq_worker_login:worker_runtime_password_for_ci_1234@127.0.0.1:5432/tiendaiq_staging?sslmode=disable
         run: node scripts/preparar-db-integracion.js
 
       - name: Reconciliar roles runtime con grants administrados por PostgreSQL
         env:
           ALLOW_ROLE_BOOTSTRAP: "1"
           MIGRATION_DATABASE_URL: postgresql://tiendaiq_migrator:migrator_test@127.0.0.1:5432/tiendaiq_staging?sslmode=disable
+          WEB_RUNTIME_LOGIN_PASSWORD: web_runtime_password_for_ci_123456
+          WORKER_RUNTIME_LOGIN_PASSWORD: worker_runtime_password_for_ci_1234
         run: node scripts/preparar-roles-runtime.js
 
       - name: Migraciones idempotentes y aislamiento RLS real
         env:
           ALLOW_RLS_TEST: "1"
           MIGRATION_DATABASE_URL: postgresql://tiendaiq_migrator:migrator_test@127.0.0.1:5432/tiendaiq_staging?sslmode=disable
-          DATABASE_URL: postgresql://tiendaiq_web:web_test@127.0.0.1:5432/tiendaiq_staging?sslmode=disable
-          TEST_DATABASE_URL: postgresql://tiendaiq_web:web_test@127.0.0.1:5432/tiendaiq_staging?sslmode=disable
-          TEST_WORKER_DATABASE_URL: postgresql://tiendaiq_worker:worker_test@127.0.0.1:5432/tiendaiq_staging?sslmode=disable
+          DATABASE_URL: postgresql://tiendaiq_web_login:web_runtime_password_for_ci_123456@127.0.0.1:5432/tiendaiq_staging?sslmode=disable
+          TEST_DATABASE_URL: postgresql://tiendaiq_web_login:web_runtime_password_for_ci_123456@127.0.0.1:5432/tiendaiq_staging?sslmode=disable
+          TEST_WORKER_DATABASE_URL: postgresql://tiendaiq_worker_login:worker_runtime_password_for_ci_1234@127.0.0.1:5432/tiendaiq_staging?sslmode=disable
         run: npm run db:test:integration
 
       - name: Cola durable y limpieza sobre PostgreSQL real
         env:
           ALLOW_QUEUE_LOAD_TEST: "1"
-          TEST_DATABASE_URL: postgresql://tiendaiq_web:web_test@127.0.0.1:5432/tiendaiq_staging?sslmode=disable
-          TEST_WORKER_DATABASE_URL: postgresql://tiendaiq_worker:worker_test@127.0.0.1:5432/tiendaiq_staging?sslmode=disable
+          TEST_DATABASE_URL: postgresql://tiendaiq_web_login:web_runtime_password_for_ci_123456@127.0.0.1:5432/tiendaiq_staging?sslmode=disable
+          TEST_WORKER_DATABASE_URL: postgresql://tiendaiq_worker_login:worker_runtime_password_for_ci_1234@127.0.0.1:5432/tiendaiq_staging?sslmode=disable
           LOAD_TENANTS: "100"
           LOAD_JOBS: "100"
           LOAD_SETUP_CONCURRENCY: "20"

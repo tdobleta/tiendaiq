@@ -1,0 +1,58 @@
+name: Rotate staging runtime logins
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: SHA completo revisado y presente en main
+        required: true
+        type: string
+      confirmation:
+        description: Escribir ROTATE_RUNTIME_LOGINS_STAGING
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tiendaiq-staging-runtime-login-rotation
+  cancel-in-progress: false
+
+jobs:
+  rotate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: staging
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.release_sha }}
+          fetch-depth: 0
+
+      - name: Validate the immutable reviewed rotation commit
+        shell: bash
+        env:
+          REQUESTED_SHA: ${{ inputs.release_sha }}
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          [[ "$REQUESTED_SHA" =~ ^[a-f0-9]{40}$ ]] || { echo "release_sha debe ser un SHA completo" >&2; exit 1; }
+          [[ "$CONFIRMATION" == "ROTATE_RUNTIME_LOGINS_STAGING" ]] || { echo "Confirmacion invalida" >&2; exit 1; }
+          [[ "$(git rev-parse HEAD)" == "$REQUESTED_SHA" ]] || { echo "El checkout no coincide con el SHA solicitado" >&2; exit 1; }
+          git fetch origin main --depth=1
+          [[ "$(git rev-parse origin/main)" == "$REQUESTED_SHA" ]] || { echo "El SHA debe ser el HEAD actual de main" >&2; exit 1; }
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "20"
+
+      - run: npm ci --no-audit --no-fund
+
+      - name: Create or rotate isolated PostgreSQL runtime logins
+        env:
+          ALLOW_ROLE_BOOTSTRAP: "1"
+          MIGRATION_DATABASE_URL: ${{ secrets.STAGING_MIGRATION_DATABASE_URL }}
+          WEB_RUNTIME_LOGIN_PASSWORD: ${{ secrets.STAGING_WEB_RUNTIME_LOGIN_PASSWORD }}
+          WORKER_RUNTIME_LOGIN_PASSWORD: ${{ secrets.STAGING_WORKER_RUNTIME_LOGIN_PASSWORD }}
+        run: node scripts/preparar-roles-runtime.js
