@@ -19,6 +19,7 @@
 // Idempotente: correrlo de nuevo pisa el metafield y reasigna el suffix.
 // ============================================================
 
+const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
 const { gql, sesionDeEnv } = require("./shopify");
@@ -121,6 +122,8 @@ async function publicarPagina(data, sesion, log = () => {}, { signal, onAvatarUp
   }
 
   // --- 1. metafield con el Producto Universal ---
+  const serializedData = JSON.stringify(dataTienda);
+  const publishedHash = crypto.createHash("sha256").update(serializedData).digest("hex");
   const r1 = await gql(
     M_METAFIELD,
     {
@@ -130,7 +133,7 @@ async function publicarPagina(data, sesion, log = () => {}, { signal, onAvatarUp
           namespace: "tiendaiq",
           key: "pagina",
           type: "json",
-          value: JSON.stringify(dataTienda)
+          value: serializedData
         }
       ]
     },
@@ -155,7 +158,10 @@ async function publicarPagina(data, sesion, log = () => {}, { signal, onAvatarUp
   const p = r2.productUpdate.product;
   log(`  plantilla  · templateSuffix = "${p.templateSuffix}"`);
 
-  return { url: p.onlineStoreUrl || `https://${sesion.tienda}/products/${p.handle}` };
+  return {
+    url: p.onlineStoreUrl || `https://${sesion.tienda}/products/${p.handle}`,
+    publishedHash
+  };
 }
 
 // Revierte un producto a su página NATIVA: le saca el templateSuffix "tiendaiq"

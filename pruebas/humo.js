@@ -61,6 +61,11 @@ const CASOS = [
     espera: 401
   },
   {
+    nombre: "/ops/shopify-certification sin bearer rechaza",
+    ruta: "/ops/shopify-certification",
+    espera: 401
+  },
+  {
     nombre: "/api/plan sin pase de sesión es 401",
     ruta: "/api/plan",
     espera: 401
@@ -124,6 +129,10 @@ async function main() {
       // El callback debe rechazar una firma inválida, no fallar por falta de
       // configuración Shopify en el proceso aislado de esta prueba.
       OPS_STATUS_TOKEN: OPS_STATUS_TOKEN_HUMO,
+      SHOPIFY_CERTIFICATION_ENABLED: "1",
+      SHOPIFY_CERTIFICATION_SHOP: "prueba-humo.myshopify.com",
+      SHOPIFY_CERTIFICATION_PAGE_ID: "pagina-humo",
+      PLAN_TEST: "1",
       SHOPIFY_CLIENT_SECRET: "secreto-humo"
     },
     stdio: ["ignore", "pipe", "pipe"]

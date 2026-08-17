@@ -18,6 +18,7 @@ function mapJob(row) {
     lockedAt: row.locked_at,
     leaseExpiresAt: row.lease_expires_at || null,
     lockedBy: row.locked_by,
+    workerReleaseSha: row.worker_release_sha || null,
     lastError: row.last_error,
     result: row.result || null,
     idempotencyKey: row.idempotency_key,
@@ -117,8 +118,12 @@ function createJobRepository(pool) {
       return mapJob(result.rows[0]);
     },
 
-    async claim(workerId, leaseSeconds = 300, jobTypes = null) {
+    async claim(workerId, releaseSha, leaseSeconds = 300, jobTypes = null) {
       if (!workerId) throw new TypeError("El worker requiere identidad");
+      const normalizedReleaseSha = String(releaseSha || "").trim().toLowerCase();
+      if (!/^[a-f0-9]{40}$/.test(normalizedReleaseSha)) {
+        throw new TypeError("El claim requiere el SHA completo del worker");
+      }
       const allowedTypes = Array.isArray(jobTypes) && jobTypes.length ? jobTypes.map(String) : null;
       const client = await pool.connect();
       try {
@@ -128,7 +133,7 @@ function createJobRepository(pool) {
           `WITH candidate AS (
              SELECT id
              FROM control_plane.jobs
-             WHERE ($3::text[] IS NULL OR type = ANY($3::text[]))
+             WHERE ($4::text[] IS NULL OR type = ANY($4::text[]))
                AND ((status = 'queued' AND run_after <= now())
                  OR (status = 'running' AND coalesce(
                    lease_expires_at,
@@ -142,11 +147,11 @@ function createJobRepository(pool) {
            UPDATE control_plane.jobs j
            SET status = 'running', attempts = attempts + 1,
                locked_at = now(), lease_expires_at = now() + ($2::int * interval '1 second'),
-               locked_by = $1, updated_at = now()
+               locked_by = $1, worker_release_sha = $3, updated_at = now()
            FROM candidate
            WHERE j.id = candidate.id
            RETURNING j.*`,
-          [workerId, Math.max(30, Number(leaseSeconds) || 300), allowedTypes]
+          [workerId, Math.max(30, Number(leaseSeconds) || 300), normalizedReleaseSha, allowedTypes]
         );
         await client.query("COMMIT");
         const job = mapJob(result.rows[0]);
@@ -239,8 +244,9 @@ function createJobRepository(pool) {
              locked_at = NULL, lease_expires_at = NULL, locked_by = NULL,
              completed_at = now(), updated_at = now()
          WHERE tenant_id = $1 AND id = $2 AND status = 'running' AND locked_by = $4
+           AND worker_release_sha = $5
          RETURNING *`,
-        [tenant.tenantId, job.id, result, job.lockedBy]
+        [tenant.tenantId, job.id, result, job.lockedBy, job.workerReleaseSha]
       ));
       return mapJob(updated.rows[0]);
     },
@@ -251,8 +257,9 @@ function createJobRepository(pool) {
         `UPDATE control_plane.jobs
          SET locked_at = now(), lease_expires_at = now() + ($4::int * interval '1 second'), updated_at = now()
          WHERE tenant_id = $1 AND id = $2 AND status = 'running' AND locked_by = $3
+           AND worker_release_sha = $5
          RETURNING *`,
-        [tenant.tenantId, job.id, job.lockedBy, Math.max(30, Number(leaseSeconds) || 300)]
+        [tenant.tenantId, job.id, job.lockedBy, Math.max(30, Number(leaseSeconds) || 300), job.workerReleaseSha]
       ));
       return mapJob(updated.rows[0]);
     },
@@ -265,6 +272,7 @@ function createJobRepository(pool) {
          SET status = $3,
              run_after = CASE WHEN $3 = 'queued' THEN now() + ($4::int * interval '1 second') ELSE run_after END,
              last_error = $5, locked_at = NULL, lease_expires_at = NULL, locked_by = NULL,
+             worker_release_sha = CASE WHEN $3 = 'queued' THEN NULL ELSE worker_release_sha END,
              completed_at = CASE WHEN $3 = 'failed' THEN now() ELSE NULL END,
              compensation_status = CASE
                WHEN $3 = 'failed' AND $7::boolean THEN 'pending'
@@ -280,8 +288,9 @@ function createJobRepository(pool) {
              END,
              updated_at = now()
          WHERE tenant_id = $1 AND id = $2 AND status = 'running' AND locked_by = $6
+           AND worker_release_sha = $8
          RETURNING *`,
-        [tenant.tenantId, job.id, terminal ? "failed" : "queued", Math.max(1, retryDelaySeconds), String(error?.message || error).slice(0, 1000), job.lockedBy, needsCompensation === true]
+        [tenant.tenantId, job.id, terminal ? "failed" : "queued", Math.max(1, retryDelaySeconds), String(error?.message || error).slice(0, 1000), job.lockedBy, needsCompensation === true, job.workerReleaseSha]
       ));
       return mapJob(updated.rows[0]);
     },

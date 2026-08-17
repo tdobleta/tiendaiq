@@ -591,6 +591,9 @@ test("el fixture y los probes de PostgreSQL usan los roles runtime efectivos", (
     assert.match(source, /runtimeRole: WEB_RUNTIME_ROLE/);
     assert.match(source, /runtimeRole: WORKER_RUNTIME_ROLE/);
   }
+  assert.match(rlsProbe, /claim\("rls-worker", TEST_RELEASE_SHA, 30\)/);
+  assert.match(capacityProbe, /normalizeReleaseSha\(process\.env\.EXPECTED_RELEASE_SHA\)/);
+  assert.match(capacityProbe, /workerJobs\.claim\([\s\S]{0,180}releaseSha,[\s\S]{0,80}\["capacity-probe"\]/);
 });
 
 test("la migracion de roles gestionados mueve privilegios y capacidad al rol efectivo", () => {
@@ -623,6 +626,28 @@ test("la capacidad worker activa rota sin depender del grant legacy administrado
   assert.match(sql, /pg_has_role\(current_user, 'tiendaiq_worker_capability_v2', 'member'\)/);
   assert.doesNotMatch(sql, /pg_has_role\(current_user, 'tiendaiq_worker_capability', 'member'\)/);
   assert.doesNotMatch(sql, /\bREVOKE\b[\s\S]*tiendaiq_worker_capability\s+FROM\s+tiendaiq_staging_user/);
+});
+
+test("la evidencia terminal de certificacion exige un SHA no nulo", () => {
+  const sql = fs.readFileSync(
+    path.join(__dirname, "..", "db", "migrations", "0019_shopify_certification_release_evidence.sql"),
+    "utf8"
+  );
+
+  for (const [status, constraint] of [
+    ["succeeded", "jobs_succeeded_requires_release_sha"],
+    ["processed", "inbox_processed_requires_release_sha"],
+    ["completed", "privacy_completed_requires_release_sha"]
+  ]) {
+    assert.match(sql, new RegExp(`${constraint}[\\s\\S]{0,260}status <> '${status}'[\\s\\S]{0,160}worker_release_sha IS NOT NULL`));
+  }
+});
+
+test("el worker embebido local usa una identidad de release sintetica explicita", () => {
+  const source = fs.readFileSync(path.join(__dirname, "..", "server.js"), "utf8");
+
+  assert.match(source, /const localReleaseSha = "0"\.repeat\(40\)/);
+  assert.match(source, /createRuntime\(\{[\s\S]{0,160}releaseSha: localReleaseSha/);
 });
 
 test("el diagnostico de roles solo inspecciona privilegios y membresias", () => {

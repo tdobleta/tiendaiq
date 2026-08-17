@@ -29,6 +29,7 @@ test("el worker no crea ni inicia runners antes de aprobar el preflight", async 
     crearRuntime(options) {
       events.push("created");
       assert.equal(options.generationConcurrency, 8);
+      assert.equal(options.releaseSha, SHA);
       return { start() { events.push("started"); }, async stop() {} };
     },
     setIntervalFn() { return { unref() {} }; }

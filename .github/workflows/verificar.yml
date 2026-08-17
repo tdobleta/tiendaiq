@@ -84,6 +84,7 @@ jobs:
           LOAD_FAKE_WORK_MS: "1"
           LOAD_MAX_DRAIN_SECONDS: "60"
           PG_POOL_MAX: "10"
+          EXPECTED_RELEASE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: npm run carga:cola
 
       - name: Pruebas de unidad y dominio

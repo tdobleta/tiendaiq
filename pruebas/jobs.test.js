@@ -5,13 +5,19 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const { TenantContext } = require("../src/tenancy/tenant-context");
-const { LeaseLostError, createJobRunner, isNonRetryable, retryDelaySeconds } = require("../src/jobs/job-runner");
+const { LeaseLostError, createJobRunner: createJobRunnerBase, isNonRetryable, retryDelaySeconds } = require("../src/jobs/job-runner");
 const { createCompensationRunner } = require("../src/jobs/compensation-runner");
 const { parseRecoveryRequest } = require("../scripts/reencolar-compensacion");
 const { boundedInteger } = require("../src/jobs/runtime");
 const { createPublishPageHandler } = require("../src/jobs/publish-page-handler");
 const { createUnpublishPageHandler } = require("../src/jobs/unpublish-page-handler");
 const { createJobRepository } = require("../src/platform/postgres/job-repository");
+
+const TEST_RELEASE_SHA = "a".repeat(40);
+
+function createJobRunner(options) {
+  return createJobRunnerBase({ releaseSha: TEST_RELEASE_SHA, ...options });
+}
 
 test("el runtime del worker forma parte del artefacto versionado", () => {
   const runtimePath = path.join(__dirname, "..", "src", "jobs", "runtime.js");
@@ -29,7 +35,20 @@ const job = (overrides = {}) => ({
   attempts: 1,
   maxAttempts: 3,
   lockedBy: "worker-1",
+  workerReleaseSha: TEST_RELEASE_SHA,
   ...overrides
+});
+
+test("el runner falla cerrado sin un SHA de release completo", () => {
+  const repository = { async claim() {}, async succeed() {}, async fail() {} };
+  assert.throws(
+    () => createJobRunnerBase({ workerId: "worker-1", repository, handlers: {} }),
+    /releaseSha completo/
+  );
+  assert.throws(
+    () => createJobRunnerBase({ workerId: "worker-1", releaseSha: "abc123", repository, handlers: {} }),
+    /releaseSha completo/
+  );
 });
 
 describe("JobRunner", () => {
@@ -51,7 +70,33 @@ describe("JobRunner", () => {
 
     assert.equal(await runner.processOnce(), true);
     assert.equal(calls[0].claimed.lockedBy, "worker-1");
-    assert.deepEqual(calls[0].result, { ok: true });
+    assert.deepEqual(calls[0].result, { ok: true, _execution: { releaseSha: TEST_RELEASE_SHA } });
+  });
+
+  test("liga el resultado durable al release SHA que ejecuto el worker", async () => {
+    const current = job();
+    let persisted;
+    const releaseSha = "a".repeat(40);
+    const runner = createJobRunner({
+      workerId: "worker-1",
+      releaseSha,
+      repository: {
+        async claim() { return current; },
+        async succeed(context, claimed, result) { persisted = result; return { ...claimed, status: "succeeded" }; },
+        async fail() { throw new Error("no debia fallar"); }
+      },
+      handlers: {
+        "test-job": {
+          async run(currentJob, execution) {
+            assert.equal(execution.releaseSha, releaseSha);
+            return { ok: true, _execution: { releaseSha: "b".repeat(40) } };
+          }
+        }
+      }
+    });
+
+    await runner.processOnce();
+    assert.deepEqual(persisted, { ok: true, _execution: { releaseSha } });
   });
 
   test("renueva el lease mientras un efecto externo sigue en curso", async () => {
@@ -312,11 +357,16 @@ describe("JobRunner", () => {
 
   test("filtra el tipo de job asignado al carril", async () => {
     let requestedTypes;
+    let requestedRelease;
     const runner = createJobRunner({
       workerId: "worker-generation-1",
       jobTypes: ["generate-page"],
       repository: {
-        async claim(workerId, leaseSeconds, jobTypes) { requestedTypes = jobTypes; return null; },
+        async claim(workerId, releaseSha, leaseSeconds, jobTypes) {
+          requestedRelease = releaseSha;
+          requestedTypes = jobTypes;
+          return null;
+        },
         async succeed() {},
         async fail() {}
       },
@@ -324,6 +374,7 @@ describe("JobRunner", () => {
     });
 
     assert.equal(await runner.processOnce(), false);
+    assert.equal(requestedRelease, TEST_RELEASE_SHA);
     assert.deepEqual(requestedTypes, ["generate-page"]);
   });
 
@@ -686,7 +737,9 @@ describe("PublishPageHandler", () => {
           return { page: saved.value };
         }
       },
-      async publish() { return { url: "https://jobs.myshopify.com/products/demo" }; },
+      async publish() {
+        return { url: "https://jobs.myshopify.com/products/demo", publishedHash: "b".repeat(64) };
+      },
       metrics(name, props) { metric = { name, props }; }
     });
 
@@ -696,6 +749,28 @@ describe("PublishPageHandler", () => {
     assert.equal(saved.value.active_job_id, null);
     assert.equal(saved.value.url_publica, result.url);
     assert.equal(metric.name, "pagina_publicada");
+  });
+
+  test("falla cerrado si el publicador no confirma el hash exacto enviado a Shopify", async () => {
+    let completions = 0;
+    const handler = createPublishPageHandler({
+      sessions: { async get() { return { tienda: tenant.tenantId, token: "token" }; } },
+      pages: {
+        async get() {
+          return { id: "42", estado: "publicando", active_job_id: "job-1", data: { fuente: {} } };
+        },
+        async checkpointAvatar() {},
+        async completePublication() { completions += 1; }
+      },
+      async publish() { return { url: "https://jobs.myshopify.com/products/demo" }; },
+      metrics() {}
+    });
+
+    await assert.rejects(
+      handler.run(job({ id: "job-1", type: "publish-page", payload: { pageId: "42" } })),
+      (error) => error.nonRetryable === true && /hash exacto/.test(error.message)
+    );
+    assert.equal(completions, 0);
   });
 
   test("conserva una edición que llega mientras Shopify está publicando", async () => {
@@ -715,7 +790,7 @@ describe("PublishPageHandler", () => {
       },
       async publish(data) {
         assert.equal(data.titulo, "Original", "el efecto remoto usa un snapshot estable");
-        return { url: "https://jobs.myshopify.com/products/demo" };
+        return { url: "https://jobs.myshopify.com/products/demo", publishedHash: "b".repeat(64) };
       },
       metrics() {}
     });
@@ -759,7 +834,7 @@ describe("PublishPageHandler", () => {
       },
       async publish(data) {
         data.facetas.hero.resena_destacada.avatar = "https://cdn.shopify.com/avatar.png";
-        return { url: "https://jobs.myshopify.com/products/demo" };
+        return { url: "https://jobs.myshopify.com/products/demo", publishedHash: "b".repeat(64) };
       },
       metrics() {}
     });
@@ -865,8 +940,9 @@ test("la migración de jobs declara idempotencia y recuperación de leases", () 
   assert.match(repository, /FOR UPDATE SKIP LOCKED/);
   assert.match(repository, /lease_expires_at = now\(\) \+ \(\$2::int \* interval '1 second'\)/);
   assert.match(repository, /locked_at \+ interval '1 hour',[\s\S]*'-infinity'::timestamptz/);
-  assert.match(repository, /locked_by = \$4/);
-  assert.match(repository, /locked_by = \$6/);
+  assert.match(repository, /worker_release_sha = \$3/);
+  assert.match(repository, /locked_by = \$4[\s\S]*worker_release_sha = \$5/);
+  assert.match(repository, /locked_by = \$6[\s\S]*worker_release_sha = \$8/);
 });
 
 test("la compensacion terminal queda durable, reclamable y observable", () => {
@@ -1041,6 +1117,7 @@ test("los workflows que operan staging fijan las acciones que ejecutan", () => {
     "ops-readiness-staging.yml",
     "capacity-staging.yml",
     "anthropic-capacity-staging.yml",
+    "shopify-e2e-staging.yml",
     "requeue-compensation-staging.yml"
   ];
 
@@ -1051,6 +1128,27 @@ test("los workflows que operan staging fijan las acciones que ejecutan", () => {
     assert.match(workflow, /actions\/setup-node@[a-f0-9]{40}/, name);
     assert.doesNotMatch(workflow, /actions\/(?:checkout|setup-node)@v\d/, name);
   }
+});
+
+test("la evidencia Shopify de staging usa solo el token operativo y un SHA revisado", () => {
+  const workflow = fs.readFileSync(
+    path.join(__dirname, "..", ".github", "workflows", "shopify-e2e-staging.yml"),
+    "utf8"
+  );
+
+  assert.match(workflow, /release_sha:/);
+  assert.match(workflow, /VERIFY_SHOPIFY_STAGING_E2E/);
+  assert.match(workflow, /ref: \$\{\{ inputs\.release_sha \}\}/);
+  assert.match(workflow, /git rev-parse origin\/main/);
+  assert.match(workflow, /environment: staging/);
+  assert.match(workflow, /STAGING_OPS_STATUS_TOKEN/);
+  assert.match(workflow, /\/ops\/shopify-certification/);
+  assert.match(workflow, /verificar-certificacion-shopify-staging\.js/);
+  assert.doesNotMatch(workflow, /STAGING_MIGRATION_DATABASE_URL/);
+  assert.doesNotMatch(workflow, /MIGRATION_DATABASE_URL/);
+  assert.doesNotMatch(workflow, /TOKEN_ENC_KEY/);
+  assert.doesNotMatch(workflow, /SHOPIFY_(?:TOKEN|ACCESS_TOKEN)/);
+  assert.doesNotMatch(workflow, /RENDER_(?:STAGING_)?(?:WEB|WORKER)_DEPLOY_HOOK/);
 });
 
 test("los workflows de produccion fijan acciones y usan entornos protegidos", () => {
@@ -1203,4 +1301,10 @@ test("las pruebas de capacidad se atan al SHA revisado y desplegado", () => {
     assert.match(workflow, /ready\.ok===true&&ready\.release===process\.env\.EXPECTED_RELEASE_SHA/, name);
     assert.match(workflow, /npm ci --no-audit --no-fund/, name);
   }
+
+  const queueCapacityWorkflow = fs.readFileSync(
+    path.join(__dirname, "..", ".github", "workflows", "capacity-staging.yml"),
+    "utf8"
+  );
+  assert.match(queueCapacityWorkflow, /EXPECTED_RELEASE_SHA: \$\{\{ inputs\.release_sha \}\}[\s\S]{0,500}npm run carga:cola/);
 });

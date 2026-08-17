@@ -13,6 +13,7 @@ const { TenantContext } = require("../src/tenancy/tenant-context");
 const SECRET = "webhook-secret";
 const SHOP = "webhooks.myshopify.com";
 const WEBHOOK_ID = "11111111-1111-4111-8111-111111111111";
+const TEST_RELEASE_SHA = "a".repeat(40);
 
 function signedHeaders(body, topic, extra = {}) {
   return {
@@ -165,10 +166,11 @@ describe("webhook handlers", () => {
       payload: { shop_id: "7" }
     };
 
-    await handlers["shop/redact"].run(event);
+    await handlers["shop/redact"].run(event, { releaseSha: "a".repeat(40) });
     assert.deepEqual(order, ["delete", "redact", "audit"]);
     assert.match(privacy.tenantReference, /^redacted:[0-9a-f]{64}$/);
     assert.doesNotMatch(privacy.tenantReference, /webhooks\.myshopify/);
+    assert.equal(privacy.workerReleaseSha, "a".repeat(40));
   });
 
   test("app/uninstalled no conserva el payload operativo", async () => {
@@ -210,6 +212,9 @@ test("el inbox durable reemplaza la deduplicación en memoria y usa leases", () 
   assert.match(repository, /FOR UPDATE SKIP LOCKED/);
   assert.match(repository, /locked_at \+ interval '3 minutes',[\s\S]*'-infinity'::timestamptz/);
   assert.match(repository, /lease_expires_at = now\(\) \+ \(\$2::int \* interval '1 second'\)/);
+  assert.match(repository, /worker_release_sha = \$3/);
+  assert.match(repository, /locked_by = \$4[\s\S]*worker_release_sha = \$5/);
+  assert.match(repository, /locked_by = \$7[\s\S]*worker_release_sha = \$8/);
   assert.match(repository, /processed_at < now\(\)/);
   assert.doesNotMatch(repository, /DELETE FROM control_plane\.inbox_events\s+WHERE status = 'failed'/);
   assert.doesNotMatch(db, /removeFailed|failedBefore/);
@@ -235,9 +240,10 @@ test("el inbox renueva y finaliza leases cercados por tenant, tienda y owner", a
           tenant_id: SHOP,
           shop_domain: SHOP,
           topic: "app/uninstalled",
-          payload_hash: "hash",
-          status: "processing",
-          locked_by: "worker:webhooks"
+           payload_hash: "hash",
+           status: "processing",
+           locked_by: "worker:webhooks",
+           worker_release_sha: TEST_RELEASE_SHA
         }] };
       }
       return { rows: [] };
@@ -250,7 +256,8 @@ test("el inbox renueva y finaliza leases cercados por tenant, tienda y owner", a
     id: WEBHOOK_ID,
     tenantId: SHOP,
     shopDomain: SHOP,
-    lockedBy: "worker:webhooks"
+    lockedBy: "worker:webhooks",
+    workerReleaseSha: TEST_RELEASE_SHA
   };
 
   await repository.renew(context, event, 75);
@@ -283,8 +290,9 @@ test("un webhook destructivo puede cerrar su lease despues de anonimizar el tena
           tenant_id: null,
           shop_domain: SHOP,
           topic: "shop/redact",
-          payload_hash: "hash",
-          status: "processed"
+           payload_hash: "hash",
+           status: "processed",
+           worker_release_sha: TEST_RELEASE_SHA
         }] };
       }
       return { rows: [] };
@@ -297,7 +305,8 @@ test("un webhook destructivo puede cerrar su lease despues de anonimizar el tena
     id: WEBHOOK_ID,
     tenantId,
     shopDomain: SHOP,
-    lockedBy: "worker:webhooks"
+    lockedBy: "worker:webhooks",
+    workerReleaseSha: TEST_RELEASE_SHA
   });
 
   assert.equal(completed.status, "processed");

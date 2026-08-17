@@ -51,12 +51,16 @@ function boundedInteger(value, fallback, min = 1, max = 32) {
 
 function createRuntime({
   workerId = `${os.hostname()}:${process.pid}`,
+  releaseSha = null,
   generationConcurrency = boundedInteger(process.env.JOB_GENERATION_CONCURRENCY, 2),
   publicationConcurrency = boundedInteger(process.env.JOB_PUBLICATION_CONCURRENCY, 2),
   webhookConcurrency = boundedInteger(process.env.WEBHOOK_CONCURRENCY, 1),
   pollMs = boundedInteger(process.env.JOB_POLL_MS, 1000, 50, 60000),
   leaseSeconds = boundedInteger(process.env.JOB_LEASE_SECONDS, 300, 30, 3600)
 } = {}) {
+  if (!/^[a-f0-9]{40}$/.test(String(releaseSha || ""))) {
+    throw new TypeError("El runtime requiere releaseSha completo");
+  }
   const publishPage = createPublishPageHandler({
     sessions: { get: sesionDe },
     pages: {
@@ -117,6 +121,7 @@ function createRuntime({
   };
   const generationRunners = Array.from({ length: generationConcurrency }, (_, index) => createJobRunner({
     workerId: `${workerId}:generate:${index + 1}`,
+    releaseSha,
     jobTypes: ["generate-page", "edit-text"],
     leaseSeconds,
     pollMs,
@@ -127,6 +132,7 @@ function createRuntime({
   }));
   const publicationRunners = Array.from({ length: publicationConcurrency }, (_, index) => createJobRunner({
     workerId: `${workerId}:publish:${index + 1}`,
+    releaseSha,
     jobTypes: ["publish-page", "unpublish-page", "install-niche-content", "create-subscription", "sync-bundles"],
     leaseSeconds,
     pollMs,
@@ -172,6 +178,7 @@ function createRuntime({
   });
   const webhookRunners = Array.from({ length: webhookConcurrency }, (_, index) => createJobRunner({
     workerId: `${workerId}:webhooks:${index + 1}`,
+    releaseSha,
     leaseSeconds: 120,
     pollMs,
     repository: {
