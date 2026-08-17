@@ -1054,7 +1054,7 @@ test("los workflows que operan staging fijan las acciones que ejecutan", () => {
 });
 
 test("los workflows de produccion fijan acciones y usan el entorno protegido", () => {
-  const workflows = ["release-production.yml", "rotate-runtime-logins-production.yml"];
+  const workflows = ["release-production.yml", "bootstrap-runtime-logins-production.yml"];
 
   for (const name of workflows) {
     const workflow = fs.readFileSync(path.join(__dirname, "..", ".github", "workflows", name), "utf8");
@@ -1073,15 +1073,39 @@ test("el release de produccion despliega y certifica exactamente el SHA revisado
 
   assert.match(workflow, /release_sha:/);
   assert.match(workflow, /DEPLOY_REVIEWED_PRODUCTION/);
+  assert.match(workflow, /MIGRATIONS_ARE_BACKWARD_COMPATIBLE/);
+  assert.match(workflow, /ALLOW_NO_PREVIOUS_RELEASE/);
   assert.match(workflow, /ref: \$\{\{ inputs\.release_sha \}\}/);
   assert.match(workflow, /git rev-parse origin\/main/);
   assert.match(workflow, /PRODUCTION_MIGRATION_DATABASE_URL/);
   assert.match(workflow, /RENDER_PRODUCTION_WEB_DEPLOY_HOOK/);
   assert.match(workflow, /RENDER_PRODUCTION_WORKER_DEPLOY_HOOK/);
-  assert.match(workflow, /https:\/\/tiendaiq\.onrender\.com\/ready/);
+  assert.match(workflow, /https:\/\/tiendaiq\.com\/ready/);
+  assert.match(workflow, /OPS_APP_URL: https:\/\/tiendaiq\.com/);
   assert.match(workflow, /CHECK_PRODUCTION_OPS_READINESS/);
   assert.match(workflow, /PRODUCTION_OPS_STATUS_TOKEN/);
   assert.match(workflow, /ready\.ok===true&&ready\.release===process\.env\.EXPECTED_SHA/);
+  assert.match(workflow, /group: tiendaiq-production-database-maintenance/);
+  assert.doesNotMatch(workflow, /WEB_RUNTIME_LOGIN_PASSWORD/);
+  assert.doesNotMatch(workflow, /WORKER_RUNTIME_LOGIN_PASSWORD/);
+  assert.doesNotMatch(workflow, /preparar-roles-runtime/);
+  assert.match(workflow, /id: previous/);
+  assert.match(workflow, /steps\.previous\.outputs\.sha/);
+  assert.match(workflow, /git merge-base --is-ancestor/);
+  assert.match(workflow, /Roll back web and worker after a failed production promotion/);
+  assert.match(workflow, /if: \$\{\{ failure\(\)/);
+  assert.match(workflow, /data-urlencode "ref=\$PREVIOUS_SHA"/);
+  assert.match(workflow, /OPS_READINESS_PROFILE: technical_preflight/);
+  assert.doesNotMatch(workflow, /complete production operational release gate/);
+
+  const captureIndex = workflow.indexOf("id: previous");
+  const migrationIndex = workflow.indexOf("Migrate production with the owner credential");
+  const deployIndex = workflow.indexOf("id: deploy_web");
+  const rollbackIndex = workflow.indexOf("Roll back web and worker after a failed production promotion");
+
+  assert.ok(captureIndex >= 0 && captureIndex < migrationIndex, "captura el release anterior antes de migrar");
+  assert.ok(migrationIndex < deployIndex, "migra antes de desplegar aplicaciones");
+  assert.ok(deployIndex < rollbackIndex, "el rollback queda despues del despliegue promovido");
 });
 
 test("las pruebas de capacidad se atan al SHA revisado y desplegado", () => {

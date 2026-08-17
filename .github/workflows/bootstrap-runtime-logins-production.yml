@@ -1,4 +1,4 @@
-name: Rotate production runtime logins
+name: Bootstrap production runtime logins
 
 on:
   workflow_dispatch:
@@ -8,7 +8,11 @@ on:
         required: true
         type: string
       confirmation:
-        description: Escribir ROTATE_RUNTIME_LOGINS_PRODUCTION
+        description: Escribir BOOTSTRAP_RUNTIME_LOGINS_PRODUCTION
+        required: true
+        type: string
+      cutover_acknowledgement:
+        description: Escribir ACKNOWLEDGE_PRELAUNCH_DATABASE_CUTOVER
         required: true
         type: string
 
@@ -16,11 +20,11 @@ permissions:
   contents: read
 
 concurrency:
-  group: tiendaiq-production-runtime-login-rotation
+  group: tiendaiq-production-database-maintenance
   cancel-in-progress: false
 
 jobs:
-  rotate:
+  bootstrap:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: production
@@ -30,15 +34,17 @@ jobs:
           ref: ${{ inputs.release_sha }}
           fetch-depth: 0
 
-      - name: Validate the immutable reviewed rotation commit
+      - name: Validate the immutable reviewed prelaunch cutover commit
         shell: bash
         env:
           REQUESTED_SHA: ${{ inputs.release_sha }}
           CONFIRMATION: ${{ inputs.confirmation }}
+          CUTOVER_ACKNOWLEDGEMENT: ${{ inputs.cutover_acknowledgement }}
         run: |
           set -euo pipefail
           [[ "$REQUESTED_SHA" =~ ^[a-f0-9]{40}$ ]] || { echo "release_sha debe ser un SHA completo" >&2; exit 1; }
-          [[ "$CONFIRMATION" == "ROTATE_RUNTIME_LOGINS_PRODUCTION" ]] || { echo "Confirmacion invalida" >&2; exit 1; }
+          [[ "$CONFIRMATION" == "BOOTSTRAP_RUNTIME_LOGINS_PRODUCTION" ]] || { echo "Confirmacion invalida" >&2; exit 1; }
+          [[ "$CUTOVER_ACKNOWLEDGEMENT" == "ACKNOWLEDGE_PRELAUNCH_DATABASE_CUTOVER" ]] || { echo "Cutover no reconocido" >&2; exit 1; }
           [[ "$(git rev-parse HEAD)" == "$REQUESTED_SHA" ]] || { echo "El checkout no coincide con el SHA solicitado" >&2; exit 1; }
           git fetch origin main --depth=1
           [[ "$(git rev-parse origin/main)" == "$REQUESTED_SHA" ]] || { echo "El SHA debe ser el HEAD actual de main" >&2; exit 1; }
@@ -49,7 +55,7 @@ jobs:
 
       - run: npm ci --no-audit --no-fund
 
-      - name: Create or rotate isolated PostgreSQL runtime logins
+      - name: Create isolated PostgreSQL runtime logins for the prelaunch cutover
         env:
           ALLOW_ROLE_BOOTSTRAP: "1"
           MIGRATION_DATABASE_URL: ${{ secrets.PRODUCTION_MIGRATION_DATABASE_URL }}
