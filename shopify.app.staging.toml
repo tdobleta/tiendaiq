@@ -1,0 +1,30 @@
+# Shopify staging is a separate app registration. Never point this config at
+# the production client ID or production callback URLs.
+client_id = "c41fe9e37c6c2e51855f74ac0a3c1981"
+name = "TiendaIQ Staging"
+application_url = "https://tiendaiq-staging-web.onrender.com"
+embedded = true
+
+[build]
+automatically_update_urls_on_dev = false
+dev_store_url = "tienda-prueba-iq.myshopify.com"
+
+[webhooks]
+api_version = "2026-07"
+
+  [[webhooks.subscriptions]]
+  compliance_topics = ["customers/data_request", "customers/redact", "shop/redact"]
+  uri = "https://tiendaiq-staging-web.onrender.com/webhooks"
+
+[access_scopes]
+scopes = "read_products,write_products,read_files,write_files,read_content,write_content,read_discounts,write_discounts,write_online_store_navigation"
+use_legacy_install_flow = true
+optional_scopes = []
+
+[auth]
+redirect_urls = [
+  "https://tiendaiq-staging-web.onrender.com/auth/callback"
+]
+
+[pos]
+embedded = false
