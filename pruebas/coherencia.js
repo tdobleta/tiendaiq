@@ -333,6 +333,7 @@ if (/environment:\s*staging/.test(opsReadinessWorkflow) &&
 if (/Cola durable y limpieza sobre PostgreSQL real/.test(verificationWorkflow) &&
     /ALLOW_QUEUE_LOAD_TEST:\s*"1"/.test(verificationWorkflow) &&
     /TEST_WORKER_DATABASE_URL/.test(verificationWorkflow) &&
+    /EXPECTED_RELEASE_SHA:\s*\$\{\{ github\.event\.pull_request\.head\.sha \|\| github\.sha \}\}/.test(verificationWorkflow) &&
     /npm run carga:cola/.test(verificationWorkflow)) {
   ok("CI ejecuta la cola y su limpieza contra PostgreSQL real");
 } else {
