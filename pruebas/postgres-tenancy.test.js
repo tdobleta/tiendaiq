@@ -523,6 +523,9 @@ test("CI reproduce y reconcilia grants administrativos de PostgreSQL antes de mi
   assert.match(fixture, /WITH ADMIN TRUE, INHERIT FALSE, SET FALSE/);
   assert.match(fixture, /ALTER ROLE \$\{quoteIdentifier\(EXPECTED_ROLES\.migration\)\} CREATEROLE/);
   assert.match(fixture, /EXPECTED_ROLES\.migration/);
+  assert.match(fixture, /legacyWeb: "tiendaiq_web"/);
+  assert.match(fixture, /legacyWorker: "tiendaiq_worker"/);
+  assert.match(fixture, /NOLOGIN compatibility roles/);
   assert.match(workflow, /Reconciliar roles runtime con grants administrados por PostgreSQL/);
   assert.match(workflow, /ALLOW_ROLE_BOOTSTRAP: "1"/);
   assert.match(workflow, /WEB_RUNTIME_LOGIN_PASSWORD/);
