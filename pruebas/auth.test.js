@@ -323,9 +323,75 @@ test("token exchange falla cerrado ante scopes incompletos", async () => {
     recuperarInstalacionDesdePase(paseValido(), {
       urlApp: "https://app.example",
       fetchImpl: async () => respuestaTokenExchange({ scope: "read_products" }),
+      gqlClient: async (query) => {
+        assert.match(query, /currentAppInstallation/);
+        return { currentAppInstallation: { accessScopes: [{ handle: "read_products" }] } };
+      },
       guardar: async () => { guardadas += 1; }
     }),
-    (error) => error.code === "SHOPIFY_SCOPES_INCOMPLETOS" && error.status === 403
+    (error) => error.code === "SHOPIFY_SCOPES_INCOMPLETOS"
+      && error.status === 403
+      && !error.detalle.includes("shpat_offline_prueba")
+  );
+  assert.strictEqual(guardadas, 0);
+});
+
+test("token exchange confirma scopes efectivos cuando la respuesta parece incompleta", async () => {
+  const guardadas = [];
+  const efectivos = [...ALCANCES.split(","), "read_online_store_navigation"];
+  const gqlClient = async (query) => {
+    if (query.includes("currentAppInstallation")) {
+      return {
+        currentAppInstallation: {
+          accessScopes: efectivos.map((handle) => ({ handle }))
+        }
+      };
+    }
+    if (query.includes("webhookSubscriptions(first")) {
+      return {
+        webhookSubscriptions: {
+          edges: TOPICOS_OPERATIVOS.map((topic) => ({
+            node: { topic, uri: "https://app.example/webhooks" }
+          }))
+        }
+      };
+    }
+    throw new Error("consulta GraphQL inesperada");
+  };
+
+  const sesion = await recuperarInstalacionDesdePase(paseValido(), {
+    urlApp: "https://app.example",
+    fetchImpl: async () => respuestaTokenExchange({ scope: "read_products" }),
+    gqlClient,
+    guardar: async (...args) => guardadas.push(args)
+  });
+
+  assert.deepStrictEqual(sesion, { tienda: SHOP, token: "shpat_offline_prueba" });
+  assert.strictEqual(guardadas.length, 1);
+  assert.deepStrictEqual(guardadas[0][2], {
+    alcances: efectivos.join(","),
+    alcances_faltantes: [],
+    autorizacion: "token_exchange"
+  });
+});
+
+test("token exchange falla cerrado si no puede confirmar los scopes efectivos", async () => {
+  let guardadas = 0;
+  const secretoRemoto = "shpat_no_debe_filtrarse";
+  await assert.rejects(
+    recuperarInstalacionDesdePase(paseValido(), {
+      fetchImpl: async () => respuestaTokenExchange({ scope: "read_products" }),
+      gqlClient: async () => {
+        const error = new Error("fallo remoto");
+        error.detalle = secretoRemoto;
+        throw error;
+      },
+      guardar: async () => { guardadas += 1; }
+    }),
+    (error) => error.code === "SHOPIFY_TOKEN_EXCHANGE_FAILED"
+      && error.status === 502
+      && !error.message.includes(secretoRemoto)
+      && !String(error.detalle || "").includes(secretoRemoto)
   );
   assert.strictEqual(guardadas, 0);
 });
