@@ -63,7 +63,7 @@ function montar(rel, { env = {}, tiendas = {}, respuestas = [] } = {}) {
     // devuelve {} en vez de romper — así una prueba que no le importa la
     // segunda llamada no tiene que declararla.
     _cola: [...respuestas],
-    env: { ...env },
+    env: { SHOPIFY_APP_HANDLE: "tiendaiq-test", ...env },
     API: "2026-07",
     async gql(query, variables, sesion) {
       shopify.llamadas.push({ query, variables, sesion });

@@ -17,6 +17,7 @@ const { env } = require("./shopify");
 const { guardarTienda, normalizar, esDominioValido } = require("./tiendas");
 const { metrica } = require("./monitoreo");
 const { guardarEstadoDB, consumirEstadoDB } = require("./db");
+const { urlInicioAppShopify } = require("./shopify-admin-url");
 
 // OJO: al agregar un alcance, las tiendas ya instaladas tienen que volver a
 // pasar por /auth?shop=... para autorizarlo.
@@ -312,10 +313,9 @@ async function terminarInstalacion(res, url) {
   metrica("instalacion", { tienda });
 
   // Adentro del admin, no a la app suelta.
-  const handle = tienda.replace(".myshopify.com", "");
   res
     .writeHead(302, {
-      Location: `https://admin.shopify.com/store/${handle}/apps/${env.SHOPIFY_CLIENT_ID}`
+      Location: urlInicioAppShopify(tienda, { appHandle: env.SHOPIFY_APP_HANDLE })
     })
     .end();
 }

@@ -2,6 +2,7 @@
 # the production client ID or production callback URLs.
 client_id = "c41fe9e37c6c2e51855f74ac0a3c1981"
 name = "TiendaIQ Staging"
+handle = "tiendaiq-staging"
 application_url = "https://tiendaiq-staging-web.onrender.com"
 embedded = true
 

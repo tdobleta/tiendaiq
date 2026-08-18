@@ -106,13 +106,13 @@ describe("crearSuscripcion — el cargo tiene que ser real", () => {
 
   test("el retorno vuelve al contexto embebido de la tienda", async () => {
     const { modulo, shopify } = montar("facturacion.js", {
-      env: { SHOPIFY_CLIENT_ID: "client-123" },
+      env: { SHOPIFY_CLIENT_ID: "client-123", SHOPIFY_APP_HANDLE: "tiendaiq-staging" },
       respuestas: [{ appSubscriptionCreate: { confirmationUrl: "https://x", userErrors: [] } }]
     });
     await modulo.crearSuscripcion(SESION, "https://tiendaiq.com");
     assert.equal(
       shopify.llamadas[0].variables.returnUrl,
-      "https://admin.shopify.com/store/prueba/apps/client-123?plan=confirmado"
+      "https://admin.shopify.com/store/prueba/apps/tiendaiq-staging/app?plan=confirmado"
     );
   });
 });
