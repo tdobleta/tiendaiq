@@ -24,7 +24,9 @@ const {
   consumirCookieEstadoOAuth,
   alcancesFaltantes,
   registrarWebhooksOperativos,
+  recuperarInstalacionDesdePase,
   ALCANCES,
+  TOPICOS_OPERATIVOS,
   COOKIE_ESTADO_OAUTH
 } = require("../auth");
 
@@ -249,4 +251,122 @@ test("un userError impide considerar completa la instalacion", async () => {
     registrarWebhooksOperativos({ tienda: SHOP, token: "token" }, "https://app.example", fakeGql),
     /No se pudo registrar/
   );
+});
+
+function respuestaTokenExchange(overrides = {}) {
+  return {
+    ok: true,
+    status: 200,
+    async json() {
+      return { access_token: "shpat_offline_prueba", scope: ALCANCES, ...overrides };
+    }
+  };
+}
+
+function gqlConWebhooksCompletos() {
+  return async (query) => {
+    if (!query.includes("webhookSubscriptions(first")) throw new Error("no debe crear webhooks existentes");
+    return {
+      webhookSubscriptions: {
+        edges: TOPICOS_OPERATIVOS.map((topic) => ({
+          node: { topic, uri: "https://app.example/webhooks" }
+        }))
+      }
+    };
+  };
+}
+
+test("token exchange offline recupera una instalacion autenticada y la persiste", async () => {
+  const llamadas = [];
+  const guardadas = [];
+  const pase = paseValido();
+  const sesion = await recuperarInstalacionDesdePase(pase, {
+    tiendaEsperada: SHOP,
+    urlApp: "https://app.example",
+    gqlClient: gqlConWebhooksCompletos(),
+    fetchImpl: async (url, opciones) => {
+      llamadas.push({ url, opciones });
+      return respuestaTokenExchange();
+    },
+    guardar: async (...args) => guardadas.push(args)
+  });
+
+  assert.deepStrictEqual(sesion, { tienda: SHOP, token: "shpat_offline_prueba" });
+  assert.strictEqual(llamadas.length, 1);
+  assert.strictEqual(llamadas[0].url, `https://${SHOP}/admin/oauth/access_token`);
+  const body = JSON.parse(llamadas[0].opciones.body);
+  assert.strictEqual(body.grant_type, "urn:ietf:params:oauth:grant-type:token-exchange");
+  assert.strictEqual(body.subject_token_type, "urn:ietf:params:oauth:token-type:id_token");
+  assert.strictEqual(body.requested_token_type, "urn:shopify:params:oauth:token-type:offline-access-token");
+  assert.strictEqual(body.subject_token, pase);
+  assert.deepStrictEqual(guardadas, [[SHOP, "shpat_offline_prueba", {
+    alcances: ALCANCES,
+    alcances_faltantes: [],
+    autorizacion: "token_exchange"
+  }]]);
+});
+
+test("un pase invalido nunca llega al token exchange", async () => {
+  let llamadas = 0;
+  await assert.rejects(
+    recuperarInstalacionDesdePase("pase-invalido", {
+      fetchImpl: async () => { llamadas += 1; return respuestaTokenExchange(); }
+    }),
+    /mal formado/i
+  );
+  assert.strictEqual(llamadas, 0);
+});
+
+test("token exchange falla cerrado ante scopes incompletos", async () => {
+  let guardadas = 0;
+  await assert.rejects(
+    recuperarInstalacionDesdePase(paseValido(), {
+      urlApp: "https://app.example",
+      fetchImpl: async () => respuestaTokenExchange({ scope: "read_products" }),
+      guardar: async () => { guardadas += 1; }
+    }),
+    (error) => error.code === "SHOPIFY_SCOPES_INCOMPLETOS" && error.status === 403
+  );
+  assert.strictEqual(guardadas, 0);
+});
+
+test("una respuesta fallida de Shopify no persiste tokens ni filtra el cuerpo", async () => {
+  let guardadas = 0;
+  const secretoRemoto = "respuesta-remota-que-no-debe-filtrarse";
+  await assert.rejects(
+    recuperarInstalacionDesdePase(paseValido(), {
+      fetchImpl: async () => ({
+        ok: false,
+        status: 401,
+        async json() { return { error: secretoRemoto }; }
+      }),
+      guardar: async () => { guardadas += 1; }
+    }),
+    (error) => error.status === 502 && !error.message.includes(secretoRemoto) && !error.detalle.includes(secretoRemoto)
+  );
+  assert.strictEqual(guardadas, 0);
+});
+
+test("requests concurrentes comparten un solo token exchange por tienda", async () => {
+  let intercambios = 0;
+  let liberar;
+  const espera = new Promise((resolve) => { liberar = resolve; });
+  const opciones = {
+    urlApp: "https://app.example",
+    gqlClient: gqlConWebhooksCompletos(),
+    fetchImpl: async () => {
+      intercambios += 1;
+      await espera;
+      return respuestaTokenExchange();
+    },
+    guardar: async () => {}
+  };
+  const pase = paseValido();
+  const primero = recuperarInstalacionDesdePase(pase, opciones);
+  const segundo = recuperarInstalacionDesdePase(pase, opciones);
+  liberar();
+  const resultados = await Promise.all([primero, segundo]);
+
+  assert.strictEqual(intercambios, 1);
+  assert.deepStrictEqual(resultados[0], resultados[1]);
 });
