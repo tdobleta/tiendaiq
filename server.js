@@ -1143,7 +1143,7 @@ const servidor = http.createServer(async (req, res) => {
 
     // /paginas y /crear son rutas del frontend (el menú lateral del admin
     // navega por URL): sirven la misma app, que rutea por pathname.
-    if (["/", "/index.html", "/paginas", "/crear", "/bundles", "/inspiracion"].includes(url.pathname))
+    if (["/", "/app", "/index.html", "/paginas", "/crear", "/bundles", "/inspiracion"].includes(url.pathname))
       return servirIndex(res);
 
     return servirEstatico(req, res, DIR_APP, url.pathname);
