@@ -46,6 +46,11 @@ const CASOS = [
     espera: 200
   },
   {
+    nombre: "/app sirve la entrada embebida configurada en Shopify App Home",
+    ruta: "/app",
+    espera: 200
+  },
+  {
     nombre: "/ready falla cerrado sin PostgreSQL fuera de desarrollo",
     ruta: "/ready",
     espera: 503
