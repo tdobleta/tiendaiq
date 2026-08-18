@@ -35,6 +35,10 @@ const { urlInicioAppShopify } = require("./shopify-admin-url");
 const ALCANCES = "read_products,write_products,read_files,write_files,read_content,write_content,read_discounts,write_discounts,write_online_store_navigation";
 
 const TOPICOS_OPERATIVOS = Object.freeze(["APP_UNINSTALLED", "APP_SUBSCRIPTIONS_UPDATE"]);
+const TIPO_GRANT_TOKEN_EXCHANGE = "urn:ietf:params:oauth:grant-type:token-exchange";
+const TIPO_TOKEN_ID = "urn:ietf:params:oauth:token-type:id_token";
+const TIPO_TOKEN_OFFLINE = "urn:shopify:params:oauth:token-type:offline-access-token";
+const intercambiosEnCurso = new Map();
 
 function alcancesFaltantes(scope) {
   const concedidos = new Set(String(scope || "").split(",").map((value) => value.trim()).filter(Boolean));
@@ -369,10 +373,100 @@ function tiendaDelPase(pase) {
   return tienda;
 }
 
+function errorTokenExchange(message, { code = "SHOPIFY_TOKEN_EXCHANGE_FAILED", status = 502 } = {}) {
+  const error = new Error(message);
+  error.code = code;
+  error.status = status;
+  error.expose = status < 500;
+  return error;
+}
+
+// Recupera la autorización durable de una instalación gestionada que Shopify
+// ya autenticó. El session token se valida antes de enviarlo y el access token
+// offline nunca sale del backend ni se registra en logs.
+async function recuperarInstalacionDesdePase(pase, {
+  tiendaEsperada,
+  fetchImpl = globalThis.fetch,
+  gqlClient,
+  guardar = guardarTienda,
+  urlApp = env.APP_URL
+} = {}) {
+  const tienda = tiendaDelPase(pase);
+  if (tiendaEsperada && normalizar(tiendaEsperada) !== tienda) {
+    throw errorTokenExchange("El pase no corresponde a la tienda solicitada", {
+      code: "TOKEN_INVALIDO",
+      status: 401
+    });
+  }
+
+  const existente = intercambiosEnCurso.get(tienda);
+  if (existente) return existente;
+
+  const intercambio = (async () => {
+    let respuesta;
+    try {
+      respuesta = await fetchImpl(`https://${tienda}/admin/oauth/access_token`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          client_id: env.SHOPIFY_CLIENT_ID,
+          client_secret: env.SHOPIFY_CLIENT_SECRET,
+          grant_type: TIPO_GRANT_TOKEN_EXCHANGE,
+          subject_token: pase,
+          subject_token_type: TIPO_TOKEN_ID,
+          requested_token_type: TIPO_TOKEN_OFFLINE
+        }),
+        signal: AbortSignal.timeout(Math.max(3000, Number(env.SHOPIFY_OAUTH_TIMEOUT_MS) || 15000))
+      });
+    } catch (cause) {
+      const error = errorTokenExchange("No se pudo autorizar la instalación con Shopify");
+      error.cause = cause;
+      throw error;
+    }
+
+    let datos;
+    try {
+      datos = await respuesta.json();
+    } catch (cause) {
+      const error = errorTokenExchange("Shopify devolvió una autorización inválida");
+      error.cause = cause;
+      throw error;
+    }
+
+    if (!respuesta.ok || typeof datos?.access_token !== "string" || !datos.access_token) {
+      const error = errorTokenExchange("Shopify no pudo autorizar esta instalación");
+      error.detalle = `token exchange HTTP ${respuesta.status || "desconocido"}`;
+      throw error;
+    }
+
+    const faltantes = alcancesFaltantes(datos.scope);
+    if (faltantes.length) {
+      throw errorTokenExchange("Shopify no concedió todos los permisos necesarios", {
+        code: "SHOPIFY_SCOPES_INCOMPLETOS",
+        status: 403
+      });
+    }
+
+    const sesion = { tienda, token: datos.access_token };
+    await registrarWebhooksOperativos(sesion, urlApp, gqlClient);
+    await guardar(tienda, datos.access_token, {
+      alcances: datos.scope,
+      alcances_faltantes: faltantes,
+      autorizacion: "token_exchange"
+    });
+    metrica("instalacion_recuperada", { tienda });
+    return sesion;
+  })().finally(() => intercambiosEnCurso.delete(tienda));
+
+  intercambiosEnCurso.set(tienda, intercambio);
+  return intercambio;
+}
+
 module.exports = {
   iniciarInstalacion,
   terminarInstalacion,
   tiendaDelPase,
+  recuperarInstalacionDesdePase,
   hmacValido,
   timestampOAuthValido,
   validarSolicitudOAuthInicial,

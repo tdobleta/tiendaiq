@@ -43,7 +43,14 @@ const {
   verificarAlmacenamientoDB,
   cerrarAlmacenamientoDB
 } = require("./db");
-const { iniciarInstalacion, terminarInstalacion, tiendaDelPase, ALCANCES, TOPICOS_OPERATIVOS } = require("./auth");
+const {
+  iniciarInstalacion,
+  terminarInstalacion,
+  tiendaDelPase,
+  recuperarInstalacionDesdePase,
+  ALCANCES,
+  TOPICOS_OPERATIVOS
+} = require("./auth");
 const { nubeServible, urlVideo, urlPoster } = require("./inspiracion-nube");
 const { estadoPlan, mesActual, PLAN_NOMBRE } = require("./facturacion");
 const { reportarError, metrica } = require("./monitoreo");
@@ -674,7 +681,13 @@ async function resolverSesion(req) {
   }
   // La identidad inválida es 401; una caída de almacenamiento debe conservar
   // su 5xx para no iniciar un loop de reinstalación engañoso.
-  const sesion = await sesionDe(tienda);
+  let sesion;
+  try {
+    sesion = await sesionDe(tienda);
+  } catch (error) {
+    if (error.code !== "TIENDA_NO_INSTALADA") throw error;
+    sesion = await recuperarInstalacionDesdePase(pase, { tiendaEsperada: tienda });
+  }
   return { ...sesion, tenant: TenantContext.fromShopDomain(sesion.tienda, { source: "session-token" }) };
 }
 
