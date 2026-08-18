@@ -583,8 +583,6 @@ async function generar(fuente, medios, { idioma = "es", angulo = "", signal } = 
 // 3. ENSAMBLADO — constantes de plantilla + salida del modelo
 // ============================================================
 
-const PCT_FIJOS = [97, 98, 98];
-
 // Chequeos baratos contra las reglas que el modelo puede violar sin romper el
 // esquema. No bloquean: avisan. Sirven para correr el lote de prueba y ver de
 // un vistazo qué producto salió mal.
@@ -718,14 +716,10 @@ function ensamblar(fuente, salida, { idioma, angulo }) {
       resenas: {
         titular: f.resenas.titular,
         subtitulo: f.resenas.subtitulo,
-        estrellas: 5,
-        // Andamio: 10 tarjetas vacías. El texto es la guía, no un testimonio.
-        items: fijo(f.resenas.guias, CARDINALIDAD["resenas.guias"]).map((g) => ({
-          autor: null,
-          estrellas: 5,
-          imagen: null,
-          texto: g
-        }))
+        // Una guía editorial no es un testimonio. Las reseñas sólo se agregan
+        // cuando exista una fuente real y verificable para cada una.
+        estrellas: null,
+        items: []
       },
       recomendados: { modo: "placeholder", items: [] },
       pagepilot_blue: {
@@ -769,13 +763,13 @@ function ensamblar(fuente, salida, { idioma, angulo }) {
           imagen: pb.feature?.imagen || null
         },
         reviews: {
-          badge: "Reseñas verificadas",
+          badge: "Reseñas",
           titular: "Experiencias de clientes",
           subtitulo: "Importá reseñas reales antes de activar esta sección.",
           items: []
         },
         blue_stats: {
-          titular: "Resultados verificados",
+          titular: "Estadísticas del producto",
           subtitulo: "Agregá una fuente válida antes de publicar estadísticas.",
           items: []
         },

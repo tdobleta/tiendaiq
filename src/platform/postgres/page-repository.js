@@ -4,6 +4,27 @@ const crypto = require("crypto");
 const { requireTenantContext } = require("../../tenancy/tenant-context");
 const { withTenantTransaction } = require("./with-tenant-transaction");
 const { mapJob } = require("./job-repository");
+const {
+  isPlainObject,
+  normalizePageRecord,
+  normalizeStoredPageRecord
+} = require("../../domain/page-contract");
+
+function hasCurrentPageContract(record) {
+  return isPlainObject(record) && Object.prototype.hasOwnProperty.call(record, "data");
+}
+
+function readStoredPage(record, id) {
+  return {
+    shape: hasCurrentPageContract(record) ? "current" : "legacy",
+    page: normalizeStoredPageRecord(record, { expectedId: id })
+  };
+}
+
+function serializeStoredPage(page, shape, id) {
+  if (shape === "current") return normalizePageRecord(page, { expectedId: id });
+  return normalizeStoredPageRecord(page, { expectedId: id });
+}
 
 function mapPageSummary(row) {
   return {
@@ -27,8 +48,11 @@ function createPageRepository(pool) {
         "SELECT datos FROM public.paginas WHERE tienda = $1 AND id = $2 FOR UPDATE",
         [tenant.tenantId, id]
       );
-      let page = locked.rows[0]?.datos ?? null;
-      if (!page) return null;
+      const storedPage = locked.rows[0]?.datos ?? null;
+      if (!storedPage) return null;
+      const { shape, page: normalizedPage } = readStoredPage(storedPage, id);
+      let page = normalizedPage;
+      const responsePage = () => serializeStoredPage(page, shape, id);
 
       if (page.active_job_id) {
         const active = await client.query(
@@ -37,8 +61,8 @@ function createPageRepository(pool) {
         );
         const currentJob = mapJob(active.rows[0]);
         if (currentJob && ["queued", "running"].includes(currentJob.status)) {
-          if (currentJob.type === type) return { page, job: currentJob, reused: true, conflict: false };
-          return { page, job: currentJob, reused: false, conflict: true };
+          if (currentJob.type === type) return { page: responsePage(), job: currentJob, reused: true, conflict: false };
+          return { page: responsePage(), job: currentJob, reused: false, conflict: true };
         }
 
         page = {
@@ -72,13 +96,14 @@ function createPageRepository(pool) {
         active_job_id: jobId,
         last_job_error: null
       };
+      const persistedPage = serializeStoredPage(updatedPage, shape, id);
       await client.query(
         `UPDATE public.paginas
             SET datos = $3, actualizada = now()
           WHERE tienda = $1 AND id = $2`,
-        [tenant.tenantId, id, updatedPage]
+        [tenant.tenantId, id, persistedPage]
       );
-      return { page: updatedPage, job: mapJob(jobResult.rows[0]), reused: false, conflict: false };
+      return { page: persistedPage, job: mapJob(jobResult.rows[0]), reused: false, conflict: false };
     });
   }
 
@@ -89,30 +114,38 @@ function createPageRepository(pool) {
         "SELECT datos FROM public.paginas WHERE tienda = $1 AND id = $2 FOR UPDATE",
         [tenant.tenantId, id]
       );
-      const page = locked.rows[0]?.datos ?? null;
-      if (!page) return null;
-      if (page.last_completed_job_id === activeJobId) return { page, replayed: true };
+      const storedPage = locked.rows[0]?.datos ?? null;
+      if (!storedPage) return null;
+      const { shape, page } = readStoredPage(storedPage, id);
+      const responsePage = () => serializeStoredPage(page, shape, id);
+      if (page.last_completed_job_id === activeJobId) return { page: responsePage(), replayed: true };
       if (page.active_job_id !== activeJobId) return null;
-      const updated = await mutate(structuredClone(page));
-      if (!updated) return { page, skipped: true };
+      const mutation = await mutate(structuredClone(page));
+      if (!mutation) return { page: responsePage(), skipped: true };
+      const persistedPage = serializeStoredPage(mutation, shape, id);
       await client.query(
         `UPDATE public.paginas
             SET datos = $3, actualizada = now()
           WHERE tienda = $1 AND id = $2
             AND datos->>'active_job_id' = $4`,
-        [tenant.tenantId, id, updated, activeJobId]
+        [tenant.tenantId, id, persistedPage, activeJobId]
       );
-      return { page: updated, replayed: false };
+      return { page: persistedPage, replayed: false };
     });
   }
 
   return Object.freeze({
     async save(context, id, data) {
       const tenant = requireTenantContext(context);
+      // The application boundary requires the current contract. The storage
+      // adapter also accepts legacy rows so existing published pages can be
+      // normalized without losing their original content.
+      const shape = hasCurrentPageContract(data) ? "current" : "legacy";
+      const page = serializeStoredPage(normalizeStoredPageRecord(data, { expectedId: id }), shape, id);
       await withTenantTransaction(pool, tenant, (client) => client.query(
         `INSERT INTO public.paginas (tienda, id, datos, actualizada) VALUES ($1, $2, $3, now())
          ON CONFLICT (tienda, id) DO UPDATE SET datos = $3, actualizada = now()`,
-        [tenant.tenantId, id, data]
+        [tenant.tenantId, id, page]
       ));
     },
 
@@ -122,7 +155,10 @@ function createPageRepository(pool) {
         "SELECT datos FROM public.paginas WHERE tienda = $1 AND id = $2",
         [tenant.tenantId, id]
       ));
-      return result.rows[0]?.datos ?? null;
+      const storedPage = result.rows[0]?.datos ?? null;
+      if (!storedPage) return null;
+      normalizeStoredPageRecord(storedPage, { expectedId: id });
+      return storedPage;
     },
 
     async enqueuePublication(context, id, { maxAttempts = 3 } = {}) {
@@ -208,8 +244,15 @@ function createPageRepository(pool) {
            datos->>'estado'                     AS estado,
            datos->>'url_publica'                AS url_publica,
            datos->>'actualizado'                AS actualizado,
-           datos#>>'{data,facetas,hero,titulo}' AS titulo,
-           (datos->'urls') ->> (datos#>>'{data,facetas,hero,galeria,0}') AS imagen
+           COALESCE(
+             datos#>>'{data,facetas,hero,titulo}',
+             datos#>>'{facetas,hero,titulo}'
+           ) AS titulo,
+           COALESCE(
+             (datos->'urls') ->> (datos#>>'{data,facetas,hero,galeria,0}'),
+             (datos->'data'->'urls') ->> (datos#>>'{data,facetas,hero,galeria,0}'),
+             (datos->'urls') ->> (datos#>>'{facetas,hero,galeria,0}')
+           ) AS imagen
          FROM public.paginas
          WHERE tienda = $1
          ORDER BY actualizada DESC`,

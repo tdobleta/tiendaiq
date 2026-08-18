@@ -24,6 +24,9 @@ const { createJobRepository } = require("./src/platform/postgres/job-repository"
 const { createGenerationRepository } = require("./src/platform/postgres/generation-repository");
 const { createInboxRepository } = require("./src/platform/postgres/inbox-repository");
 const { createShopifyCertificationRepository } = require("./src/platform/postgres/shopify-certification-repository");
+const {
+  normalizeStoredPageRecord
+} = require("./src/domain/page-contract");
 
 // El token vive dentro del JSONB `datos`. Se cifra al escribir y se descifra al
 // leer, en esta capa: el resto de la app sigue viendo el token en claro y no se
@@ -259,14 +262,15 @@ async function actualizarCamposTiendaDB(dominio, campos) {
 
 async function guardarPaginaDB(context, id, datos) {
   const tenant = requireTenantContext(context);
+  const page = normalizeStoredPageRecord(datos, { expectedId: id });
   if (USA_PG) {
     const p = await pg();
     pageRepository ||= createPageRepository(p);
-    await pageRepository.save(tenant, id, datos);
+    await pageRepository.save(tenant, id, page);
   } else {
     const dir = path.join(DIR_PAGINAS, seguro(tenant.tenantId));
     fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(path.join(dir, seguro(id) + ".json"), JSON.stringify(datos, null, 2));
+    fs.writeFileSync(path.join(dir, seguro(id) + ".json"), JSON.stringify(page, null, 2));
   }
 }
 
@@ -278,7 +282,11 @@ async function leerPaginaDB(context, id) {
     return pageRepository.findById(tenant, id);
   }
   const r = path.join(DIR_PAGINAS, seguro(tenant.tenantId), seguro(id) + ".json");
-  return fs.existsSync(r) ? JSON.parse(fs.readFileSync(r, "utf8")) : null;
+  if (!fs.existsSync(r)) return null;
+
+  return normalizeStoredPageRecord(JSON.parse(fs.readFileSync(r, "utf8")), {
+    expectedId: id
+  });
 }
 
 async function marcarPublicacionFallidaDB(context, id, activeJobId, errorMessage) {

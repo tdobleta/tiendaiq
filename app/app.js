@@ -1622,8 +1622,8 @@
   }
 
   const selectorEstrellas = (ruta, v) =>
-    `<s-select data-ruta="${ruta}" data-tipo="numero" value="${v}">${[5, 4, 3, 2, 1]
-      .map((n) => `<s-option value="${n}">${"★".repeat(n)}${"☆".repeat(5 - n)}</s-option>`)
+    `<s-select data-ruta="${ruta}" data-tipo="numero" value="${v}">${[0, 5, 4, 3, 2, 1]
+      .map((n) => `<s-option value="${n}">${n === 0 ? "Sin calificación" : `${"★".repeat(n)}${"☆".repeat(5 - n)}`}</s-option>`)
       .join("")}</s-select>`;
 
   // ---- edición sobre el preview, estilo PagePilot ----
@@ -1754,7 +1754,7 @@
           <div class="fila-doble">
             <input type="text" placeholder="Nombre del cliente" data-nulo="1"
                    data-ruta="facetas.resenas.items.${i}.autor" value="${esc(r.autor ?? "")}">
-            ${selectorEstrellas(`facetas.resenas.items.${i}.estrellas`, r.estrellas ?? 5)}
+            ${selectorEstrellas(`facetas.resenas.items.${i}.estrellas`, r.estrellas ?? 0)}
           </div>
           <textarea rows="2" placeholder="Texto de la reseña"
                     data-ruta="facetas.resenas.items.${i}.texto">${esc(r.texto ?? "")}</textarea>
@@ -1848,7 +1848,7 @@
           campo("facetas.hero.resena_destacada.texto", "Texto", 3, true) +
           `<div class="campo campo--editor"><label>Estrellas</label>${selectorEstrellas(
             "facetas.hero.resena_destacada.estrellas",
-            f.hero.resena_destacada.estrellas ?? 5
+            f.hero.resena_destacada.estrellas ?? 0
           )}</div>`
       },
       acordeones: {
@@ -1983,7 +1983,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
           const statItems = Array.isArray(stats.items) ? stats.items : (stats.items = Array.from({ length: 4 }, () => ({ pct: "", frase: "" })));
           const comparisonRows = Array.isArray(comparison.filas) ? comparison.filas : (comparison.filas = Array.from({ length: 6 }, () => ""));
           const faqItems = Array.isArray(faq.items) ? faq.items : (faq.items = Array.from({ length: 5 }, () => ({ pregunta: "", respuesta: "" })));
-          const reviewItems = Array.isArray(reviews.items) ? reviews.items : (reviews.items = Array.from({ length: 4 }, () => ({ autor: "", estrellas: 5, texto: "", imagen: null })));
+          const reviewItems = Array.isArray(reviews.items) ? reviews.items : (reviews.items = Array.from({ length: 4 }, () => ({ autor: "", estrellas: null, texto: "", imagen: null })));
           const ticker = Array.isArray(pb.ticker) ? pb.ticker : (pb.ticker = Array.from({ length: 5 }, () => ({ texto: "", icono: "check" })));
           const socialImgs = Array.isArray(social.imagenes) ? social.imagenes : (social.imagenes = [null, null, null]);
           const pagos = Array.isArray(pb.pagos) ? pb.pagos : (pb.pagos = ["amex", "apple", "visa", "mastercard", "paypal", "gpay", "shop"]);
@@ -1997,9 +1997,9 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
             `<h3 class="pe-prop__subheader">Cómo funciona</h3>` + input("facetas.pagepilot_blue.como_funciona.titular", "Titular", "¿Cómo funciona este producto?") + [0, 1, 2].map((i) => input(`facetas.pagepilot_blue.como_funciona.parrafos.${i}`, `Párrafo ${i + 1}`, "Texto editable de la sección.")).join("") + input("facetas.pagepilot_blue.como_funciona.imagen", "Imagen", "tiq-placeholder-detail.svg") +
             `<h3 class="pe-prop__subheader">Acordeones del hero</h3>` + accordions.slice(0, 3).map((_, i) => input(`facetas.pagepilot_blue.acordeones.${i}.titulo`, `Título ${i + 1}`, ["Descripción", "Cómo usar", "Envíos y devoluciones"][i]) + input(`facetas.pagepilot_blue.acordeones.${i}.contenido`, `Contenido ${i + 1}`, "Contenido editable de esta sección.")).join("") +
             `<h3 class="pe-prop__subheader">5 beneficios</h3>` + input("facetas.pagepilot_blue.feature.titular", "Titular", "5 beneficios diarios del producto") + input("facetas.pagepilot_blue.feature.subtitulo", "Subtítulo", "Potenciá tu rutina para disfrutar un resultado que se nota.") + items.slice(0, 5).map((_, i) => input(`facetas.pagepilot_blue.feature.items.${i}.titulo`, `Beneficio ${i + 1}`, "Beneficio diario") + input(`facetas.pagepilot_blue.feature.items.${i}.frase`, `Descripción ${i + 1}`, "Pensado para acompañarte con comodidad.")).join("") + input("facetas.pagepilot_blue.feature.imagen", "Imagen del bloque", "tiq-placeholder-detail.svg") +
-            `<h3 class="pe-prop__subheader">Estadísticas</h3>` + input("facetas.pagepilot_blue.blue_stats.titular", "Titular", "Lo que dicen los números") + input("facetas.pagepilot_blue.blue_stats.subtitulo", "Subtítulo", "Resultados que se sienten en la rutina.") + statItems.slice(0, 4).map((_, i) => input(`facetas.pagepilot_blue.blue_stats.items.${i}.pct`, `Porcentaje ${i + 1}`, [98, 100, 100, 96][i]) + input(`facetas.pagepilot_blue.blue_stats.items.${i}.frase`, `Frase ${i + 1}`, "Notaron una mejora en su rutina.")).join("") +
+            `<h3 class="pe-prop__subheader">Estadísticas del producto</h3>` + input("facetas.pagepilot_blue.blue_stats.titular", "Titular", "Estadísticas del producto") + input("facetas.pagepilot_blue.blue_stats.subtitulo", "Subtítulo", "Agregá una fuente válida antes de publicar estadísticas.") + statItems.slice(0, 4).map((_, i) => input(`facetas.pagepilot_blue.blue_stats.items.${i}.pct`, `Porcentaje ${i + 1}`, "") + input(`facetas.pagepilot_blue.blue_stats.items.${i}.frase`, `Frase ${i + 1}`, "")).join("") +
             `<h3 class="pe-prop__subheader">Comparación</h3>` + input("facetas.pagepilot_blue.comparison.titular", "Titular", "Comparalo vos misma") + input("facetas.pagepilot_blue.comparison.parrafo", "Texto", "Mirá por qué esta propuesta se destaca frente a las alternativas.") + input("facetas.pagepilot_blue.comparison.cta", "Texto del botón", "Obtené el tuyo ahora") + input("facetas.pagepilot_blue.comparison.otros", "Columna alternativa", "Otros") + comparisonRows.slice(0, 6).map((_, i) => input(`facetas.pagepilot_blue.comparison.filas.${i}`, `Fila ${i + 1}`, ["Mayor definición", "Aplicación fluida", "Resultado natural", "Sin grumos", "Secado rápido", "Resistencia diaria"][i])).join("") +
-            `<h3 class="pe-prop__subheader">Reseñas</h3>` + input("facetas.pagepilot_blue.reviews.badge", "Badge de reseñas", "Basado en más de 1422 reseñas") + input("facetas.pagepilot_blue.reviews.titular", "Titular", "Lo que dicen nuestras clientas") + input("facetas.pagepilot_blue.reviews.subtitulo", "Subtítulo", "Unite a miles de personas que mejoran su rutina cada mañana con nosotros.") + reviewItems.slice(0, 4).map((_, i) => input(`facetas.pagepilot_blue.reviews.items.${i}.autor`, `Nombre ${i + 1}`, "Cliente verificado") + input(`facetas.pagepilot_blue.reviews.items.${i}.texto`, `Texto ${i + 1}`, "Me resultó práctico y fácil de incorporar a mi rutina.") + input(`facetas.pagepilot_blue.reviews.items.${i}.imagen`, `Foto ${i + 1}`, "tiq-placeholder-review.svg")).join("") +
+            `<h3 class="pe-prop__subheader">Reseñas</h3>` + input("facetas.pagepilot_blue.reviews.badge", "Badge de reseñas", "Reseñas") + input("facetas.pagepilot_blue.reviews.titular", "Titular", "Experiencias de clientes") + input("facetas.pagepilot_blue.reviews.subtitulo", "Subtítulo", "Importá reseñas reales antes de activar esta sección.") + reviewItems.slice(0, 4).map((_, i) => input(`facetas.pagepilot_blue.reviews.items.${i}.autor`, `Nombre ${i + 1}`, "") + input(`facetas.pagepilot_blue.reviews.items.${i}.texto`, `Texto ${i + 1}`, "") + input(`facetas.pagepilot_blue.reviews.items.${i}.imagen`, `Foto ${i + 1}`, "")).join("") +
             `<h3 class="pe-prop__subheader">Preguntas frecuentes</h3>` + input("facetas.pagepilot_blue.faq.titular", "Titular", "Preguntas frecuentes") + input("facetas.pagepilot_blue.faq.subtitulo", "Subtítulo", "Todo lo que necesitás saber antes de comprarlo.") + faqItems.slice(0, 5).map((_, i) => input(`facetas.pagepilot_blue.faq.items.${i}.pregunta`, `Pregunta ${i + 1}`, ["¿De qué material está hecho?", "¿Cómo se usa?", "¿Cómo se limpia o mantiene?", "¿Qué colores tiene disponibles?", "¿Qué pasa si no estoy conforme?"][i]) + input(`facetas.pagepilot_blue.faq.items.${i}.respuesta`, `Respuesta ${i + 1}`, "Consultá la ficha del producto y la política de devolución.")).join("") +
             `<h3 class="pe-prop__subheader">Recomendados</h3><div class="editor__ayuda">Se cargan automáticamente desde las recomendaciones reales del catálogo de Shopify. No se guardan precios ni descuentos de ejemplo.</div>` +
             `<h3 class="pe-prop__subheader">Panel azul y pagos</h3>` + input("facetas.pagepilot_blue.panel.titular", "Titular del panel", "Una mejora simple para cada día") + input("facetas.pagepilot_blue.panel.subtitulo", "Texto del panel", "Sumá una solución pensada para acompañarte con comodidad.") + input("facetas.pagepilot_blue.panel.imagen", "Imagen del panel", "tiq-placeholder-detail.svg") + `<div class="campo campo--editor"><label>Medios de pago activos</label><div class="fila-triple">${Object.entries(pagoNombres).map(([id, nombre]) => `<label><input type="checkbox" data-ppb-payment="${id}"${pagos.includes(id) ? " checked" : ""}> ${nombre}</label>`).join("")}</div></div>`;
@@ -2092,7 +2092,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
             </label>
             ${it.url && /^https?:\/\/cdn\.shopify/.test(it.url) ? `<div class="ayuda" style="margin-top:6px">${ico("check")} Video subido</div>` : ""}
             ${campo(`${base}.items.${j}.titulo`, "Nombre / título (ej. Jess B.)", 0, true)}
-            <div class="campo campo--editor"><label>Estrellas</label>${selectorEstrellas(`${base}.items.${j}.estrellas`, it.estrellas ?? 5)}</div>
+            <div class="campo campo--editor"><label>Estrellas</label>${selectorEstrellas(`${base}.items.${j}.estrellas`, it.estrellas ?? 0)}</div>
             <details class="resena-edit__foto">
               <summary>${ico("imagen")} Miniatura del video (opcional)${it.poster ? " · elegida" : ""}</summary>
               ${selectorImagenUno(`${base}.items.${j}.poster`, "", true)}
@@ -2189,7 +2189,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       const [i, tipo] = add.dataset.secAdd.split(":");
       secs[+i].items.push(
         tipo === "video" ? { url: "", poster: null }
-        : tipo === "videoslider" ? { url: "", poster: null, titulo: "", estrellas: 5 }
+        : tipo === "videoslider" ? { url: "", poster: null, titulo: "", estrellas: null }
         : { media_id: null, caption: "", link: "" }
       );
       return true;
@@ -2758,7 +2758,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         ? { id, tipo: "videos", ancla, items: [{ url: "", poster: null }, { url: "", poster: null }, { url: "", poster: null }] }
         : tipo === "videoslider"
         ? { id, tipo: "videoslider", ancla,
-            items: [{ url: "", poster: null, titulo: "", estrellas: 5 }, { url: "", poster: null, titulo: "", estrellas: 5 }, { url: "", poster: null, titulo: "", estrellas: 5 }],
+            items: [{ url: "", poster: null, titulo: "", estrellas: null }, { url: "", poster: null, titulo: "", estrellas: null }, { url: "", poster: null, titulo: "", estrellas: null }],
             settings: {} }
         : { id, tipo: "carrusel", ancla, items: [{ media_id: null, caption: "", link: "" }, { media_id: null, caption: "", link: "" }, { media_id: null, caption: "", link: "" }, { media_id: null, caption: "", link: "" }] };
     estado.pagina.data.secciones.push(nueva);
@@ -2837,7 +2837,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       // avisa "guía" hasta que le pongan autor.
       const autor = lineas.length > 1 ? lineas[0] : null;
       const texto = (lineas.length > 1 ? lineas.slice(1) : lineas).join(" ");
-      const item = { autor, estrellas: 5, imagen: null, texto };
+      const item = { autor, estrellas: null, imagen: null, texto };
       if (i < items.length) items[i] = item;
       else items.push(item);
     });
@@ -3317,7 +3317,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
           </label>
           ${it.url && /^https?:\/\/cdn\.shopify/.test(it.url) ? `<div class="ayuda" style="margin-top:6px">${ico("check")} Video subido</div>` : ""}
           ${campo(`${base}.items.${j}.titulo`, "Nombre / título (ej. Jess B.)", 0, true)}
-          <div class="campo campo--editor"><label>Estrellas</label>${selectorEstrellas(`${base}.items.${j}.estrellas`, it.estrellas ?? 5)}</div>
+          <div class="campo campo--editor"><label>Estrellas</label>${selectorEstrellas(`${base}.items.${j}.estrellas`, it.estrellas ?? 0)}</div>
           <details class="resena-edit__foto"><summary>${ico("imagen")} Miniatura (opcional)${it.poster ? " · elegida" : ""}</summary>${selectorImagenUno(`${base}.items.${j}.poster`, "", true)}</details>
         </div>`)
       .join("");

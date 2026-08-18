@@ -38,6 +38,25 @@ test("Liquid no sirve reseñas ni políticas sin procedencia", () => {
   assert.doesNotMatch(liquid, /h\.puntaje \| default: 4\.9/);
 });
 
+test("los defaults no convierten guias en prueba social ni estadisticas", () => {
+  const adaptador = leer("adaptador.js");
+
+  assert.doesNotMatch(adaptador, /const PCT_FIJOS/);
+  assert.doesNotMatch(adaptador, /Reseñas verificadas/);
+  assert.doesNotMatch(adaptador, /Resultados verificados/);
+  assert.match(adaptador, /resenas:\s*\{[\s\S]{0,400}items:\s*\[\]/);
+});
+
+test("el editor no precarga testimonios ni porcentajes aparentes", () => {
+  const editor = leer("app/app.js");
+
+  assert.doesNotMatch(editor, /Basado en más de 1422 reseñas/);
+  assert.doesNotMatch(editor, /Cliente verificado/);
+  assert.doesNotMatch(editor, /Notaron una mejora en su rutina/);
+  assert.doesNotMatch(editor, /\[98,\s*100,\s*100,\s*96\]/);
+  assert.doesNotMatch(editor, /estrellas:\s*5/);
+});
+
 test("el storefront obtiene recomendados reales y no publica precios de ejemplo", () => {
   const adaptador = leer("adaptador.js");
   const widget = leer("extensions/tiendaiq-widgets/assets/tiendaiq.js");
