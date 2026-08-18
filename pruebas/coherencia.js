@@ -40,6 +40,7 @@ const ARCHIVOS_CON_DOMINIO = [
 // El dominio de referencia es el `application_url` del toml: es el que Shopify
 // tiene cargado en el Partner Dashboard.
 const toml = leer("shopify.app.toml");
+const stagingToml = leer("shopify.app.staging.toml");
 const render = leer("render.yaml");
 const releaseWorkflow = leer(".github/workflows/release-staging.yml");
 const productionReleaseWorkflow = leer(".github/workflows/release-production.yml");
@@ -54,6 +55,21 @@ const launchPlan = leer("docs/plan-lanzamiento-1000-tiendas.md");
 const ola1Runbook = leer("docs/runbook-ola-1.md");
 const appFrontend = leer("app/app.js");
 const principal = toml.match(/^application_url\s*=\s*"([^"]+)"/m)?.[1];
+
+const productionHandle = toml.match(/^handle\s*=\s*"([^"]+)"/m)?.[1];
+const stagingHandle = stagingToml.match(/^handle\s*=\s*"([^"]+)"/m)?.[1];
+const adminUrlSource = leer("shopify-admin-url.js");
+if (!productionHandle || !stagingHandle) {
+  mal("producción y staging declaran un App Home handle", "falta handle en un archivo shopify.app*.toml");
+} else if (productionHandle === stagingHandle) {
+  mal("producción y staging usan handles distintos", `ambos declaran ${productionHandle}`);
+} else if (!/SHOPIFY_APP_HANDLE/.test(adminUrlSource) || !/\/apps\/\$\{handleApp\(appHandle\)\}\/app/.test(adminUrlSource)) {
+  mal("App Home usa el handle de Shopify", "el backend no construye /apps/{handle}/app");
+} else if (/apps\/\$\{env\.SHOPIFY_CLIENT_ID\}/.test(leer("auth.js") + leer("facturacion.js"))) {
+  mal("App Home usa el handle de Shopify", "un redirect todavía usa SHOPIFY_CLIENT_ID como slug");
+} else {
+  ok(`App Home separa los handles ${productionHandle} y ${stagingHandle}`);
+}
 
 function servicioRender(nombre) {
   const escaped = nombre.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");

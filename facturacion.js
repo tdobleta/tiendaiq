@@ -12,6 +12,7 @@
 const { gql, env } = require("./shopify");
 const { leerTienda, actualizarCamposTienda, consumirCupoTienda, revertirCupoTienda } = require("./tiendas");
 const { metrica } = require("./monitoreo");
+const { urlInicioAppShopify } = require("./shopify-admin-url");
 
 const PAGINAS_GRATIS = Number(env.PAGINAS_GRATIS) || 3; // NaN/vacío → 3
 const PLAN_NOMBRE = "TiendaIQ Pro";
@@ -183,10 +184,10 @@ async function revertirCupo(sesion) {
 }
 
 function urlRetornoSuscripcion(sesion, urlApp) {
-  const handle = sesion.tienda.replace(".myshopify.com", "");
-  return env.SHOPIFY_CLIENT_ID
-    ? `https://admin.shopify.com/store/${handle}/apps/${env.SHOPIFY_CLIENT_ID}?plan=confirmado`
-    : `${urlApp}/?plan=confirmado`;
+  return urlInicioAppShopify(sesion.tienda, {
+    appHandle: env.SHOPIFY_APP_HANDLE,
+    query: { plan: "confirmado" }
+  });
 }
 
 function errorSuscripcionAmbigua(cause, reconciliationError) {

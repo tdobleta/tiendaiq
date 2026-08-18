@@ -32,6 +32,9 @@ services:
         sync: false
       - key: SHOPIFY_CLIENT_SECRET
         sync: false
+      # Slug público de App Home; no confundir con SHOPIFY_CLIENT_ID.
+      - key: SHOPIFY_APP_HANDLE
+        value: "tiendaiq-app"
       # 32 bytes en base64. Produccion falla al arrancar si falta.
       - key: TOKEN_ENC_KEY
         sync: false
