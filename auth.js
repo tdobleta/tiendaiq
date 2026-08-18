@@ -40,9 +40,29 @@ const TIPO_TOKEN_ID = "urn:ietf:params:oauth:token-type:id_token";
 const TIPO_TOKEN_OFFLINE = "urn:shopify:params:oauth:token-type:offline-access-token";
 const intercambiosEnCurso = new Map();
 
+function normalizarAlcances(scope) {
+  const valores = Array.isArray(scope) ? scope : String(scope || "").split(",");
+  return [...new Set(
+    valores
+      .map((value) => typeof value === "object" ? value?.handle : value)
+      .map((value) => String(value || "").trim())
+      .filter(Boolean)
+  )];
+}
+
 function alcancesFaltantes(scope) {
-  const concedidos = new Set(String(scope || "").split(",").map((value) => value.trim()).filter(Boolean));
+  const concedidos = new Set(normalizarAlcances(scope));
   return ALCANCES.split(",").filter((alcance) => !concedidos.has(alcance));
+}
+
+async function consultarAlcancesInstalacion(sesion, gqlClient) {
+  const gql = gqlClient || require("./shopify").gql;
+  const resultado = await gql(`query {
+    currentAppInstallation {
+      accessScopes { handle }
+    }
+  }`, {}, sesion);
+  return normalizarAlcances(resultado?.currentAppInstallation?.accessScopes);
 }
 
 async function registrarWebhooksOperativos(sesion, urlApp, gqlClient) {
@@ -439,18 +459,31 @@ async function recuperarInstalacionDesdePase(pase, {
       throw error;
     }
 
-    const faltantes = alcancesFaltantes(datos.scope);
+    const sesion = { tienda, token: datos.access_token };
+    let alcancesConcedidos = normalizarAlcances(datos.scope);
+    let faltantes = alcancesFaltantes(alcancesConcedidos);
     if (faltantes.length) {
-      throw errorTokenExchange("Shopify no concedió todos los permisos necesarios", {
-        code: "SHOPIFY_SCOPES_INCOMPLETOS",
-        status: 403
-      });
+      try {
+        alcancesConcedidos = await consultarAlcancesInstalacion(sesion, gqlClient);
+        faltantes = alcancesFaltantes(alcancesConcedidos);
+      } catch (cause) {
+        const error = errorTokenExchange("No se pudieron verificar los permisos concedidos por Shopify");
+        error.cause = cause;
+        throw error;
+      }
+      if (faltantes.length) {
+        const error = errorTokenExchange("Shopify no concedió todos los permisos necesarios", {
+          code: "SHOPIFY_SCOPES_INCOMPLETOS",
+          status: 403
+        });
+        error.detalle = `faltan:${faltantes.sort().join(",")};concedidos:${alcancesConcedidos.sort().join(",")}`;
+        throw error;
+      }
     }
 
-    const sesion = { tienda, token: datos.access_token };
     await registrarWebhooksOperativos(sesion, urlApp, gqlClient);
     await guardar(tienda, datos.access_token, {
-      alcances: datos.scope,
+      alcances: alcancesConcedidos.join(","),
       alcances_faltantes: faltantes,
       autorizacion: "token_exchange"
     });
@@ -474,7 +507,9 @@ module.exports = {
   crearCookieEstadoOAuth,
   verificarCookieEstadoOAuth,
   consumirCookieEstadoOAuth,
+  normalizarAlcances,
   alcancesFaltantes,
+  consultarAlcancesInstalacion,
   registrarWebhooksOperativos,
   ALCANCES,
   TOPICOS_OPERATIVOS,
