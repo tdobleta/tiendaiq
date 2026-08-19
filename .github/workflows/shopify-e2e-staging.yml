@@ -87,7 +87,16 @@ jobs:
           OPS_STATUS_TOKEN: ${{ secrets.STAGING_OPS_STATUS_TOKEN }}
         run: |
           set -euo pipefail
-          curl --fail-with-body --silent --show-error --max-time 25 \
+          response="$(mktemp)"
+          status="$(curl --silent --show-error --max-time 25 \
+            --output "$response" \
+            --write-out "%{http_code}" \
             --header "Authorization: Bearer $OPS_STATUS_TOKEN" \
-            https://tiendaiq-staging-web.onrender.com/ops/shopify-certification \
-            | node scripts/verificar-certificacion-shopify-staging.js
+            https://tiendaiq-staging-web.onrender.com/ops/shopify-certification)"
+          if ! node scripts/verificar-certificacion-shopify-staging.js < "$response"; then
+            echo "Respuesta sanitizada del endpoint de certificacion Shopify:" >&2
+            cat "$response" >&2
+            echo "El endpoint de certificacion Shopify devolvio HTTP $status" >&2
+            exit 1
+          fi
+          [[ "$status" == "200" ]] || { echo "El endpoint de certificacion Shopify devolvio HTTP $status" >&2; exit 1; }

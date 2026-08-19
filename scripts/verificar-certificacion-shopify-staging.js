@@ -29,7 +29,21 @@ process.stdin.on("end", () => {
       evidence?.complianceWebhooks?.certifiedHere === false &&
       evidence?.complianceWebhooks?.blocksFullCertification === true;
 
-    if (!valid) throw new Error("La evidencia Shopify activa no satisface el contrato protegido");
+    if (!valid) {
+      console.error("La evidencia Shopify activa no satisface el contrato protegido");
+      const errorCode = String(evidence?.error || "").replace(/[^a-z0-9_.:-]/gi, "");
+      if (errorCode) console.error(`error=${errorCode}`);
+      if (Array.isArray(evidence?.errors) && evidence.errors.length > 0) {
+        const errors = evidence.errors
+          .map((item) => String(item || "").replace(/[^a-z0-9_.:-]/gi, ""))
+          .filter(Boolean);
+        if (errors.length > 0) console.error(`errors=${errors.join(",")}`);
+      }
+      const checks = Object.entries(evidence?.checks || {})
+        .map(([name, check]) => `${name}:${check?.ok === true ? "ok" : "fail"}`);
+      if (checks.length > 0) console.error(`checks=${checks.join(",")}`);
+      throw new Error("Contrato protegido incompleto");
+    }
     console.log(`Shopify staging activo y preflight HTML del storefront verificados para release ${expectedRelease}`);
     console.log("La instalacion o reinstalacion OAuth completa sigue siendo evidencia E2E separada");
     console.log("La version desplegada de los compliance webhooks sigue siendo evidencia separada en Shopify Dev Dashboard");

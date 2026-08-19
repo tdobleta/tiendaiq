@@ -3,6 +3,8 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const crypto = require("node:crypto");
+const path = require("node:path");
+const { spawnSync } = require("node:child_process");
 const {
   evaluateShopifyCertification,
   queryShopifyCertification,
@@ -133,6 +135,30 @@ test("rechaza evidencia durable incompleta o privacidad parcial", () => {
   }));
   assert.equal(durable.checks.publicationDatabase.ok, false);
   assert.equal(privacy.checks.privacyDeliveries.ok, false);
+});
+
+test("el validador CLI resume checks sanitizados cuando el endpoint devuelve 503", () => {
+  const script = path.join(__dirname, "..", "scripts", "verificar-certificacion-shopify-staging.js");
+  const result = spawnSync(process.execPath, [script], {
+    input: JSON.stringify({
+      activeStoreOk: false,
+      release: RELEASE_SHA,
+      error: "certification_not_configured",
+      checks: {
+        scopes: { ok: true, granted: 2 },
+        billing: { ok: false, token: "no-debe-salir" },
+        privacyDeliveries: { ok: false }
+      },
+      errors: ["test_billing_not_active", "privacy_webhook_evidence_incomplete"]
+    }),
+    encoding: "utf8"
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /certification_not_configured/);
+  assert.match(result.stderr, /errors=test_billing_not_active,privacy_webhook_evidence_incomplete/);
+  assert.match(result.stderr, /checks=scopes:ok,billing:fail,privacyDeliveries:fail/);
+  assert.doesNotMatch(result.stderr, /no-debe-salir/);
 });
 
 test("rechaza evidencia de un worker o privacidad de otro release", () => {
