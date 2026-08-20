@@ -8,6 +8,7 @@ const Anthropic = require("@anthropic-ai/sdk");
 const { TenantContext } = require("../src/tenancy/tenant-context");
 const { createGenerationRepository } = require("../src/platform/postgres/generation-repository");
 const { createGeneratePageHandler } = require("../src/jobs/generate-page-handler");
+const { PAGE_SCHEMA_VERSION } = require("../src/domain/page-contract");
 const { isAmbiguousProviderError, normalizeProviderError, retryAfterSeconds } = require("../adaptador");
 
 const tenant = TenantContext.fromShopDomain("generation.myshopify.com", { source: "internal-job" });
@@ -156,8 +157,33 @@ describe("GenerationRepository", () => {
     await repository.release(tenant, queued.reservation.id, new Error("tardío"));
 
     assert.equal(pool.state.reservations[0].status, "committed");
-    assert.equal(pool.state.pages.get(`${tenant.tenantId}:42`).data.titulo, "Lista");
+    const persistedPage = pool.state.pages.get(`${tenant.tenantId}:42`);
+    assert.equal(persistedPage.schema_version, PAGE_SCHEMA_VERSION);
+    assert.equal(persistedPage.data.titulo, "Lista");
     assert.equal(pool.state.usage, 2);
+  });
+
+  test("confirmar rechaza paginas generadas fuera del contrato", async () => {
+    const pool = generationPool(1);
+    const repository = createGenerationRepository(pool);
+    const queued = await repository.enqueue(tenant, {
+      payload: { productId: "gid://shopify/Product/42" },
+      idempotencyKey: "generate:req-contract",
+      period,
+      limit: 3
+    });
+
+    await assert.rejects(
+      repository.finalize(tenant, {
+        reservationId: queued.reservation.id,
+        pageId: "42",
+        page: { id: "otra", data: { titulo: "Lista" } }
+      }),
+      /no coincide/
+    );
+
+    assert.equal(pool.state.reservations[0].status, "reserved");
+    assert.equal(pool.state.pages.size, 0);
   });
 
   test("liberar dos veces descuenta exactamente una", async () => {

@@ -28,6 +28,14 @@ test("el storefront exige una fuente antes de insertar claims", () => {
   assert.doesNotMatch(widget, /#1 EL MÁS VENDIDO DE 2026/);
   assert.doesNotMatch(widget, /Basado en más de 1422 reseñas/);
   assert.doesNotMatch(widget, /Recomendaron esta experiencia a todas sus amigas/);
+  assert.doesNotMatch(widget, /puntaje1\(h\.puntaje \?\? 4\.9\)/);
+  assert.doesNotMatch(widget, /Cliente verificado/);
+  assert.doesNotMatch(widget, /Comprador verificado/);
+  assert.doesNotMatch(widget, /Nombre del cliente/);
+  assert.doesNotMatch(widget, /Notaron una mejora/);
+  assert.doesNotMatch(widget, /Amado por miles|más de 200 clientes/);
+  assert.doesNotMatch(widget, /estrellas\([^)]*(?:\|\| 5|\?\? 5)\)/);
+  assert.doesNotMatch(widget, /pct\s*\?\?\s*0/);
 });
 
 test("Liquid no sirve reseñas ni políticas sin procedencia", () => {
