@@ -4,6 +4,7 @@ const crypto = require("crypto");
 const { requireTenantContext } = require("../../tenancy/tenant-context");
 const { withTenantTransaction } = require("./with-tenant-transaction");
 const { mapJob } = require("./job-repository");
+const { normalizePageRecord } = require("../../domain/page-contract");
 
 function mapReservation(row) {
   if (!row) return null;
@@ -167,6 +168,7 @@ function createGenerationRepository(pool) {
 
     async finalize(context, { reservationId, pageId, page }) {
       const tenant = requireTenantContext(context);
+      const normalizedPage = normalizePageRecord(page, { expectedId: pageId });
       return withTenantTransaction(pool, tenant, async (client) => {
         const result = await client.query(
           "SELECT * FROM control_plane.usage_reservations WHERE tenant_id = $1 AND id = $2 FOR UPDATE",
@@ -184,7 +186,7 @@ function createGenerationRepository(pool) {
         await client.query(
           `INSERT INTO public.paginas (tienda, id, datos, actualizada) VALUES ($1, $2, $3, now())
            ON CONFLICT (tienda, id) DO UPDATE SET datos = $3, actualizada = now()`,
-          [tenant.tenantId, pageId, page]
+          [tenant.tenantId, pageId, normalizedPage]
         );
         const committed = await client.query(
           `UPDATE control_plane.usage_reservations

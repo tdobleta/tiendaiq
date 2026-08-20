@@ -97,8 +97,23 @@
   const estrellas = (n = 5) => `<span class="estrellas" role="img" aria-label="${n} de 5 estrellas">${"★".repeat(n)}</span>`;
   // Miles con punto (es-AR): 1205 → "1.205".
   const miles = (n) => String(n ?? "").replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-  // Puntaje siempre con un decimal: 4.9 → "4.9", 5 → "5.0".
+  // Puntaje siempre con un decimal cuando existe una fuente real.
   const puntaje1 = (n) => Number(n).toFixed(1);
+  const estrellasValidas = (n) => {
+    const value = Number(n);
+    if (!Number.isFinite(value) || value < 1 || value > 5) return "";
+    return estrellas(Math.round(value));
+  };
+  const tienePuntajeReal = (puntaje, cantidad) => {
+    const score = Number(puntaje);
+    const total = Number(cantidad);
+    return Number.isFinite(score) && score > 0 && Number.isFinite(total) && total > 0;
+  };
+  const resenaCompleta = (r) => !!(r && r.texto && r.autor && estrellasValidas(r.estrellas));
+  const estadisticaCompleta = (s) => {
+    const pct = Number(s?.pct);
+    return Number.isFinite(pct) && pct >= 0 && pct <= 100 && !!s?.frase;
+  };
 
   // Iconos de línea (mismos que usa PagePilot: trazo fino, sin relleno)
   const ICONO = {
@@ -109,7 +124,7 @@
     retorno: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg>`,
     // check violeta de los bullets del hero — trazo grueso redondeado, como PagePilot
     tick: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12.8l4.7 4.7L19.5 6.8"/></svg>`,
-    // sello azul de comprador verificado
+    // sello visual para claims con fuente verificada
     verificado: `<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/><path d="M10.2 16.4l-4-4 1.4-1.4 2.6 2.6 6-6 1.4 1.4z" fill="#fff"/></svg>`
   };
 
@@ -252,13 +267,12 @@
       </div>`;
 
     const rd = h.resena_destacada ?? {};
-    // En la tienda, una reseña sin texto real no se muestra: el placeholder
-    // de guía es para el editor, no para el cliente.
-    const rdVisible = !EN_TIENDA || !!rd.texto;
-    const rdTexto = rd.texto
-      ? `"${esc(rd.texto)}"`
-      : `"Acá va tu mejor reseña. Pasá el mouse por el texto y hacé clic en el lápiz para editarla. Pegá una reseña real y guardá."`;
-    const rdAutor = rd.autor ? esc(rd.autor) : `Nombre del cliente`;
+    const rdVisible = resenaCompleta(rd);
+    const rdTexto = `"${esc(rd.texto || "")}"`;
+    const rdAutor = esc(rd.autor || "");
+    const heroResenas = tienePuntajeReal(h.puntaje, h.resenas_count)
+      ? `<div class="hero__resenas">${estrellasValidas(h.puntaje)} <span>Calificación ${esc(puntaje1(h.puntaje))}/5.0 (${esc(miles(h.resenas_count))})</span></div>`
+      : "";
     // El avatar es un asset de la plantilla (avatares/xx.jpg), no un media_id
     // del producto. Sin carpeta o sin archivo, cae a la silueta.
     const rdAvatar = imgAsset(rd.avatar, `<span class="resena-destacada__silueta">👤</span>`);
@@ -285,7 +299,7 @@
             ${global && global.estilo === "premium"
               ? heroTimer(global)
               : `<div class="hero__urgencia">${esc(h.urgencia ?? "Ya es viral | Pocas unidades")}</div>`}
-            <div class="hero__resenas">${estrellas(5)} <span>Calificación ${esc(puntaje1(h.puntaje ?? 4.9))}/5.0 (${esc(miles(h.resenas_count))})</span></div>
+            ${heroResenas}
             <h1 class="hero__titulo">${esc(h.titulo)}</h1>
             <div class="hero__precios">
               <span class="hero__precio">${esc(precioBonito(fuente.moneda, fuente.precio))}</span>
@@ -304,7 +318,7 @@
                 <button class="resena-destacada__editar" type="button">✎ Editar</button>
               </div>
               <div class="resena-destacada__cuerpo">
-                ${estrellas(rd.estrellas ?? 5)}
+                ${estrellasValidas(rd.estrellas)}
                 <p class="resena-destacada__texto">${rdTexto}</p>
                 <div class="resena-destacada__autor">${ICONO.verificado} ${rdAutor}</div>
               </div>
@@ -388,6 +402,7 @@
 
   function stats(f, global) {
     const items = (f.items ?? [])
+      .filter(estadisticaCompleta)
       .map(
         (s) => `
         <div class="stat-item">
@@ -396,6 +411,7 @@
         </div>`
       )
       .join("");
+    if (!items) return "";
 
     return `
     <section class="stats">
@@ -452,7 +468,7 @@
     return `
     <section class="muro">
       <div class="contenedor">
-        <h2 class="muro__titulo">${esc(c.titulo || "Únete a más de 200 clientes contentos")}</h2>
+        <h2 class="muro__titulo">${esc(c.titulo || "Contenido de clientes")}</h2>
         <div class="tiq-vcar" data-idx="0">
           <button class="tiq-vcar__flecha tiq-vcar__flecha--izq" type="button" onclick="tiqVideoNav(this,-1)" aria-label="Anterior">${FLECHA_IZQ}</button>
           <div class="tiq-vcar__viewport"><div class="tiq-vcar__pista">${cards}</div></div>
@@ -505,21 +521,18 @@
   }
 
   function resenas(f) {
-    // El muro se muestra siempre, con andamio incluido — igual que PagePilot.
-    // El dueño reemplaza las tarjetas guía por reseñas reales desde el editor.
-    const items = f.items ?? [];
+    const items = (f.items ?? []).filter(resenaCompleta);
+    if (!items.length) return "";
 
     const tarjeta = (r, j) => {
-      const modoGuia = !r.autor && !r.imagen; // sin datos reales → tarjeta punteada
       // En el editor la foto es clickeable: abre el selector de archivos.
       const clic = MODO_APP ? ` data-imgclick="res:${j}" title="Clic para elegir una imagen"` : "";
       return `
-      <div class="tarjeta-resena ${modoGuia ? "tarjeta-resena--vacia" : ""}">
-        <div class="tarjeta-resena__img${MODO_APP ? " tiq-clicable" : ""}"${clic}>${r.imagen ? img(r.imagen) : `<div class="ph-img">Foto del cliente</div>`}</div>
-        <div class="tarjeta-resena__autor ${r.autor ? "" : "guia"}">${r.autor ? esc(r.autor) : "Nombre del cliente"}</div>
-        <div class="tarjeta-resena__verificado"><span class="verificado">✔</span> Comprador verificado</div>
-        ${estrellas(r.estrellas ?? 5)}
-        <p class="tarjeta-resena__texto ${r.autor ? "" : "guia"}">${esc(r.texto)}</p>
+      <div class="tarjeta-resena">
+        <div class="tarjeta-resena__img${MODO_APP ? " tiq-clicable" : ""}"${clic}>${r.imagen ? img(r.imagen) : ""}</div>
+        <div class="tarjeta-resena__autor">${esc(r.autor)}</div>
+        ${estrellasValidas(r.estrellas)}
+        <p class="tarjeta-resena__texto">${esc(r.texto)}</p>
       </div>`;
     };
 
@@ -527,7 +540,6 @@
     <section class="resenas">
       <div class="contenedor">
         <div class="resenas__cabecera">
-          <div class="estrellas" role="img" aria-label="5 de 5 estrellas">★★★★★</div>
           <h2>${esc(f.titular)}</h2>
           <p>${esc(f.subtitulo)}</p>
         </div>
@@ -1064,28 +1076,21 @@
   // Reseñas en carrusel de scroll INFINITO (marquee). Se duplica la fila para
   // que el loop no tenga costura. Pausa al pasar el mouse.
   function resenasMarquee(f) {
-    const reales = (f.items || []).filter((r) => r.autor || r.texto);
-    const list = reales.length ? reales : [
-      { autor: "@sofia.m", estrellas: 5, texto: "La calidad me sorprendió, la volvería a comprar sin dudar." },
-      { autor: "@martin_ok", estrellas: 5, texto: "Llegó rapidísimo y es tal cual las fotos. Recomendadísimo." },
-      { autor: "@caro.diaz", estrellas: 5, texto: "Uso diario, no me decepcionó. El soporte respondió al toque." },
-      { autor: "@lucas.p", estrellas: 4, texto: "Muy bueno por el precio. Mejor de lo que esperaba." },
-      { autor: "@vale.ríos", estrellas: 5, texto: "Ya la recomendé a toda mi familia. Encantada." }
-    ];
+    const list = (f.items || []).filter(resenaCompleta);
+    if (!list.length) return "";
     const card = (r) => `
       <figure class="tiq-mq__card">
         ${r.imagen ? `<div class="tiq-mq__img">${img(r.imagen)}</div>` : ""}
-        <div class="tiq-mq__stars">${estrellas(r.estrellas ?? 5)}</div>
+        <div class="tiq-mq__stars">${estrellasValidas(r.estrellas)}</div>
         <p class="tiq-mq__txt">${esc(r.texto)}</p>
-        <figcaption class="tiq-mq__autor">${esc(r.autor || "Cliente verificado")}</figcaption>
+        <figcaption class="tiq-mq__autor">${esc(r.autor)}</figcaption>
       </figure>`;
     const fila = list.map(card).join("");
     const editar = MODO_APP ? `<button class="resenas__editar tiq-mq__editar">✎ Editar reseñas en lote</button>` : "";
     return `
     <section class="resenas tiq-mq" data-bloque="resenas" data-fijo="1">
       <div class="tiq-mq__cab">
-        <div class="estrellas" role="img" aria-label="5 de 5 estrellas">★★★★★</div>
-        <h2>${esc(f.titular || "Amado por miles de clientes")}</h2>
+        <h2>${esc(f.titular || "Reseñas")}</h2>
         ${f.subtitulo ? `<p>${esc(f.subtitulo)}</p>` : ""}
       </div>
       ${editar}
@@ -1118,7 +1123,13 @@
     const avatar = imgAsset(rd.avatar, `<span class="tiq-pp__avatar-fallback">${esc((rd.autor || "C").slice(0, 1))}</span>`);
     const precio = precioBonito(fuente.moneda, fuente.precio);
     const comparativo = fuente.precio_comparativo ? `<del>${esc(precioBonito(fuente.moneda, fuente.precio_comparativo))}</del>` : "";
-    return `<section class="tiq-pp__hero" data-bloque="hero"><div class="tiq-pp__wrap tiq-pp__hero-grid"><div class="tiq-pp__gallery"><div id="imagen-principal" class="tiq-pp__gallery-main">${img(galeria[0], h.titulo || "Producto", { hero: true })}</div><div class="tiq-pp__thumbs">${thumbs}</div></div><div class="tiq-pp__buy"><div class="tiq-pp__rating">${estrellas(5)} <span>Calificado con <strong>${esc(puntaje1(h.puntaje ?? 4.9))}/5</strong> por ${esc(miles(h.resenas_count || 0))} clientes satisfechos</span></div><h1>${esc(h.titulo || fuente.titulo_crudo || "Producto")}</h1><p class="tiq-pp__tagline">${esc(h.urgencia || h.subtitulo || "Una mejora simple para todos los días.")}</p><p class="tiq-pp__subtitulo">${esc(h.subtitulo || "Pensado para resolver una necesidad cotidiana con menos esfuerzo.")}</p><ul class="tiq-pp__benefits">${bullets}</ul><div class="tiq-pp__price">${comparativo}<strong>${esc(precio)}</strong>${fuente.precio_comparativo ? `<span class="tiq-pp__save">Oferta especial</span>` : ""}</div>${pagepilotBoton(g)}<div class="tiq-pp__trust"><span>${ICONO.camion} Envío incluido</span><span>${ICONO.retorno} Devolución simple</span></div>${rd.texto ? `<blockquote class="tiq-pp__quote"><div class="tiq-pp__quote-head">${avatar}<span>${estrellas(rd.estrellas || 5)}</span></div><p>"${esc(rd.texto)}"</p><cite>${ICONO.verificado} ${esc(rd.autor || "Cliente verificado")}</cite></blockquote>` : ""}</div></div></section>`;
+    const ratingHtml = tienePuntajeReal(h.puntaje, h.resenas_count)
+      ? `<div class="tiq-pp__rating">${estrellasValidas(h.puntaje)} <span>Calificado con <strong>${esc(puntaje1(h.puntaje))}/5</strong> por ${esc(miles(h.resenas_count))} reseñas</span></div>`
+      : "";
+    const quoteHtml = resenaCompleta(rd)
+      ? `<blockquote class="tiq-pp__quote"><div class="tiq-pp__quote-head">${avatar}<span>${estrellasValidas(rd.estrellas)}</span></div><p>"${esc(rd.texto)}"</p><cite>${ICONO.verificado} ${esc(rd.autor)}</cite></blockquote>`
+      : "";
+    return `<section class="tiq-pp__hero" data-bloque="hero"><div class="tiq-pp__wrap tiq-pp__hero-grid"><div class="tiq-pp__gallery"><div id="imagen-principal" class="tiq-pp__gallery-main">${img(galeria[0], h.titulo || "Producto", { hero: true })}</div><div class="tiq-pp__thumbs">${thumbs}</div></div><div class="tiq-pp__buy">${ratingHtml}<h1>${esc(h.titulo || fuente.titulo_crudo || "Producto")}</h1><p class="tiq-pp__tagline">${esc(h.urgencia || h.subtitulo || "Una mejora simple para todos los días.")}</p><p class="tiq-pp__subtitulo">${esc(h.subtitulo || "Pensado para resolver una necesidad cotidiana con menos esfuerzo.")}</p><ul class="tiq-pp__benefits">${bullets}</ul><div class="tiq-pp__price">${comparativo}<strong>${esc(precio)}</strong>${fuente.precio_comparativo ? `<span class="tiq-pp__save">Oferta especial</span>` : ""}</div>${pagepilotBoton(g)}<div class="tiq-pp__trust"><span>${ICONO.camion} Envío incluido</span><span>${ICONO.retorno} Devolución simple</span></div>${quoteHtml}</div></div></section>`;
   }
 
   function pagepilotTimeline(f) {
@@ -1130,9 +1141,9 @@
 
   function pagepilotReviews(f) {
     const r = f.resenas || {};
-    const items = (r.items || []).slice(0, 3).map((it) => `<article class="tiq-pp__review"><div class="tiq-pp__review-image">${it.imagen ? img(it.imagen, it.autor || "Cliente") : `<div class="ph-img">Foto del cliente</div>`}</div><div class="tiq-pp__review-body"><strong>${esc(it.autor || "Cliente verificado")}</strong>${estrellas(it.estrellas || 5)}<p>${esc(it.texto || "Compartí una experiencia real usando el producto.")}</p></div></article>`).join("");
+    const items = (r.items || []).filter(resenaCompleta).slice(0, 3).map((it) => `<article class="tiq-pp__review"><div class="tiq-pp__review-image">${it.imagen ? img(it.imagen, it.autor) : ""}</div><div class="tiq-pp__review-body"><strong>${esc(it.autor)}</strong>${estrellasValidas(it.estrellas)}<p>${esc(it.texto)}</p></div></article>`).join("");
     if (!items) return "";
-    return `<section class="tiq-pp__reviews" data-bloque="resenas"><div class="tiq-pp__wrap"><header class="tiq-pp__section-head"><div class="tiq-pp__pill">${estrellas(5)} Basado en resenas confiables</div><h2>${esc(r.titular || "Lo que dice nuestra comunidad")}</h2><p>${esc(r.subtitulo || "Experiencias reales de personas que ya lo usan.")}</p></header><div class="tiq-pp__reviews-grid">${items}</div></div></section>`;
+    return `<section class="tiq-pp__reviews" data-bloque="resenas"><div class="tiq-pp__wrap"><header class="tiq-pp__section-head"><h2>${esc(r.titular || "Reseñas")}</h2><p>${esc(r.subtitulo || "")}</p></header><div class="tiq-pp__reviews-grid">${items}</div></div></section>`;
   }
 
   function pagepilotFeature(f, g) {
@@ -1143,7 +1154,7 @@
 
   function pagepilotProblem(f) {
     const t = f.tabla || {};
-    const statsItems = (f.stats?.items || []).map((it) => `<div class="tiq-pp__stat"><b>${esc(it.pct ?? 0)}%</b><span>${esc(it.frase)}</span></div>`).join("");
+    const statsItems = (f.stats?.items || []).filter(estadisticaCompleta).map((it) => `<div class="tiq-pp__stat"><b>${esc(it.pct)}%</b><span>${esc(it.frase)}</span></div>`).join("");
     return `<section class="tiq-pp__dark" data-bloque="tabla"><div class="tiq-pp__wrap tiq-pp__dark-grid"><div><span class="tiq-pp__dark-kicker">Por qué importa</span><h2>${esc(t.titular || "Menos complicaciones, más tranquilidad")}</h2><p>${esc(t.parrafo || "Una solución pensada para hacer más sencillo lo que antes costaba.")}</p></div><div class="tiq-pp__stats">${statsItems}</div></div></section>`;
   }
 
@@ -1205,8 +1216,13 @@
     const actual = Number(fuente.precio);
     const anterior = Number(fuente.precio_comparativo);
     const ahorro = Number.isFinite(actual) && Number.isFinite(anterior) && anterior > actual ? Math.round((1 - actual / anterior) * 100) : 0;
-    const rating = Math.max(1, Math.min(5, Math.round(Number(h.puntaje || 5))));
-    return `<section class="tiq-ppb__hero" data-bloque="hero"><div class="tiq-ppb__wrap tiq-ppb__hero-grid"><div class="tiq-ppb__gallery"><div id="tiq-ppb-main" class="tiq-ppb__gallery-main">${img(galeria[0], titulo, { hero: true })}<button type="button" class="tiq-ppb__gallery-arrow tiq-ppb__gallery-arrow--prev" onclick="tiqPpbMover(-1)" aria-label="Imagen anterior">‹</button><button type="button" class="tiq-ppb__gallery-arrow tiq-ppb__gallery-arrow--next" onclick="tiqPpbMover(1)" aria-label="Imagen siguiente">›</button></div><div class="tiq-ppb__thumbs">${thumbs}</div></div><div class="tiq-ppb__buy"><div class="tiq-ppb__badge"><b>★</b><span>${esc(h.urgencia || "Oferta destacada")}</span></div><h1>${esc(titulo)}</h1><div class="tiq-ppb__rating">${estrellas(rating)} <span>Calificado con <strong>${esc(puntaje1(h.puntaje ?? 4.9))}/5</strong> por más de <strong>${esc(miles(h.resenas_count || 0))}</strong> personas</span></div><ul class="tiq-ppb__benefits">${bullets}</ul><div class="tiq-ppb__price">${comparativo}<strong>${esc(precio)}</strong>${ahorro ? `<span class="tiq-ppb__save">AHORRÁ ${ahorro}%</span>` : ""}</div>${pagepilotBlueButton(g, g.cta || "Añadir al carrito")}<div class="tiq-ppb__trust"><span>${ICONO.verificado} Garantía de devolución de 30 días</span><span>${ICONO.paquete} Envío y devoluciones simples</span></div><div class="tiq-ppb__payments" aria-label="Medios de pago"><span>AMEX</span><span>Apple Pay</span><span>VISA</span><span>MC</span><span>PayPal</span><span>G Pay</span><span>shop</span></div><div class="tiq-ppb__accordions">${accordions}</div>${review.texto ? `<blockquote class="tiq-ppb__quote"><span class="tiq-ppb__quote-avatar">${avatar}</span><div class="tiq-ppb__quote-body"><div class="tiq-ppb__quote-stars">${estrellas(review.estrellas || 5)}</div><p>"${esc(review.texto)}"</p><cite>${ICONO.verificado} ${esc(review.autor || "Cliente verificado")}</cite></div></blockquote>` : ""}${h.urgencia ? `<div class="tiq-ppb__scarcity">${ICONOS_BULLET.rayo}<strong>${esc(h.urgencia)}</strong><span>Consultá disponibilidad y condiciones antes de finalizar tu compra.</span></div>` : ""}</div></div></section>`;
+    const ratingHtml = tienePuntajeReal(h.puntaje, h.resenas_count)
+      ? `<div class="tiq-ppb__rating">${estrellasValidas(h.puntaje)} <span>Calificado con <strong>${esc(puntaje1(h.puntaje))}/5</strong> por <strong>${esc(miles(h.resenas_count))}</strong> reseñas</span></div>`
+      : "";
+    const quoteHtml = resenaCompleta(review)
+      ? `<blockquote class="tiq-ppb__quote"><span class="tiq-ppb__quote-avatar">${avatar}</span><div class="tiq-ppb__quote-body"><div class="tiq-ppb__quote-stars">${estrellasValidas(review.estrellas)}</div><p>"${esc(review.texto)}"</p><cite>${ICONO.verificado} ${esc(review.autor)}</cite></div></blockquote>`
+      : "";
+    return `<section class="tiq-ppb__hero" data-bloque="hero"><div class="tiq-ppb__wrap tiq-ppb__hero-grid"><div class="tiq-ppb__gallery"><div id="tiq-ppb-main" class="tiq-ppb__gallery-main">${img(galeria[0], titulo, { hero: true })}<button type="button" class="tiq-ppb__gallery-arrow tiq-ppb__gallery-arrow--prev" onclick="tiqPpbMover(-1)" aria-label="Imagen anterior">‹</button><button type="button" class="tiq-ppb__gallery-arrow tiq-ppb__gallery-arrow--next" onclick="tiqPpbMover(1)" aria-label="Imagen siguiente">›</button></div><div class="tiq-ppb__thumbs">${thumbs}</div></div><div class="tiq-ppb__buy"><div class="tiq-ppb__badge"><b>★</b><span>${esc(h.urgencia || "Producto destacado")}</span></div><h1>${esc(titulo)}</h1>${ratingHtml}<ul class="tiq-ppb__benefits">${bullets}</ul><div class="tiq-ppb__price">${comparativo}<strong>${esc(precio)}</strong>${ahorro ? `<span class="tiq-ppb__save">AHORRÁ ${ahorro}%</span>` : ""}</div>${pagepilotBlueButton(g, g.cta || "Añadir al carrito")}<div class="tiq-ppb__trust"><span>${ICONO.verificado} Garantía de devolución de 30 días</span><span>${ICONO.paquete} Envío y devoluciones simples</span></div><div class="tiq-ppb__payments" aria-label="Medios de pago"><span>AMEX</span><span>Apple Pay</span><span>VISA</span><span>MC</span><span>PayPal</span><span>G Pay</span><span>shop</span></div><div class="tiq-ppb__accordions">${accordions}</div>${quoteHtml}${h.urgencia ? `<div class="tiq-ppb__scarcity">${ICONOS_BULLET.rayo}<strong>${esc(h.urgencia)}</strong><span>Consultá disponibilidad y condiciones antes de finalizar tu compra.</span></div>` : ""}</div></div></section>`;
   }
 
   function pagepilotBlueTicker(f) {
@@ -1218,15 +1234,10 @@
 
   function pagepilotBlueSocial(f, g) {
     const r = f.resenas || {};
-    const galeria = f.hero?.galeria || [];
     const media = (r.items || []).map((item) => item.imagen).filter(Boolean).slice(0, 3);
-    // En la tienda no reutilizamos fotos del producto como si fueran UGC.
-    // El preview conserva el fallback visual para que el merchant pueda editar
-    // la sección aunque todavía no haya cargado contenido de clientes.
-    if (EN_TIENDA && !media.length) return "";
-    const images = (media.length ? media : galeria.slice(0, 3)).map((id, i) => `<article class="tiq-ppb__ugc">${img(id, `Cliente ${i + 1}`)}</article>`).join("");
+    const images = media.map((id) => `<article class="tiq-ppb__ugc">${img(id, "Contenido de cliente")}</article>`).join("");
     if (!images) return "";
-    return `<section class="tiq-ppb__social" data-bloque="clientes"><div class="tiq-ppb__wrap tiq-ppb__social-grid"><div><h2>${esc(r.titular || "Miles confían. Personas reales eligen calidad.")}</h2><p>${esc(r.subtitulo || "Experiencias reales de personas que ya incorporaron el producto a su rutina.")}</p>${pagepilotBlueButton(g, "Obtené el tuyo ahora")}</div><div class="tiq-ppb__ugc-grid">${images}</div></div></section>`;
+    return `<section class="tiq-ppb__social" data-bloque="clientes"><div class="tiq-ppb__wrap tiq-ppb__social-grid"><div><h2>${esc(r.titular || "Contenido de clientes")}</h2><p>${esc(r.subtitulo || "")}</p>${pagepilotBlueButton(g, "Obtené el tuyo ahora")}</div><div class="tiq-ppb__ugc-grid">${images}</div></div></section>`;
   }
 
   function pagepilotBlueTextImage(f, g) {
@@ -1246,19 +1257,15 @@
 
   function pagepilotBlueReviews(f) {
     const r = f.resenas || {};
-    const candidatas = (r.items || []).filter((item) => item.texto);
-    // Las tarjetas sin autor ni imagen son guías para el editor, no reseñas
-    // publicables. El preview las muestra para facilitar la edición; la tienda
-    // evita presentar copy de ejemplo como testimonio real.
-    const visibles = EN_TIENDA ? candidatas.filter((item) => item.autor || item.imagen) : candidatas;
-    const items = visibles.slice(0, 4).map((item) => `<article class="tiq-ppb__review"><div class="tiq-ppb__review-media">${item.imagen ? img(item.imagen, item.autor || "Cliente") : `<div class="ph-img">Foto del cliente</div>`}</div><strong>${esc(item.autor || "Cliente verificado")}</strong>${estrellas(item.estrellas || 5)}<p>${esc(item.texto)}</p></article>`).join("");
+    const visibles = (r.items || []).filter(resenaCompleta);
+    const items = visibles.slice(0, 4).map((item) => `<article class="tiq-ppb__review"><div class="tiq-ppb__review-media">${item.imagen ? img(item.imagen, item.autor) : ""}</div><strong>${esc(item.autor)}</strong>${estrellasValidas(item.estrellas)}<p>${esc(item.texto)}</p></article>`).join("");
     if (!items) return "";
-    return `<section class="tiq-ppb__reviews" data-bloque="resenas"><div class="tiq-ppb__wrap"><header class="tiq-ppb__section-head"><div class="tiq-ppb__pill">${estrellas(5)} Basado en ${esc(miles(r.items.length || 0))} reseñas confiables</div><h2>${esc(r.titular || "Lo que dicen nuestros clientes")}</h2><p>${esc(r.subtitulo || "Experiencias reales de personas que ya lo usan.")}</p></header><div class="tiq-ppb__reviews-grid">${items}</div></div></section>`;
+    return `<section class="tiq-ppb__reviews" data-bloque="resenas"><div class="tiq-ppb__wrap"><header class="tiq-ppb__section-head"><h2>${esc(r.titular || "Reseñas")}</h2><p>${esc(r.subtitulo || "")}</p></header><div class="tiq-ppb__reviews-grid">${items}</div></div></section>`;
   }
 
   function pagepilotBlueStats(f) {
     const s = f.stats || {};
-    const items = (s.items || []).slice(0, 4).map((item) => `<article><b>${esc(item.pct ?? 0)}%</b><p>${esc(item.frase || "Notaron una mejora al usarlo de forma constante.")}</p></article>`).join("");
+    const items = (s.items || []).filter(estadisticaCompleta).slice(0, 4).map((item) => `<article><b>${esc(item.pct)}%</b><p>${esc(item.frase)}</p></article>`).join("");
     if (!items) return "";
     return `<section class="tiq-ppb__stats-section" data-bloque="stats"><div class="tiq-ppb__wrap"><header class="tiq-ppb__section-head"><h2>${esc(s.titular || "Lo que notaron quienes lo usan")}</h2></header><div class="tiq-ppb__stats-grid">${items}</div></div></section>`;
   }
@@ -1308,8 +1315,8 @@
     social: { titular: "Contenido de clientes", enfasis: "", subtitulo: "Agregá contenido autorizado para mostrar esta sección.", cta: "Obtené el tuyo ahora", rating: "", imagenes: [] },
     como_funciona: { titular: "¿Cómo funciona este producto?", parrafos: ["Su diseño está pensado para resolver una necesidad cotidiana de forma simple.", "Usalo como parte de tu rutina y disfrutá una experiencia cómoda desde el primer momento.", "Una propuesta práctica para acompañarte todos los días, sin pasos innecesarios."], cta: "Compralo ahora", imagen: null },
     feature: { titular: "5 beneficios diarios del producto", subtitulo: "Potenciá tu rutina para disfrutar un resultado que se nota.", items: ["Uso sencillo", "Diseño práctico", "Resultados claros", "Mantenimiento simple", "Para todos los días"].map((titulo) => ({ titulo, frase: "Pensado para acompañarte con comodidad." })), imagen: null },
-    reviews: { badge: "Reseñas verificadas", titular: "Experiencias de clientes", subtitulo: "Importá reseñas reales para mostrar esta sección.", items: [] },
-    blue_stats: { titular: "Resultados verificados", subtitulo: "Agregá una fuente válida para publicar estadísticas.", items: [] },
+    reviews: { badge: "Reseñas", titular: "Experiencias de clientes", subtitulo: "Importá reseñas reales para mostrar esta sección.", items: [] },
+    blue_stats: { titular: "Estadísticas", subtitulo: "Agregá una fuente válida para publicar estadísticas.", items: [] },
     comparison: { titular: "Comparalo vos misma", parrafo: "Mirá por qué esta propuesta se destaca frente a las alternativas.", cta: "Obtené el tuyo ahora", filas: ["Mayor definición", "Aplicación fluida", "Resultado natural", "Sin grumos", "Secado rápido", "Resistencia diaria"], otros: "Otros" },
     panel: { titular: "Una mejora simple para cada día", subtitulo: "Sumá una solución pensada para acompañarte con comodidad.", cta: "Compralo ahora", imagen: null },
     faq: { titular: "Preguntas frecuentes", subtitulo: "Todo lo que necesitás saber antes de comprarlo.", items: ["¿De qué material está hecho?", "¿Cómo se usa?", "¿Cómo se limpia o mantiene?", "¿Qué colores tiene disponibles?", "¿Qué pasa si no estoy conforme?"].map((pregunta) => ({ pregunta, respuesta: "Consultá la ficha del producto y la política de devolución para conocer todos los detalles." })) },
@@ -1385,16 +1392,21 @@
     const accordions = accordionData.map((item) => `<details><summary>${esc(item.titulo || "Información del producto")}<span>⌄</span></summary><p>${esc(item.contenido || "Consultá la información del producto antes de comprar.")}</p></details>`).join("");
     const review = h.resena_destacada || {};
     const avatar = imgAsset(review.avatar, `<span class="tiq-ppb__avatar-fallback">${esc((review.autor || "C").slice(0, 1))}</span>`);
-    const reviewPool = [review, ...(Array.isArray(f.resenas?.items) ? f.resenas.items : [])].filter((item) => item?.texto).slice(0, 5);
+    const reviewPool = [review, ...(Array.isArray(f.resenas?.items) ? f.resenas.items : [])].filter(resenaCompleta).slice(0, 5);
     const precio = precioBonito(fuente.moneda, fuente.precio || "0.00");
     const anterior = fuente.precio_comparativo ? precioBonito(fuente.moneda, fuente.precio_comparativo) : "";
     const ahorro = Number(fuente.precio) && Number(fuente.precio_comparativo) > Number(fuente.precio) ? Math.round((1 - Number(fuente.precio) / Number(fuente.precio_comparativo)) * 100) : 0;
-    const reviewText = review.texto || "Una experiencia práctica y simple para sumar a tu rutina diaria.";
     const badge = String(b.badge || PPB_DEFAULTS.badge).trim();
     const badgeMatch = badge.match(/^(#[0-9]+)\s+(.+)$/);
     const badgeMark = badgeMatch ? badgeMatch[1] : "★";
     const badgeLabel = badgeMatch ? badgeMatch[2] : badge;
-    return `<section class="tiq-ppb__hero" data-bloque="hero"><div class="tiq-ppb__wrap tiq-ppb__hero-grid"><div class="tiq-ppb__gallery"><div id="tiq-ppb-main" class="tiq-ppb__gallery-main">${gallery[0] ? img(gallery[0], titulo, { hero: true }) : ppbAssetImg(PPB_ASSETS.detail, titulo)}<button type="button" class="tiq-ppb__gallery-arrow tiq-ppb__gallery-arrow--prev" onclick="tiqPpbMover(-1)" aria-label="Imagen anterior">‹</button><button type="button" class="tiq-ppb__gallery-arrow tiq-ppb__gallery-arrow--next" onclick="tiqPpbMover(1)" aria-label="Imagen siguiente">›</button></div><div class="tiq-ppb__thumbs">${thumbs}</div></div><div class="tiq-ppb__buy"><div class="tiq-ppb__badge"><b>${esc(badgeMark)}</b><span>${esc(badgeLabel)}</span></div><h1>${esc(titulo)}</h1><div class="tiq-ppb__rating">${estrellas(Math.max(1, Math.min(5, Math.round(Number(h.puntaje || 5)))))} <span>Calificado con <strong>${esc(puntaje1(h.puntaje ?? 4.9))}/5</strong> por más de <strong>${esc(miles(h.resenas_count || 0))}</strong> personas</span></div><ul class="tiq-ppb__benefits">${bullets}</ul><div class="tiq-ppb__price">${anterior ? `<del>${esc(anterior)}</del>` : ""}<strong>${esc(precio)}</strong>${ahorro ? `<span class="tiq-ppb__save">AHORRA ${ahorro}%</span>` : ""}</div>${ppbAddButton(g, g.cta || "Añadir al carrito")}<div class="tiq-ppb__trust"><span>${ICONO.verificado} Garantía de devolución de 30 días</span><span>${ICONO.paquete} Devoluciones en 30 días</span></div><div class="tiq-ppb__payments" aria-label="Medios de pago">${b.pagos.slice(0, 7).map((id) => PPB_ASSETS.payments[id] ? ppbAssetImg(PPB_ASSETS.payments[id], id) : "").join("")}</div><div class="tiq-ppb__accordions">${accordions}</div><div class="tiq-ppb__guarantee">${ICONO.corazon}<span>Menos del 1% de los clientes solicita nuestra Garantía de Devolución</span></div><blockquote class="tiq-ppb__quote" data-ppb-review-pool='${esc(JSON.stringify(reviewPool))}' data-ppb-review-index="0"><button type="button" onclick="tiqPpbReviewMover(-1)" aria-label="Reseña anterior">‹</button><span class="tiq-ppb__quote-avatar">${avatar}</span><div class="tiq-ppb__quote-body"><div class="tiq-ppb__quote-stars">${estrellas(review.estrellas || 5)}</div><p>"${esc(reviewText)}"</p><cite>${ICONO.verificado} ${esc(review.autor || "Cliente verificado")}</cite></div><button type="button" onclick="tiqPpbReviewMover(1)" aria-label="Reseña siguiente">›</button></blockquote></div></div></section>`;
+    const ratingHtml = tienePuntajeReal(h.puntaje, h.resenas_count)
+      ? `<div class="tiq-ppb__rating">${estrellasValidas(h.puntaje)} <span>Calificado con <strong>${esc(puntaje1(h.puntaje))}/5</strong> por <strong>${esc(miles(h.resenas_count))}</strong> reseñas</span></div>`
+      : "";
+    const quoteHtml = reviewPool.length
+      ? `<blockquote class="tiq-ppb__quote" data-ppb-review-pool='${esc(JSON.stringify(reviewPool))}' data-ppb-review-index="0"><button type="button" onclick="tiqPpbReviewMover(-1)" aria-label="Reseña anterior">‹</button><span class="tiq-ppb__quote-avatar">${avatar}</span><div class="tiq-ppb__quote-body"><div class="tiq-ppb__quote-stars">${estrellasValidas(reviewPool[0].estrellas)}</div><p>"${esc(reviewPool[0].texto)}"</p><cite>${ICONO.verificado} ${esc(reviewPool[0].autor)}</cite></div><button type="button" onclick="tiqPpbReviewMover(1)" aria-label="Reseña siguiente">›</button></blockquote>`
+      : "";
+    return `<section class="tiq-ppb__hero" data-bloque="hero"><div class="tiq-ppb__wrap tiq-ppb__hero-grid"><div class="tiq-ppb__gallery"><div id="tiq-ppb-main" class="tiq-ppb__gallery-main">${gallery[0] ? img(gallery[0], titulo, { hero: true }) : ppbAssetImg(PPB_ASSETS.detail, titulo)}<button type="button" class="tiq-ppb__gallery-arrow tiq-ppb__gallery-arrow--prev" onclick="tiqPpbMover(-1)" aria-label="Imagen anterior">‹</button><button type="button" class="tiq-ppb__gallery-arrow tiq-ppb__gallery-arrow--next" onclick="tiqPpbMover(1)" aria-label="Imagen siguiente">›</button></div><div class="tiq-ppb__thumbs">${thumbs}</div></div><div class="tiq-ppb__buy"><div class="tiq-ppb__badge"><b>${esc(badgeMark)}</b><span>${esc(badgeLabel)}</span></div><h1>${esc(titulo)}</h1>${ratingHtml}<ul class="tiq-ppb__benefits">${bullets}</ul><div class="tiq-ppb__price">${anterior ? `<del>${esc(anterior)}</del>` : ""}<strong>${esc(precio)}</strong>${ahorro ? `<span class="tiq-ppb__save">AHORRA ${ahorro}%</span>` : ""}</div>${ppbAddButton(g, g.cta || "Añadir al carrito")}<div class="tiq-ppb__trust"><span>${ICONO.verificado} Garantía de devolución de 30 días</span><span>${ICONO.paquete} Devoluciones en 30 días</span></div><div class="tiq-ppb__payments" aria-label="Medios de pago">${b.pagos.slice(0, 7).map((id) => PPB_ASSETS.payments[id] ? ppbAssetImg(PPB_ASSETS.payments[id], id) : "").join("")}</div><div class="tiq-ppb__accordions">${accordions}</div>${quoteHtml}</div></div></section>`;
   }
 
   function ppbTicker(b) {
@@ -1405,8 +1417,9 @@
 
   function ppbSocial(data, b) {
     const existing = (data.facetas?.resenas?.items || []).map((item) => item?.imagen).filter(Boolean).slice(0, 3);
-    const images = b.social.imagenes.length ? b.social.imagenes.slice(0, 3) : (existing.length ? existing : PPB_ASSETS.ugc);
-    return `<section class="tiq-ppb__social" data-bloque="clientes"><div class="tiq-ppb__wrap tiq-ppb__social-grid"><div><h2>${ppbEmphasis(b.social.titular, b.social.enfasis)}</h2><p>${esc(b.social.subtitulo)}</p>${ppbAddButton(data.global || {}, b.social.cta)}<div class="tiq-ppb__social-rating">${estrellas(5)} <span>${esc(b.social.rating)}</span></div></div><div class="tiq-ppb__ugc-grid">${images.map((id, i) => `<article class="tiq-ppb__ugc">${ppbAssetOrMedia(id, `Contenido de cliente ${i + 1}`, PPB_ASSETS.ugc[i % 3])}</article>`).join("")}</div></div></section>`;
+    const images = b.social.imagenes.length ? b.social.imagenes.slice(0, 3) : existing;
+    if (!images.length) return "";
+    return `<section class="tiq-ppb__social" data-bloque="clientes"><div class="tiq-ppb__wrap tiq-ppb__social-grid"><div><h2>${ppbEmphasis(b.social.titular, b.social.enfasis)}</h2><p>${esc(b.social.subtitulo)}</p>${ppbAddButton(data.global || {}, b.social.cta)}</div><div class="tiq-ppb__ugc-grid">${images.map((id) => `<article class="tiq-ppb__ugc">${ppbAssetOrMedia(id, "Contenido de cliente", "")}</article>`).join("")}</div></div></section>`;
   }
 
   function ppbTextImage(data, b) {
@@ -1421,14 +1434,16 @@
   }
 
   function ppbReviews(b) {
-    if (!b.reviews.items.length) return "";
-    const items = b.reviews.items.slice(0, 4).map((item) => `<article class="tiq-ppb__review"><div class="tiq-ppb__review-media">${ppbAssetOrMedia(item.imagen, item.autor || "Cliente", PPB_ASSETS.review)}</div><strong>${esc(item.autor || "Cliente verificado")}</strong>${estrellas(item.estrellas || 5)}<p>${esc(item.texto || "Una experiencia práctica para todos los días.")}</p></article>`).join("");
-    return `<section class="tiq-ppb__reviews" data-bloque="resenas"><div class="tiq-ppb__wrap"><header class="tiq-ppb__section-head"><div class="tiq-ppb__pill">${estrellas(5)} ${esc(b.reviews.badge)}</div><h2>${esc(b.reviews.titular)}</h2><p>${esc(b.reviews.subtitulo)}</p></header><div class="tiq-ppb__reviews-grid">${items}</div></div></section>`;
+    const reviews = b.reviews.items.filter(resenaCompleta);
+    if (!reviews.length) return "";
+    const items = reviews.slice(0, 4).map((item) => `<article class="tiq-ppb__review"><div class="tiq-ppb__review-media">${item.imagen ? ppbAssetOrMedia(item.imagen, item.autor, "") : ""}</div><strong>${esc(item.autor)}</strong>${estrellasValidas(item.estrellas)}<p>${esc(item.texto)}</p></article>`).join("");
+    return `<section class="tiq-ppb__reviews" data-bloque="resenas"><div class="tiq-ppb__wrap"><header class="tiq-ppb__section-head"><h2>${esc(b.reviews.titular)}</h2><p>${esc(b.reviews.subtitulo)}</p></header><div class="tiq-ppb__reviews-grid">${items}</div></div></section>`;
   }
 
   function ppbStats(b) {
-    if (!b.blue_stats.items.length) return "";
-    return `<section class="tiq-ppb__stats-section" data-bloque="stats"><div class="tiq-ppb__wrap"><header class="tiq-ppb__section-head"><h2>${esc(b.blue_stats.titular)}</h2><p>${esc(b.blue_stats.subtitulo)}</p></header><div class="tiq-ppb__stats-grid">${b.blue_stats.items.slice(0, 4).map((item) => `<article><b>${esc(item.pct ?? 0)}%</b><p>${esc(item.frase || "Notaron una mejora en su rutina.")}</p></article>`).join("")}</div></div></section>`;
+    const items = b.blue_stats.items.filter(estadisticaCompleta);
+    if (!items.length) return "";
+    return `<section class="tiq-ppb__stats-section" data-bloque="stats"><div class="tiq-ppb__wrap"><header class="tiq-ppb__section-head"><h2>${esc(b.blue_stats.titular)}</h2><p>${esc(b.blue_stats.subtitulo)}</p></header><div class="tiq-ppb__stats-grid">${items.slice(0, 4).map((item) => `<article><b>${esc(item.pct)}%</b><p>${esc(item.frase)}</p></article>`).join("")}</div></div></section>`;
   }
 
   function ppbComparison(data, b) {
@@ -1694,16 +1709,16 @@
     const current = Number(quote.dataset.ppbReviewIndex) || 0;
     const next = (current + delta + pool.length) % pool.length;
     const review = pool[next] || {};
+    if (!resenaCompleta(review)) return;
     quote.dataset.ppbReviewIndex = String(next);
-    const stars = Math.max(1, Math.min(5, Number(review.estrellas) || 5));
     const body = quote.querySelector(".tiq-ppb__quote-body");
     if (body) {
       const rating = body.querySelector(".tiq-ppb__quote-stars");
       const text = body.querySelector("p");
       const author = body.querySelector("cite");
-      if (rating) rating.textContent = "★".repeat(stars);
-      if (text) text.textContent = `"${review.texto || "Una experiencia práctica y simple para sumar a tu rutina diaria."}"`;
-      if (author) author.textContent = `✓ ${review.autor || "Cliente verificado"}`;
+      if (rating) rating.textContent = "★".repeat(Math.round(Number(review.estrellas)));
+      if (text) text.textContent = `"${review.texto}"`;
+      if (author) author.textContent = `✓ ${review.autor}`;
     }
     const avatar = quote.querySelector(".tiq-ppb__quote-avatar");
     if (avatar) avatar.innerHTML = `<span class="tiq-ppb__avatar-fallback">${esc((review.autor || "C").slice(0, 1))}</span>`;
