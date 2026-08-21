@@ -15,15 +15,17 @@ const { certificationFailureSummary } = require("../scripts/verificar-certificac
 const SESSION = { tienda: "recovery.myshopify.com", token: "token-falso" };
 const NONE = { currentAppInstallation: { activeSubscriptions: [] } };
 
-test("PAGINAS_GRATIS acepta cero y sólo usa 3 ante ausencia, vacío o inválido", () => {
-  const value = (raw) => montar("facturacion.js", { env: raw === undefined ? {} : { PAGINAS_GRATIS: raw } }).modulo.PAGINAS_GRATIS;
-  assert.equal(value("0"), 0);
-  assert.equal(value(undefined), 3);
-  assert.equal(value(""), 3);
-  assert.equal(value("  "), 3);
-  assert.equal(value("-1"), 3);
-  assert.equal(value("1.5"), 3);
-  assert.equal(value("no-numero"), 3);
+test("PAGINAS_GRATIS tiene un único fallback y acepta el override de test controlado", () => {
+  const config = (raw, extra = {}) => montar("facturacion.js", {
+    env: { ...(raw === undefined ? {} : { PAGINAS_GRATIS: raw }), ...extra }
+  }).modulo.configuracionPaginasGratis;
+
+  assert.deepEqual(config(undefined), { limite: 3, origen: "default", presente: false, valida: false });
+  assert.deepEqual(config(""), { limite: 3, origen: "default", presente: true, valida: false });
+  assert.deepEqual(config("no-numero"), { limite: 3, origen: "default", presente: true, valida: false });
+  assert.deepEqual(config("0"), { limite: 0, origen: "env", presente: true, valida: true });
+  assert.deepEqual(config("-1"), { limite: 3, origen: "default", presente: true, valida: false });
+  assert.deepEqual(config("-1", { PLAN_TEST: "1" }), { limite: -1, origen: "env", presente: true, valida: true });
 });
 
 test("una respuesta Shopify sin confirmationUrl persiste sólo diagnóstico seguro", async () => {
