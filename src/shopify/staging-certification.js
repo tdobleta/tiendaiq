@@ -10,6 +10,32 @@ function setOf(values) {
   return new Set((values || []).map((value) => String(value || "").trim()).filter(Boolean));
 }
 
+function equivalentWriteScope(scope) {
+  return scope.startsWith("read_") ? `write_${scope.slice("read_".length)}` : null;
+}
+
+function evaluateScopeEquivalence(requiredScopes, grantedScopes) {
+  const expected = setOf(requiredScopes);
+  const granted = setOf(grantedScopes);
+  const missing = [...expected].filter((scope) => !granted.has(scope));
+  const unexpected = [...granted].filter((scope) => !expected.has(scope));
+  const compatibleReadExtras = unexpected.filter((scope) => {
+    const writeScope = equivalentWriteScope(scope);
+    return writeScope && expected.has(writeScope) && granted.has(writeScope);
+  });
+  const incompatibleUnexpected = unexpected.filter((scope) => !compatibleReadExtras.includes(scope));
+
+  return {
+    ok: missing.length === 0 && incompatibleUnexpected.length === 0,
+    expected,
+    granted,
+    missing,
+    unexpected,
+    compatibleReadExtras,
+    incompatibleUnexpected
+  };
+}
+
 async function readTextLimited(response, maxBytes) {
   const declared = Number(response.headers?.get?.("content-length"));
   if (Number.isFinite(declared) && declared > maxBytes) throw new Error("storefront_response_too_large");
@@ -122,11 +148,8 @@ function evaluateShopifyCertification({
   remote
 }) {
   const errors = [];
-  const expectedScopes = setOf(requiredScopes);
-  const actualScopes = setOf(remote?.scopes);
-  const missingScopes = [...expectedScopes].filter((scope) => !actualScopes.has(scope));
-  const unexpectedScopes = [...actualScopes].filter((scope) => !expectedScopes.has(scope));
-  const scopesOk = missingScopes.length === 0 && unexpectedScopes.length === 0;
+  const scopeComparison = evaluateScopeEquivalence(requiredScopes, remote?.scopes);
+  const scopesOk = scopeComparison.ok;
   if (!scopesOk) errors.push("scopes_not_exact");
 
   const billingOk = planTest === true && (remote?.subscriptions || []).some((subscription) =>
@@ -185,7 +208,14 @@ function evaluateShopifyCertification({
     activeStoreOk: errors.length === 0,
     scope: "active_store_non_destructive",
     checks: {
-      scopes: { ok: scopesOk, expected: expectedScopes.size, granted: actualScopes.size },
+      scopes: {
+        ok: scopesOk,
+        expected: scopeComparison.expected.size,
+        granted: scopeComparison.granted.size,
+        missing: scopeComparison.missing,
+        unexpected: scopeComparison.incompatibleUnexpected,
+        compatibleReadExtras: scopeComparison.compatibleReadExtras
+      },
       billing: { ok: billingOk, testMode: planTest === true },
       operationalWebhooks: { ok: webhooksOk, expected: expectedTopics.size, matched: matchingTopics.size },
       publicationDatabase: { ok: databasePublicationOk, recentEvidence: Boolean(publication), releaseMatch: publication?.workerReleaseSha === releaseSha },
@@ -213,6 +243,7 @@ function evaluateShopifyCertification({
 }
 
 module.exports = {
+  evaluateScopeEquivalence,
   queryShopifyCertification,
   queryStorefrontCertification,
   evaluateShopifyCertification,

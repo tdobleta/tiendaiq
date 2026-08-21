@@ -4,6 +4,7 @@ const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const crypto = require("node:crypto");
 const {
+  evaluateScopeEquivalence,
   evaluateShopifyCertification,
   queryShopifyCertification,
   queryStorefrontCertification
@@ -79,7 +80,27 @@ test("certifica la tienda activa sin confundirla con shop/redact", () => {
   assert.equal(Object.keys(result.checks).length, 7);
 });
 
-test("rechaza scopes faltantes o inesperados", () => {
+test("tolera el read scope implicito por un write scope concedido", () => {
+  const comparison = evaluateScopeEquivalence(
+    ["read_products", "write_products", "write_online_store_navigation"],
+    ["read_products", "write_products", "write_online_store_navigation", "read_online_store_navigation"]
+  );
+  const result = evaluateShopifyCertification(fixture({
+    requiredScopes: ["read_products", "write_products", "write_online_store_navigation"],
+    remote: {
+      ...fixture().remote,
+      scopes: ["read_products", "write_products", "write_online_store_navigation", "read_online_store_navigation"]
+    }
+  }));
+
+  assert.equal(comparison.ok, true);
+  assert.deepEqual(comparison.compatibleReadExtras, ["read_online_store_navigation"]);
+  assert.deepEqual(comparison.incompatibleUnexpected, []);
+  assert.equal(result.checks.scopes.ok, true);
+  assert.deepEqual(result.checks.scopes.compatibleReadExtras, ["read_online_store_navigation"]);
+});
+
+test("rechaza scopes faltantes o inesperados no equivalentes", () => {
   const missing = evaluateShopifyCertification(fixture({
     remote: { ...fixture().remote, scopes: ["read_products"] }
   }));
@@ -88,6 +109,19 @@ test("rechaza scopes faltantes o inesperados", () => {
   }));
   assert.equal(missing.checks.scopes.ok, false);
   assert.equal(unexpected.checks.scopes.ok, false);
+  assert.deepEqual(missing.checks.scopes.missing, ["write_products"]);
+  assert.deepEqual(unexpected.checks.scopes.unexpected, ["read_orders"]);
+});
+
+test("no usa una lectura extra para suplir un write scope requerido", () => {
+  const comparison = evaluateScopeEquivalence(
+    ["write_online_store_navigation"],
+    ["read_online_store_navigation"]
+  );
+
+  assert.equal(comparison.ok, false);
+  assert.deepEqual(comparison.missing, ["write_online_store_navigation"]);
+  assert.deepEqual(comparison.incompatibleUnexpected, ["read_online_store_navigation"]);
 });
 
 test("rechaza billing que no sea activo y de prueba", () => {
