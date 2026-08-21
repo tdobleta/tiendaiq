@@ -18,14 +18,31 @@ const {
   safeSubscriptionRecoveryDiagnostic
 } = require("./src/jobs/subscription-recovery");
 
-function parsePaginasGratis(value, fallback = 3) {
+function configuracionPaginasGratis(value, { fallback = 3, permitirOverrideTemporal = false } = {}) {
+  const presente = value !== undefined;
   const raw = String(value ?? "").trim();
-  if (!raw) return fallback;
   const parsed = Number(raw);
-  return Number.isInteger(parsed) && parsed >= 0 ? parsed : fallback;
+  // -1 es un interruptor temporal exclusivo de billing de prueba: fuerza el
+  // upgrade aun con uso cero. Fuera de PLAN_TEST conserva el fail-closed.
+  const valida = raw !== "" && Number.isInteger(parsed) && (
+    parsed >= 0 || (permitirOverrideTemporal && parsed === -1)
+  );
+  return {
+    limite: valida ? parsed : fallback,
+    origen: valida ? "env" : "default",
+    presente,
+    valida
+  };
 }
 
-const PAGINAS_GRATIS = parsePaginasGratis(env.PAGINAS_GRATIS);
+function parsePaginasGratis(value, fallback = 3, opciones = {}) {
+  return configuracionPaginasGratis(value, { fallback, ...opciones }).limite;
+}
+
+const CONFIGURACION_PAGINAS_GRATIS = configuracionPaginasGratis(env.PAGINAS_GRATIS, {
+  permitirOverrideTemporal: env.PLAN_TEST === "1"
+});
+const PAGINAS_GRATIS = CONFIGURACION_PAGINAS_GRATIS.limite;
 const PLAN_NOMBRE = "TiendaIQ Pro";
 const PLAN_PRECIO = Number(env.PLAN_PRECIO || 19.99);
 
@@ -350,5 +367,6 @@ module.exports = {
   consultarSuscripcionesActivas, crearSuscripcionRemota, errorSuscripcionAmbigua,
   iniciarSuscripcion, isAmbiguousSubscriptionError, reconciliarSuscripcionActiva,
   esSuscripcionElegible, suscripcionElegibleActiva,
-  PAGINAS_GRATIS, PLAN_PRECIO, PLAN_NOMBRE, mesActual, parsePaginasGratis
+  PAGINAS_GRATIS, PLAN_PRECIO, PLAN_NOMBRE, mesActual, parsePaginasGratis,
+  configuracionPaginasGratis: CONFIGURACION_PAGINAS_GRATIS
 };

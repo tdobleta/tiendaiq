@@ -54,7 +54,7 @@ const {
   TOPICOS_OPERATIVOS
 } = require("./auth");
 const { nubeServible, urlVideo, urlPoster } = require("./inspiracion-nube");
-const { estadoPlan, mesActual, PLAN_NOMBRE } = require("./facturacion");
+const { estadoPlan, mesActual, PLAN_NOMBRE, configuracionPaginasGratis } = require("./facturacion");
 const { reportarError, metrica } = require("./monitoreo");
 const { TenantContext } = require("./src/tenancy/tenant-context");
 const { verifyAndNormalizeWebhook } = require("./src/webhooks/verify-and-normalize");
@@ -361,6 +361,24 @@ async function estadoOperativo(req, res) {
     })),
     totals: totales,
     ts: new Date().toISOString()
+  }, { "Cache-Control": "no-store" });
+}
+
+function configuracionBillingOperativa(req, res) {
+  const token = String(env.OPS_STATUS_TOKEN || "");
+  if (token.length < 32) return json(res, 404, { error: "not_found" });
+  if (!safeEqual(req.headers.authorization, `Bearer ${token}`)) {
+    return json(res, 401, { error: "unauthorized" }, { "WWW-Authenticate": "Bearer" });
+  }
+  if (req.method !== "GET") return json(res, 405, { error: "method_not_allowed" }, { Allow: "GET" });
+
+  return json(res, 200, {
+    ok: true,
+    release: process.env.RENDER_GIT_COMMIT || null,
+    billing: {
+      paginasGratis: configuracionPaginasGratis,
+      planTest: String(env.PLAN_TEST || "") === "1"
+    }
   }, { "Cache-Control": "no-store" });
 }
 
@@ -1128,6 +1146,7 @@ const servidor = http.createServer(async (req, res) => {
       });
     }
     if (url.pathname === "/ops/status") return await estadoOperativo(req, res);
+    if (url.pathname === "/ops/billing-config") return configuracionBillingOperativa(req, res);
     if (url.pathname === "/ops/shopify-certification") return await certificarShopifyStaging(req, res);
     if (await syntheticLoadHandler(req, res, url)) return;
 

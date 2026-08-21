@@ -66,6 +66,11 @@ const CASOS = [
     espera: 401
   },
   {
+    nombre: "/ops/billing-config sin bearer rechaza",
+    ruta: "/ops/billing-config",
+    espera: 401
+  },
+  {
     nombre: "/ops/shopify-certification sin bearer rechaza",
     ruta: "/ops/shopify-certification",
     espera: 401
@@ -138,6 +143,7 @@ async function main() {
       SHOPIFY_CERTIFICATION_SHOP: "prueba-humo.myshopify.com",
       SHOPIFY_CERTIFICATION_PAGE_ID: "pagina-humo",
       PLAN_TEST: "1",
+      RENDER_GIT_COMMIT: "a".repeat(40),
       SHOPIFY_CLIENT_SECRET: "secreto-humo"
     },
     stdio: ["ignore", "pipe", "pipe"]
@@ -225,6 +231,34 @@ async function main() {
       }
     } catch (e) {
       mal("/ops/status con bearer valido responde", e.message);
+    }
+    try {
+      const r = await fetch(`${BASE}/ops/billing-config`, {
+        headers: { Authorization: `Bearer ${OPS_STATUS_TOKEN_HUMO}` },
+        redirect: "manual"
+      });
+      if (r.status !== 200) {
+        mal("/ops/billing-config con bearer valido responde", `esperaba 200, vino ${r.status}`);
+      } else {
+        const cuerpo = await r.json();
+        const serializado = JSON.stringify(cuerpo);
+        const config = cuerpo.billing?.paginasGratis;
+        const problema = cuerpo.ok !== true
+          ? "no marco ok=true"
+          : cuerpo.release !== "a".repeat(40)
+            ? "no informo el SHA de release"
+            : cuerpo.billing?.planTest !== true
+              ? "no informo PLAN_TEST"
+              : !config || config.limite !== 3 || config.origen !== "default" || config.presente !== false || config.valida !== false
+                ? "no informo el diagnostico de cuota efectivo"
+                : serializado.includes(OPS_STATUS_TOKEN_HUMO) || serializado.includes("secreto-humo")
+                  ? "expuso un secreto"
+                  : null;
+        if (problema) mal("/ops/billing-config con bearer valido responde", problema);
+        else ok("/ops/billing-config con bearer valido responde");
+      }
+    } catch (e) {
+      mal("/ops/billing-config con bearer valido responde", e.message);
     }
   } finally {
     await matar();
