@@ -43,6 +43,8 @@ const {
   verificarAlmacenamientoDB,
   cerrarAlmacenamientoDB
 } = require("./db");
+const { subscriptionRecoveryDiagnosticFromJob } = require("./src/jobs/subscription-recovery");
+const { certificationConfigurationDiagnostic } = require("./src/shopify/certification-diagnostic");
 const {
   iniciarInstalacion,
   terminarInstalacion,
@@ -200,6 +202,7 @@ const jobPublico = (job) => job && ({
   maxAttempts: job.maxAttempts,
   lastError: job.status === "failed" ? "No se pudo completar la operación después de varios intentos." : null,
   result: job.status === "succeeded" ? job.result : null,
+  diagnostic: job.status === "failed" ? subscriptionRecoveryDiagnosticFromJob(job) : null,
   createdAt: job.createdAt,
   updatedAt: job.updatedAt,
   completedAt: job.completedAt
@@ -378,8 +381,18 @@ async function certificarShopifyStaging(req, res) {
   const shop = normalizar(env.SHOPIFY_CERTIFICATION_SHOP);
   const pageId = String(env.SHOPIFY_CERTIFICATION_PAGE_ID || "").trim();
   const releaseSha = String(process.env.RENDER_GIT_COMMIT || "").trim().toLowerCase();
-  if (!esDominioValido(shop) || !pageId || String(env.PLAN_TEST || "") !== "1" || !/^[a-f0-9]{40}$/.test(releaseSha)) {
-    return json(res, 503, { activeStoreOk: false, error: "certification_not_configured" });
+  const configuration = certificationConfigurationDiagnostic({
+    shop: esDominioValido(shop) ? shop : null,
+    pageId,
+    planTest: String(env.PLAN_TEST || "") === "1",
+    releaseSha
+  });
+  if (!configuration.configured) {
+    return json(res, 503, {
+      activeStoreOk: false,
+      error: "certification_not_configured",
+      diagnostic: configuration
+    });
   }
 
   const maxAgeHours = Math.min(168, Math.max(1, Number(env.SHOPIFY_CERTIFICATION_MAX_AGE_HOURS) || 24));
@@ -927,6 +940,12 @@ async function api(req, res, url) {
       idempotencyKey: `create-subscription:${request_id}`,
       maxAttempts: 2
     });
+    if (job?.status === "failed") {
+      return json(res, 409, {
+        error: "subscription_recovery_required",
+        diagnostic: subscriptionRecoveryDiagnosticFromJob(job)
+      });
+    }
     return json(res, 202, { job: jobPublico(job) });
   }
 

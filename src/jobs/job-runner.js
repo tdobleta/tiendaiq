@@ -17,6 +17,10 @@ function withDeadline(promise, timeoutMs, message) {
 }
 
 function isNonRetryable(error) {
+  // El segundo intento de un job de billing ambiguo sólo reconcilia: nunca
+  // repite appSubscriptionCreate. Es la ventana segura para recuperar un
+  // eventual ACTIVE que Shopify haya aceptado sin devolver respuesta.
+  if (error?.code === "SHOPIFY_SUBSCRIPTION_AMBIGUOUS") return false;
   if (error?.nonRetryable) return true;
   return [400, 401, 402, 403, 404, 405, 406, 410, 411, 413, 414, 415, 422]
     .includes(Number(error?.status));

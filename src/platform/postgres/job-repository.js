@@ -3,6 +3,16 @@
 const crypto = require("crypto");
 const { TenantContext, requireTenantContext, assertTenant } = require("../../tenancy/tenant-context");
 const { withTenantTransaction } = require("./with-tenant-transaction");
+const {
+  SUBSCRIPTION_RECOVERY_DIAGNOSTIC_KIND,
+  safeSubscriptionRecoveryDiagnostic,
+  subscriptionRecoveryDiagnosticFromJob
+} = require("../../jobs/subscription-recovery");
+
+function failureResult(error) {
+  const diagnostic = safeSubscriptionRecoveryDiagnostic(error?.safeDiagnostic);
+  return diagnostic ? { diagnostic } : null;
+}
 
 function mapJob(row) {
   if (!row) return null;
@@ -87,6 +97,20 @@ function createJobRepository(pool) {
           [tenant.tenantId, type]
         );
         if (active.rows[0]) return mapJob(active.rows[0]);
+
+        if (type === "create-subscription") {
+          const blocked = await client.query(
+            `SELECT *
+               FROM control_plane.jobs
+              WHERE tenant_id = $1 AND type = $2 AND status = 'failed'
+                AND (result->'diagnostic'->>'kind' = $3 OR last_error LIKE $4)
+              ORDER BY completed_at DESC NULLS LAST, created_at DESC
+              LIMIT 1`,
+            [tenant.tenantId, type, SUBSCRIPTION_RECOVERY_DIAGNOSTIC_KIND, "Shopify pudo haber creado la suscripción, pero no confirmó el resultado%"]
+          );
+          const blockedJob = mapJob(blocked.rows[0]);
+          if (subscriptionRecoveryDiagnosticFromJob(blockedJob)) return blockedJob;
+        }
 
         const inserted = await client.query(
           `WITH inserted AS (
@@ -267,11 +291,13 @@ function createJobRepository(pool) {
     async fail(context, job, error, retryDelaySeconds, needsCompensation = false) {
       const tenant = assertTenant(context, job.tenantId);
       const terminal = Number(job.attempts) >= Number(job.maxAttempts);
+      const result = failureResult(error);
       const updated = await withTenantTransaction(pool, tenant, (client) => client.query(
         `UPDATE control_plane.jobs
          SET status = $3,
              run_after = CASE WHEN $3 = 'queued' THEN now() + ($4::int * interval '1 second') ELSE run_after END,
              last_error = $5, locked_at = NULL, lease_expires_at = NULL, locked_by = NULL,
+             result = CASE WHEN $9::jsonb IS NULL THEN result ELSE $9::jsonb END,
              worker_release_sha = CASE WHEN $3 = 'queued' THEN NULL ELSE worker_release_sha END,
              completed_at = CASE WHEN $3 = 'failed' THEN now() ELSE NULL END,
              compensation_status = CASE
@@ -290,7 +316,7 @@ function createJobRepository(pool) {
          WHERE tenant_id = $1 AND id = $2 AND status = 'running' AND locked_by = $6
            AND worker_release_sha = $8
          RETURNING *`,
-        [tenant.tenantId, job.id, terminal ? "failed" : "queued", Math.max(1, retryDelaySeconds), String(error?.message || error).slice(0, 1000), job.lockedBy, needsCompensation === true, job.workerReleaseSha]
+        [tenant.tenantId, job.id, terminal ? "failed" : "queued", Math.max(1, retryDelaySeconds), String(error?.message || error).slice(0, 1000), job.lockedBy, needsCompensation === true, job.workerReleaseSha, result ? JSON.stringify(result) : null]
       ));
       return mapJob(updated.rows[0]);
     },
@@ -397,4 +423,4 @@ function createJobRepository(pool) {
   });
 }
 
-module.exports = { createJobRepository, mapJob };
+module.exports = { createJobRepository, failureResult, mapJob };

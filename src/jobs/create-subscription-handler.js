@@ -1,9 +1,12 @@
 "use strict";
 
-function terminalError(message, code) {
+const { createSubscriptionRecoveryDiagnostic } = require("./subscription-recovery");
+
+function terminalError(message, code, safeDiagnostic = null) {
   const error = new Error(message);
   error.code = code;
   error.nonRetryable = true;
+  if (safeDiagnostic) error.safeDiagnostic = safeDiagnostic;
   return error;
 }
 
@@ -57,7 +60,11 @@ function createCreateSubscriptionHandler({ sessions, billing, metrics = () => {}
         if (!result) {
           const error = terminalError(
             "Shopify todavía no informa una suscripción activa; no se creará otro cargo automáticamente",
-            "SUBSCRIPTION_RECONCILIATION_PENDING"
+            "SUBSCRIPTION_RECONCILIATION_PENDING",
+            createSubscriptionRecoveryDiagnostic({
+              reconciliationAttempted: true,
+              activeSubscriptionFound: false
+            })
           );
           error.ambiguous = true;
           error.skipCompensation = true;
