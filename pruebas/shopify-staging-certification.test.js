@@ -7,7 +7,8 @@ const {
   evaluateScopeEquivalence,
   evaluateShopifyCertification,
   queryShopifyCertification,
-  queryStorefrontCertification
+  queryStorefrontCertification,
+  certificationUrlDiagnostic
 } = require("../src/shopify/staging-certification");
 const { createShopifyCertificationRepository } = require("../src/platform/postgres/shopify-certification-repository");
 const { TenantContext } = require("../src/tenancy/tenant-context");
@@ -201,6 +202,38 @@ test("rechaza URL publica distinta o storefront sin marcadores", () => {
   }));
   assert.equal(wrongUrl.checks.publicationShopify.publicUrlMatch, false);
   assert.equal(missingMarkers.checks.storefront.ok, false);
+});
+
+test("diagnostica la diferencia de URL sin exponer valores de query", () => {
+  const diagnostic = certificationUrlDiagnostic(
+    "https://certification.myshopify.com/products/demo/?variant=42&token=valor-secreto"
+  );
+  const mismatch = evaluateShopifyCertification(fixture({
+    remote: {
+      ...fixture().remote,
+      product: {
+        ...fixture().remote.product,
+        onlineStoreUrl: "https://certification.myshopify.com/products/demo/?variant=42&token=valor-secreto"
+      }
+    }
+  }));
+
+  assert.deepEqual(diagnostic, {
+    present: true,
+    valid: true,
+    protocol: "https:",
+    host: "certification.myshopify.com",
+    path: "/products/demo/",
+    search: { present: true, keys: ["token", "variant"], signature: diagnostic.search.signature },
+    trailingSlash: true,
+    normalized: "https://certification.myshopify.com/products/demo?token=[redacted]&variant=[redacted]"
+  });
+  assert.equal(JSON.stringify(diagnostic).includes("valor-secreto"), false);
+  assert.equal(mismatch.checks.publicationShopify.publicUrlMatch, false);
+  assert.deepEqual(
+    mismatch.checks.publicationShopify.publicUrlComparison.shopify.search.keys,
+    ["token", "variant"]
+  );
 });
 
 test("verifica el HTML real del storefront sin devolver su contenido", async () => {

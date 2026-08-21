@@ -6,6 +6,62 @@ function normalizedUrl(value) {
   return String(value || "").trim().replace(/\/+$/, "");
 }
 
+function certificationUrlDiagnostic(value) {
+  const raw = String(value || "").trim();
+  if (!raw) {
+    return {
+      present: false,
+      valid: false,
+      protocol: null,
+      host: null,
+      path: null,
+      search: { present: false, keys: [], signature: null },
+      trailingSlash: false,
+      normalized: null
+    };
+  }
+
+  try {
+    const url = new URL(raw);
+    const path = url.pathname || "/";
+    const trailingSlash = path.length > 1 && path.endsWith("/");
+    const normalizedPath = trailingSlash ? path.replace(/\/+$/, "") : path;
+    const searchKeys = [...new Set([...url.searchParams.keys()].map((key) => key.slice(0, 80)))].sort();
+    const search = url.search || "";
+    const redactedSearch = searchKeys.length
+      ? `?${searchKeys.map((key) => `${encodeURIComponent(key)}=[redacted]`).join("&")}`
+      : "";
+
+    return {
+      present: true,
+      valid: true,
+      protocol: url.protocol.toLowerCase(),
+      host: url.host.toLowerCase(),
+      path,
+      search: {
+        present: Boolean(search),
+        keys: searchKeys,
+        signature: search
+          ? crypto.createHash("sha256").update(search).digest("hex").slice(0, 16)
+          : null
+      },
+      trailingSlash,
+      normalized: `${url.protocol.toLowerCase()}//${url.host.toLowerCase()}${normalizedPath}${redactedSearch}`
+    };
+  } catch {
+    return {
+      present: true,
+      valid: false,
+      protocol: null,
+      host: null,
+      path: null,
+      search: { present: false, keys: [], signature: null },
+      trailingSlash: false,
+      normalized: null
+    };
+  }
+}
+
 function setOf(values) {
   return new Set((values || []).map((value) => String(value || "").trim()).filter(Boolean));
 }
@@ -222,7 +278,11 @@ function evaluateShopifyCertification({
       publicationShopify: {
         ok: shopifyPublicationOk,
         contentHashMatch: remoteHash === publication?.contentHash,
-        publicUrlMatch: normalizedUrl(product?.onlineStoreUrl) === normalizedUrl(publication?.publicUrl)
+        publicUrlMatch: normalizedUrl(product?.onlineStoreUrl) === normalizedUrl(publication?.publicUrl),
+        publicUrlComparison: {
+          persisted: certificationUrlDiagnostic(publication?.publicUrl),
+          shopify: certificationUrlDiagnostic(product?.onlineStoreUrl)
+        }
       },
       storefront: { ok: storefrontOk, ...(remote?.storefront || {}) },
       privacyDeliveries: { ok: privacyOk, dataRequest: dataRequestOk, customerRedact: customerRedactOk }
@@ -247,5 +307,6 @@ module.exports = {
   queryShopifyCertification,
   queryStorefrontCertification,
   evaluateShopifyCertification,
+  certificationUrlDiagnostic,
   normalizedUrl
 };
