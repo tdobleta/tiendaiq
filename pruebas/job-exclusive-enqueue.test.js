@@ -139,3 +139,41 @@ test("la exclusión se aplica también a la intención de cobro Shopify", async 
   assert.equal(result.id, active.id);
   assert.equal(result.type, "create-subscription");
 });
+
+test("una suscripción ambigua terminal bloquea una nueva mutación de billing", async () => {
+  const blocked = {
+    id: "55555555-5555-4555-8555-555555555555",
+    tenant_id: tenant.tenantId,
+    type: "create-subscription",
+    payload: {},
+    status: "failed",
+    attempts: 2,
+    max_attempts: 2,
+    last_error: "Shopify pudo haber creado la suscripción, pero no confirmó el resultado; se requiere reconciliación antes de volver a intentar",
+    result: { diagnostic: { kind: "shopify_subscription_recovery", version: 1 } }
+  };
+  const queries = [];
+  const client = {
+    async query(text) {
+      queries.push(text);
+      if (/SELECT dominio FROM public\.tiendas/.test(text)) return { rows: [{ dominio: tenant.tenantId }] };
+      if (/status IN \('queued', 'running'\)/.test(text)) return { rows: [] };
+      if (/status = 'failed'/.test(text) && /result->'diagnostic'/.test(text)) return { rows: [blocked] };
+      if (/INSERT INTO control_plane\.jobs/.test(text)) throw new Error("no debe crear un segundo cargo");
+      return { rows: [] };
+    },
+    release() {}
+  };
+  const repository = createJobRepository({ async connect() { return client; } });
+
+  const result = await repository.enqueueExclusive(tenant, {
+    type: "create-subscription",
+    payload: { urlApp: "https://tiendaiq.example" },
+    idempotencyKey: "create-subscription:new-request",
+    maxAttempts: 2
+  });
+
+  assert.equal(result.id, blocked.id);
+  assert.equal(result.status, "failed");
+  assert.equal(queries.some((query) => /last_error LIKE/.test(query)), true);
+});

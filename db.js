@@ -588,6 +588,14 @@ async function encolarJobExclusivoDB(context, options) {
     ["queued", "running"].includes(job.status)
   );
   if (active) return active;
+  if (options.type === "create-subscription") {
+    const blocked = fileListar(DIR_JOBS).find((job) =>
+      job.tenantId === tenant.tenantId && job.type === options.type && job.status === "failed" &&
+    (job.result?.diagnostic?.kind === "shopify_subscription_recovery" ||
+      String(job.lastError || "").startsWith("Shopify pudo haber creado la suscripción, pero no confirmó el resultado"))
+    );
+    if (blocked) return blocked;
+  }
   return encolarJobDB(tenant, options);
 }
 
@@ -798,6 +806,9 @@ async function fallarJobDB(context, job, error, retryDelaySeconds, needsCompensa
     ? stored.runAfter
     : new Date(Date.now() + Math.max(1, retryDelaySeconds) * 1000).toISOString();
   stored.lastError = String(error?.message || error).slice(0, 1000);
+  if (error?.safeDiagnostic?.kind === "shopify_subscription_recovery") {
+    stored.result = { diagnostic: error.safeDiagnostic };
+  }
   stored.lockedAt = null;
   stored.leaseExpiresAt = null;
   stored.lockedBy = null;

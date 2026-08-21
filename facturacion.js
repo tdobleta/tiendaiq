@@ -13,8 +13,19 @@ const { gql, env } = require("./shopify");
 const { leerTienda, actualizarCamposTienda, consumirCupoTienda, revertirCupoTienda } = require("./tiendas");
 const { metrica } = require("./monitoreo");
 const { urlInicioAppShopify } = require("./shopify-admin-url");
+const {
+  createSubscriptionRecoveryDiagnostic,
+  safeSubscriptionRecoveryDiagnostic
+} = require("./src/jobs/subscription-recovery");
 
-const PAGINAS_GRATIS = Number(env.PAGINAS_GRATIS) || 3; // NaN/vacío → 3
+function parsePaginasGratis(value, fallback = 3) {
+  const raw = String(value ?? "").trim();
+  if (!raw) return fallback;
+  const parsed = Number(raw);
+  return Number.isInteger(parsed) && parsed >= 0 ? parsed : fallback;
+}
+
+const PAGINAS_GRATIS = parsePaginasGratis(env.PAGINAS_GRATIS);
 const PLAN_NOMBRE = "TiendaIQ Pro";
 const PLAN_PRECIO = Number(env.PLAN_PRECIO || 19.99);
 
@@ -190,7 +201,7 @@ function urlRetornoSuscripcion(sesion, urlApp) {
   });
 }
 
-function errorSuscripcionAmbigua(cause, reconciliationError) {
+function errorSuscripcionAmbigua(cause, reconciliationError, diagnostic = null) {
   const error = new Error(
     "Shopify pudo haber creado la suscripción, pero no confirmó el resultado; se requiere reconciliación antes de volver a intentar",
     cause ? { cause } : undefined
@@ -200,6 +211,17 @@ function errorSuscripcionAmbigua(cause, reconciliationError) {
   error.ambiguous = true;
   error.skipCompensation = true;
   if (reconciliationError) error.reconciliationError = reconciliationError;
+  const previous = safeSubscriptionRecoveryDiagnostic(diagnostic);
+  error.safeDiagnostic = createSubscriptionRecoveryDiagnostic({
+    mutationAttempted: previous?.mutationAttempted === true || cause != null,
+    mutationResponseReceived: previous?.mutationResponseReceived === true,
+    confirmationUrlPresent: previous?.confirmationUrlPresent === true,
+    subscriptionIdPresent: previous?.subscriptionIdPresent === true,
+    subscriptionStatus: previous?.subscriptionStatus,
+    activeSubscriptionFound: false,
+    reconciliationAttempted: previous?.reconciliationAttempted === true || reconciliationError != null,
+    reconciliationFailed: reconciliationError != null
+  });
   return error;
 }
 
@@ -263,7 +285,13 @@ async function crearSuscripcionRemota(sesion, urlApp, { signal } = {}) {
     throw error;
   }
   if (!r?.confirmationUrl) {
-    throw errorSuscripcionAmbigua();
+    throw errorSuscripcionAmbigua(null, null, createSubscriptionRecoveryDiagnostic({
+      mutationAttempted: true,
+      mutationResponseReceived: Boolean(r),
+      confirmationUrlPresent: false,
+      subscriptionIdPresent: Boolean(r?.appSubscription?.id),
+      subscriptionStatus: r?.appSubscription?.status
+    }));
   }
   // Intención de suscribirse (embudo). La confirmación de revenue —el merchant
   // aprueba y vuelve por ?plan=confirmado— se trackea aparte (follow-up).
@@ -297,7 +325,16 @@ async function iniciarSuscripcion(sesion, urlApp, { signal } = {}) {
       reconciliationError = reconcileError;
     }
     if (reconciliada) return reconciliada;
-    throw errorSuscripcionAmbigua(error, reconciliationError);
+    const previous = safeSubscriptionRecoveryDiagnostic(error?.safeDiagnostic);
+    throw errorSuscripcionAmbigua(error, reconciliationError, createSubscriptionRecoveryDiagnostic({
+      mutationAttempted: true,
+      mutationResponseReceived: previous?.mutationResponseReceived === true,
+      confirmationUrlPresent: previous?.confirmationUrlPresent === true,
+      subscriptionIdPresent: previous?.subscriptionIdPresent === true,
+      subscriptionStatus: previous?.subscriptionStatus,
+      reconciliationAttempted: true,
+      reconciliationFailed: reconciliationError != null
+    }));
   }
 }
 
@@ -313,5 +350,5 @@ module.exports = {
   consultarSuscripcionesActivas, crearSuscripcionRemota, errorSuscripcionAmbigua,
   iniciarSuscripcion, isAmbiguousSubscriptionError, reconciliarSuscripcionActiva,
   esSuscripcionElegible, suscripcionElegibleActiva,
-  PAGINAS_GRATIS, PLAN_PRECIO, PLAN_NOMBRE, mesActual
+  PAGINAS_GRATIS, PLAN_PRECIO, PLAN_NOMBRE, mesActual, parsePaginasGratis
 };
