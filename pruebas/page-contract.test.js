@@ -27,6 +27,36 @@ test("normaliza una pagina con contrato v1 sin mutar el caller", () => {
   assert.notEqual(normalized, current);
 });
 
+test("el contrato no permite fabricar claims verificados desde data editable", () => {
+  const current = page({
+    data: {
+      compliance: {
+        claims_verified: true,
+        review_source: "https://merchant.example/reviews",
+        statistics_source: "https://merchant.example/stats",
+        policy_source: "https://merchant.example/policy"
+      }
+    }
+  });
+
+  const normalized = normalizePageRecord(current);
+
+  assert.equal(normalized.data.compliance.claims_verified, false);
+  assert.equal(current.data.compliance.claims_verified, true);
+  assert.equal(normalized.data.compliance.review_source, current.data.compliance.review_source);
+  assert.equal(normalized.data.compliance.statistics_source, current.data.compliance.statistics_source);
+  assert.equal(normalized.data.compliance.policy_source, current.data.compliance.policy_source);
+});
+
+test("la lectura de un registro versionado tambien cierra claims fabricados", () => {
+  const stored = normalizeStoredPageRecord(page({
+    data: { compliance: { claims_verified: true, review_source: "https://merchant.example/reviews" } },
+    schema_version: PAGE_SCHEMA_VERSION
+  }));
+
+  assert.equal(stored.data.compliance.claims_verified, false);
+});
+
 test("rechaza paginas sin un objeto data", () => {
   assert.throws(
     () => normalizePageRecord(page({ data: null })),
