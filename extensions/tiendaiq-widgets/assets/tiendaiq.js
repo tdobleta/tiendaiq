@@ -1034,22 +1034,19 @@
     </div>`;
   }
 
-  const COMPARA_DEF = [
-    "Calidad premium comprobada",
-    "Envío rápido y seguro",
-    "Garantía de 30 días",
-    "Soporte que responde",
-    "Materiales de primera"
-  ];
   const CHK_OK = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg>`;
   const CHK_NO = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M6 18L18 6"/></svg>`;
 
-  function comparacion(f, g) {
+  function comparacion(f, g, compliance) {
     const c = (f && f.comparacion) || {};
-    const filas = Array.isArray(c.filas) && c.filas.length ? c.filas : COMPARA_DEF;
-    const nombre = c.marca || "Nuestro producto";
-    const otros = c.otros || "Otras marcas";
-    const titular = c.titular || "¿Por qué elegirnos?";
+    const filas = Array.isArray(c.filas) ? c.filas.filter(Boolean) : [];
+    // Una comparación declara hechos sobre alternativas. Solo se muestra con
+    // una fuente de comparación atestiguada por el servidor; no existe un
+    // fallback editorial que pueda convertir una página incompleta en claim.
+    if (!filas.length || compliance?.claims_verified !== true || !compliance.comparison_source) return "";
+    const nombre = c.marca || "Producto";
+    const otros = c.otros || "Alternativas";
+    const titular = c.titular || "Comparación del producto";
     const editar = MODO_APP ? ` data-editar="comparacion" title="Clic para editar"` : "";
     const fila = (t) => `
       <div class="tiq-cmp__row">
@@ -1222,7 +1219,7 @@
     const quoteHtml = resenaCompleta(review)
       ? `<blockquote class="tiq-ppb__quote"><span class="tiq-ppb__quote-avatar">${avatar}</span><div class="tiq-ppb__quote-body"><div class="tiq-ppb__quote-stars">${estrellasValidas(review.estrellas)}</div><p>"${esc(review.texto)}"</p><cite>${ICONO.verificado} ${esc(review.autor)}</cite></div></blockquote>`
       : "";
-    return `<section class="tiq-ppb__hero" data-bloque="hero"><div class="tiq-ppb__wrap tiq-ppb__hero-grid"><div class="tiq-ppb__gallery"><div id="tiq-ppb-main" class="tiq-ppb__gallery-main">${img(galeria[0], titulo, { hero: true })}<button type="button" class="tiq-ppb__gallery-arrow tiq-ppb__gallery-arrow--prev" onclick="tiqPpbMover(-1)" aria-label="Imagen anterior">‹</button><button type="button" class="tiq-ppb__gallery-arrow tiq-ppb__gallery-arrow--next" onclick="tiqPpbMover(1)" aria-label="Imagen siguiente">›</button></div><div class="tiq-ppb__thumbs">${thumbs}</div></div><div class="tiq-ppb__buy"><div class="tiq-ppb__badge"><b>★</b><span>${esc(h.urgencia || "Producto destacado")}</span></div><h1>${esc(titulo)}</h1>${ratingHtml}<ul class="tiq-ppb__benefits">${bullets}</ul><div class="tiq-ppb__price">${comparativo}<strong>${esc(precio)}</strong>${ahorro ? `<span class="tiq-ppb__save">AHORRÁ ${ahorro}%</span>` : ""}</div>${pagepilotBlueButton(g, g.cta || "Añadir al carrito")}<div class="tiq-ppb__trust"><span>${ICONO.verificado} Garantía de devolución de 30 días</span><span>${ICONO.paquete} Envío y devoluciones simples</span></div><div class="tiq-ppb__payments" aria-label="Medios de pago"><span>AMEX</span><span>Apple Pay</span><span>VISA</span><span>MC</span><span>PayPal</span><span>G Pay</span><span>shop</span></div><div class="tiq-ppb__accordions">${accordions}</div>${quoteHtml}${h.urgencia ? `<div class="tiq-ppb__scarcity">${ICONOS_BULLET.rayo}<strong>${esc(h.urgencia)}</strong><span>Consultá disponibilidad y condiciones antes de finalizar tu compra.</span></div>` : ""}</div></div></section>`;
+    return `<section class="tiq-ppb__hero" data-bloque="hero"><div class="tiq-ppb__wrap tiq-ppb__hero-grid"><div class="tiq-ppb__gallery"><div id="tiq-ppb-main" class="tiq-ppb__gallery-main">${img(galeria[0], titulo, { hero: true })}<button type="button" class="tiq-ppb__gallery-arrow tiq-ppb__gallery-arrow--prev" onclick="tiqPpbMover(-1)" aria-label="Imagen anterior">‹</button><button type="button" class="tiq-ppb__gallery-arrow tiq-ppb__gallery-arrow--next" onclick="tiqPpbMover(1)" aria-label="Imagen siguiente">›</button></div><div class="tiq-ppb__thumbs">${thumbs}</div></div><div class="tiq-ppb__buy"><div class="tiq-ppb__badge"><b>★</b><span>${esc(h.urgencia || "Producto destacado")}</span></div><h1>${esc(titulo)}</h1>${ratingHtml}<ul class="tiq-ppb__benefits">${bullets}</ul><div class="tiq-ppb__price">${comparativo}<strong>${esc(precio)}</strong>${ahorro ? `<span class="tiq-ppb__save">AHORRÁ ${ahorro}%</span>` : ""}</div>${pagepilotBlueButton(g, g.cta || "Añadir al carrito")}<div class="tiq-ppb__trust"><span>${ICONO.verificado} Garantía de devolución de 30 días</span><span>${ICONO.paquete} Envío y devoluciones simples</span></div><div class="tiq-ppb__accordions">${accordions}</div>${quoteHtml}${h.urgencia ? `<div class="tiq-ppb__scarcity">${ICONOS_BULLET.rayo}<strong>${esc(h.urgencia)}</strong><span>Consultá disponibilidad y condiciones antes de finalizar tu compra.</span></div>` : ""}</div></div></section>`;
   }
 
   function pagepilotBlueTicker(f) {
@@ -1270,11 +1267,10 @@
     return `<section class="tiq-ppb__stats-section" data-bloque="stats"><div class="tiq-ppb__wrap"><header class="tiq-ppb__section-head"><h2>${esc(s.titular || "Lo que notaron quienes lo usan")}</h2></header><div class="tiq-ppb__stats-grid">${items}</div></div></section>`;
   }
 
-  function pagepilotBlueComparison(f, g) {
-    const t = f.tabla || {};
-    const filas = (t.filas || []).filter(Boolean).map((fila) => `<div class="tiq-ppb__compare-row"><span>${esc(fila)}</span><b>${ICONOS_BULLET.check}</b><b class="is-no">×</b></div>`).join("");
-    if (!filas) return "";
-    return `<section class="tiq-ppb__comparison" data-bloque="tabla"><div class="tiq-ppb__wrap tiq-ppb__comparison-grid"><div><h2>${esc(t.titular || "Una diferencia que se nota")}</h2><p>${esc(t.parrafo || "Una solución pensada para hacer más sencillo lo que antes costaba.")}</p>${t.cta ? pagepilotBlueButton(g, "Obtené el tuyo ahora") : ""}</div><div class="tiq-ppb__compare"><div class="tiq-ppb__compare-head"><span></span><strong>Nuestro producto</strong><strong>${esc(t.col_otros || "Otros")}</strong></div>${filas}</div></div></section>`;
+  function pagepilotBlueComparison() {
+    // Este renderer histórico no recibe una atestación de comparación.
+    // Mantenerlo vacío evita reactivar claims competitivos por accidente.
+    return "";
   }
 
   function pagepilotBlueCtaPanel(f, g) {
@@ -1317,7 +1313,6 @@
     feature: { titular: "5 beneficios diarios del producto", subtitulo: "Potenciá tu rutina para disfrutar un resultado que se nota.", items: ["Uso sencillo", "Diseño práctico", "Resultados claros", "Mantenimiento simple", "Para todos los días"].map((titulo) => ({ titulo, frase: "Pensado para acompañarte con comodidad." })), imagen: null },
     reviews: { badge: "Reseñas", titular: "Experiencias de clientes", subtitulo: "Importá reseñas reales para mostrar esta sección.", items: [] },
     blue_stats: { titular: "Estadísticas", subtitulo: "Agregá una fuente válida para publicar estadísticas.", items: [] },
-    comparison: { titular: "Comparalo vos misma", parrafo: "Mirá por qué esta propuesta se destaca frente a las alternativas.", cta: "Obtené el tuyo ahora", filas: ["Mayor definición", "Aplicación fluida", "Resultado natural", "Sin grumos", "Secado rápido", "Resistencia diaria"], otros: "Otros" },
     panel: { titular: "Una mejora simple para cada día", subtitulo: "Sumá una solución pensada para acompañarte con comodidad.", cta: "Compralo ahora", imagen: null },
     faq: { titular: "Preguntas frecuentes", subtitulo: "Todo lo que necesitás saber antes de comprarlo.", items: ["¿De qué material está hecho?", "¿Cómo se usa?", "¿Cómo se limpia o mantiene?", "¿Qué colores tiene disponibles?", "¿Qué pasa si no estoy conforme?"].map((pregunta) => ({ pregunta, respuesta: "Consultá la ficha del producto y la política de devolución para conocer todos los detalles." })) },
     acordeones: [{ titulo: "Descripción", contenido: "Conocé los detalles y beneficios del producto." }, { titulo: "Cómo usar", contenido: "Usalo siguiendo las indicaciones de la ficha del producto." }, { titulo: "Envíos y devoluciones", contenido: "Consultá las condiciones de envío y devolución antes de comprar." }],
@@ -1351,24 +1346,23 @@
       feature: { ...PPB_DEFAULTS.feature, ...(raw.feature || {}) },
       reviews: { ...PPB_DEFAULTS.reviews, ...(raw.reviews || {}) },
       blue_stats: { ...PPB_DEFAULTS.blue_stats, ...(raw.blue_stats || {}) },
-      comparison: { ...PPB_DEFAULTS.comparison, ...(raw.comparison || {}) },
+      comparison: raw.comparison || {},
       panel: { ...PPB_DEFAULTS.panel, ...(raw.panel || {}) },
       faq: { ...PPB_DEFAULTS.faq, ...(raw.faq || {}) },
       acordeones: Array.isArray(raw.acordeones) && raw.acordeones.length ? raw.acordeones : PPB_DEFAULTS.acordeones,
       recomendados: Array.isArray(raw.recomendados) ? raw.recomendados : PPB_DEFAULTS.recomendados
     };
     b.ticker = Array.isArray(raw.ticker) && raw.ticker.length ? raw.ticker : PPB_DEFAULTS.ticker;
-    b.pagos = Array.isArray(raw.pagos) && raw.pagos.length ? raw.pagos : ["amex", "apple", "visa", "mastercard", "paypal", "gpay", "shop"];
+    // Los logos de pago son una afirmación comercial. No se infieren del
+    // modelo ni de contenido heredado hasta contar con una atestación propia.
+    b.pagos = [];
     b.social.imagenes = Array.isArray(raw.social?.imagenes) ? raw.social.imagenes : [];
     b.como_funciona.parrafos = Array.isArray(raw.como_funciona?.parrafos) && raw.como_funciona.parrafos.length ? raw.como_funciona.parrafos : PPB_DEFAULTS.como_funciona.parrafos;
     b.feature.items = Array.isArray(raw.feature?.items) && raw.feature.items.length ? raw.feature.items : PPB_DEFAULTS.feature.items;
     b.reviews.items = Array.isArray(raw.reviews?.items) ? raw.reviews.items : [];
     b.blue_stats.items = Array.isArray(raw.blue_stats?.items) ? raw.blue_stats.items : [];
-    b.comparison.filas = Array.isArray(raw.comparison?.filas) && raw.comparison.filas.length ? raw.comparison.filas : PPB_DEFAULTS.comparison.filas;
     b.faq.items = Array.isArray(raw.faq?.items) && raw.faq.items.length ? raw.faq.items : PPB_DEFAULTS.faq.items;
-    if (!Array.isArray(raw.comparison?.filas) || !raw.comparison.filas.length) b.comparison.filas = (f.tabla?.filas || []).filter(Boolean).slice(0, 6).length ? (f.tabla.filas || []).filter(Boolean).slice(0, 6) : b.comparison.filas;
     if (!Array.isArray(raw.faq?.items) || !raw.faq.items.length) b.faq.items = (f.faq?.items || []).filter((item) => item?.pregunta).slice(0, 5).length ? (f.faq.items || []).filter((item) => item?.pregunta).slice(0, 5) : b.faq.items;
-    while (b.comparison.filas.length < 6) b.comparison.filas.push(PPB_DEFAULTS.comparison.filas[b.comparison.filas.length]);
     return b;
   }
 
@@ -1406,7 +1400,10 @@
     const quoteHtml = reviewPool.length
       ? `<blockquote class="tiq-ppb__quote" data-ppb-review-pool='${esc(JSON.stringify(reviewPool))}' data-ppb-review-index="0"><button type="button" onclick="tiqPpbReviewMover(-1)" aria-label="Reseña anterior">‹</button><span class="tiq-ppb__quote-avatar">${avatar}</span><div class="tiq-ppb__quote-body"><div class="tiq-ppb__quote-stars">${estrellasValidas(reviewPool[0].estrellas)}</div><p>"${esc(reviewPool[0].texto)}"</p><cite>${ICONO.verificado} ${esc(reviewPool[0].autor)}</cite></div><button type="button" onclick="tiqPpbReviewMover(1)" aria-label="Reseña siguiente">›</button></blockquote>`
       : "";
-    return `<section class="tiq-ppb__hero" data-bloque="hero"><div class="tiq-ppb__wrap tiq-ppb__hero-grid"><div class="tiq-ppb__gallery"><div id="tiq-ppb-main" class="tiq-ppb__gallery-main">${gallery[0] ? img(gallery[0], titulo, { hero: true }) : ppbAssetImg(PPB_ASSETS.detail, titulo)}<button type="button" class="tiq-ppb__gallery-arrow tiq-ppb__gallery-arrow--prev" onclick="tiqPpbMover(-1)" aria-label="Imagen anterior">‹</button><button type="button" class="tiq-ppb__gallery-arrow tiq-ppb__gallery-arrow--next" onclick="tiqPpbMover(1)" aria-label="Imagen siguiente">›</button></div><div class="tiq-ppb__thumbs">${thumbs}</div></div><div class="tiq-ppb__buy"><div class="tiq-ppb__badge"><b>${esc(badgeMark)}</b><span>${esc(badgeLabel)}</span></div><h1>${esc(titulo)}</h1>${ratingHtml}<ul class="tiq-ppb__benefits">${bullets}</ul><div class="tiq-ppb__price">${anterior ? `<del>${esc(anterior)}</del>` : ""}<strong>${esc(precio)}</strong>${ahorro ? `<span class="tiq-ppb__save">AHORRA ${ahorro}%</span>` : ""}</div>${ppbAddButton(g, g.cta || "Añadir al carrito")}<div class="tiq-ppb__trust"><span>${ICONO.verificado} Garantía de devolución de 30 días</span><span>${ICONO.paquete} Devoluciones en 30 días</span></div><div class="tiq-ppb__payments" aria-label="Medios de pago">${b.pagos.slice(0, 7).map((id) => PPB_ASSETS.payments[id] ? ppbAssetImg(PPB_ASSETS.payments[id], id) : "").join("")}</div><div class="tiq-ppb__accordions">${accordions}</div>${quoteHtml}</div></div></section>`;
+    const paymentsHtml = b.pagos.length
+      ? `<div class="tiq-ppb__payments" aria-label="Medios de pago">${b.pagos.slice(0, 7).map((id) => PPB_ASSETS.payments[id] ? ppbAssetImg(PPB_ASSETS.payments[id], id) : "").join("")}</div>`
+      : "";
+    return `<section class="tiq-ppb__hero" data-bloque="hero"><div class="tiq-ppb__wrap tiq-ppb__hero-grid"><div class="tiq-ppb__gallery"><div id="tiq-ppb-main" class="tiq-ppb__gallery-main">${gallery[0] ? img(gallery[0], titulo, { hero: true }) : ppbAssetImg(PPB_ASSETS.detail, titulo)}<button type="button" class="tiq-ppb__gallery-arrow tiq-ppb__gallery-arrow--prev" onclick="tiqPpbMover(-1)" aria-label="Imagen anterior">‹</button><button type="button" class="tiq-ppb__gallery-arrow tiq-ppb__gallery-arrow--next" onclick="tiqPpbMover(1)" aria-label="Imagen siguiente">›</button></div><div class="tiq-ppb__thumbs">${thumbs}</div></div><div class="tiq-ppb__buy"><div class="tiq-ppb__badge"><b>${esc(badgeMark)}</b><span>${esc(badgeLabel)}</span></div><h1>${esc(titulo)}</h1>${ratingHtml}<ul class="tiq-ppb__benefits">${bullets}</ul><div class="tiq-ppb__price">${anterior ? `<del>${esc(anterior)}</del>` : ""}<strong>${esc(precio)}</strong>${ahorro ? `<span class="tiq-ppb__save">AHORRA ${ahorro}%</span>` : ""}</div>${ppbAddButton(g, g.cta || "Añadir al carrito")}<div class="tiq-ppb__trust"><span>${ICONO.verificado} Garantía de devolución de 30 días</span><span>${ICONO.paquete} Devoluciones en 30 días</span></div>${paymentsHtml}<div class="tiq-ppb__accordions">${accordions}</div>${quoteHtml}</div></div></section>`;
   }
 
   function ppbTicker(b) {
@@ -1447,8 +1444,12 @@
   }
 
   function ppbComparison(data, b) {
-    const rows = b.comparison.filas.slice(0, 6).map((fila) => `<div class="tiq-ppb__compare-row"><span>${esc(fila)}</span><b>${ICONOS_BULLET.check}</b><b class="is-no">×</b></div>`).join("");
-    return `<section class="tiq-ppb__comparison" data-bloque="tabla"><div class="tiq-ppb__wrap tiq-ppb__comparison-grid"><div><h2>${esc(b.comparison.titular)}</h2><p>${esc(b.comparison.parrafo)}</p>${ppbAddButton(data.global || {}, b.comparison.cta)}</div><div class="tiq-ppb__compare"><div class="tiq-ppb__compare-head"><span></span><strong>Nuestro producto</strong><strong>${esc(b.comparison.otros)}</strong></div>${rows}</div></div></section>`;
+    const comparison = b.comparison || {};
+    const rows = Array.isArray(comparison.filas) ? comparison.filas.filter(Boolean).slice(0, 6) : [];
+    const compliance = data?.compliance || {};
+    if (!rows.length || compliance.claims_verified !== true || !compliance.comparison_source) return "";
+    const rowsHtml = rows.map((fila) => `<div class="tiq-ppb__compare-row"><span>${esc(fila)}</span><b>${ICONOS_BULLET.check}</b><b class="is-no">×</b></div>`).join("");
+    return `<section class="tiq-ppb__comparison" data-bloque="tabla"><div class="tiq-ppb__wrap tiq-ppb__comparison-grid"><div><h2>${esc(comparison.titular || "Comparación del producto")}</h2><p>${esc(comparison.parrafo || "")}</p>${ppbAddButton(data.global || {}, comparison.cta)}</div><div class="tiq-ppb__compare"><div class="tiq-ppb__compare-head"><span></span><strong>${esc(comparison.marca || "Producto")}</strong><strong>${esc(comparison.otros || "Alternativas")}</strong></div>${rowsHtml}</div></div></section>`;
   }
 
   function ppbPanel(data, b) {
@@ -1516,7 +1517,7 @@
     const partes = [];
     if (!opts.sinHero) partes.push(hero(f, data.fuente, g)); // el SSR ya lo pintó
     partes.push(
-      comparacion(f, g),
+      comparacion(f, g, data.compliance),
       iconos(f.iconos),
       resenasMarquee(f.resenas),
       recomendados(f.recomendados)

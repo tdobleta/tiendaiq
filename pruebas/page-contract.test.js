@@ -110,6 +110,22 @@ test("valida una pagina heredada sin cambiar su forma publicada", () => {
   assert.equal(normalized.schema_version, undefined);
 });
 
+test("la lectura de una pagina heredada tambien cierra claims fabricados", () => {
+  const legacy = {
+    id: "page_legacy",
+    compliance: { claims_verified: true, review_source: "https://merchant.example/reviews" },
+    facetas: { hero: { titulo: "Titulo heredado" } }
+  };
+
+  const normalized = normalizeStoredPageRecord(legacy, { expectedId: "page_legacy" });
+
+  assert.equal(normalized.compliance.claims_verified, false);
+  assert.equal(normalized.compliance.review_source, legacy.compliance.review_source);
+  assert.deepEqual(normalized.facetas, legacy.facetas);
+  assert.equal(normalized.data, undefined);
+  assert.equal(normalized.schema_version, undefined);
+});
+
 test("preserva paginas heredadas que no almacenaban el id dentro del JSON", () => {
   const legacy = { estado: "publicando", active_job_id: "job_123" };
 

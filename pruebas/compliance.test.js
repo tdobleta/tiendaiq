@@ -55,6 +55,20 @@ test("los defaults no convierten guias en prueba social ni estadisticas", () => 
   assert.match(adaptador, /resenas:\s*\{[\s\S]{0,400}items:\s*\[\]/);
 });
 
+test("la generación y el storefront no infieren medios de pago ni comparaciones", () => {
+  const adaptador = leer("adaptador.js");
+  const widget = leer("extensions/tiendaiq-widgets/assets/tiendaiq.js");
+
+  assert.doesNotMatch(adaptador, /pagos:\s*\{\s*type:/);
+  assert.doesNotMatch(adaptador, /comparison:\s*\{\s*type:/);
+  assert.doesNotMatch(adaptador, /\["amex", "apple", "visa", "mastercard", "paypal", "gpay", "shop"\]/);
+  assert.doesNotMatch(widget, /COMPARA_DEF/);
+  assert.match(widget, /b\.pagos = \[\];/);
+  assert.match(widget, /const paymentsHtml = b\.pagos\.length/);
+  assert.match(widget, /!filas\.length \|\| compliance\?\.claims_verified !== true \|\| !compliance\.comparison_source/);
+  assert.match(widget, /!rows\.length \|\| compliance\.claims_verified !== true \|\| !compliance\.comparison_source/);
+});
+
 test("el editor no precarga testimonios ni porcentajes aparentes", () => {
   const editor = leer("app/app.js");
 
