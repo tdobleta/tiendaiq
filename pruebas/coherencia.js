@@ -289,6 +289,7 @@ if (/release_sha:/.test(releaseWorkflow) &&
     /Authorization:\s*`Bearer \$\{token\}`/.test(opsReadinessScript) &&
     /worker\.release \|\| ""/.test(opsReadinessScript) &&
     /timeout-minutes:\s*40/.test(releaseWorkflow) &&
+    /node-version:\s*"22"/.test(releaseWorkflow) &&
     /npm install --global @shopify\/cli@4\.1\.0/.test(releaseWorkflow) &&
     /SHOPIFY_APP_AUTOMATION_TOKEN:\s*\$\{\{ secrets\.STAGING_SHOPIFY_APP_AUTOMATION_TOKEN \}\}/.test(releaseWorkflow) &&
     /SHOPIFY_CLI_NO_ANALYTICS:\s*"1"/.test(releaseWorkflow) &&
