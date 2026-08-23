@@ -1198,6 +1198,16 @@ test("el release de produccion persiste un rollback antes de desplegar el SHA re
   assert.match(workflow, /RENDER_PRODUCTION_WEB_DEPLOY_HOOK/);
   assert.match(workflow, /RENDER_PRODUCTION_WORKER_DEPLOY_HOOK/);
   assert.match(workflow, /https:\/\/tiendaiq\.com\/ready/);
+  assert.match(workflow, /node-version: "22"/);
+  assert.match(workflow, /npm install --global @shopify\/cli@4\.1\.0/);
+  assert.match(workflow, /PRODUCTION_SHOPIFY_APP_AUTOMATION_TOKEN/);
+  assert.match(workflow, /shopify app deploy --allow-updates --source-control-url "\$COMMIT_URL"/);
+  assert.ok(
+    workflow.indexOf("Wait for the deployed production web readiness gate") <
+      workflow.indexOf("Deploy Shopify production app components for the reviewed SHA") &&
+      workflow.indexOf("Deploy Shopify production app components for the reviewed SHA") <
+      workflow.indexOf("Wait for the production technical preflight gate")
+  );
   assert.match(workflow, /OPS_APP_URL: https:\/\/tiendaiq\.com/);
   assert.match(workflow, /CHECK_PRODUCTION_OPS_READINESS/);
   assert.match(workflow, /PRODUCTION_OPS_STATUS_TOKEN/);

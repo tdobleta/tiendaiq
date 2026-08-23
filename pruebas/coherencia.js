@@ -305,6 +305,22 @@ if (/release_sha:/.test(releaseWorkflow) &&
   );
 }
 
+if (/release_sha:/.test(productionReleaseWorkflow) &&
+    /node-version:\s*"22"/.test(productionReleaseWorkflow) &&
+    /npm install --global @shopify\/cli@4\.1\.0/.test(productionReleaseWorkflow) &&
+    /SHOPIFY_APP_AUTOMATION_TOKEN:\s*\$\{\{ secrets\.PRODUCTION_SHOPIFY_APP_AUTOMATION_TOKEN \}\}/.test(productionReleaseWorkflow) &&
+    /SHOPIFY_CLI_NO_ANALYTICS:\s*"1"/.test(productionReleaseWorkflow) &&
+    /shopify app deploy --allow-updates --source-control-url "\$COMMIT_URL"/.test(productionReleaseWorkflow) &&
+    productionReleaseWorkflow.indexOf("Wait for the deployed production web readiness gate") < productionReleaseWorkflow.indexOf("Deploy Shopify production app components for the reviewed SHA") &&
+    productionReleaseWorkflow.indexOf("Deploy Shopify production app components for the reviewed SHA") < productionReleaseWorkflow.indexOf("Wait for the production technical preflight gate")) {
+  ok("el release de produccion publica Shopify con el mismo SHA revisado");
+} else {
+  mal(
+    "el release de produccion publica Shopify con el mismo SHA revisado",
+    "debe fijar Node 22, CLI Shopify pinneada, token productivo y despliegue antes del preflight"
+  );
+}
+
 const workerSource = leer("worker.js");
 if (/await Promise\.race/.test(workerSource) &&
     /verificarWorkerDB/.test(workerSource) &&

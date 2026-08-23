@@ -59,9 +59,18 @@ jobs:
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: "20"
+          # @shopify/cli@4.1.0 imports node:module.enableCompileCache, which
+          # is available in Node 22 but not in the Node 20 runner image.
+          node-version: "22"
 
       - run: npm ci --no-audit --no-fund
+
+      # La configuracion de Shopify y la theme app extension viven fuera de
+      # Render. El release solo es integro si publica tambien esos componentes
+      # con el mismo SHA revisado. La CLI se pinnea para evitar cambios
+      # transitorios de comportamiento del runner.
+      - name: Install pinned Shopify CLI for app deployment
+        run: npm install --global @shopify/cli@4.1.0
 
       - id: previous
         name: Capture the current production release for application rollback
@@ -141,6 +150,21 @@ jobs:
           done
           echo "Production no aprobo /ready dentro de 10 minutos" >&2
           exit 1
+
+      # No usar --config staging: el archivo por defecto es la configuracion
+      # productiva. Si el token no esta configurado, fallar cerrado antes del
+      # preflight; nunca declarar verde un release que dejo el extension o los
+      # webhooks de Shopify en un SHA anterior.
+      - name: Deploy Shopify production app components for the reviewed SHA
+        shell: bash
+        env:
+          SHOPIFY_APP_AUTOMATION_TOKEN: ${{ secrets.PRODUCTION_SHOPIFY_APP_AUTOMATION_TOKEN }}
+          SHOPIFY_CLI_NO_ANALYTICS: "1"
+          COMMIT_URL: ${{ github.server_url }}/${{ github.repository }}/commit/${{ steps.release.outputs.sha }}
+        run: |
+          set -euo pipefail
+          [[ -n "$SHOPIFY_APP_AUTOMATION_TOKEN" ]] || { echo "Falta PRODUCTION_SHOPIFY_APP_AUTOMATION_TOKEN" >&2; exit 1; }
+          shopify app deploy --allow-updates --source-control-url "$COMMIT_URL"
 
       - name: Wait for the production technical preflight gate
         shell: bash
