@@ -50,6 +50,7 @@ const {
   terminarInstalacion,
   tiendaDelPase,
   recuperarInstalacionDesdePase,
+  asegurarOrigenStorefront,
   ALCANCES,
   TOPICOS_OPERATIVOS
 } = require("./auth");
@@ -720,6 +721,7 @@ async function resolverSesion(req) {
     if (error.code !== "TIENDA_NO_INSTALADA") throw error;
     sesion = await recuperarInstalacionDesdePase(pase, { tiendaEsperada: tienda });
   }
+  await asegurarOrigenStorefront(sesion, env.APP_URL);
   return { ...sesion, tenant: TenantContext.fromShopDomain(sesion.tienda, { source: "session-token" }) };
 }
 

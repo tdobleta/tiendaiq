@@ -7,9 +7,12 @@
   trae la config del bundle (mismo dato que hoy viaja embebido en la inyección
   directa; sin secretos). El widget se monta solo cerca del botón de compra.
 
-  La URL de la app coincide con el dominio público configurado para TiendaIQ.
+  El origen se guarda por instalación en un app-data metafield no sensible.
+  No hay fallback a producción: si la instalación todavía no fue configurada,
+  el widget no hace ninguna petición a otro entorno.
 {% endcomment %}
 {%- if product -%}
+  {%- assign tiendaiq_bundles_origin = app.metafields.tiendaiq.storefront_origin.value -%}
   <script>
     window.TIENDAIQ_PRODUCTO = {
       id: {{ product.id | json }},
@@ -40,8 +43,10 @@
     ];
     // País del comprador (para "Segmentar por mercado"). ISO code, ej. "AR".
     window.TIENDAIQ_MERCADO = { pais: {{ localization.country.iso_code | json }} };
-    window.TIENDAIQ_BUNDLES_SRC =
-      "https://tiendaiq.com/publico/bundles?shop={{ shop.permanent_domain }}";
+    {%- if tiendaiq_bundles_origin != blank -%}
+      {%- assign tiendaiq_bundles_src = tiendaiq_bundles_origin | append: "/publico/bundles?shop=" | append: shop.permanent_domain -%}
+      window.TIENDAIQ_BUNDLES_SRC = {{ tiendaiq_bundles_src | json }};
+    {%- endif -%}
   </script>
   {{ 'tiendaiq-bundle.css' | asset_url | stylesheet_tag }}
   <script src="{{ 'tiendaiq-bundle.js' | asset_url }}" defer></script>

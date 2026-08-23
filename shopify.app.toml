@@ -23,8 +23,9 @@ name = "TiendaIQ: Páginas con IA"
 # manda aud=...9097 y firmaOk=true (el secreto siempre estuvo bien).
 handle = "tiendaiq-app"
 
-# El dominio propio. Ver pruebas/coherencia.js: los dos app embeds tienen que
-# apuntar acá, y el chequeo falla si alguno se queda atrás.
+# El dominio propio de producción. Los app embeds no lo fijan: resuelven su
+# origen aislado por instalación desde un app-data metafield, para no cruzar
+# staging y producción.
 application_url = "https://tiendaiq.com"
 
 # La app vive adentro del admin de Shopify (App Bridge + iframe). Ver el
