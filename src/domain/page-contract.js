@@ -28,6 +28,24 @@ function validatePageIdentity(record, expectedId) {
   }
 }
 
+function normalizeUnverifiedClaims(data) {
+  if (!isPlainObject(data.compliance) || data.compliance.claims_verified !== true) {
+    return data;
+  }
+
+  // `data` puede ser guardada por el editor o por importaciones; una fuente
+  // declarativa no constituye prueba. Hasta que exista una atestación emitida
+  // y verificada por el servidor, ninguna ruta de persistencia puede marcar
+  // reseñas, estadísticas o políticas como verificadas.
+  return {
+    ...data,
+    compliance: {
+      ...data.compliance,
+      claims_verified: false
+    }
+  };
+}
+
 function normalizePageRecord(record, { expectedId } = {}) {
   validatePageIdentity(record, expectedId);
   if (!isPlainObject(record.data)) {
@@ -42,6 +60,7 @@ function normalizePageRecord(record, { expectedId } = {}) {
 
   return {
     ...record,
+    data: normalizeUnverifiedClaims(record.data),
     schema_version: schemaVersion
   };
 }
@@ -73,6 +92,7 @@ module.exports = Object.freeze({
   PageContractError,
   isPlainObject,
   validatePageIdentity,
+  normalizeUnverifiedClaims,
   normalizePageRecord,
   normalizeStoredPageRecord
 });
