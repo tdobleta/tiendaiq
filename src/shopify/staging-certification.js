@@ -6,6 +6,28 @@ function normalizedUrl(value) {
   return String(value || "").trim().replace(/\/+$/, "");
 }
 
+function publicationUrlFromShopify(product, expectedShop) {
+  const primary = String(product?.onlineStoreUrl || "").trim();
+  if (primary) return { url: primary, source: "online_store_url" };
+
+  const preview = String(product?.onlineStorePreviewUrl || "").trim();
+  const expectedHost = String(expectedShop || "").trim().toLowerCase();
+  if (!preview || !expectedHost) return { url: null, source: null };
+
+  try {
+    const url = new URL(preview);
+    const isExactStagingShop = url.protocol === "https:" &&
+      url.host.toLowerCase() === expectedHost &&
+      !url.username && !url.password &&
+      !url.search && !url.hash;
+    return isExactStagingShop
+      ? { url: url.href, source: "online_store_preview_url" }
+      : { url: null, source: "online_store_preview_url_rejected" };
+  } catch {
+    return { url: null, source: "online_store_preview_url_rejected" };
+  }
+}
+
 function certificationUrlDiagnostic(value) {
   const raw = String(value || "").trim();
   if (!raw) {
@@ -175,6 +197,7 @@ async function queryShopifyCertification(gql, session, productId, { signal } = {
           id
           templateSuffix
           onlineStoreUrl
+          onlineStorePreviewUrl
           metafield(namespace: "tiendaiq", key: "pagina") { id type value }
         }
       }`,
@@ -197,6 +220,7 @@ function evaluateShopifyCertification({
   requiredScopes,
   requiredTopics,
   expectedWebhookUrl,
+  shopDomain,
   planName,
   planTest,
   releaseSha,
@@ -224,6 +248,7 @@ function evaluateShopifyCertification({
 
   const publication = evidence?.publication;
   const product = remote?.product;
+  const shopifyPublicationUrl = publicationUrlFromShopify(product, shopDomain);
   const metafieldValue = String(product?.metafield?.value || "");
   let validJson = false;
   try {
@@ -242,10 +267,10 @@ function evaluateShopifyCertification({
   );
   const shopifyPublicationOk = Boolean(
     databasePublicationOk && product?.id === publication.productId &&
-    product?.templateSuffix === "tiendaiq" && product?.onlineStoreUrl &&
+    product?.templateSuffix === "tiendaiq" && shopifyPublicationUrl.url &&
     product?.metafield?.id && product?.metafield?.type === "json" && validJson &&
     remoteHash === publication.contentHash &&
-    normalizedUrl(product.onlineStoreUrl) === normalizedUrl(publication.publicUrl)
+    normalizedUrl(shopifyPublicationUrl.url) === normalizedUrl(publication.publicUrl)
   );
   if (!databasePublicationOk) errors.push("durable_publication_not_verified");
   if (!shopifyPublicationOk) errors.push("shopify_publication_not_verified");
@@ -278,10 +303,11 @@ function evaluateShopifyCertification({
       publicationShopify: {
         ok: shopifyPublicationOk,
         contentHashMatch: remoteHash === publication?.contentHash,
-        publicUrlMatch: normalizedUrl(product?.onlineStoreUrl) === normalizedUrl(publication?.publicUrl),
+        publicUrlMatch: normalizedUrl(shopifyPublicationUrl.url) === normalizedUrl(publication?.publicUrl),
         publicUrlComparison: {
           persisted: certificationUrlDiagnostic(publication?.publicUrl),
-          shopify: certificationUrlDiagnostic(product?.onlineStoreUrl)
+          shopify: certificationUrlDiagnostic(shopifyPublicationUrl.url),
+          source: shopifyPublicationUrl.source
         }
       },
       storefront: { ok: storefrontOk, ...(remote?.storefront || {}) },

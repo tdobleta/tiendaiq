@@ -448,6 +448,7 @@ async function certificarShopifyStaging(req, res) {
     requiredScopes: ALCANCES.split(","),
     requiredTopics: TOPICOS_OPERATIVOS,
     expectedWebhookUrl: `${URL_APP}/webhooks`,
+    shopDomain: shop,
     planName: PLAN_NOMBRE,
     planTest: String(env.PLAN_TEST || "") === "1",
     releaseSha,

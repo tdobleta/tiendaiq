@@ -22,6 +22,7 @@ function fixture(overrides = {}) {
     requiredScopes: ["read_products", "write_products"],
     requiredTopics: ["APP_UNINSTALLED", "APP_SUBSCRIPTIONS_UPDATE"],
     expectedWebhookUrl: "https://staging.example/webhooks",
+    shopDomain: "certification.myshopify.com",
     planName: "TiendaIQ Pro",
     planTest: true,
     releaseSha: RELEASE_SHA,
@@ -204,6 +205,75 @@ test("rechaza URL publica distinta o storefront sin marcadores", () => {
   assert.equal(missingMarkers.checks.storefront.ok, false);
 });
 
+test("acepta preview de Shopify solo cuando no existe URL primaria y coincide exactamente", () => {
+  const result = evaluateShopifyCertification(fixture({
+    remote: {
+      ...fixture().remote,
+      product: {
+        ...fixture().remote.product,
+        onlineStoreUrl: null,
+        onlineStorePreviewUrl: "https://certification.myshopify.com/products/demo"
+      }
+    }
+  }));
+
+  assert.equal(result.checks.publicationShopify.ok, true);
+  assert.equal(result.checks.publicationShopify.publicUrlMatch, true);
+  assert.equal(result.checks.publicationShopify.publicUrlComparison.source, "online_store_preview_url");
+});
+
+test("no usa preview si la URL primaria existe pero difiere", () => {
+  const result = evaluateShopifyCertification(fixture({
+    remote: {
+      ...fixture().remote,
+      product: {
+        ...fixture().remote.product,
+        onlineStoreUrl: "https://certification.myshopify.com/products/otro",
+        onlineStorePreviewUrl: "https://certification.myshopify.com/products/demo"
+      }
+    }
+  }));
+
+  assert.equal(result.checks.publicationShopify.ok, false);
+  assert.equal(result.checks.publicationShopify.publicUrlMatch, false);
+  assert.equal(result.checks.publicationShopify.publicUrlComparison.source, "online_store_url");
+});
+
+test("rechaza preview con host, path, query o fragmento distinto", () => {
+  const previews = [
+    { url: "https://otro.myshopify.com/products/demo", source: "online_store_preview_url_rejected" },
+    { url: "https://usuario@certification.myshopify.com/products/demo", source: "online_store_preview_url_rejected" },
+    { url: "https://certification.myshopify.com/products/otro", source: "online_store_preview_url" },
+    { url: "https://certification.myshopify.com/products/demo?preview=1", source: "online_store_preview_url_rejected" },
+    { url: "https://certification.myshopify.com/products/demo#preview", source: "online_store_preview_url_rejected" }
+  ];
+
+  for (const { url: onlineStorePreviewUrl, source } of previews) {
+    const result = evaluateShopifyCertification(fixture({
+      remote: {
+        ...fixture().remote,
+        product: { ...fixture().remote.product, onlineStoreUrl: null, onlineStorePreviewUrl }
+      }
+    }));
+    assert.equal(result.checks.publicationShopify.ok, false, onlineStorePreviewUrl);
+    assert.equal(result.checks.publicationShopify.publicUrlMatch, false, onlineStorePreviewUrl);
+    assert.equal(result.checks.publicationShopify.publicUrlComparison.source, source);
+  }
+});
+
+test("rechaza la publicacion cuando faltan ambas URLs de Shopify", () => {
+  const result = evaluateShopifyCertification(fixture({
+    remote: {
+      ...fixture().remote,
+      product: { ...fixture().remote.product, onlineStoreUrl: null, onlineStorePreviewUrl: null }
+    }
+  }));
+
+  assert.equal(result.checks.publicationShopify.ok, false);
+  assert.equal(result.checks.publicationShopify.publicUrlMatch, false);
+  assert.equal(result.checks.publicationShopify.publicUrlComparison.source, null);
+});
+
 test("diagnostica la diferencia de URL sin exponer valores de query", () => {
   const diagnostic = certificationUrlDiagnostic(
     "https://certification.myshopify.com/products/demo/?variant=42&token=valor-secreto"
@@ -291,6 +361,7 @@ test("consulta Shopify con la sesion resuelta y devuelve solo el contrato necesa
   assert.equal(calls.every((call) => call.options.signal === "signal"), true);
   assert.deepEqual(result.scopes, ["read_products"]);
   assert.equal(Object.hasOwn(result, "token"), false);
+  assert.match(calls[1].query, /onlineStorePreviewUrl/);
 });
 
 test("lee evidencia bajo TenantContext y fija la pagina exacta dentro de la transaccion", async () => {
