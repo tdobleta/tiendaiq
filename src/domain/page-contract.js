@@ -82,9 +82,12 @@ function normalizeStoredPageRecord(record, { expectedId } = {}) {
 
   // Las paginas anteriores guardaban el contenido directamente en la raiz.
   // No se las envuelve ni se les agrega metadata: una lectura/escritura de
-  // mantenimiento debe preservar exactamente su forma publicada.
+  // mantenimiento debe preservar exactamente su forma publicada. El cierre
+  // de claims aplica tambien a esa forma heredada: no puede conservar un
+  // `claims_verified` fabricado solo por haber sido guardada antes del
+  // contrato versionado.
   validatePageIdentity({ ...stored, id }, expectedId);
-  return stored;
+  return normalizeUnverifiedClaims(stored);
 }
 
 module.exports = Object.freeze({

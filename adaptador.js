@@ -257,8 +257,9 @@ PAGEPILOT BLUE
 Si la plantilla elegida es pagepilot-blue, completá también pagepilot_blue con
 contenido genérico, editable y basado en el producto. Incluí 5 beneficios para
 el ticker, 3 imágenes UGC o null, 3 párrafos de cómo funciona, 5 beneficios
-numerados, 4 tarjetas guía sin testimonios y 4 stats guía con porcentaje 0, 6
-filas de comparación y 5 preguntas frecuentes. Devolvé recomendados como un
+numerados, 4 tarjetas guía sin testimonios y 4 stats guía con porcentaje 0, y
+5 preguntas frecuentes. No incluyas comparaciones competitivas ni medios de
+pago: requieren una atestación verificable fuera de la generación. Devolvé recomendados como un
 array vacío: esa sección se completa en vivo desde el catálogo real de Shopify. Incluí también
 3 acordeones del hero con los títulos "Descripción", "Cómo usar" y "Envíos y devoluciones".
 No inventes
@@ -452,13 +453,11 @@ const ESQUEMA = {
           properties: {
             badge: { type: "string" },
             ticker: { type: "array", items: { type: "object", properties: { icono: { type: "string" }, texto: { type: "string" } }, required: ["icono", "texto"], additionalProperties: false } },
-            pagos: { type: "array", items: { type: "string", enum: ["amex", "apple", "visa", "mastercard", "paypal", "gpay", "shop"] } },
             social: { type: "object", properties: { titular: { type: "string" }, enfasis: { type: "string" }, subtitulo: { type: "string" }, cta: { type: "string" }, rating: { type: "string" }, imagenes: { type: "array", items: { type: ["string", "null"] } } }, required: ["titular", "enfasis", "subtitulo", "cta", "rating", "imagenes"], additionalProperties: false },
             como_funciona: { type: "object", properties: { titular: { type: "string" }, parrafos: { type: "array", items: { type: "string" } }, cta: { type: "string" }, imagen: { type: ["string", "null"] } }, required: ["titular", "parrafos", "cta", "imagen"], additionalProperties: false },
             feature: { type: "object", properties: { titular: { type: "string" }, subtitulo: { type: "string" }, items: { type: "array", items: { type: "object", properties: { titulo: { type: "string" }, frase: { type: "string" } }, required: ["titulo", "frase"], additionalProperties: false } }, imagen: { type: ["string", "null"] } }, required: ["titular", "subtitulo", "items", "imagen"], additionalProperties: false },
             reviews: { type: "object", properties: { badge: { type: "string" }, titular: { type: "string" }, subtitulo: { type: "string" }, items: { type: "array", items: { type: "object", properties: { autor: { type: "string" }, estrellas: { type: "integer" }, texto: { type: "string" }, imagen: { type: ["string", "null"] } }, required: ["autor", "estrellas", "texto", "imagen"], additionalProperties: false } } }, required: ["badge", "titular", "subtitulo", "items"], additionalProperties: false },
             blue_stats: { type: "object", properties: { titular: { type: "string" }, subtitulo: { type: "string" }, items: { type: "array", items: { type: "object", properties: { pct: { type: "integer" }, frase: { type: "string" } }, required: ["pct", "frase"], additionalProperties: false } } }, required: ["titular", "subtitulo", "items"], additionalProperties: false },
-            comparison: { type: "object", properties: { titular: { type: "string" }, parrafo: { type: "string" }, cta: { type: "string" }, filas: { type: "array", items: { type: "string" } }, otros: { type: "string" } }, required: ["titular", "parrafo", "cta", "filas", "otros"], additionalProperties: false },
             panel: { type: "object", properties: { titular: { type: "string" }, subtitulo: { type: "string" }, cta: { type: "string" }, imagen: { type: ["string", "null"] } }, required: ["titular", "subtitulo", "cta", "imagen"], additionalProperties: false },
             faq: { type: "object", properties: { titular: { type: "string" }, subtitulo: { type: "string" }, items: { type: "array", items: { type: "object", properties: { pregunta: { type: "string" }, respuesta: { type: "string" } }, required: ["pregunta", "respuesta"], additionalProperties: false } } }, required: ["titular", "subtitulo", "items"], additionalProperties: false },
             acordeones: { type: "array", items: { type: "object", properties: { titulo: { type: "string" }, contenido: { type: "string" } }, required: ["titulo", "contenido"], additionalProperties: false } },
@@ -602,7 +601,6 @@ const CARDINALIDAD = {
   "pagepilot_blue.feature.items": 5,
   "pagepilot_blue.reviews.items": 4,
   "pagepilot_blue.blue_stats.items": 4,
-  "pagepilot_blue.comparison.filas": 6,
   "pagepilot_blue.faq.items": 5,
   "pagepilot_blue.acordeones": 3
 };
@@ -731,7 +729,6 @@ function ensamblar(fuente, salida, { idioma, angulo }) {
           { icono: "brillo", texto: "Una experiencia que se disfruta" },
           { icono: "check", texto: "Elegí una solución práctica" }
         ],
-        pagos: Array.isArray(pb.pagos) && pb.pagos.length ? pb.pagos.slice(0, 7) : ["amex", "apple", "visa", "mastercard", "paypal", "gpay", "shop"],
         social: {
           titular: "Mirá el producto en uso",
           enfasis: "producto en uso",
@@ -772,13 +769,6 @@ function ensamblar(fuente, salida, { idioma, angulo }) {
           titular: "Estadísticas del producto",
           subtitulo: "Agregá una fuente válida antes de publicar estadísticas.",
           items: []
-        },
-        comparison: {
-          titular: pb.comparison?.titular || "Comparalo vos misma",
-          parrafo: pb.comparison?.parrafo || "Mirá por qué esta propuesta se destaca frente a las alternativas.",
-          cta: pb.comparison?.cta || "Obtené el tuyo ahora",
-          filas: fijo(pb.comparison?.filas, 6).length ? fijo(pb.comparison.filas, 6) : ["Diseño práctico", "Uso sencillo", "Cuidado diario", "Mantenimiento", "Versatilidad", "Durabilidad"],
-          otros: pb.comparison?.otros || "Otros"
         },
         panel: {
           titular: pb.panel?.titular || "Una mejora simple para cada día",
