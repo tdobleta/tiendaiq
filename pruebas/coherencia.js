@@ -289,12 +289,18 @@ if (/release_sha:/.test(releaseWorkflow) &&
     /Authorization:\s*`Bearer \$\{token\}`/.test(opsReadinessScript) &&
     /worker\.release \|\| ""/.test(opsReadinessScript) &&
     /timeout-minutes:\s*40/.test(releaseWorkflow) &&
+    /npm install --global @shopify\/cli@4\.1\.0/.test(releaseWorkflow) &&
+    /SHOPIFY_APP_AUTOMATION_TOKEN:\s*\$\{\{ secrets\.STAGING_SHOPIFY_APP_AUTOMATION_TOKEN \}\}/.test(releaseWorkflow) &&
+    /SHOPIFY_CLI_NO_ANALYTICS:\s*"1"/.test(releaseWorkflow) &&
+    /shopify app deploy --config staging --allow-updates --source-control-url "\$COMMIT_URL"/.test(releaseWorkflow) &&
+    releaseWorkflow.indexOf("Wait for the deployed web readiness gate") < releaseWorkflow.indexOf("Deploy Shopify staging app components for the reviewed SHA") &&
+    releaseWorkflow.indexOf("Deploy Shopify staging app components for the reviewed SHA") < releaseWorkflow.indexOf("Wait for the complete operational release gate") &&
     /RENDER_GIT_COMMIT/.test(leer("server.js"))) {
-  ok("el release fija el SHA revisado y espera readiness de staging");
+  ok("el release fija el SHA revisado, publica Shopify y espera readiness de staging");
 } else {
   mal(
-    "el release fija el SHA revisado y espera readiness de staging",
-    "debe validar un SHA completo en main, desplegar ese ref y esperar /ready"
+    "el release fija el SHA revisado, publica Shopify y espera readiness de staging",
+    "debe validar un SHA completo en main, desplegar Render y la app Shopify del mismo ref, y esperar /ready"
   );
 }
 

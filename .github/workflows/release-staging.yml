@@ -52,6 +52,12 @@ jobs:
 
       - run: npm ci --no-audit --no-fund
 
+      # Shopify versiona la configuracion y los theme app extensions fuera de
+      # Render. Pinneamos la CLI para que el release de storefront sea
+      # reproducible y no cambie por una actualizacion transitoria del runner.
+      - name: Install pinned Shopify CLI for app deployment
+        run: npm install --global @shopify/cli@4.1.0
+
       - name: Prepare isolated runtime roles
         env:
           ALLOW_ROLE_BOOTSTRAP: "1"
@@ -92,6 +98,20 @@ jobs:
           done
           echo "Staging no aprobo /ready dentro de 10 minutos" >&2
           exit 1
+
+      # El mismo SHA que corre en Render debe ser la version activa de la app
+      # Shopify. Sin este paso, el storefront puede seguir sirviendo una
+      # extension anterior aunque /ready y el worker sean verdes.
+      - name: Deploy Shopify staging app components for the reviewed SHA
+        shell: bash
+        env:
+          SHOPIFY_APP_AUTOMATION_TOKEN: ${{ secrets.STAGING_SHOPIFY_APP_AUTOMATION_TOKEN }}
+          SHOPIFY_CLI_NO_ANALYTICS: "1"
+          COMMIT_URL: ${{ github.server_url }}/${{ github.repository }}/commit/${{ steps.release.outputs.sha }}
+        run: |
+          set -euo pipefail
+          [[ -n "$SHOPIFY_APP_AUTOMATION_TOKEN" ]] || { echo "Falta STAGING_SHOPIFY_APP_AUTOMATION_TOKEN" >&2; exit 1; }
+          shopify app deploy --config staging --allow-updates --source-control-url "$COMMIT_URL"
 
       - name: Wait for the complete operational release gate
         shell: bash
