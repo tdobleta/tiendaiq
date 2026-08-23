@@ -38,7 +38,10 @@ const TOPICOS_OPERATIVOS = Object.freeze(["APP_UNINSTALLED", "APP_SUBSCRIPTIONS_
 const TIPO_GRANT_TOKEN_EXCHANGE = "urn:ietf:params:oauth:grant-type:token-exchange";
 const TIPO_TOKEN_ID = "urn:ietf:params:oauth:token-type:id_token";
 const TIPO_TOKEN_OFFLINE = "urn:shopify:params:oauth:token-type:offline-access-token";
+const NAMESPACE_ORIGEN_STOREFRONT = "tiendaiq";
+const CLAVE_ORIGEN_STOREFRONT = "storefront_origin";
 const intercambiosEnCurso = new Map();
+const origenesStorefrontSincronizados = new Map();
 
 function normalizarAlcances(scope) {
   const valores = Array.isArray(scope) ? scope : String(scope || "").split(",");
@@ -103,6 +106,94 @@ async function registrarWebhooksOperativos(sesion, urlApp, gqlClient) {
       throw error;
     }
   }
+}
+
+// El app embed corre en el storefront y no puede leer APP_URL. Guardamos el
+// origen público no sensible en los app-data metafields de ESTA instalación:
+// Shopify lo aísla por app/tienda y el objeto Liquid `app` puede leerlo. Así
+// staging jamás tiene que apuntar a la API pública de producción.
+function origenStorefrontValido(urlApp) {
+  let url;
+  try {
+    url = new URL(String(urlApp || ""));
+  } catch {
+    throw new Error("APP_URL debe ser una URL HTTPS válida para el storefront");
+  }
+  if (
+    url.protocol !== "https:" ||
+    url.username ||
+    url.password ||
+    url.search ||
+    url.hash ||
+    url.pathname !== "/"
+  ) {
+    throw new Error("APP_URL debe ser un origen HTTPS sin credenciales, query, fragmento ni path");
+  }
+  return url.origin;
+}
+
+async function configurarOrigenStorefront(sesion, urlApp, gqlClient) {
+  const origen = origenStorefrontValido(urlApp);
+  const gql = gqlClient || require("./shopify").gql;
+  const instalacion = await gql(`query($namespace: String!, $key: String!) {
+    currentAppInstallation {
+      id
+      metafield(namespace: $namespace, key: $key) { value }
+    }
+  }`, {
+    namespace: NAMESPACE_ORIGEN_STOREFRONT,
+    key: CLAVE_ORIGEN_STOREFRONT
+  }, sesion);
+  const ownerId = instalacion?.currentAppInstallation?.id;
+  if (typeof ownerId !== "string" || !ownerId.startsWith("gid://shopify/AppInstallation/")) {
+    throw new Error("Shopify no devolvió la instalación de la app para configurar el storefront");
+  }
+  if (instalacion.currentAppInstallation.metafield?.value === origen) {
+    return { origen, actualizado: false };
+  }
+
+  const resultado = await gql(`mutation($metafields: [MetafieldsSetInput!]!) {
+    metafieldsSet(metafields: $metafields) {
+      metafields { namespace key value }
+      userErrors { field message code }
+    }
+  }`, {
+    metafields: [{
+      ownerId,
+      namespace: NAMESPACE_ORIGEN_STOREFRONT,
+      key: CLAVE_ORIGEN_STOREFRONT,
+      type: "single_line_text_field",
+      value: origen
+    }]
+  }, sesion);
+  const payload = resultado?.metafieldsSet;
+  const valor = payload?.metafields?.find((metafield) =>
+    metafield?.namespace === NAMESPACE_ORIGEN_STOREFRONT &&
+    metafield?.key === CLAVE_ORIGEN_STOREFRONT
+  )?.value;
+  if ((payload?.userErrors || []).length || valor !== origen) {
+    throw new Error("Shopify no confirmó la configuración del origen de storefront");
+  }
+  return { origen, actualizado: true };
+}
+
+// Las instalaciones existentes no pasan nuevamente por OAuth. Al abrir la
+// app se reconcilia una sola vez por proceso/origen; si Shopify no confirma la
+// escritura, la app falla cerrada en vez de dejar el embed apuntando a otro
+// entorno. Una nueva URL de APP_URL usa una clave de caché distinta.
+async function asegurarOrigenStorefront(sesion, urlApp, gqlClient) {
+  const origen = origenStorefrontValido(urlApp);
+  const clave = `${sesion?.tienda || ""}\n${origen}`;
+  let pendiente = origenesStorefrontSincronizados.get(clave);
+  if (!pendiente) {
+    pendiente = configurarOrigenStorefront(sesion, origen, gqlClient)
+      .catch((error) => {
+        origenesStorefrontSincronizados.delete(clave);
+        throw error;
+      });
+    origenesStorefrontSincronizados.set(clave, pendiente);
+  }
+  return pendiente;
 }
 
 // Comparación en tiempo constante: comparar firmas con === filtra el secreto
@@ -326,8 +417,9 @@ async function terminarInstalacion(res, url) {
   }
   try {
     await registrarWebhooksOperativos({ tienda, token: datos.access_token }, env.APP_URL);
+    await asegurarOrigenStorefront({ tienda, token: datos.access_token }, env.APP_URL);
   } catch (error) {
-    console.error(`  instalacion ${tienda}: webhooks incompletos`, error.message, error.detalle || "");
+    console.error(`  instalacion ${tienda}: configuración Shopify incompleta`, error.message);
     return void res.writeHead(502, { "Content-Type": "text/plain; charset=utf-8" })
       .end("No se pudo completar la configuración de la app. Volvé a iniciar la instalación.");
   }
@@ -482,6 +574,7 @@ async function recuperarInstalacionDesdePase(pase, {
     }
 
     await registrarWebhooksOperativos(sesion, urlApp, gqlClient);
+    await asegurarOrigenStorefront(sesion, urlApp, gqlClient);
     await guardar(tienda, datos.access_token, {
       alcances: alcancesConcedidos.join(","),
       alcances_faltantes: faltantes,
@@ -511,6 +604,9 @@ module.exports = {
   alcancesFaltantes,
   consultarAlcancesInstalacion,
   registrarWebhooksOperativos,
+  origenStorefrontValido,
+  configurarOrigenStorefront,
+  asegurarOrigenStorefront,
   ALCANCES,
   TOPICOS_OPERATIVOS,
   COOKIE_ESTADO_OAUTH

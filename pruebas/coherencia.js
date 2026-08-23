@@ -21,24 +21,12 @@ const mal = (n, d) => {
   console.error(`  ✖ ${n}\n      ${d}`);
 };
 
-// ---------- el dominio de la app vive en varios archivos ----------
+// ---------- el dominio de la app y el app embed ----------
 //
-// shopify.app.toml lo usa para el OAuth y los webhooks; los dos app embeds lo
-// llevan escrito porque corren en el storefront del merchant, donde no hay
-// forma de leer una variable de entorno. Si se cambia uno y no los otros, la
-// app instala bien pero los widgets piden la config al dominio viejo — y eso
-// no se nota hasta que el dominio viejo deja de responder.
-function dominiosDe(texto) {
-  return new Set((texto.match(/https:\/\/[a-z0-9.-]+/gi) || []).map((u) => u.toLowerCase()));
-}
-
-const ARCHIVOS_CON_DOMINIO = [
-  "shopify.app.toml",
-  "extensions/tiendaiq-widgets/blocks/bundle.liquid"
-];
-
-// El dominio de referencia es el `application_url` del toml: es el que Shopify
-// tiene cargado en el Partner Dashboard.
+// El storefront no tiene variables de entorno. En lugar de grabar el dominio
+// de producción dentro del extension (que también se despliega a staging), el
+// backend persiste por instalación el origen HTTPS en un app-data metafield.
+// Sin valor, el embed queda inactivo; nunca puede pedir datos a producción.
 const toml = leer("shopify.app.toml");
 const stagingToml = leer("shopify.app.staging.toml");
 const render = leer("render.yaml");
@@ -86,16 +74,15 @@ if (!principal) {
 } else {
   ok(`el dominio de la app es ${principal}`);
 
-  for (const rel of ARCHIVOS_CON_DOMINIO.slice(1)) {
-    const usados = [...dominiosDe(leer(rel))];
-    const ajenos = usados.filter((u) => !principal.startsWith(u) && !u.startsWith(principal));
-    if (ajenos.length) {
-      mal(`${rel} apunta al mismo dominio que la app`, `usa ${ajenos.join(", ")} en vez de ${principal}`);
-    } else if (!usados.length) {
-      mal(`${rel} apunta al mismo dominio que la app`, "no menciona ninguna URL — ¿se borró el fetch de config?");
-    } else {
-      ok(`${rel} apunta a ${principal}`);
-    }
+  const bundleEmbed = leer("extensions/tiendaiq-widgets/blocks/bundle.liquid");
+  if (!/app\.metafields\.tiendaiq\.storefront_origin\.value/.test(bundleEmbed)) {
+    mal("el app embed lee el origen aislado por instalación", "falta app.metafields.tiendaiq.storefront_origin.value");
+  } else if (/https:\/\/tiendaiq\.com\/publico\/bundles/.test(bundleEmbed)) {
+    mal("el app embed no fija el origen de producción", "bundle.liquid todavía contiene tiendaiq.com/publico/bundles");
+  } else if (!/TIENDAIQ_BUNDLES_SRC/.test(bundleEmbed)) {
+    mal("el app embed mantiene el contrato del widget", "falta window.TIENDAIQ_BUNDLES_SRC");
+  } else {
+    ok("el app embed resuelve el origen aislado por instalación");
   }
 
   // El redirect del OAuth tiene que incluir el dominio principal, o la

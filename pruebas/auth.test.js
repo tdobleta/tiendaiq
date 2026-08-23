@@ -24,6 +24,9 @@ const {
   consumirCookieEstadoOAuth,
   alcancesFaltantes,
   registrarWebhooksOperativos,
+  origenStorefrontValido,
+  configurarOrigenStorefront,
+  asegurarOrigenStorefront,
   recuperarInstalacionDesdePase,
   ALCANCES,
   TOPICOS_OPERATIVOS,
@@ -53,9 +56,10 @@ test("el callback valida permisos y webhooks antes de persistir la instalación"
   );
   const permisos = callback.indexOf("alcancesFaltantes(datos.scope)");
   const webhooks = callback.indexOf("registrarWebhooksOperativos(");
+  const storefront = callback.indexOf("asegurarOrigenStorefront(");
   const guardar = callback.indexOf("guardarTienda(");
 
-  assert.ok(permisos >= 0 && webhooks > permisos && guardar > webhooks);
+  assert.ok(permisos >= 0 && webhooks > permisos && storefront > webhooks && guardar > storefront);
 });
 
 test("el request inicial exige HMAC valido y timestamp reciente en produccion", () => {
@@ -264,17 +268,122 @@ function respuestaTokenExchange(overrides = {}) {
 }
 
 function gqlConWebhooksCompletos() {
-  return async (query) => {
-    if (!query.includes("webhookSubscriptions(first")) throw new Error("no debe crear webhooks existentes");
-    return {
+  let origen = null;
+  return async (query, variables) => {
+    if (query.includes("webhookSubscriptions(first")) return {
       webhookSubscriptions: {
         edges: TOPICOS_OPERATIVOS.map((topic) => ({
           node: { topic, uri: "https://app.example/webhooks" }
         }))
       }
     };
+    if (query.includes("currentAppInstallation") && query.includes("metafield(")) return {
+      currentAppInstallation: {
+        id: "gid://shopify/AppInstallation/1",
+        metafield: origen ? { value: origen } : null
+      }
+    };
+    if (query.includes("metafieldsSet(")) {
+      origen = variables.metafields[0].value;
+      return {
+        metafieldsSet: {
+          metafields: [{ namespace: "tiendaiq", key: "storefront_origin", value: origen }],
+          userErrors: []
+        }
+      };
+    }
+    throw new Error("consulta GraphQL inesperada");
   };
 }
+
+test("el origen del storefront exige HTTPS canónico y sin componentes ambiguos", () => {
+  assert.strictEqual(origenStorefrontValido("https://staging.example/"), "https://staging.example");
+  for (const valor of [
+    "http://staging.example/",
+    "https://user@staging.example/",
+    "https://staging.example/app",
+    "https://staging.example/?debug=1",
+    "https://staging.example/#fragmento"
+  ]) {
+    assert.throws(() => origenStorefrontValido(valor), /APP_URL/);
+  }
+});
+
+test("la configuración de storefront queda aislada en el app-data metafield de la instalación", async () => {
+  const llamadas = [];
+  const fakeGql = async (query, variables) => {
+    llamadas.push({ query, variables });
+    if (query.includes("currentAppInstallation")) return {
+      currentAppInstallation: { id: "gid://shopify/AppInstallation/99", metafield: null }
+    };
+    return {
+      metafieldsSet: {
+        metafields: [{ namespace: "tiendaiq", key: "storefront_origin", value: variables.metafields[0].value }],
+        userErrors: []
+      }
+    };
+  };
+
+  const resultado = await configurarOrigenStorefront({ tienda: SHOP, token: "token" }, "https://staging.example/", fakeGql);
+  assert.deepStrictEqual(resultado, { origen: "https://staging.example", actualizado: true });
+  assert.strictEqual(llamadas.length, 2);
+  assert.deepStrictEqual(llamadas[1].variables.metafields, [{
+    ownerId: "gid://shopify/AppInstallation/99",
+    namespace: "tiendaiq",
+    key: "storefront_origin",
+    type: "single_line_text_field",
+    value: "https://staging.example"
+  }]);
+});
+
+test("el origen ya confirmado no se reescribe", async () => {
+  let mutaciones = 0;
+  const resultado = await configurarOrigenStorefront({ tienda: SHOP, token: "token" }, "https://app.example/", async (query) => {
+    if (query.includes("metafieldsSet(")) mutaciones += 1;
+    return {
+      currentAppInstallation: {
+        id: "gid://shopify/AppInstallation/99",
+        metafield: { value: "https://app.example" }
+      }
+    };
+  });
+  assert.deepStrictEqual(resultado, { origen: "https://app.example", actualizado: false });
+  assert.strictEqual(mutaciones, 0);
+});
+
+test("un error de Shopify al guardar el origen no considera instalada la configuración", async () => {
+  await assert.rejects(
+    configurarOrigenStorefront({ tienda: SHOP, token: "token" }, "https://app.example/", async (query) => query.includes("currentAppInstallation")
+      ? { currentAppInstallation: { id: "gid://shopify/AppInstallation/99", metafield: null } }
+      : { metafieldsSet: { metafields: [], userErrors: [{ message: "rechazado" }] } }),
+    /no confirmó/
+  );
+});
+
+test("la reconciliación de una instalación existente no repite la mutación dentro del proceso", async () => {
+  let consultas = 0;
+  let mutaciones = 0;
+  const fakeGql = async (query, variables) => {
+    if (query.includes("currentAppInstallation")) {
+      consultas += 1;
+      return { currentAppInstallation: { id: "gid://shopify/AppInstallation/100", metafield: null } };
+    }
+    mutaciones += 1;
+    return {
+      metafieldsSet: {
+        metafields: [{ namespace: "tiendaiq", key: "storefront_origin", value: variables.metafields[0].value }],
+        userErrors: []
+      }
+    };
+  };
+  const sesion = { tienda: "cache-storefront.myshopify.com", token: "token" };
+
+  await asegurarOrigenStorefront(sesion, "https://cache-storefront.example/", fakeGql);
+  await asegurarOrigenStorefront(sesion, "https://cache-storefront.example/", fakeGql);
+
+  assert.strictEqual(consultas, 1);
+  assert.strictEqual(mutaciones, 1);
+});
 
 test("token exchange offline recupera una instalacion autenticada y la persiste", async () => {
   const llamadas = [];
