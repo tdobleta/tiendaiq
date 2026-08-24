@@ -77,7 +77,13 @@ function createJobRepository(pool) {
     // Serializes one logical operation per tenant while it is waiting or running.
     // The tenant row is the stable lock target, so distinct request UUIDs cannot
     // create concurrent external side effects for the same shop.
-    async enqueueExclusive(context, { type, payload = {}, idempotencyKey = null, maxAttempts = 5 }) {
+    async enqueueExclusive(context, {
+      type,
+      payload = {},
+      idempotencyKey = null,
+      maxAttempts = 5,
+      allowSubscriptionRecovery = false
+    }) {
       const tenant = requireTenantContext(context);
       if (!type) throw new TypeError("El job requiere type");
       const id = crypto.randomUUID();
@@ -109,7 +115,10 @@ function createJobRepository(pool) {
             [tenant.tenantId, type, SUBSCRIPTION_RECOVERY_DIAGNOSTIC_KIND, "Shopify pudo haber creado la suscripción, pero no confirmó el resultado%"]
           );
           const blockedJob = mapJob(blocked.rows[0]);
-          if (subscriptionRecoveryDiagnosticFromJob(blockedJob)) return blockedJob;
+          // Sólo una nueva intención explícita llega hasta el worker. Antes de
+          // cualquier mutación éste consulta allSubscriptions (incluidos los
+          // PENDING), por lo que no se duplica un cobro de respuesta perdida.
+          if (!allowSubscriptionRecovery && subscriptionRecoveryDiagnosticFromJob(blockedJob)) return blockedJob;
         }
 
         const inserted = await client.query(

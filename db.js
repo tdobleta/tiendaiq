@@ -594,7 +594,7 @@ async function encolarJobExclusivoDB(context, options) {
     (job.result?.diagnostic?.kind === "shopify_subscription_recovery" ||
       String(job.lastError || "").startsWith("Shopify pudo haber creado la suscripción, pero no confirmó el resultado"))
     );
-    if (blocked) return blocked;
+    if (blocked && !options.allowSubscriptionRecovery) return blocked;
   }
   return encolarJobDB(tenant, options);
 }

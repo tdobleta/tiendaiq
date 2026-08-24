@@ -177,3 +177,49 @@ test("una suscripción ambigua terminal bloquea una nueva mutación de billing",
   assert.equal(result.status, "failed");
   assert.equal(queries.some((query) => /last_error LIKE/.test(query)), true);
 });
+
+test("una intención explícita puede pasar a reconciliación luego de un fallo ambiguo", async () => {
+  const blocked = {
+    id: "66666666-6666-4666-8666-666666666666",
+    tenant_id: tenant.tenantId,
+    type: "create-subscription",
+    payload: {},
+    status: "failed",
+    attempts: 2,
+    max_attempts: 2,
+    last_error: "Shopify pudo haber creado la suscripción, pero no confirmó el resultado",
+    result: { diagnostic: { kind: "shopify_subscription_recovery", version: 1 } }
+  };
+  const inserted = {
+    id: "77777777-7777-4777-8777-777777777777",
+    tenant_id: tenant.tenantId,
+    type: "create-subscription",
+    payload: { urlApp: "https://tiendaiq.example" },
+    status: "queued",
+    attempts: 0,
+    max_attempts: 2,
+    idempotency_key: "create-subscription:recovered-request"
+  };
+  const client = {
+    async query(text) {
+      if (/SELECT dominio FROM public\.tiendas/.test(text)) return { rows: [{ dominio: tenant.tenantId }] };
+      if (/status IN \('queued', 'running'\)/.test(text)) return { rows: [] };
+      if (/status = 'failed'/.test(text) && /result->'diagnostic'/.test(text)) return { rows: [blocked] };
+      if (/INSERT INTO control_plane\.jobs/.test(text)) return { rows: [inserted] };
+      return { rows: [] };
+    },
+    release() {}
+  };
+  const repository = createJobRepository({ async connect() { return client; } });
+
+  const result = await repository.enqueueExclusive(tenant, {
+    type: "create-subscription",
+    payload: inserted.payload,
+    idempotencyKey: inserted.idempotency_key,
+    maxAttempts: 2,
+    allowSubscriptionRecovery: true
+  });
+
+  assert.equal(result.id, inserted.id);
+  assert.equal(result.status, "queued");
+});
