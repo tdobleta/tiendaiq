@@ -38,6 +38,7 @@ const {
   leerJobDB,
   estadoColaDB,
   estadoWorkerDB,
+  estadoBillingWorkerDB,
   estadoInboxDB,
   leerEvidenciaCertificacionShopifyDB,
   verificarAlmacenamientoDB,
@@ -56,6 +57,7 @@ const {
 } = require("./auth");
 const { nubeServible, urlVideo, urlPoster } = require("./inspiracion-nube");
 const { estadoPlan, mesActual, PLAN_NOMBRE, configuracionPaginasGratis } = require("./facturacion");
+const { billingRuntimeContract, billingRuntimeCompatible } = require("./src/runtime/billing-runtime-contract");
 const { reportarError, metrica } = require("./monitoreo");
 const { TenantContext } = require("./src/tenancy/tenant-context");
 const { verifyAndNormalizeWebhook } = require("./src/webhooks/verify-and-normalize");
@@ -365,7 +367,7 @@ async function estadoOperativo(req, res) {
   }, { "Cache-Control": "no-store" });
 }
 
-function configuracionBillingOperativa(req, res) {
+async function configuracionBillingOperativa(req, res) {
   const token = String(env.OPS_STATUS_TOKEN || "");
   if (token.length < 32) return json(res, 404, { error: "not_found" });
   if (!safeEqual(req.headers.authorization, `Bearer ${token}`)) {
@@ -373,12 +375,17 @@ function configuracionBillingOperativa(req, res) {
   }
   if (req.method !== "GET") return json(res, 405, { error: "method_not_allowed" }, { Allow: "GET" });
 
+  const expected = billingRuntimeContract(env);
+  const worker = await estadoBillingWorkerDB();
   return json(res, 200, {
     ok: true,
     release: process.env.RENDER_GIT_COMMIT || null,
     billing: {
       paginasGratis: configuracionPaginasGratis,
-      planTest: String(env.PLAN_TEST || "") === "1"
+      planTest: expected.planTest,
+      appHandle: expected.appHandle,
+      worker,
+      workerCompatible: billingRuntimeCompatible(expected, worker)
     }
   }, { "Cache-Control": "no-store" });
 }
@@ -952,6 +959,13 @@ async function api(req, res, url) {
     if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(request_id || "")) {
       return json(res, 400, { error: "Falta un request_id valido para iniciar la suscripcion de forma segura" });
     }
+    // The web admits the intent but the worker performs the Shopify mutation.
+    // Refuse before enqueueing unless its latest non-secret heartbeat proves it
+    // has the same billing mode and App Home handle as this web process.
+    const billingWorker = await estadoBillingWorkerDB();
+    if (!billingRuntimeCompatible(billingRuntimeContract(env), billingWorker)) {
+      return json(res, 503, { error: "billing_worker_runtime_not_ready" }, { "Retry-After": "30" });
+    }
     // Shopify no ofrece idempotency key para appSubscriptionCreate. Una llave
     // por request evita replays del mismo cliente, pero dos pestañas generan
     // llaves distintas; el bloqueo por tenant deja una única intención activa.
@@ -1149,7 +1163,7 @@ const servidor = http.createServer(async (req, res) => {
       });
     }
     if (url.pathname === "/ops/status") return await estadoOperativo(req, res);
-    if (url.pathname === "/ops/billing-config") return configuracionBillingOperativa(req, res);
+    if (url.pathname === "/ops/billing-config") return await configuracionBillingOperativa(req, res);
     if (url.pathname === "/ops/shopify-certification") return await certificarShopifyStaging(req, res);
     if (await syntheticLoadHandler(req, res, url)) return;
 

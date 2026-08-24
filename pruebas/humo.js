@@ -248,7 +248,9 @@ async function main() {
           : cuerpo.release !== "a".repeat(40)
             ? "no informo el SHA de release"
             : cuerpo.billing?.planTest !== true
-              ? "no informo PLAN_TEST"
+            ? "no informo PLAN_TEST"
+              : cuerpo.billing?.workerCompatible !== false
+                ? "no informa compatibilidad de billing worker en modo local"
               : !config || config.limite !== 3 || config.origen !== "default" || config.presente !== false || config.valida !== false
                 ? "no informo el diagnostico de cuota efectivo"
                 : serializado.includes(OPS_STATUS_TOKEN_HUMO) || serializado.includes("secreto-humo")

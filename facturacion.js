@@ -13,6 +13,7 @@ const { gql, env } = require("./shopify");
 const { leerTienda, actualizarCamposTienda, consumirCupoTienda, revertirCupoTienda } = require("./tiendas");
 const { metrica } = require("./monitoreo");
 const { urlInicioAppShopify } = require("./shopify-admin-url");
+const { billingRuntimeContract } = require("./src/runtime/billing-runtime-contract");
 const {
   createSubscriptionRecoveryDiagnostic,
   safeSubscriptionRecoveryDiagnostic
@@ -39,8 +40,9 @@ function parsePaginasGratis(value, fallback = 3, opciones = {}) {
   return configuracionPaginasGratis(value, { fallback, ...opciones }).limite;
 }
 
+const BILLING_RUNTIME = billingRuntimeContract(env);
 const CONFIGURACION_PAGINAS_GRATIS = configuracionPaginasGratis(env.PAGINAS_GRATIS, {
-  permitirOverrideTemporal: env.PLAN_TEST === "1"
+  permitirOverrideTemporal: BILLING_RUNTIME.planTest
 });
 const PAGINAS_GRATIS = CONFIGURACION_PAGINAS_GRATIS.limite;
 const PLAN_NOMBRE = "TiendaIQ Pro";
@@ -78,7 +80,7 @@ function esSuscripcionElegible(suscripcion) {
   if (!suscripcion || suscripcion.status !== "ACTIVE" || suscripcion.name !== PLAN_NOMBRE) {
     return false;
   }
-  return suscripcion.test !== true || env.PLAN_TEST === "1";
+  return suscripcion.test !== true || BILLING_RUNTIME.planTest;
 }
 
 async function suscripcionElegibleActiva(sesion, opciones) {
@@ -212,8 +214,14 @@ async function revertirCupo(sesion) {
 }
 
 function urlRetornoSuscripcion(sesion, urlApp) {
+  if (!BILLING_RUNTIME.appHandle) {
+    const error = new Error("SHOPIFY_APP_HANDLE debe ser un slug válido antes de crear una suscripción");
+    error.code = "BILLING_RUNTIME_CONFIG_INVALID";
+    error.nonRetryable = true;
+    throw error;
+  }
   return urlInicioAppShopify(sesion.tienda, {
-    appHandle: env.SHOPIFY_APP_HANDLE,
+    appHandle: BILLING_RUNTIME.appHandle,
     query: { plan: "confirmado" }
   });
 }
@@ -288,7 +296,7 @@ async function crearSuscripcionRemota(sesion, urlApp, { signal } = {}) {
       returnUrl,
       // Cargo REAL por defecto. El de prueba (no factura) es opt-in explícito
       // con PLAN_TEST=1 — así producción nunca deja de cobrar por olvido.
-      test: env.PLAN_TEST === "1",
+      test: BILLING_RUNTIME.planTest,
       precio: PLAN_PRECIO
     },
     sesion,
@@ -312,7 +320,7 @@ async function crearSuscripcionRemota(sesion, urlApp, { signal } = {}) {
   }
   // Intención de suscribirse (embudo). La confirmación de revenue —el merchant
   // aprueba y vuelve por ?plan=confirmado— se trackea aparte (follow-up).
-  metrica("suscripcion_iniciada", { tienda: sesion.tienda, test: env.PLAN_TEST === "1" });
+  metrica("suscripcion_iniciada", { tienda: sesion.tienda, test: BILLING_RUNTIME.planTest });
   return {
     status: "pending_confirmation",
     alreadyActive: false,

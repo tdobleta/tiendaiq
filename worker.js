@@ -3,6 +3,7 @@
 const os = require("os");
 const { randomUUID } = require("crypto");
 const { createRuntime } = require("./src/jobs/runtime");
+const { billingRuntimeContract } = require("./src/runtime/billing-runtime-contract");
 const { reportarError } = require("./monitoreo");
 const {
   verificarWorkerDB,
@@ -34,6 +35,7 @@ function identidadWorker(runtimeEnv = process.env) {
     workerId: `${os.hostname()}:${process.pid}:${randomUUID()}`,
     releaseSha,
     runtimeRole,
+    billing: billingRuntimeContract(runtimeEnv),
     capacity: {
       generations: enteroAcotado(runtimeEnv.JOB_GENERATION_CONCURRENCY, 2),
       publications: enteroAcotado(runtimeEnv.JOB_PUBLICATION_CONCURRENCY, 2),
