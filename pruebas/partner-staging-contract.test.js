@@ -34,6 +34,7 @@ test("Partner Staging declara una topología Render aislada y fail-closed", () =
 
 test("la app Partner y los workflows usan el mismo runtime e identidad aislados", () => {
   const app = read("shopify.app.partner-staging.toml");
+  const blueprint = read("render.partner-staging.yaml");
   const bootstrap = read(".github/workflows/bootstrap-partner-staging.yml");
   const release = read(".github/workflows/release-partner-staging.yml");
   const readiness = read(".github/workflows/ops-readiness-partner-staging.yml");
@@ -42,6 +43,11 @@ test("la app Partner y los workflows usan el mismo runtime e identidad aislados"
   assert.match(app, /uri\s*=\s*"https:\/\/tiendaiq-partner-staging-web\.onrender\.com\/webhooks"/);
   assert.match(app, /https:\/\/tiendaiq-partner-staging-web\.onrender\.com\/auth\/callback/);
   assert.doesNotMatch(app, /tiendaiq-staging-web\.onrender\.com/);
+
+  const appClientId = app.match(/^client_id\s*=\s*"([^"]+)"/m)?.[1];
+  const renderClientId = blueprint.match(/SHOPIFY_CLIENT_ID\s*\n\s*value:\s*"([^"]+)"/m)?.[1];
+  assert.equal(appClientId, "91ac2b61f8d21cc0e788a34a81f2ad58");
+  assert.equal(renderClientId, appClientId);
 
   for (const workflow of [bootstrap, release, readiness]) {
     assert.match(workflow, /environment:\s*partner-staging/);
@@ -58,6 +64,7 @@ test("la app Partner y los workflows usan el mismo runtime e identidad aislados"
   assert.doesNotMatch(bootstrap, /RENDER_PARTNER_STAGING/);
 
   assert.match(release, /DEPLOY_REVIEWED_PARTNER_STAGING/);
+  assert.match(release, /PARTNER_STAGING_REMOTE_IDENTITY_AUDITED/);
   assert.match(release, /RENDER_PARTNER_STAGING_WEB_DEPLOY_HOOK/);
   assert.match(release, /RENDER_PARTNER_STAGING_WORKER_DEPLOY_HOOK/);
   assert.match(release, /PARTNER_STAGING_SHOPIFY_APP_AUTOMATION_TOKEN/);

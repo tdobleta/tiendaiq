@@ -11,6 +11,10 @@ on:
         description: Escribir DEPLOY_REVIEWED_PARTNER_STAGING
         required: true
         type: string
+      identity_audit_confirmation:
+        description: Escribir PARTNER_STAGING_REMOTE_IDENTITY_AUDITED tras revisar app, distribución, handle, extensiones e instalaciones
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -36,10 +40,12 @@ jobs:
         env:
           REQUESTED_SHA: ${{ inputs.release_sha }}
           CONFIRMATION: ${{ inputs.confirmation }}
+          IDENTITY_AUDIT_CONFIRMATION: ${{ inputs.identity_audit_confirmation }}
         run: |
           set -euo pipefail
           [[ "$REQUESTED_SHA" =~ ^[a-f0-9]{40}$ ]] || { echo "release_sha debe ser un SHA completo" >&2; exit 1; }
           [[ "$CONFIRMATION" == "DEPLOY_REVIEWED_PARTNER_STAGING" ]] || { echo "confirmacion invalida" >&2; exit 1; }
+          [[ "$IDENTITY_AUDIT_CONFIRMATION" == "PARTNER_STAGING_REMOTE_IDENTITY_AUDITED" ]] || { echo "auditoria de identidad Partner Staging no confirmada" >&2; exit 1; }
           ACTUAL_SHA="$(git rev-parse HEAD)"
           [[ "$ACTUAL_SHA" == "$REQUESTED_SHA" ]] || { echo "el checkout no coincide con el SHA solicitado" >&2; exit 1; }
           git fetch origin main --depth=1

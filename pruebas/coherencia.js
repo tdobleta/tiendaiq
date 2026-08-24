@@ -31,6 +31,7 @@ const toml = leer("shopify.app.toml");
 const stagingToml = leer("shopify.app.staging.toml");
 const partnerStagingToml = leer("shopify.app.partner-staging.toml");
 const render = leer("render.yaml");
+const partnerStagingRender = leer("render.partner-staging.yaml");
 const releaseWorkflow = leer(".github/workflows/release-staging.yml");
 const productionReleaseWorkflow = leer(".github/workflows/release-production.yml");
 const productionRecoveryWorkflow = leer(".github/workflows/recover-production.yml");
@@ -97,6 +98,18 @@ if (!partnerStagingHandle || !partnerStagingClientId) {
   mal("Partner staging usa el runtime aislado y la instalación gestionada", "el manifiesto no corresponde al contrato de staging Partner");
 } else {
   ok("Partner staging queda aislado y listo para un cutover gestionado");
+}
+
+const partnerStagingRenderClientId = partnerStagingRender.match(
+  /SHOPIFY_CLIENT_ID\s*\r?\n\s*value:\s*"([^"]+)"/m
+)?.[1];
+if (partnerStagingRenderClientId === partnerStagingClientId) {
+  ok("Partner staging ata Render a la misma identidad Shopify declarada");
+} else {
+  mal(
+    "Partner staging ata Render a la misma identidad Shopify declarada",
+    "SHOPIFY_CLIENT_ID en render.partner-staging.yaml debe coincidir exactamente con shopify.app.partner-staging.toml"
+  );
 }
 
 function servicioRender(nombre) {
