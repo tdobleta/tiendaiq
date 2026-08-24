@@ -105,6 +105,15 @@ test("la migracion mantiene un singleton fisico, RLS forzado y activacion exclus
   assert.doesNotMatch(sql, /provider_id|billing_id|subscription_id/i);
 });
 
+test("la correccion RLS permite el SECURITY DEFINER sin conceder acceso directo a la tabla", () => {
+  const sql = fs.readFileSync(path.join(__dirname, "..", "db", "migrations", "0022_fix_app_registration_binding_rls.sql"), "utf8");
+
+  assert.match(sql, /DROP POLICY IF EXISTS app_registration_binding_migrator/);
+  assert.match(sql, /CREATE POLICY app_registration_binding_security_definer[\s\S]*FOR ALL TO PUBLIC/);
+  assert.match(sql, /REVOKE ALL ON TABLE control_plane\.app_registration_binding[\s\S]*FROM PUBLIC, tiendaiq_web_runtime, tiendaiq_worker_runtime/);
+  assert.doesNotMatch(sql, /GRANT\s+(?:SELECT|INSERT|UPDATE|DELETE|ALL)\s+ON TABLE/i);
+});
+
 test("la activacion manual exige una confirmacion y solo informa un diagnostico sanitizado", () => {
   const source = fs.readFileSync(path.join(__dirname, "..", "scripts", "vincular-registro-shopify.js"), "utf8");
 
