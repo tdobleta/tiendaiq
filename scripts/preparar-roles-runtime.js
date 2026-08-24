@@ -13,13 +13,15 @@ const WORKER_RUNTIME_ROLE = "tiendaiq_worker_runtime";
 // Version the capability identity so provider-managed legacy grants can remain
 // present without carrying authority in current RLS policies.
 const WORKER_CAPABILITY = "tiendaiq_worker_capability_v2";
+const MIGRATOR_COMPATIBILITY_ROLE = "tiendaiq_migrator";
 // Immutable migrations 0007-0010 still refer to these former identities. They
 // are created only for fresh-database bootstrap and are inert NOLOGIN roles;
 // no service ever authenticates as them.
 const LEGACY_COMPATIBILITY_ROLES = [
   "tiendaiq_web",
   "tiendaiq_worker",
-  "tiendaiq_worker_capability"
+  "tiendaiq_worker_capability",
+  MIGRATOR_COMPATIBILITY_ROLE
 ];
 const LOGIN_ROLES = [WEB_LOGIN_ROLE, WORKER_LOGIN_ROLE];
 const RUNTIME_ROLES = [WEB_RUNTIME_ROLE, WORKER_RUNTIME_ROLE];
@@ -54,6 +56,9 @@ function bootstrapRolePlan(env = process.env) {
   const ownedRoles = [...OWNED_ROLES, ...compatibilityRoles];
   return {
     compatibilityRoles,
+    migratorRole: compatibilityRoles.includes(MIGRATOR_COMPATIBILITY_ROLE)
+      ? MIGRATOR_COMPATIBILITY_ROLE
+      : null,
     ownedRoles,
     controlledRoles: [...LOGIN_ROLES, ...ownedRoles]
   };
@@ -115,6 +120,21 @@ async function ensureLoginRole(client, role, password) {
   );
 }
 
+async function grantMigratorMembership(client, { bootstrapRole, migratorRole }) {
+  if (!migratorRole) return;
+  await client.query(
+    `GRANT ${quoteIdentifier(migratorRole)} TO ${quoteIdentifier(bootstrapRole)} ` +
+    "WITH INHERIT TRUE, SET TRUE"
+  );
+  const verification = await client.query(
+    "SELECT pg_has_role(current_user, $1, 'member') AS member",
+    [migratorRole]
+  );
+  if (!verification.rows[0]?.member) {
+    throw new Error("La identidad de migracion no recibio el rol administrativo requerido");
+  }
+}
+
 async function main() {
   if (process.env.ALLOW_ROLE_BOOTSTRAP !== "1") {
     throw new Error("Defini ALLOW_ROLE_BOOTSTRAP=1 para configurar roles de runtime");
@@ -136,12 +156,16 @@ async function main() {
     await ensureRuntimeRole(client, WORKER_CAPABILITY);
     for (const role of rolePlan.compatibilityRoles) await ensureRuntimeRole(client, role);
     for (const role of LOGIN_ROLES) await ensureLoginRole(client, role, passwords.get(role));
+    await grantMigratorMembership(client, { bootstrapRole, migratorRole: rolePlan.migratorRole });
 
     const expectedPaths = new Set([
       `${WEB_LOGIN_ROLE}->${WEB_RUNTIME_ROLE}`,
       `${WORKER_LOGIN_ROLE}->${WORKER_RUNTIME_ROLE}`,
       `${WORKER_RUNTIME_ROLE}->${WORKER_CAPABILITY}`
     ]);
+    if (rolePlan.migratorRole) {
+      expectedPaths.add(`${bootstrapRole}->${rolePlan.migratorRole}`);
+    }
     const existingPaths = await client.query(
       `SELECT member.rolname AS member, parent.rolname AS parent, grantor.rolname AS grantor,
               membership.admin_option, membership.inherit_option, membership.set_option
@@ -231,6 +255,14 @@ async function main() {
     );
     if (loginEdges.some((edge) => edge.inherit_option !== false || edge.set_option !== true)) {
       throw new Error("Los logins runtime deben poder SET ROLE sin heredar privilegios runtime");
+    }
+    if (rolePlan.migratorRole) {
+      const migratorEdge = runtimePaths.find(({ member, parent }) =>
+        member === bootstrapRole && parent === rolePlan.migratorRole
+      );
+      if (!migratorEdge || migratorEdge.inherit_option !== true || migratorEdge.set_option !== true) {
+        throw new Error("La membresia administrativa de migracion no conserva el contrato esperado");
+      }
     }
 
     // A correct login->runtime edge is insufficient: prove that RESET ROLE

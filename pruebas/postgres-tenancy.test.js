@@ -505,12 +505,19 @@ test("el bootstrap de una base nueva crea solo los roles legacy NOLOGIN indispen
   assert.deepEqual(bootstrapRolePlan({}).compatibilityRoles, []);
   assert.deepEqual(
     bootstrapRolePlan({ BOOTSTRAP_LEGACY_COMPATIBILITY_ROLES: "1" }).compatibilityRoles,
-    ["tiendaiq_web", "tiendaiq_worker", "tiendaiq_worker_capability"]
+    ["tiendaiq_web", "tiendaiq_worker", "tiendaiq_worker_capability", "tiendaiq_migrator"]
+  );
+  assert.equal(
+    bootstrapRolePlan({ BOOTSTRAP_LEGACY_COMPATIBILITY_ROLES: "1" }).migratorRole,
+    "tiendaiq_migrator"
   );
   const source = fs.readFileSync(path.join(__dirname, "..", "scripts", "preparar-roles-runtime.js"), "utf8");
   assert.match(source, /BOOTSTRAP_LEGACY_COMPATIBILITY_ROLES === "1"/);
   assert.match(source, /for \(const role of rolePlan\.compatibilityRoles\) await ensureRuntimeRole/);
   assert.match(source, /CREATE ROLE \$\{quoteIdentifier\(role\)\} NOLOGIN/);
+  assert.match(source, /GRANT \$\{quoteIdentifier\(migratorRole\)\} TO \$\{quoteIdentifier\(bootstrapRole\)\}/);
+  assert.match(source, /WITH INHERIT TRUE, SET TRUE/);
+  assert.match(source, /pg_has_role\(current_user, \$1, 'member'\)/);
 });
 
 test("el bootstrap solo tolera la arista administrativa no efectiva creada por PostgreSQL", () => {
