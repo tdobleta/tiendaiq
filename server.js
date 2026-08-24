@@ -58,6 +58,7 @@ const {
 const { nubeServible, urlVideo, urlPoster } = require("./inspiracion-nube");
 const { estadoPlan, mesActual, PLAN_NOMBRE, configuracionPaginasGratis } = require("./facturacion");
 const { billingRuntimeContract, billingRuntimeCompatible } = require("./src/runtime/billing-runtime-contract");
+const { appRegistrationContract, appRegistrationDiagnostic } = require("./src/runtime/app-registration-contract");
 const { reportarError, metrica } = require("./monitoreo");
 const { TenantContext } = require("./src/tenancy/tenant-context");
 const { verifyAndNormalizeWebhook } = require("./src/webhooks/verify-and-normalize");
@@ -329,6 +330,10 @@ async function estadoOperativo(req, res) {
   return json(res, 200, {
     ok: true,
     release: process.env.RENDER_GIT_COMMIT || null,
+    // Este endpoint muestra configuración no secreta. La coincidencia con la
+    // base se demuestra en el preflight y en /ready; así ops local sigue siendo
+    // consultable sin convertirlo en una conexión Postgres implícita.
+    appRegistration: appRegistrationDiagnostic(appRegistrationContract(env)),
     billing: {
       planTest: String(env.PLAN_TEST || "") === "1"
     },
@@ -1160,6 +1165,7 @@ const servidor = http.createServer(async (req, res) => {
         release: process.env.RENDER_GIT_COMMIT || null,
         almacenamiento: almacenamiento.tipo,
         aislamiento: almacenamiento.aislamiento || null,
+        appRegistration: almacenamiento.appRegistration || null,
         ts: new Date().toISOString()
       });
     }
@@ -1280,7 +1286,30 @@ async function cerrarPorFallo(error, tipo) {
 process.on("unhandledRejection", (error) => void cerrarPorFallo(error, "unhandledRejection"));
 process.on("uncaughtException", (error) => void cerrarPorFallo(error, "uncaughtException"));
 
-servidor.listen(PUERTO, async () => {
+async function iniciarServidor({
+  server = servidor,
+  port = PUERTO,
+  verificar = verificarAlmacenamientoDB,
+  usaPostgres = Boolean(env.DATABASE_URL),
+  iniciarWorkerLocal = null
+} = {}) {
+  // Antes de abrir un puerto HTTP, la instancia web con Postgres debe demostrar
+  // que su registro Shopify coincide con la base. Así un client id de otra app
+  // jamás puede consumir o escribir estado de tenants de esta base.
+  if (usaPostgres) await verificar();
+
+  await new Promise((resolve, reject) => {
+    const onError = (error) => {
+      server.off?.("error", onError);
+      reject(error);
+    };
+    server.once("error", onError);
+    server.listen(port, () => {
+      server.off?.("error", onError);
+      resolve();
+    });
+  });
+
   const { USA_PG } = require("./db");
   console.log(`\n  TiendaIQ  →  ${URL_APP}`);
   console.log(`  almacén: ${USA_PG ? "Postgres" : "archivos (local)"}`);
@@ -1299,12 +1328,27 @@ servidor.listen(PUERTO, async () => {
   // En desarrollo por archivos no levantamos un segundo proceso: el mismo
   // server ejecuta el worker. Producción usa el servicio worker de Render.
   if (env.DEV_MODE === "1" && !USA_PG) {
+    if (typeof iniciarWorkerLocal === "function") {
+      await iniciarWorkerLocal(server);
+      return server;
+    }
     const localReleaseSha = "0".repeat(40);
-    servidor._tiendaiqWorker = require("./src/jobs/runtime").createRuntime({
+    server._tiendaiqWorker = require("./src/jobs/runtime").createRuntime({
       workerId: `dev-web:${process.pid}`,
       releaseSha: localReleaseSha
     });
-    servidor._tiendaiqWorker.start();
+    server._tiendaiqWorker.start();
     console.log("  worker local: activo\n");
   }
-});
+  return server;
+}
+
+if (require.main === module) {
+  iniciarServidor().catch(async (error) => {
+    console.error(`Servidor detenido por preflight fallido: ${error.message}`);
+    await cerrarAlmacenamientoDB().catch(() => {});
+    process.exitCode = 1;
+  });
+}
+
+module.exports = { servidor, iniciarServidor };

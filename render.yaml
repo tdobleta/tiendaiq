@@ -35,9 +35,17 @@ services:
       # Slug público de App Home; no confundir con SHOPIFY_CLIENT_ID.
       - key: SHOPIFY_APP_HANDLE
         value: "tiendaiq-app"
+      # Identidad no secreta e inmutable de esta instalación Shopify. Debe
+      # coincidir con el singleton de la base antes de aceptar tráfico.
+      - key: SHOPIFY_APP_REGISTRATION_ID
+        value: "tiendaiq-production-v1"
       # 32 bytes en base64. Produccion falla al arrancar si falta.
       - key: TOKEN_ENC_KEY
         sync: false
+      # Debe ser el mismo identificador no secreto que el servicio web y el
+      # singleton de esta base. No representa provider ni billing.
+      - key: SHOPIFY_APP_REGISTRATION_ID
+        value: "tiendaiq-production-v1"
       # DATABASE_URL es interna y viaja solo por la red privada de Render.
       - key: PG_PRIVATE_NETWORK
         value: "1"

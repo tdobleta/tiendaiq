@@ -24,6 +24,8 @@ const { createJobRepository } = require("./src/platform/postgres/job-repository"
 const { createGenerationRepository } = require("./src/platform/postgres/generation-repository");
 const { createInboxRepository } = require("./src/platform/postgres/inbox-repository");
 const { createShopifyCertificationRepository } = require("./src/platform/postgres/shopify-certification-repository");
+const { createAppRegistrationRepository } = require("./src/platform/postgres/app-registration-repository");
+const { requireAppRegistration, appRegistrationDiagnostic } = require("./src/runtime/app-registration-contract");
 const {
   normalizeStoredPageRecord
 } = require("./src/domain/page-contract");
@@ -50,6 +52,7 @@ let jobRepository = null;
 let generationRepository = null;
 let inboxRepository = null;
 let shopifyCertificationRepository = null;
+let appRegistrationRepository = null;
 async function pg() {
   if (pool) return pool;
   const { Pool } = require("pg");
@@ -1510,8 +1513,9 @@ async function verificarAlmacenamientoDB() {
   }
   const p = await pg();
   await p.query("SELECT 1");
+  const appRegistration = await verificarRegistroAplicacionDB();
   const aislamiento = await verifyTenantIsolation(p, { expectedRole: env.PG_RUNTIME_ROLE || "tiendaiq_web_runtime" });
-  return { tipo: "postgres", aislamiento };
+  return { tipo: "postgres", aislamiento, appRegistration };
 }
 
 async function verificarWorkerDB() {
@@ -1519,8 +1523,18 @@ async function verificarWorkerDB() {
   if (!env.PG_RUNTIME_ROLE) throw new Error("El worker requiere PG_RUNTIME_ROLE");
   const p = await pg();
   await p.query("SELECT 1");
+  const appRegistration = await verificarRegistroAplicacionDB();
   const aislamiento = await verifyWorkerIsolation(p, { expectedRole: env.PG_RUNTIME_ROLE });
-  return { tipo: "postgres", aislamiento };
+  return { tipo: "postgres", aislamiento, appRegistration };
+}
+
+async function verificarRegistroAplicacionDB() {
+  if (!USA_PG) return appRegistrationDiagnostic(null);
+  const registration = requireAppRegistration(env);
+  const p = await pg();
+  appRegistrationRepository ||= createAppRegistrationRepository(p);
+  await appRegistrationRepository.assert(registration.id);
+  return appRegistrationDiagnostic(registration);
 }
 
 async function cerrarAlmacenamientoDB() {
@@ -1532,6 +1546,7 @@ async function cerrarAlmacenamientoDB() {
   generationRepository = null;
   inboxRepository = null;
   shopifyCertificationRepository = null;
+  appRegistrationRepository = null;
   await activePool.end();
 }
 
@@ -1560,5 +1575,5 @@ module.exports = {
   recibirWebhookDB, reclamarWebhookDB, renovarLeaseWebhookDB, completarWebhookDB, fallarWebhookDB,
   redactarInboxTiendaDB, registrarPrivacidadWebhookDB, depurarInboxDB,
   leerEvidenciaCertificacionShopifyDB,
-  verificarAlmacenamientoDB, verificarWorkerDB, cerrarAlmacenamientoDB
+  verificarAlmacenamientoDB, verificarWorkerDB, verificarRegistroAplicacionDB, cerrarAlmacenamientoDB
 };

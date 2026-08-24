@@ -11,6 +11,7 @@ const PROTECTED_TABLES = Object.freeze([
   ["control_plane", "privacy_requests"],
   ["control_plane", "usage_reservations"],
   ["control_plane", "compensation_recovery_audit"],
+  ["control_plane", "app_registration_binding"],
   ["app_data", "pages"],
   ["app_data", "page_versions"],
   ["app_data", "publications"]
