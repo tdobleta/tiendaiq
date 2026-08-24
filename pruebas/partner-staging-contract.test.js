@@ -28,6 +28,8 @@ test("Partner Staging declara una topología Render aislada y fail-closed", () =
   assert.match(blueprint, /fromService:\s*\n\s*type:\s*web\s*\n\s*name:\s*tiendaiq-partner-staging-web\s*\n\s*envVarKey:\s*TOKEN_ENC_KEY/);
   assert.match(blueprint, /GENERATION_ADMISSION_PAUSED\s*\n\s*value:\s*"1"/);
   assert.match(blueprint, /PLAN_TEST\s*\n\s*value:\s*"1"/);
+  const workerBlueprint = blueprint.slice(blueprint.indexOf("- type: worker"));
+  assert.match(workerBlueprint, /PLAN_TEST\s*\n\s*value:\s*"1"/);
   assert.doesNotMatch(blueprint, /ANTHROPIC_API_KEY\s*\n\s*value:/);
   assert.doesNotMatch(blueprint, /SHOPIFY_CLIENT_SECRET\s*\n\s*value:/);
 });
@@ -81,4 +83,6 @@ test("la app Partner y los workflows usan el mismo runtime e identidad aislados"
   assert.match(readiness, /https:\/\/tiendaiq-partner-staging-web\.onrender\.com/);
   assert.match(release, /GITHUB_STEP_SUMMARY/);
   assert.match(release, /partner-staging-ops-readiness\.log/);
+  assert.match(release, /max_attempts=30/);
+  assert.match(release, /for attempt in \$\(seq 1 "\$max_attempts"\)/);
 });

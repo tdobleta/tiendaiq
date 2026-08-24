@@ -86,6 +86,10 @@ services:
           envVarKey: TOKEN_ENC_KEY
       - key: SHOPIFY_APP_HANDLE
         value: "tiendaiq-partner-staging"
+      # Billing test mode is a versioned runtime contract: worker and web must
+      # agree before the operational gate can accept the release.
+      - key: PLAN_TEST
+        value: "1"
       - key: SHOPIFY_APP_REGISTRATION_ID
         value: "tiendaiq-partner-staging-v1"
       - key: SHOPIFY_APP_REGISTRATION_BINDING_ENFORCED
