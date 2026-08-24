@@ -1,0 +1,125 @@
+# Partner Staging is intentionally a separate Render Blueprint. It must never
+# share the legacy staging database, service, client secret, installation token
+# or deploy hooks. Create it as its own Blueprint in Oregon before using the
+# Partner Staging GitHub environment.
+
+databases:
+  - name: tiendaiq-partner-staging-db
+    plan: basic-256mb
+    databaseName: tiendaiq_partner_staging
+    postgresMajorVersion: "16"
+
+services:
+  - type: web
+    name: tiendaiq-partner-staging-web
+    runtime: node
+    plan: starter
+    autoDeployTrigger: off
+    buildCommand: npm ci
+    startCommand: node server.js
+    healthCheckPath: /ready
+    envVars:
+      # Runtime uses a low-privilege login, never the Render database owner.
+      # The URL is entered only after the protected bootstrap creates the role.
+      - key: DATABASE_URL
+        sync: false
+      - key: APP_URL
+        value: "https://tiendaiq-partner-staging-web.onrender.com"
+      - key: SHOPIFY_CLIENT_ID
+        value: "84c005c4433b94ed2d8b6b0729e6de54"
+      - key: SHOPIFY_CLIENT_SECRET
+        sync: false
+      - key: SHOPIFY_APP_HANDLE
+        value: "tiendaiq-partner-staging"
+      - key: SHOPIFY_APP_REGISTRATION_ID
+        value: "tiendaiq-partner-staging-v1"
+      # The process fails closed until the protected bootstrap binds this DB.
+      - key: SHOPIFY_APP_REGISTRATION_BINDING_ENFORCED
+        value: "1"
+      # Render generates the encryption material once; worker reads the same
+      # value only through Render's encrypted service-to-service reference.
+      - key: TOKEN_ENC_KEY
+        generateValue: true
+      - key: PG_PRIVATE_NETWORK
+        value: "1"
+      - key: PG_RUNTIME_ROLE
+        value: "tiendaiq_web_runtime"
+      - key: PG_POOL_MAX
+        value: "10"
+      - key: SHOPIFY_OAUTH_TIMEOUT_MS
+        value: "15000"
+      - key: PUBLIC_BUNDLES_CACHE_MS
+        value: "60000"
+      - key: GENERATION_QUEUE_MAX_PER_TENANT
+        value: "2"
+      - key: GENERATION_QUEUE_MAX_GLOBAL
+        value: "120"
+      - key: GENERATION_ADMISSION_PAUSED
+        value: "1"
+      - key: GENERATION_ADMISSION_RETRY_AFTER_SECONDS
+        value: "300"
+      # This value is shared manually with the protected GitHub environment;
+      # it is never committed or copied from legacy staging.
+      - key: OPS_STATUS_TOKEN
+        sync: false
+      - key: DEV_MODE
+        value: "0"
+      - key: PLAN_TEST
+        value: "1"
+      - key: EMAIL_SOPORTE
+        sync: false
+      - key: RAZON_SOCIAL
+        sync: false
+      - key: DOMICILIO
+        sync: false
+
+  - type: worker
+    name: tiendaiq-partner-staging-worker
+    runtime: node
+    plan: starter
+    autoDeployTrigger: off
+    buildCommand: npm ci
+    startCommand: npm run worker
+    envVars:
+      # Low-privilege worker login, set only after bootstrap.
+      - key: DATABASE_URL
+        sync: false
+      - key: TOKEN_ENC_KEY
+        fromService:
+          type: web
+          name: tiendaiq-partner-staging-web
+          envVarKey: TOKEN_ENC_KEY
+      - key: SHOPIFY_APP_HANDLE
+        value: "tiendaiq-partner-staging"
+      - key: SHOPIFY_APP_REGISTRATION_ID
+        value: "tiendaiq-partner-staging-v1"
+      - key: SHOPIFY_APP_REGISTRATION_BINDING_ENFORCED
+        value: "1"
+      - key: PG_PRIVATE_NETWORK
+        value: "1"
+      - key: PG_RUNTIME_ROLE
+        value: "tiendaiq_worker_runtime"
+      # Intentionally unset during infrastructure/certification work. Adding
+      # it later needs a separately approved, budgeted generation test.
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: PG_POOL_MAX
+        value: "12"
+      - key: ANTHROPIC_TIMEOUT_MS
+        value: "120000"
+      - key: JOB_GENERATION_CONCURRENCY
+        value: "8"
+      - key: JOB_PUBLICATION_CONCURRENCY
+        value: "4"
+      - key: WEBHOOK_CONCURRENCY
+        value: "2"
+      - key: JOB_POLL_MS
+        value: "1000"
+      - key: JOB_LEASE_SECONDS
+        value: "300"
+      - key: WORKER_PREFLIGHT_TIMEOUT_MS
+        value: "15000"
+      - key: WORKER_HEARTBEAT_MS
+        value: "15000"
+      - key: DEV_MODE
+        value: "0"

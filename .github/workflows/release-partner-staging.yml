@@ -1,0 +1,127 @@
+name: Release Partner Staging
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: SHA completo revisado y presente en main
+        required: true
+        type: string
+      confirmation:
+        description: Escribir DEPLOY_REVIEWED_PARTNER_STAGING
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tiendaiq-partner-staging-database-maintenance
+  cancel-in-progress: false
+
+jobs:
+  migrate-and-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    environment: partner-staging
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.release_sha }}
+          fetch-depth: 0
+
+      - id: release
+        name: Validate the immutable reviewed release commit
+        shell: bash
+        env:
+          REQUESTED_SHA: ${{ inputs.release_sha }}
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          [[ "$REQUESTED_SHA" =~ ^[a-f0-9]{40}$ ]] || { echo "release_sha debe ser un SHA completo" >&2; exit 1; }
+          [[ "$CONFIRMATION" == "DEPLOY_REVIEWED_PARTNER_STAGING" ]] || { echo "confirmacion invalida" >&2; exit 1; }
+          ACTUAL_SHA="$(git rev-parse HEAD)"
+          [[ "$ACTUAL_SHA" == "$REQUESTED_SHA" ]] || { echo "el checkout no coincide con el SHA solicitado" >&2; exit 1; }
+          git fetch origin main --depth=1
+          [[ "$(git rev-parse origin/main)" == "$ACTUAL_SHA" ]] || { echo "el SHA revisado debe ser el HEAD actual de main" >&2; exit 1; }
+          echo "sha=$ACTUAL_SHA" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22"
+
+      - run: npm ci --no-audit --no-fund
+
+      - name: Migrate Partner Staging with the owner credential
+        env:
+          MIGRATION_DATABASE_URL: ${{ secrets.PARTNER_STAGING_MIGRATION_DATABASE_URL }}
+        run: npm run db:migrate
+
+      - name: Deploy Partner Staging web after a successful migration
+        env:
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_PARTNER_STAGING_WEB_DEPLOY_HOOK }}
+        run: curl --fail-with-body --connect-timeout 5 --max-time 20 --request POST --get --data-urlencode "ref=${{ steps.release.outputs.sha }}" "$RENDER_DEPLOY_HOOK"
+
+      - name: Deploy Partner Staging worker after a successful migration
+        env:
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_PARTNER_STAGING_WORKER_DEPLOY_HOOK }}
+        run: curl --fail-with-body --connect-timeout 5 --max-time 20 --request POST --get --data-urlencode "ref=${{ steps.release.outputs.sha }}" "$RENDER_DEPLOY_HOOK"
+
+      - name: Wait for Partner Staging web readiness
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ steps.release.outputs.sha }}
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent --show-error --max-time 5 https://tiendaiq-partner-staging-web.onrender.com/ready \
+              | node -e 'let body="";process.stdin.on("data",c=>body+=c).on("end",()=>{const ready=JSON.parse(body);process.exit(ready.ok===true&&ready.release===process.env.EXPECTED_SHA?0:1)})'; then
+              echo "Partner Staging web aprobo /ready con el SHA esperado"
+              exit 0
+            fi
+            echo "Esperando readiness de Partner Staging ($attempt/60)"
+            sleep 10
+          done
+          echo "Partner Staging no aprobo /ready dentro de 10 minutos" >&2
+          exit 1
+
+      - name: Deploy Partner Staging Shopify components for the reviewed SHA
+        shell: bash
+        env:
+          SHOPIFY_APP_AUTOMATION_TOKEN: ${{ secrets.PARTNER_STAGING_SHOPIFY_APP_AUTOMATION_TOKEN }}
+          SHOPIFY_CLI_NO_ANALYTICS: "1"
+          COMMIT_URL: ${{ github.server_url }}/${{ github.repository }}/commit/${{ steps.release.outputs.sha }}
+        run: |
+          set -euo pipefail
+          [[ -n "$SHOPIFY_APP_AUTOMATION_TOKEN" ]] || { echo "falta PARTNER_STAGING_SHOPIFY_APP_AUTOMATION_TOKEN" >&2; exit 1; }
+          shopify app deploy --config partner-staging --allow-updates --source-control-url "$COMMIT_URL"
+
+      - name: Wait for the complete Partner Staging operational gate
+        env:
+          CONFIRMATION: CHECK_PARTNER_STAGING_OPS_READINESS
+          EXPECTED_RELEASE_SHA: ${{ steps.release.outputs.sha }}
+          STAGING_APP_URL: https://tiendaiq-partner-staging-web.onrender.com
+          OPS_STATUS_TOKEN: ${{ secrets.PARTNER_STAGING_OPS_STATUS_TOKEN }}
+          OPS_MAX_QUEUED_JOBS: "20"
+          OPS_MAX_OLDEST_JOB_SECONDS: "300"
+          OPS_MAX_RUNNING_JOBS: "16"
+          OPS_MAX_FAILED_RECENT_JOBS: "0"
+          OPS_MAX_STALE_RUNNING_JOBS: "0"
+          OPS_MAX_COMPENSATION_PENDING: "0"
+          OPS_MAX_COMPENSATION_DEAD_LETTER: "0"
+          OPS_MAX_STALE_COMPENSATION: "0"
+          OPS_MAX_OLDEST_COMPENSATION_SECONDS: "300"
+          OPS_MAX_INBOX_RECEIVED: "20"
+          OPS_MAX_INBOX_PROCESSING: "8"
+          OPS_MAX_INBOX_FAILED: "0"
+          OPS_MAX_INBOX_FAILED_RECENT: "0"
+          OPS_MAX_INBOX_STALE_PROCESSING: "0"
+          OPS_MAX_OLDEST_INBOX_SECONDS: "300"
+          OPS_MAX_WORKER_AGE_SECONDS: "60"
+          OPS_MIN_WORKER_UPTIME_SECONDS: "30"
+          OPS_MIN_GENERATION_CONCURRENCY: "8"
+          OPS_MIN_PUBLICATION_CONCURRENCY: "4"
+          OPS_MIN_WEBHOOK_CONCURRENCY: "2"
+          OPS_EXPECT_PLAN_TEST: "1"
+          OPS_READINESS_PROFILE: technical_preflight
+        run: npm run ops:readiness
