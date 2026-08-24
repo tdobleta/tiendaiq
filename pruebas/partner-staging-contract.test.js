@@ -52,6 +52,7 @@ test("la app Partner y los workflows usan el mismo runtime e identidad aislados"
   }
   assert.match(bootstrap, /BOOTSTRAP_PARTNER_STAGING_DATABASE/);
   assert.match(bootstrap, /PARTNER_STAGING_MIGRATION_DATABASE_URL/);
+  assert.match(bootstrap, /BOOTSTRAP_LEGACY_COMPATIBILITY_ROLES: "1"/);
   assert.match(bootstrap, /SHOPIFY_APP_REGISTRATION_ID:\s*tiendaiq-partner-staging-v1/);
   assert.match(bootstrap, /node scripts\/vincular-registro-shopify\.js/);
   assert.doesNotMatch(bootstrap, /RENDER_PARTNER_STAGING/);

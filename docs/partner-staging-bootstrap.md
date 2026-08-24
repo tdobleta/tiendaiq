@@ -35,8 +35,11 @@ valores del staging legado.
 ## Fase 2: vincular y crear los servicios
 
 1. Ejecutar **Bootstrap Partner Staging database** sobre el SHA revisado. El
-   workflow crea roles, aplica migraciones y vincula de forma irreversible esa
-   base sólo a `tiendaiq-partner-staging-v1`; no despliega tráfico.
+   workflow crea roles, tres roles legacy `NOLOGIN` necesarios sólo para
+   reproducir migraciones históricas, aplica migraciones y vincula de forma
+   irreversible esa base sólo a `tiendaiq-partner-staging-v1`; no despliega
+   tráfico. Los roles legacy nunca son credenciales de servicio ni reciben
+   membresías runtime.
 2. Formar las dos `DATABASE_URL` internas con los logins creados por el
    workflow (web y worker distintos). El usuario administrará estos valores
    solamente dentro de Render, nunca en Git ni por consola.

@@ -463,8 +463,8 @@ test("el bootstrap crea logins y roles propios sin depender de credenciales gest
   assert.match(source, /client\.query\("COMMIT"\)/);
   assert.match(source, /client\.query\("ROLLBACK"\)/);
   assert.match(source, /member\.rolname = ANY\(\$1::text\[\]\)/);
-  assert.match(source, /const CONTROLLED_ROLES = \[\.\.\.LOGIN_ROLES, \.\.\.OWNED_ROLES\]/);
-  assert.match(source, /\[CONTROLLED_ROLES\]/);
+  assert.match(source, /controlledRoles: \[\.\.\.LOGIN_ROLES, \.\.\.ownedRoles\]/);
+  assert.match(source, /\[rolePlan\.controlledRoles\]/);
   assert.match(source, /REVOKE \$\{quoteIdentifier\(parent\)\} FROM \$\{quoteIdentifier\(member\)\}/);
   assert.match(source, /membership\.grantor/);
   assert.match(source, /GRANTED BY \$\{quoteIdentifier\(grantor\)\}/);
@@ -497,6 +497,20 @@ test("las contrasenas de logins runtime son obligatorias y no aceptan valores de
   });
   assert.equal(passwords.get("tiendaiq_web_login"), "v".repeat(40));
   assert.equal(passwords.get("tiendaiq_worker_login"), "w".repeat(40));
+});
+
+test("el bootstrap de una base nueva crea solo los roles legacy NOLOGIN indispensables para migraciones inmutables", () => {
+  const { bootstrapRolePlan } = require("../scripts/preparar-roles-runtime");
+
+  assert.deepEqual(bootstrapRolePlan({}).compatibilityRoles, []);
+  assert.deepEqual(
+    bootstrapRolePlan({ BOOTSTRAP_LEGACY_COMPATIBILITY_ROLES: "1" }).compatibilityRoles,
+    ["tiendaiq_web", "tiendaiq_worker", "tiendaiq_worker_capability"]
+  );
+  const source = fs.readFileSync(path.join(__dirname, "..", "scripts", "preparar-roles-runtime.js"), "utf8");
+  assert.match(source, /BOOTSTRAP_LEGACY_COMPATIBILITY_ROLES === "1"/);
+  assert.match(source, /for \(const role of rolePlan\.compatibilityRoles\) await ensureRuntimeRole/);
+  assert.match(source, /CREATE ROLE \$\{quoteIdentifier\(role\)\} NOLOGIN/);
 });
 
 test("el bootstrap solo tolera la arista administrativa no efectiva creada por PostgreSQL", () => {

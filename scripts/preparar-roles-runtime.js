@@ -13,10 +13,17 @@ const WORKER_RUNTIME_ROLE = "tiendaiq_worker_runtime";
 // Version the capability identity so provider-managed legacy grants can remain
 // present without carrying authority in current RLS policies.
 const WORKER_CAPABILITY = "tiendaiq_worker_capability_v2";
+// Immutable migrations 0007-0010 still refer to these former identities. They
+// are created only for fresh-database bootstrap and are inert NOLOGIN roles;
+// no service ever authenticates as them.
+const LEGACY_COMPATIBILITY_ROLES = [
+  "tiendaiq_web",
+  "tiendaiq_worker",
+  "tiendaiq_worker_capability"
+];
 const LOGIN_ROLES = [WEB_LOGIN_ROLE, WORKER_LOGIN_ROLE];
 const RUNTIME_ROLES = [WEB_RUNTIME_ROLE, WORKER_RUNTIME_ROLE];
 const OWNED_ROLES = [...RUNTIME_ROLES, WORKER_CAPABILITY];
-const CONTROLLED_ROLES = [...LOGIN_ROLES, ...OWNED_ROLES];
 const MINIMUM_PASSWORD_LENGTH = 32;
 
 function quoteIdentifier(value) {
@@ -38,6 +45,18 @@ function runtimePasswords(env = process.env) {
     }
   }
   return passwords;
+}
+
+function bootstrapRolePlan(env = process.env) {
+  const compatibilityRoles = env.BOOTSTRAP_LEGACY_COMPATIBILITY_ROLES === "1"
+    ? LEGACY_COMPATIBILITY_ROLES
+    : [];
+  const ownedRoles = [...OWNED_ROLES, ...compatibilityRoles];
+  return {
+    compatibilityRoles,
+    ownedRoles,
+    controlledRoles: [...LOGIN_ROLES, ...ownedRoles]
+  };
 }
 
 async function revokeMembership(client, { parent, member, grantor }) {
@@ -103,6 +122,7 @@ async function main() {
   const databaseUrl = process.env.MIGRATION_DATABASE_URL;
   if (!databaseUrl) throw new Error("Falta MIGRATION_DATABASE_URL");
   const passwords = runtimePasswords();
+  const rolePlan = bootstrapRolePlan();
 
   const pool = createPostgresPool({ databaseUrl, caCertificate: process.env.PG_CA_CERT, Pool });
   const client = await pool.connect();
@@ -114,6 +134,7 @@ async function main() {
 
     for (const role of RUNTIME_ROLES) await ensureRuntimeRole(client, role);
     await ensureRuntimeRole(client, WORKER_CAPABILITY);
+    for (const role of rolePlan.compatibilityRoles) await ensureRuntimeRole(client, role);
     for (const role of LOGIN_ROLES) await ensureLoginRole(client, role, passwords.get(role));
 
     const expectedPaths = new Set([
@@ -129,7 +150,7 @@ async function main() {
        JOIN pg_roles AS parent ON parent.oid = membership.roleid
        JOIN pg_roles AS grantor ON grantor.oid = membership.grantor
        WHERE member.rolname = ANY($1::text[]) OR parent.rolname = ANY($1::text[])`,
-      [CONTROLLED_ROLES]
+      [rolePlan.controlledRoles]
     );
     // PostgreSQL 16+ gives a non-superuser role creator an ADMIN-only edge to
     // each role it creates. Render records it under its bootstrap role. It is
@@ -154,9 +175,9 @@ async function main() {
               rolcreatedb, rolcreaterole, rolreplication,
               pg_has_role(rolname, $1, 'member') AS worker_capability
        FROM pg_roles WHERE rolname = ANY($2::text[]) ORDER BY rolname`,
-      [WORKER_CAPABILITY, OWNED_ROLES]
+      [WORKER_CAPABILITY, rolePlan.ownedRoles]
     );
-    if (verified.rowCount !== OWNED_ROLES.length) {
+    if (verified.rowCount !== rolePlan.ownedRoles.length) {
       throw new Error("No se pudieron verificar todos los roles aislados");
     }
     const invalid = verified.rows.find((row) =>
@@ -190,7 +211,7 @@ async function main() {
        WHERE member.rolname = ANY($1::text[])
           OR parent.rolname = ANY($1::text[])
        ORDER BY member.rolname, parent.rolname`,
-      [CONTROLLED_ROLES]
+      [rolePlan.controlledRoles]
     );
     const runtimePaths = paths.rows.filter((edge) =>
       !isBootstrapAdministrationEdge(edge, bootstrapRole)
@@ -267,4 +288,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { isBootstrapAdministrationEdge, runtimePasswords };
+module.exports = { bootstrapRolePlan, isBootstrapAdministrationEdge, runtimePasswords };
