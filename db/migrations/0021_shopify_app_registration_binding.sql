@@ -18,7 +18,7 @@ CREATE POLICY app_registration_binding_migrator
   WITH CHECK (true);
 
 REVOKE ALL ON TABLE control_plane.app_registration_binding
-  FROM PUBLIC, tiendaiq_web, tiendaiq_worker, tiendaiq_web_runtime, tiendaiq_worker_runtime;
+  FROM PUBLIC, tiendaiq_web_runtime, tiendaiq_worker_runtime;
 
 CREATE OR REPLACE FUNCTION control_plane.assert_app_registration(p_registration_id text)
 RETURNS void
