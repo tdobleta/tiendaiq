@@ -58,7 +58,8 @@ jobs:
                 const data=JSON.parse(body);
                 const deploySteps=new Set([
                   "Deploy web after a successful migration",
-                  "Deploy worker after a successful migration"
+                  "Deploy worker after a successful migration",
+                  "Deploy Shopify production app components for the reviewed SHA"
                 ]);
                 const started=data.jobs.flatMap(job=>job.steps||[]).some(step=>
                   deploySteps.has(step.name) && step.conclusion && step.conclusion!=="skipped"
@@ -78,7 +79,10 @@ jobs:
     needs: inspect-rollback-state
     if: ${{ needs.inspect-rollback-state.outputs.available == 'true' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    # The rollback can need Render hooks, dependency install, a Shopify
+    # extension/config restore, and a 15-minute operational certification.
+    # Leave enough runway for every phase instead of expiring mid-recovery.
+    timeout-minutes: 30
     environment: production-recovery
     steps:
       - name: Download the rollback state from the failed promotion
@@ -142,13 +146,31 @@ jobs:
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ steps.state.outputs.release_sha }}
+          # The recovery must restore the Shopify config and extension from
+          # the same previous SHA that Render is rolling back to, never from
+          # the failed release being diagnosed.
+          ref: ${{ steps.state.outputs.previous_sha }}
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: "20"
+          node-version: "22"
 
       - run: npm ci --no-audit --no-fund
+
+      - name: Install pinned Shopify CLI for production rollback
+        run: npm install --global @shopify/cli@4.1.0
+
+      - name: Restore Shopify production app components for the previous SHA
+        shell: bash
+        env:
+          PREVIOUS_SHA: ${{ steps.state.outputs.previous_sha }}
+          SHOPIFY_APP_AUTOMATION_TOKEN: ${{ secrets.PRODUCTION_SHOPIFY_APP_AUTOMATION_TOKEN }}
+          SHOPIFY_CLI_NO_ANALYTICS: "1"
+          COMMIT_URL: ${{ github.server_url }}/${{ github.repository }}/commit/${{ steps.state.outputs.previous_sha }}
+        run: |
+          set -euo pipefail
+          [[ -n "$SHOPIFY_APP_AUTOMATION_TOKEN" ]] || { echo "Falta PRODUCTION_SHOPIFY_APP_AUTOMATION_TOKEN" >&2; exit 1; }
+          shopify app deploy --allow-updates --source-control-url "$COMMIT_URL"
 
       - name: Certify the restored production web and worker
         shell: bash

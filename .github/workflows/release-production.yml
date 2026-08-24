@@ -59,9 +59,15 @@ jobs:
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: "20"
+          # @shopify/cli@4.1.0 requires the Node 22 runtime available on
+          # GitHub-hosted runners. Keep production aligned with staging so
+          # the same reviewed SHA publishes its app components everywhere.
+          node-version: "22"
 
       - run: npm ci --no-audit --no-fund
+
+      - name: Install pinned Shopify CLI for app deployment
+        run: npm install --global @shopify/cli@4.1.0
 
       - id: previous
         name: Capture the current production release for application rollback
@@ -141,6 +147,20 @@ jobs:
           done
           echo "Production no aprobo /ready dentro de 10 minutos" >&2
           exit 1
+
+      # Render does not version the Shopify app configuration or theme app
+      # extension. Publish both from this same immutable SHA before the final
+      # operational gate; a failure triggers the independent recovery flow.
+      - name: Deploy Shopify production app components for the reviewed SHA
+        shell: bash
+        env:
+          SHOPIFY_APP_AUTOMATION_TOKEN: ${{ secrets.PRODUCTION_SHOPIFY_APP_AUTOMATION_TOKEN }}
+          SHOPIFY_CLI_NO_ANALYTICS: "1"
+          COMMIT_URL: ${{ github.server_url }}/${{ github.repository }}/commit/${{ steps.release.outputs.sha }}
+        run: |
+          set -euo pipefail
+          [[ -n "$SHOPIFY_APP_AUTOMATION_TOKEN" ]] || { echo "Falta PRODUCTION_SHOPIFY_APP_AUTOMATION_TOKEN" >&2; exit 1; }
+          shopify app deploy --allow-updates --source-control-url "$COMMIT_URL"
 
       - name: Wait for the production technical preflight gate
         shell: bash
