@@ -91,7 +91,7 @@ if (!partnerStagingHandle || !partnerStagingClientId) {
   mal("Partner staging queda aislado de producción y staging legado", "el manifiesto Partner reutiliza un handle o client_id de otra identidad");
 } else if (
   !/name\s*=\s*"TiendaIQ Partner Staging"/.test(partnerStagingToml) ||
-  !/application_url\s*=\s*"https:\/\/tiendaiq-staging-web\.onrender\.com"/.test(partnerStagingToml) ||
+  !/application_url\s*=\s*"https:\/\/tiendaiq-partner-staging-web\.onrender\.com"/.test(partnerStagingToml) ||
   !/use_legacy_install_flow\s*=\s*false/.test(partnerStagingToml)
 ) {
   mal("Partner staging usa el runtime aislado y la instalación gestionada", "el manifiesto no corresponde al contrato de staging Partner");
