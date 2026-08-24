@@ -79,4 +79,6 @@ test("la app Partner y los workflows usan el mismo runtime e identidad aislados"
   assert.match(readiness, /CHECK_STAGING_OPS_READINESS/);
   assert.match(readiness, /PARTNER_STAGING_OPS_STATUS_TOKEN/);
   assert.match(readiness, /https:\/\/tiendaiq-partner-staging-web\.onrender\.com/);
+  assert.match(release, /GITHUB_STEP_SUMMARY/);
+  assert.match(release, /partner-staging-ops-readiness\.log/);
 });

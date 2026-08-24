@@ -142,4 +142,17 @@ jobs:
           OPS_MIN_WEBHOOK_CONCURRENCY: "2"
           OPS_EXPECT_PLAN_TEST: "1"
           OPS_READINESS_PROFILE: technical_preflight
-        run: npm run ops:readiness
+        run: |
+          set -o pipefail
+          set +e
+          npm run ops:readiness 2>&1 | tee "$RUNNER_TEMP/partner-staging-ops-readiness.log"
+          status="${PIPESTATUS[0]}"
+          set -e
+          {
+            echo "## Partner Staging operational readiness"
+            echo
+            echo '```text'
+            tail -n 120 "$RUNNER_TEMP/partner-staging-ops-readiness.log"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit "$status"
