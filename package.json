@@ -17,6 +17,7 @@
     "humo": "node pruebas/humo.js",
     "db:migrate": "node scripts/migrar-db.js",
     "db:migrate:check": "node scripts/migrar-db.js --dry-run",
+    "db:bind-shopify-registration": "node scripts/vincular-registro-shopify.js",
     "db:test:rls": "node scripts/probar-rls.js",
     "db:test:integration": "npm run db:migrate && npm run db:migrate && npm run db:test:rls",
     "carga:mock": "node scripts/servidor-carga-local.js",
