@@ -29,6 +29,7 @@ const mal = (n, d) => {
 // Sin valor, el embed queda inactivo; nunca puede pedir datos a producción.
 const toml = leer("shopify.app.toml");
 const stagingToml = leer("shopify.app.staging.toml");
+const partnerStagingToml = leer("shopify.app.partner-staging.toml");
 const render = leer("render.yaml");
 const releaseWorkflow = leer(".github/workflows/release-staging.yml");
 const productionReleaseWorkflow = leer(".github/workflows/release-production.yml");
@@ -47,6 +48,10 @@ const principal = toml.match(/^application_url\s*=\s*"([^"]+)"/m)?.[1];
 
 const productionHandle = toml.match(/^handle\s*=\s*"([^"]+)"/m)?.[1];
 const stagingHandle = stagingToml.match(/^handle\s*=\s*"([^"]+)"/m)?.[1];
+const partnerStagingHandle = partnerStagingToml.match(/^handle\s*=\s*"([^"]+)"/m)?.[1];
+const productionClientId = toml.match(/^client_id\s*=\s*"([^"]+)"/m)?.[1];
+const stagingClientId = stagingToml.match(/^client_id\s*=\s*"([^"]+)"/m)?.[1];
+const partnerStagingClientId = partnerStagingToml.match(/^client_id\s*=\s*"([^"]+)"/m)?.[1];
 const adminUrlSource = leer("shopify-admin-url.js");
 
 if (/^# Contrato de promoción Partner y limpieza legacy de TiendaIQ/m.test(partnerCutoverContract) &&
@@ -73,6 +78,25 @@ if (!productionHandle || !stagingHandle) {
   mal("App Home usa el handle de Shopify", "un redirect todavía usa SHOPIFY_CLIENT_ID como slug");
 } else {
   ok(`App Home separa los handles ${productionHandle} y ${stagingHandle}`);
+}
+
+if (!partnerStagingHandle || !partnerStagingClientId) {
+  mal("Partner staging declara identidad Shopify completa", "falta handle o client_id en shopify.app.partner-staging.toml");
+} else if (
+  partnerStagingHandle === productionHandle ||
+  partnerStagingHandle === stagingHandle ||
+  partnerStagingClientId === productionClientId ||
+  partnerStagingClientId === stagingClientId
+) {
+  mal("Partner staging queda aislado de producción y staging legado", "el manifiesto Partner reutiliza un handle o client_id de otra identidad");
+} else if (
+  !/name\s*=\s*"TiendaIQ Partner Staging"/.test(partnerStagingToml) ||
+  !/application_url\s*=\s*"https:\/\/tiendaiq-staging-web\.onrender\.com"/.test(partnerStagingToml) ||
+  !/use_legacy_install_flow\s*=\s*false/.test(partnerStagingToml)
+) {
+  mal("Partner staging usa el runtime aislado y la instalación gestionada", "el manifiesto no corresponde al contrato de staging Partner");
+} else {
+  ok("Partner staging queda aislado y listo para un cutover gestionado");
 }
 
 function servicioRender(nombre) {
