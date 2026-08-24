@@ -217,6 +217,13 @@ if (/environment:\s*production/.test(productionReleaseWorkflow) &&
     /actions\/upload-artifact@[a-f0-9]{40}/.test(productionReleaseWorkflow) &&
     /name:\s*production-rollback-state-\$\{\{ github\.run_attempt \}\}/.test(productionReleaseWorkflow) &&
     /run_attempt:Number\(process\.env\.RELEASE_ATTEMPT\)/.test(productionReleaseWorkflow) &&
+    /node-version:\s*"22"/.test(productionReleaseWorkflow) &&
+    /npm install --global @shopify\/cli@4\.1\.0/.test(productionReleaseWorkflow) &&
+    /PRODUCTION_SHOPIFY_APP_AUTOMATION_TOKEN/.test(productionReleaseWorkflow) &&
+    /shopify app deploy --allow-updates --source-control-url "\$COMMIT_URL"/.test(productionReleaseWorkflow) &&
+    !/shopify app deploy --config staging/.test(productionReleaseWorkflow) &&
+    productionReleaseWorkflow.indexOf("Wait for the deployed production web readiness gate") < productionReleaseWorkflow.indexOf("Deploy Shopify production app components for the reviewed SHA") &&
+    productionReleaseWorkflow.indexOf("Deploy Shopify production app components for the reviewed SHA") < productionReleaseWorkflow.indexOf("Wait for the production technical preflight gate") &&
     /workflow_run:/.test(productionRecoveryWorkflow) &&
     /workflows:\s*\["Release production"\]/.test(productionRecoveryWorkflow) &&
     /queue:\s*max/.test(productionRecoveryWorkflow) &&
@@ -232,6 +239,13 @@ if (/environment:\s*production/.test(productionReleaseWorkflow) &&
     /--connect-timeout 5 --max-time 20/.test(productionRecoveryWorkflow) &&
     /ROLLBACK_READINESS_DEADLINE_SECONDS:\s*"900"/.test(productionRecoveryWorkflow) &&
     /data-urlencode "ref=\$PREVIOUS_SHA"/.test(productionRecoveryWorkflow) &&
+    /ref:\s*\$\{\{ steps\.state\.outputs\.previous_sha \}\}/.test(productionRecoveryWorkflow) &&
+    /node-version:\s*"22"/.test(productionRecoveryWorkflow) &&
+    /Install pinned Shopify CLI for production rollback/.test(productionRecoveryWorkflow) &&
+    /Restore Shopify production app components for the previous SHA/.test(productionRecoveryWorkflow) &&
+    /PRODUCTION_SHOPIFY_APP_AUTOMATION_TOKEN/.test(productionRecoveryWorkflow) &&
+    /shopify app deploy --allow-updates --source-control-url "\$COMMIT_URL"/.test(productionRecoveryWorkflow) &&
+    !/shopify app deploy --config staging/.test(productionRecoveryWorkflow) &&
     /EXPECTED_RELEASE_SHA:\s*\$\{\{ steps\.state\.outputs\.previous_sha \}\}/.test(productionRecoveryWorkflow) &&
     /OPS_READINESS_PROFILE:\s*rollback/.test(productionRecoveryWorkflow) &&
     /Rollback certificado: web y worker/.test(productionRecoveryWorkflow) &&

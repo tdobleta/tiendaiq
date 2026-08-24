@@ -1217,6 +1217,11 @@ test("el release de produccion persiste un rollback antes de desplegar el SHA re
   assert.match(workflow, /run_attempt:Number\(process\.env\.RELEASE_ATTEMPT\)/);
   assert.match(workflow, /retention-days: 1/);
   assert.match(workflow, /--connect-timeout 5 --max-time 20/);
+  assert.match(workflow, /node-version: "22"/);
+  assert.match(workflow, /npm install --global @shopify\/cli@4\.1\.0/);
+  assert.match(workflow, /PRODUCTION_SHOPIFY_APP_AUTOMATION_TOKEN/);
+  assert.match(workflow, /shopify app deploy --allow-updates --source-control-url "\$COMMIT_URL"/);
+  assert.doesNotMatch(workflow, /shopify app deploy --config staging/);
   assert.match(workflow, /OPS_READINESS_PROFILE: technical_preflight/);
   assert.doesNotMatch(workflow, /rollback-production:/);
   assert.doesNotMatch(workflow, /complete production operational release gate/);
@@ -1225,10 +1230,13 @@ test("el release de produccion persiste un rollback antes de desplegar el SHA re
   const migrationIndex = workflow.indexOf("Migrate production with the owner credential");
   const rollbackStateIndex = workflow.indexOf("Prepare the durable application rollback state");
   const deployIndex = workflow.indexOf("id: deploy_web");
+  const shopifyIndex = workflow.indexOf("Deploy Shopify production app components for the reviewed SHA");
+  const preflightIndex = workflow.indexOf("Wait for the production technical preflight gate");
 
   assert.ok(captureIndex >= 0 && captureIndex < migrationIndex, "captura el release anterior antes de migrar");
   assert.ok(migrationIndex < rollbackStateIndex, "migra antes de fijar el estado recuperable");
   assert.ok(rollbackStateIndex < deployIndex, "persiste el estado antes de desplegar aplicaciones");
+  assert.ok(deployIndex < shopifyIndex && shopifyIndex < preflightIndex, "publica Shopify antes del gate operativo final");
 });
 
 test("la recuperacion de produccion restaura y certifica web y worker fuera del release fallido", () => {
@@ -1248,13 +1256,14 @@ test("la recuperacion de produccion restaura y certifica web y worker fuera del 
   assert.match(workflow, /group: tiendaiq-production-database-maintenance/);
   assert.match(workflow, /queue: max/);
   assert.match(workflow, /environment: production-recovery/);
-  assert.match(workflow, /timeout-minutes: 25/);
+  assert.match(workflow, /timeout-minutes: 30/);
   assert.match(workflow, /actions\/download-artifact@[a-f0-9]{40}/);
   assert.match(workflow, /name: production-rollback-state-\$\{\{ github\.event\.workflow_run\.run_attempt \}\}/);
   assert.match(workflow, /--retry 3 --retry-delay 2 --retry-all-errors/);
   assert.match(workflow, /jobs\?filter=latest&per_page=100/);
   assert.match(workflow, /Deploy web after a successful migration/);
   assert.match(workflow, /Deploy worker after a successful migration/);
+  assert.match(workflow, /Deploy Shopify production app components for the reviewed SHA/);
   assert.match(workflow, /un deploy de aplicacion comenzo pero falta el estado de rollback/);
   assert.match(workflow, /No se inicio ningun deploy de aplicacion; no hay rollback que ejecutar/);
   assert.match(workflow, /run-id: \$\{\{ github\.event\.workflow_run\.id \}\}/);
@@ -1270,6 +1279,13 @@ test("la recuperacion de produccion restaura y certifica web y worker fuera del 
   assert.match(workflow, /PRODUCTION_OPS_STATUS_TOKEN/);
   assert.match(workflow, /EXPECTED_RELEASE_SHA: \$\{\{ steps\.state\.outputs\.previous_sha \}\}/);
   assert.match(workflow, /OPS_READINESS_PROFILE: rollback/);
+  assert.match(workflow, /ref: \$\{\{ steps\.state\.outputs\.previous_sha \}\}/);
+  assert.match(workflow, /node-version: "22"/);
+  assert.match(workflow, /Install pinned Shopify CLI for production rollback/);
+  assert.match(workflow, /Restore Shopify production app components for the previous SHA/);
+  assert.match(workflow, /PRODUCTION_SHOPIFY_APP_AUTOMATION_TOKEN/);
+  assert.match(workflow, /shopify app deploy --allow-updates --source-control-url "\$COMMIT_URL"/);
+  assert.doesNotMatch(workflow, /shopify app deploy --config staging/);
   assert.match(workflow, /Rollback certificado: web y worker ejecutan \$PREVIOUS_SHA/);
   assert.match(workflow, /ROLLBACK_READINESS_DEADLINE_SECONDS: "900"/);
   assert.match(workflow, /deadline=\$\(\(SECONDS \+ ROLLBACK_READINESS_DEADLINE_SECONDS\)\)/);
@@ -1278,7 +1294,10 @@ test("la recuperacion de produccion restaura y certifica web y worker fuera del 
 
   const hookIndex = workflow.indexOf("Request rollback for web and worker before installing tooling");
   const installIndex = workflow.indexOf("npm ci --no-audit --no-fund");
+  const shopifyRollbackIndex = workflow.indexOf("Restore Shopify production app components for the previous SHA");
+  const certifyIndex = workflow.indexOf("Certify the restored production web and worker");
   assert.ok(hookIndex >= 0 && hookIndex < installIndex, "los hooks se disparan antes de depender de npm");
+  assert.ok(installIndex < shopifyRollbackIndex && shopifyRollbackIndex < certifyIndex, "restaura Shopify antes de certificar el rollback");
 
   const rollbackTimeoutMinutes = Number(workflow.match(/recover-production:[\s\S]*?timeout-minutes: (\d+)/)?.[1]);
   const readinessDeadlineSeconds = Number(workflow.match(/ROLLBACK_READINESS_DEADLINE_SECONDS: "(\d+)"/)?.[1]);
