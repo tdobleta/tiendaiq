@@ -1045,6 +1045,22 @@ test("el heartbeat operativo no expone datos tenant y restringe escritura al wor
   assert.doesNotMatch(sql, /\btenant_id\b|\bshop\b|\bpayload\b/);
 });
 
+test("el contrato de billing del worker es versionado, agregado y no contiene secretos", () => {
+  const sql = fs.readFileSync(
+    path.join(__dirname, "..", "db", "migrations", "0020_worker_billing_runtime_contract.sql"),
+    "utf8"
+  );
+  const repository = fs.readFileSync(path.join(__dirname, "..", "src", "platform", "postgres", "job-repository.js"), "utf8");
+  assert.match(sql, /billing_contract_version integer/);
+  assert.match(sql, /billing_plan_test boolean/);
+  assert.match(sql, /billing_app_handle text/);
+  assert.match(sql, /operational_billing_worker_status\(\)/);
+  assert.match(sql, /TO tiendaiq_web_runtime, tiendaiq_worker_runtime/);
+  assert.doesNotMatch(sql, /tenant_id|payload|shopify_(?:token|client_secret)|anthropic|database_url/i);
+  assert.match(repository, /record_worker_heartbeat\(\$1, \$2, \$3, \$4, \$5, \$6, \$7, \$8\)/);
+  assert.match(repository, /operational_billing_worker_status\(\)/);
+});
+
 test("el repositorio persiste y proyecta heartbeat sin contexto tenant", async () => {
   const queries = [];
   const client = {
@@ -1055,6 +1071,18 @@ test("el repositorio persiste y proyecta heartbeat sin contexto tenant", async (
     async connect() { return client; },
     async query(text, values) {
       queries.push({ text, values });
+      if (/operational_billing_worker_status/.test(text)) {
+        return { rows: [{
+          contract_version: 1,
+          plan_test: true,
+          app_handle: "tiendaiq-staging",
+          configured: true,
+          active_workers: 1,
+          version_variants: 1,
+          plan_test_variants: 1,
+          app_handle_variants: 1
+        }] };
+      }
       return { rows: [{
         worker_id: "worker-1",
         release_sha: "a".repeat(40),
@@ -1077,10 +1105,11 @@ test("el repositorio persiste y proyecta heartbeat sin contexto tenant", async (
     releaseSha: "a".repeat(40),
     runtimeRole: "tiendaiq_worker_runtime",
     isolationOk: true,
-    capacity: { generations: 8, publications: 4, webhooks: 2 }
+    capacity: { generations: 8, publications: 4, webhooks: 2 },
+    billing: { version: 1, planTest: true, appHandle: "tiendaiq-staging" }
   });
   const heartbeat = queries.find(({ text }) => /record_worker_heartbeat/.test(text));
-  assert.deepEqual(heartbeat.values, ["worker-1", "a".repeat(40), 8, 4, 2]);
+  assert.deepEqual(heartbeat.values, ["worker-1", "a".repeat(40), 8, 4, 2, 1, true, "tiendaiq-staging"]);
   assert.doesNotMatch(heartbeat.text, /tenant_id|payload|INSERT|DELETE|UPDATE/);
 
   const status = await repository.workerStatus();
@@ -1091,6 +1120,17 @@ test("el repositorio persiste y proyecta heartbeat sin contexto tenant", async (
   assert.equal(status.activeWorkers, 1);
   assert.equal(status.releaseVariants, 1);
   assert.equal(status.runtimeRoleVariants, 1);
+
+  assert.deepEqual(await repository.billingWorkerStatus(), {
+    version: 1,
+    planTest: true,
+    appHandle: "tiendaiq-staging",
+    configured: true,
+    activeWorkers: 1,
+    versionVariants: 1,
+    planTestVariants: 1,
+    appHandleVariants: 1
+  });
 });
 
 test("el repositorio rechaza un heartbeat ambiguo antes de abrir una conexion", async () => {
@@ -1104,7 +1144,8 @@ test("el repositorio rechaza un heartbeat ambiguo antes de abrir una conexion", 
       releaseSha: "main",
       runtimeRole: "tiendaiq_worker_runtime",
       isolationOk: true,
-      capacity: { generations: 8, publications: 4, webhooks: 2 }
+      capacity: { generations: 8, publications: 4, webhooks: 2 },
+      billing: { version: 1, planTest: true, appHandle: "tiendaiq-staging" }
     }),
     /SHA completo/
   );

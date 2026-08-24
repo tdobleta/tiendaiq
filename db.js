@@ -716,6 +716,13 @@ async function estadoWorkerDB() {
   return jobRepository.workerStatus();
 }
 
+async function estadoBillingWorkerDB() {
+  if (!USA_PG) return null;
+  const p = await pg();
+  jobRepository ||= createJobRepository(p);
+  return jobRepository.billingWorkerStatus();
+}
+
 async function estadoInboxDB() {
   if (USA_PG) {
     const p = await pg();
@@ -1547,7 +1554,7 @@ module.exports = {
   guardarEstadoDB, consumirEstadoDB,
   encolarJobDB, encolarJobExclusivoDB, leerJobDB, reclamarJobDB, renovarLeaseJobDB, completarJobDB, fallarJobDB,
   reclamarCompensacionJobDB, renovarCompensacionJobDB, completarCompensacionJobDB, fallarCompensacionJobDB,
-  estadoColaDB, registrarHeartbeatWorkerDB, estadoWorkerDB, estadoInboxDB,
+  estadoColaDB, registrarHeartbeatWorkerDB, estadoWorkerDB, estadoBillingWorkerDB, estadoInboxDB,
   encolarGeneracionDB, leerReservaGeneracionDB, finalizarGeneracionDB, liberarReservaGeneracionDB,
   transicionarProveedorGeneracionDB, reconciliarGeneracionAmbiguaDB,
   recibirWebhookDB, reclamarWebhookDB, renovarLeaseWebhookDB, completarWebhookDB, fallarWebhookDB,

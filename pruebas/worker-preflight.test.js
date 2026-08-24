@@ -10,7 +10,9 @@ const RUNTIME_ENV = {
   PG_RUNTIME_ROLE: "tiendaiq_worker_runtime",
   JOB_GENERATION_CONCURRENCY: "8",
   JOB_PUBLICATION_CONCURRENCY: "4",
-  WEBHOOK_CONCURRENCY: "2"
+  WEBHOOK_CONCURRENCY: "2",
+  PLAN_TEST: "1",
+  SHOPIFY_APP_HANDLE: "tiendaiq-staging"
 };
 
 test("el worker no crea ni inicia runners antes de aprobar el preflight", async () => {
@@ -25,6 +27,11 @@ test("el worker no crea ni inicia runners antes de aprobar el preflight", async 
       events.push("heartbeat");
       assert.equal(heartbeat.releaseSha, SHA);
       assert.equal(heartbeat.isolationOk, true);
+      assert.deepEqual(heartbeat.billing, {
+        version: 1,
+        planTest: true,
+        appHandle: "tiendaiq-staging"
+      });
     },
     crearRuntime(options) {
       events.push("created");

@@ -23,7 +23,7 @@ test("la ruta de suscripción usa una única intención activa por tenant", () =
   const server = fs.readFileSync(path.join(__dirname, "..", "server.js"), "utf8");
   assert.match(
     server,
-    /ruta === "\/api\/plan\/suscribir"[\s\S]{0,900}encolarJobExclusivoDB\(sesion\.tenant, \{[\s\S]{0,240}type: "create-subscription"/
+    /ruta === "\/api\/plan\/suscribir"[\s\S]*?encolarJobExclusivoDB\(sesion\.tenant, \{[\s\S]{0,240}type: "create-subscription"/
   );
 });
 

@@ -22,7 +22,10 @@ const ruta = (m) => require.resolve(path.join(RAIZ, m));
 
 // Módulos que se cargan de verdad y hay que sacar del cache para que la
 // próxima prueba los vuelva a construir con sus dobles nuevos.
-const A_LIMPIAR = ["shopify.js", "tiendas.js", "db.js", "facturacion.js", "bundles.js"];
+const A_LIMPIAR = [
+  "shopify.js", "tiendas.js", "db.js", "facturacion.js", "bundles.js",
+  "src/runtime/billing-runtime-contract.js"
+];
 
 function limpiarCache() {
   for (const m of A_LIMPIAR) {

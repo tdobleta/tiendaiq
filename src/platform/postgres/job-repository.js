@@ -217,7 +217,7 @@ function createJobRepository(pool) {
       }
     },
 
-    async recordHeartbeat({ workerId, releaseSha, runtimeRole, isolationOk, capacity }) {
+    async recordHeartbeat({ workerId, releaseSha, runtimeRole, isolationOk, capacity, billing }) {
       if (!workerId) throw new TypeError("El heartbeat requiere workerId");
       if (!/^[a-f0-9]{40}$/.test(String(releaseSha || ""))) {
         throw new TypeError("El heartbeat requiere un SHA completo");
@@ -232,10 +232,35 @@ function createJobRepository(pool) {
       if (isolationOk !== true) {
         throw new TypeError("El heartbeat requiere aislamiento verificado");
       }
+      if (billing?.version !== 1 || typeof billing.planTest !== "boolean") {
+        throw new TypeError("El heartbeat requiere contrato billing versionado");
+      }
+      if (billing.appHandle != null && !/^[a-z0-9][a-z0-9-]*$/.test(billing.appHandle)) {
+        throw new TypeError("El heartbeat requiere un app handle billing válido");
+      }
       await pool.query(
-        "SELECT control_plane.record_worker_heartbeat($1, $2, $3, $4, $5)",
-        [workerId, releaseSha, capacity.generations, capacity.publications, capacity.webhooks]
+        "SELECT control_plane.record_worker_heartbeat($1, $2, $3, $4, $5, $6, $7, $8)",
+        [workerId, releaseSha, capacity.generations, capacity.publications, capacity.webhooks,
+          billing.version, billing.planTest, billing.appHandle]
       );
+    },
+
+    async billingWorkerStatus() {
+      const result = await pool.query("SELECT * FROM control_plane.operational_billing_worker_status()");
+      const row = result.rows[0];
+      if (!row) return null;
+      return {
+        version: row.contract_version == null
+          ? null
+          : (Number.isInteger(Number(row.contract_version)) ? Number(row.contract_version) : null),
+        planTest: typeof row.plan_test === "boolean" ? row.plan_test : null,
+        appHandle: row.app_handle || null,
+        configured: row.configured === true,
+        activeWorkers: Number(row.active_workers || 0),
+        versionVariants: Number(row.version_variants || 0),
+        planTestVariants: Number(row.plan_test_variants || 0),
+        appHandleVariants: Number(row.app_handle_variants || 0)
+      };
     },
 
     async workerStatus() {
