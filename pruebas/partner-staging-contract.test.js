@@ -69,6 +69,11 @@ test("la app Partner y los workflows usan el mismo runtime e identidad aislados"
   assert.match(release, /RENDER_PARTNER_STAGING_WEB_DEPLOY_HOOK/);
   assert.match(release, /RENDER_PARTNER_STAGING_WORKER_DEPLOY_HOOK/);
   assert.match(release, /PARTNER_STAGING_SHOPIFY_APP_AUTOMATION_TOKEN/);
+  assert.match(release, /npm install --global @shopify\/cli@4\.1\.0/);
+  assert.ok(
+    release.indexOf("npm install --global @shopify/cli@4.1.0") < release.indexOf("shopify app deploy --config partner-staging"),
+    "instala Shopify CLI antes de publicar componentes Partner Staging"
+  );
   assert.match(release, /shopify app deploy --config partner-staging --allow-updates/);
   assert.match(release, /https:\/\/tiendaiq-partner-staging-web\.onrender\.com\/ready/);
   assert.match(readiness, /CHECK_PARTNER_STAGING_OPS_READINESS/);
