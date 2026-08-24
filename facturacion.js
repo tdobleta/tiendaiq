@@ -83,20 +83,47 @@ function esSuscripcionElegible(suscripcion) {
   return suscripcion.test !== true || BILLING_RUNTIME.planTest;
 }
 
+function esSuscripcionPendienteElegible(suscripcion) {
+  if (!suscripcion || suscripcion.status !== "PENDING" || suscripcion.name !== PLAN_NOMBRE) {
+    return false;
+  }
+  return suscripcion.test !== true || BILLING_RUNTIME.planTest;
+}
+
 async function suscripcionElegibleActiva(sesion, opciones) {
   return (await consultarSuscripcionesActivas(sesion, opciones))
     .find(esSuscripcionElegible) || null;
 }
 
-// Consulta autoritativa y reutilizable para iniciar o reconciliar billing.
-async function consultarSuscripcionesActivas(sesion, { signal } = {}) {
+// Incluye estados pendientes para que una respuesta perdida de
+// appSubscriptionCreate no habilite una segunda mutación de cobro.
+async function consultarSuscripcionesPlan(sesion, { signal } = {}) {
   const d = await gql(
-    `{ currentAppInstallation { activeSubscriptions { id name status test } } }`,
+    `{ currentAppInstallation { allSubscriptions(first: 250) { nodes { id name status test } pageInfo { hasNextPage } } } }`,
     {},
     sesion,
     { signal }
   );
-  return (d.currentAppInstallation?.activeSubscriptions || [])
+  // activeSubscriptions es sólo una compatibilidad para dobles de tests
+  // anteriores; Shopify responde allSubscriptions en el runtime real.
+  const allSubscriptions = d.currentAppInstallation?.allSubscriptions;
+  if (allSubscriptions?.pageInfo?.hasNextPage === true) {
+    const error = new Error("La reconciliación de suscripciones no alcanzó a leer el historial completo");
+    error.code = "SHOPIFY_SUBSCRIPTION_RECONCILIATION_INCOMPLETE";
+    error.nonRetryable = true;
+    throw error;
+  }
+  const subscriptions = allSubscriptions?.nodes
+    || d.currentAppInstallation?.activeSubscriptions
+    || [];
+  return subscriptions
+    .filter(Boolean)
+    .map(suscripcionSerializable);
+}
+
+// Consulta autoritativa reutilizable para validar acceso Pro.
+async function consultarSuscripcionesActivas(sesion, opciones) {
+  return (await consultarSuscripcionesPlan(sesion, opciones))
     .filter((suscripcion) => suscripcion?.status === "ACTIVE")
     .map(suscripcionSerializable);
 }
@@ -276,6 +303,30 @@ async function reconciliarSuscripcionActiva(sesion, { signal, reconciled = false
   };
 }
 
+async function reconciliarSuscripcionExistente(sesion, { signal, reconciled = false } = {}) {
+  const subscriptions = await consultarSuscripcionesPlan(sesion, { signal });
+  const active = subscriptions.find(esSuscripcionElegible);
+  if (active) {
+    return {
+      status: "active",
+      alreadyActive: true,
+      reconciled: reconciled === true,
+      confirmationUrl: null,
+      subscription: active
+    };
+  }
+  const pending = subscriptions.find(esSuscripcionPendienteElegible);
+  if (!pending) return null;
+  return {
+    status: "pending_confirmation",
+    alreadyActive: false,
+    reconciled: reconciled === true,
+    confirmationUrl: null,
+    subscription: pending,
+    manualApprovalRequired: true
+  };
+}
+
 async function crearSuscripcionRemota(sesion, urlApp, { signal } = {}) {
   const returnUrl = urlRetornoSuscripcion(sesion, urlApp);
   const d = await gql(
@@ -334,7 +385,7 @@ async function crearSuscripcionRemota(sesion, urlApp, { signal } = {}) {
 // verdad; ante un resultado remoto incierto vuelve a consultar y, si no puede
 // demostrar que ya está activo, queda terminal para revisión manual.
 async function iniciarSuscripcion(sesion, urlApp, { signal } = {}) {
-  const existente = await reconciliarSuscripcionActiva(sesion, { signal });
+  const existente = await reconciliarSuscripcionExistente(sesion, { signal });
   if (existente) return existente;
 
   try {
@@ -345,7 +396,7 @@ async function iniciarSuscripcion(sesion, urlApp, { signal } = {}) {
     let reconciliada = null;
     let reconciliationError = null;
     try {
-      reconciliada = await reconciliarSuscripcionActiva(sesion, { signal, reconciled: true });
+      reconciliada = await reconciliarSuscripcionExistente(sesion, { signal, reconciled: true });
     } catch (reconcileError) {
       reconciliationError = reconcileError;
     }
@@ -374,7 +425,8 @@ module.exports = {
   estadoPlan, exigirCupo, consumirCupo, revertirCupo, crearSuscripcion, actualizarPlanDesdeWebhook,
   consultarSuscripcionesActivas, crearSuscripcionRemota, errorSuscripcionAmbigua,
   iniciarSuscripcion, isAmbiguousSubscriptionError, reconciliarSuscripcionActiva,
-  esSuscripcionElegible, suscripcionElegibleActiva,
+  esSuscripcionElegible, esSuscripcionPendienteElegible, suscripcionElegibleActiva,
+  consultarSuscripcionesPlan, reconciliarSuscripcionExistente,
   PAGINAS_GRATIS, PLAN_PRECIO, PLAN_NOMBRE, mesActual, parsePaginasGratis,
   configuracionPaginasGratis: CONFIGURACION_PAGINAS_GRATIS
 };

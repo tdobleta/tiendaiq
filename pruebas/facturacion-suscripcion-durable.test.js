@@ -47,6 +47,46 @@ test("consulta y normaliza solamente suscripciones activas", async () => {
   }]);
 });
 
+test("una suscripción pendiente del mismo plan bloquea una segunda mutación", async () => {
+  const { modulo, shopify } = montar("facturacion.js", {
+    env: { PLAN_TEST: "1" },
+    respuestas: [{
+      currentAppInstallation: {
+        allSubscriptions: { nodes: [{
+          id: "gid://shopify/AppSubscription/pending",
+          name: "TiendaIQ Pro",
+          status: "PENDING",
+          test: true
+        }] }
+      }
+    }]
+  });
+
+  const result = await modulo.iniciarSuscripcion(SESION, "https://tiendaiq.example");
+
+  assert.equal(result.status, "pending_confirmation");
+  assert.equal(result.manualApprovalRequired, true);
+  assert.equal(result.confirmationUrl, null);
+  assert.equal(shopify.llamadas.filter((call) => /appSubscriptionCreate/.test(call.query)).length, 0);
+  assert.match(shopify.llamadas[0].query, /allSubscriptions/);
+});
+
+test("un historial de suscripciones incompleto falla cerrado antes de crear billing", async () => {
+  const { modulo, shopify } = montar("facturacion.js", {
+    respuestas: [{
+      currentAppInstallation: {
+        allSubscriptions: { nodes: [], pageInfo: { hasNextPage: true } }
+      }
+    }]
+  });
+
+  await assert.rejects(
+    () => modulo.iniciarSuscripcion(SESION, "https://tiendaiq.example"),
+    (error) => error.code === "SHOPIFY_SUBSCRIPTION_RECONCILIATION_INCOMPLETE" && error.nonRetryable === true
+  );
+  assert.equal(shopify.llamadas.filter((call) => /appSubscriptionCreate/.test(call.query)).length, 0);
+});
+
 test("no crea otro cargo cuando Shopify ya informa una suscripción activa", async () => {
   const { modulo, shopify } = montar("facturacion.js", { respuestas: [ACTIVA] });
 
@@ -57,7 +97,7 @@ test("no crea otro cargo cuando Shopify ya informa una suscripción activa", asy
   assert.equal(result.confirmationUrl, null);
   assert.equal(result.subscription.id, "gid://shopify/AppSubscription/1");
   assert.equal(shopify.llamadas.length, 1);
-  assert.match(shopify.llamadas[0].query, /activeSubscriptions/);
+  assert.match(shopify.llamadas[0].query, /allSubscriptions/);
 });
 
 test("una suscripción activa ajena no resuelve la intención de TiendaIQ Pro", async () => {

@@ -973,7 +973,8 @@ async function api(req, res, url) {
       type: "create-subscription",
       payload: { urlApp: URL_APP },
       idempotencyKey: `create-subscription:${request_id}`,
-      maxAttempts: 2
+      maxAttempts: 2,
+      allowSubscriptionRecovery: true
     });
     if (job?.status === "failed") {
       return json(res, 409, {
