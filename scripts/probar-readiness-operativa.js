@@ -98,9 +98,10 @@ function summarizeQueue(rows) {
   return totals;
 }
 
-function evaluateReady(payload, expectedSha) {
+function evaluateReady(payload, expectedSha, { requireAppRegistration = false } = {}) {
   const errors = [];
   const aislamiento = payload?.aislamiento || {};
+  const appRegistration = payload?.appRegistration || {};
   const release = String(payload?.release || "").toLowerCase();
 
   if (!payload?.ok) errors.push("/ready no respondio ok=true");
@@ -112,6 +113,17 @@ function evaluateReady(payload, expectedSha) {
   if (aislamiento.roleBypassesRls !== false) errors.push("el rol web puede omitir RLS");
   if (aislamiento.inheritsRoles !== false) errors.push("el rol web hereda privilegios");
   if (aislamiento.workerCapability !== false) errors.push("el rol web tiene capacidad worker");
+  if (requireAppRegistration) {
+    if (appRegistration.configured !== true) {
+      errors.push("el registro Shopify no figura configurado en /ready");
+    }
+    if (appRegistration.enforced !== true) {
+      errors.push("el registro Shopify no figura enforced en /ready");
+    }
+    if (!/^[a-f0-9]{16}$/i.test(String(appRegistration.fingerprint || ""))) {
+      errors.push("el registro Shopify no expone un fingerprint sanitizado valido en /ready");
+    }
+  }
 
   return { ok: errors.length === 0, errors };
 }
@@ -318,7 +330,7 @@ function evaluateBillingRuntime(payload, requirements = {}) {
   return { ok: errors.length === 0, errors };
 }
 
-async function fetchReady(appUrl, expectedSha, timeoutMs = 15000) {
+async function fetchReady(appUrl, expectedSha, { requireAppRegistration = false } = {}, timeoutMs = 15000) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -333,7 +345,7 @@ async function fetchReady(appUrl, expectedSha, timeoutMs = 15000) {
     if (!response.ok) {
       throw new Error(`/ready respondio HTTP ${response.status}: ${text.slice(0, 200)}`);
     }
-    const evaluation = evaluateReady(payload, expectedSha);
+    const evaluation = evaluateReady(payload, expectedSha, { requireAppRegistration });
     return { payload, evaluation };
   } finally {
     clearTimeout(timeout);
@@ -448,10 +460,13 @@ async function main() {
     requireLegalComplete: profile === "go",
     requireAdmissionOpen: profile === "go",
     ignoreBacklogPressure: profile === "rollback",
-    expectedPlanTest: planTest
+    expectedPlanTest: planTest,
+    requireAppRegistration: profile === "go"
   };
 
-  const ready = await fetchReady(appUrl, expectedSha);
+  const ready = await fetchReady(appUrl, expectedSha, {
+    requireAppRegistration: requirements.requireAppRegistration
+  });
   const opsStatus = await fetchOpsStatus(appUrl, opsStatusToken, expectedSha, thresholds, requirements);
   const billingRuntime = await fetchBillingRuntime(appUrl, opsStatusToken, requirements);
   const errors = [...ready.evaluation.errors, ...opsStatus.evaluation.errors, ...billingRuntime.evaluation.errors];

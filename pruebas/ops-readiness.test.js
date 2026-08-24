@@ -70,6 +70,27 @@ test("evalua /ready con Postgres, release y aislamiento RLS", () => {
   assert.deepEqual(evaluateReady(ready, SHA), { ok: true, errors: [] });
   assert.equal(evaluateReady({ ...ready, release: "0".repeat(40) }, SHA).ok, false);
   assert.equal(evaluateReady({ ...ready, aislamiento: { ...ready.aislamiento, workerCapability: true } }, SHA).ok, false);
+  assert.equal(evaluateReady(ready, SHA, { requireAppRegistration: true }).ok, false);
+  assert.deepEqual(evaluateReady({
+    ...ready,
+    appRegistration: {
+      version: 1,
+      configured: true,
+      enforced: true,
+      fingerprint: "aa303c8451a18543"
+    }
+  }, SHA, { requireAppRegistration: true }), { ok: true, errors: [] });
+  assert.match(
+    evaluateReady({
+      ...ready,
+      appRegistration: {
+        configured: true,
+        enforced: false,
+        fingerprint: "aa303c8451a18543"
+      }
+    }, SHA, { requireAppRegistration: true }).errors.join("; "),
+    /enforced/
+  );
 });
 
 test("evalua /ops/status con release, admission control y cola agregada", () => {
