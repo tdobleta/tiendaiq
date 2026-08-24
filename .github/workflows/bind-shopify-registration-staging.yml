@@ -1,0 +1,63 @@
+name: Bind staging Shopify registration
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: SHA completo revisado y presente en main
+        required: true
+        type: string
+      registration_id:
+        description: Identidad no secreta del registro Shopify que se vinculara a la base de staging
+        required: true
+        type: string
+      confirmation:
+        description: Escribir BIND_ONE_STAGING_SHOPIFY_REGISTRATION
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tiendaiq-staging-shopify-registration-binding
+  cancel-in-progress: false
+
+jobs:
+  bind:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: staging
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.release_sha }}
+          fetch-depth: 0
+
+      - name: Validate immutable reviewed binding request
+        shell: bash
+        env:
+          REQUESTED_SHA: ${{ inputs.release_sha }}
+          REGISTRATION_ID: ${{ inputs.registration_id }}
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          [[ "$REQUESTED_SHA" =~ ^[a-f0-9]{40}$ ]] || { echo "release_sha debe ser un SHA completo" >&2; exit 1; }
+          [[ "$REGISTRATION_ID" =~ ^[a-z][a-z0-9-]{2,63}$ ]] || { echo "registration_id invalido" >&2; exit 1; }
+          [[ "$CONFIRMATION" == "BIND_ONE_STAGING_SHOPIFY_REGISTRATION" ]] || { echo "confirmacion invalida" >&2; exit 1; }
+          [[ "$(git rev-parse HEAD)" == "$REQUESTED_SHA" ]] || { echo "checkout distinto al SHA solicitado" >&2; exit 1; }
+          git fetch origin main --depth=1
+          [[ "$(git rev-parse origin/main)" == "$REQUESTED_SHA" ]] || { echo "el SHA debe ser el HEAD actual de main" >&2; exit 1; }
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "20"
+
+      - run: npm ci --no-audit --no-fund
+
+      - name: Bind only the reviewed Shopify registration to staging database
+        env:
+          APP_REGISTRATION_BIND_CONFIRMATION: BIND_ONE_SHOPIFY_APP_REGISTRATION
+          SHOPIFY_APP_REGISTRATION_ID: ${{ inputs.registration_id }}
+          MIGRATION_DATABASE_URL: ${{ secrets.STAGING_MIGRATION_DATABASE_URL }}
+        run: node scripts/vincular-registro-shopify.js
