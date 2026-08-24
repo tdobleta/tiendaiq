@@ -16,6 +16,7 @@ const fs = require("fs");
 const path = require("path");
 const Anthropic = require("@anthropic-ai/sdk");
 const { gql, env, sesionDeEnv } = require("./shopify");
+const { resolveTemplateForCreation, templateMetadata } = require("./src/domain/template-registry");
 
 // El modelo y el esfuerzo salen de env para poder compararlos sobre los mismos
 // productos sin tocar código ni deployar.
@@ -818,12 +819,19 @@ async function crearPagina(idProducto, sesion, {
   signal,
   beforeProviderCall
 } = {}) {
+  // Resolver antes de extraer/generar: un estilo inválido nunca debe consumir
+  // Shopify ni Anthropic para terminar convertido silenciosamente en Clásico.
+  const template = resolveTemplateForCreation(estilo);
   const { fuente, medios } = await extraer(idProducto, sesion, { signal });
   if (typeof beforeProviderCall === "function") await beforeProviderCall();
   const { salida, uso } = await generar(fuente, medios, { idioma, angulo, signal });
   const data = ensamblar(fuente, salida, { idioma, angulo });
-  // Modelo de página elegido en la creación (el render branchea por acá).
-  data.global.estilo = ["clasico", "premium", "pagepilot", "pagepilot-blue"].includes(estilo) ? estilo : "clasico";
+  // `estilo` se conserva como alias de compatibilidad hasta que editor y
+  // storefront consuman el registro directamente. Las páginas nuevas ya
+  // incluyen el descriptor versionado para permitir esa migración sin adivinar.
+  const metadata = templateMetadata(template);
+  data.global.estilo = metadata.legacyStyle;
+  data.global.template = metadata.template;
   const urls = Object.fromEntries(medios.map((m) => [m.media_id, m.url]));
   return { data, urls, avisos: validar(data, salida), uso };
 }
