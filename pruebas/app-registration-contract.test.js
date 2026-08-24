@@ -98,6 +98,7 @@ test("la migracion mantiene un singleton fisico, RLS forzado y activacion exclus
   assert.match(sql, /app_registration_binding FORCE ROW LEVEL SECURITY/);
   assert.match(sql, /CREATE POLICY app_registration_binding_migrator[\s\S]*FOR ALL TO tiendaiq_migrator/);
   assert.match(sql, /REVOKE ALL ON TABLE control_plane\.app_registration_binding[\s\S]*tiendaiq_web_runtime, tiendaiq_worker_runtime/);
+  assert.doesNotMatch(sql, /FROM PUBLIC, tiendaiq_web, tiendaiq_worker,/);
   assert.match(sql, /GRANT EXECUTE ON FUNCTION control_plane\.assert_app_registration\(text\)[\s\S]*tiendaiq_web_runtime, tiendaiq_worker_runtime/);
   assert.match(sql, /GRANT EXECUTE ON FUNCTION control_plane\.bind_app_registration\(text\) TO tiendaiq_migrator/);
   assert.match(sql, /ON CONFLICT \(singleton\) DO NOTHING/);
