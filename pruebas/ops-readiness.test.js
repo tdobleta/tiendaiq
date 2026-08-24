@@ -8,10 +8,12 @@ const {
   assertOpsStatusToken,
   assertExpectedSha,
   booleanFlag,
+  evaluateBillingRuntime,
   evaluateInbox,
   evaluateOpsStatus,
   evaluateQueue,
   evaluateReady,
+  expectedPlanTest,
   integer,
   normalizeAppUrl,
   readinessProfile,
@@ -41,6 +43,13 @@ test("separa las confirmaciones operativas de staging y produccion", () => {
   assert.equal(CONFIRMATION, "CHECK_STAGING_OPS_READINESS");
   assert.equal(PRODUCTION_CONFIRMATION, "CHECK_PRODUCTION_OPS_READINESS");
   assert.notEqual(CONFIRMATION, PRODUCTION_CONFIRMATION);
+});
+
+test("normaliza el modo de billing esperado sin inferirlo", () => {
+  assert.equal(expectedPlanTest(""), null);
+  assert.equal(expectedPlanTest("1"), true);
+  assert.equal(expectedPlanTest("0"), false);
+  assert.throws(() => expectedPlanTest("true"), /0 o 1/);
 });
 
 test("evalua /ready con Postgres, release y aislamiento RLS", () => {
@@ -217,6 +226,28 @@ test("bloquea webhooks terminales, estancados o demasiado viejos", () => {
   assert.equal(evaluateInbox({ ...healthy, failedRecent: 1 }, thresholds).ok, false);
   assert.equal(evaluateInbox({ ...healthy, processing: 9 }, thresholds).ok, false);
   assert.equal(evaluateInbox({ ...healthy, received: 21 }, thresholds).ok, false);
+});
+
+test("exige que web y worker demuestren el mismo contrato no secreto de billing", () => {
+  const healthy = {
+    ok: true,
+    billing: {
+      planTest: true,
+      appHandle: "tiendaiq-staging",
+      workerCompatible: true,
+      worker: {
+        version: 1,
+        planTest: true,
+        appHandle: "tiendaiq-staging",
+        configured: true,
+        activeWorkers: 1
+      }
+    }
+  };
+  assert.deepEqual(evaluateBillingRuntime(healthy, { expectedPlanTest: true }), { ok: true, errors: [] });
+  assert.equal(evaluateBillingRuntime({ ...healthy, billing: { ...healthy.billing, workerCompatible: false } }).ok, false);
+  assert.equal(evaluateBillingRuntime({ ...healthy, billing: { ...healthy.billing, planTest: false } }, { expectedPlanTest: true }).ok, false);
+  assert.equal(evaluateBillingRuntime({ ...healthy, billing: { ...healthy.billing, appHandle: null } }).ok, false);
 });
 
 test("resume la cola durable y aplica umbrales operativos", () => {

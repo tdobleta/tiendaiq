@@ -77,6 +77,7 @@ jobs:
           OPS_MIN_GENERATION_CONCURRENCY: "8"
           OPS_MIN_PUBLICATION_CONCURRENCY: "4"
           OPS_MIN_WEBHOOK_CONCURRENCY: "2"
+          OPS_EXPECT_PLAN_TEST: "1"
           OPS_READINESS_PROFILE: technical_preflight
         run: npm run ops:readiness
 

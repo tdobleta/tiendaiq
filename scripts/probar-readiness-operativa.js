@@ -53,6 +53,15 @@ function readinessProfile(value) {
   return profile;
 }
 
+function expectedPlanTest(value) {
+  if (value == null || String(value).trim() === "") return null;
+  const normalized = String(value).trim();
+  if (!["0", "1"].includes(normalized)) {
+    throw new Error("OPS_EXPECT_PLAN_TEST debe ser 0 o 1 cuando se configura");
+  }
+  return normalized === "1";
+}
+
 function summarizeQueue(rows) {
   const totals = {
     types: 0,
@@ -285,6 +294,30 @@ function evaluateOpsStatus(payload, expectedSha, thresholds, requirements = {}) 
   return { ok: errors.length === 0, errors };
 }
 
+function evaluateBillingRuntime(payload, requirements = {}) {
+  const errors = [];
+  const billing = payload?.billing || {};
+  const worker = billing.worker;
+
+  if (payload?.ok !== true) errors.push("/ops/billing-config no respondio ok=true");
+  if (typeof billing.planTest !== "boolean") {
+    errors.push("/ops/billing-config no devuelve billing.planTest boolean");
+  } else if (requirements.expectedPlanTest != null && billing.planTest !== requirements.expectedPlanTest) {
+    errors.push(`/ops/billing-config billing.planTest no coincide con el modo esperado ${requirements.expectedPlanTest}`);
+  }
+  if (!/^[a-z0-9][a-z0-9-]*$/.test(String(billing.appHandle || ""))) {
+    errors.push("/ops/billing-config no devuelve un billing.appHandle valido");
+  }
+  if (!worker || typeof worker !== "object") {
+    errors.push("/ops/billing-config no reporta contrato del worker");
+  }
+  if (billing.workerCompatible !== true) {
+    errors.push("/ops/billing-config no confirma contrato compatible entre web y worker");
+  }
+
+  return { ok: errors.length === 0, errors };
+}
+
 async function fetchReady(appUrl, expectedSha, timeoutMs = 15000) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
@@ -332,6 +365,30 @@ async function fetchOpsStatus(appUrl, token, expectedSha, thresholds, requiremen
   }
 }
 
+async function fetchBillingRuntime(appUrl, token, requirements = {}, timeoutMs = 15000) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(`${appUrl}/ops/billing-config`, {
+      headers: { Authorization: `Bearer ${token}` },
+      signal: controller.signal
+    });
+    const text = await response.text();
+    let payload;
+    try {
+      payload = JSON.parse(text);
+    } catch {
+      throw new Error(`/ops/billing-config no devolvio JSON valido: ${text.slice(0, 120)}`);
+    }
+    if (!response.ok) {
+      throw new Error(`/ops/billing-config respondio HTTP ${response.status}: ${text.slice(0, 200)}`);
+    }
+    return { payload, evaluation: evaluateBillingRuntime(payload, requirements) };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 async function main() {
   if (![CONFIRMATION, PRODUCTION_CONFIRMATION].includes(process.env.CONFIRMATION)) {
     throw new Error(`CONFIRMATION debe ser ${CONFIRMATION} o ${PRODUCTION_CONFIRMATION}`);
@@ -362,6 +419,7 @@ async function main() {
   const minGenerationConcurrency = integer(process.env.OPS_MIN_GENERATION_CONCURRENCY, 8, 1, 32, "OPS_MIN_GENERATION_CONCURRENCY");
   const minPublicationConcurrency = integer(process.env.OPS_MIN_PUBLICATION_CONCURRENCY, 4, 1, 32, "OPS_MIN_PUBLICATION_CONCURRENCY");
   const minWebhookConcurrency = integer(process.env.OPS_MIN_WEBHOOK_CONCURRENCY, 2, 1, 32, "OPS_MIN_WEBHOOK_CONCURRENCY");
+  const planTest = expectedPlanTest(process.env.OPS_EXPECT_PLAN_TEST);
   const profile = readinessProfile(process.env.OPS_READINESS_PROFILE);
   const thresholds = {
     maxQueued,
@@ -389,12 +447,14 @@ async function main() {
     requireRealBilling: profile === "go",
     requireLegalComplete: profile === "go",
     requireAdmissionOpen: profile === "go",
-    ignoreBacklogPressure: profile === "rollback"
+    ignoreBacklogPressure: profile === "rollback",
+    expectedPlanTest: planTest
   };
 
   const ready = await fetchReady(appUrl, expectedSha);
   const opsStatus = await fetchOpsStatus(appUrl, opsStatusToken, expectedSha, thresholds, requirements);
-  const errors = [...ready.evaluation.errors, ...opsStatus.evaluation.errors];
+  const billingRuntime = await fetchBillingRuntime(appUrl, opsStatusToken, requirements);
+  const errors = [...ready.evaluation.errors, ...opsStatus.evaluation.errors, ...billingRuntime.evaluation.errors];
   const result = {
     event: process.env.CONFIRMATION === PRODUCTION_CONFIRMATION
       ? "ops_readiness_production"
@@ -405,6 +465,7 @@ async function main() {
     expectedRelease: expectedSha,
     ready: ready.payload,
     opsStatus: opsStatus.payload,
+    billingRuntime: billingRuntime.payload,
     queue: opsStatus.payload?.totals || null,
     thresholds,
     requirements,
@@ -430,10 +491,13 @@ module.exports = {
   assertOpsStatusToken,
   assertExpectedSha,
   booleanFlag,
+  evaluateBillingRuntime,
   evaluateOpsStatus,
   evaluateInbox,
   evaluateQueue,
   evaluateReady,
+  expectedPlanTest,
+  fetchBillingRuntime,
   fetchOpsStatus,
   integer,
   normalizeAppUrl,
