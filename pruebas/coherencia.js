@@ -49,9 +49,10 @@ const productionHandle = toml.match(/^handle\s*=\s*"([^"]+)"/m)?.[1];
 const stagingHandle = stagingToml.match(/^handle\s*=\s*"([^"]+)"/m)?.[1];
 const adminUrlSource = leer("shopify-admin-url.js");
 
-if (/^# Contrato de cutover Partner para TiendaIQ/m.test(partnerCutoverContract) &&
-    /Partner staging y Partner production usan registros Shopify distintos/.test(partnerCutoverContract) &&
-    /No usar la base de legacy staging/.test(partnerCutoverContract) &&
+if (/^# Contrato de promoción Partner y limpieza legacy de TiendaIQ/m.test(partnerCutoverContract) &&
+    /No se infiere propiedad ni distribución/.test(partnerCutoverContract) &&
+    /La candidata existente se reutiliza/.test(partnerCutoverContract) &&
+    /Staging y producción usan registros Shopify distintos/.test(partnerCutoverContract) &&
     /shop\/redact.*tienda sacrificable/s.test(partnerCutoverContract) &&
     /Condición de limpieza de legacy/.test(partnerCutoverContract)) {
   ok("el cutover Partner conserva aislamiento, evidencia y rollback antes de retirar legacy");
