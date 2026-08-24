@@ -1,0 +1,9 @@
+# Phase 1 of Partner Staging: a database with no legacy rows, roles or app
+# binding. The protected GitHub bootstrap owns migrations and role creation;
+# web and worker are deliberately not part of this Blueprint.
+
+databases:
+  - name: tiendaiq-partner-staging-db
+    plan: basic-256mb
+    databaseName: tiendaiq_partner_staging
+    postgresMajorVersion: "16"

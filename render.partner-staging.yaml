@@ -1,13 +1,8 @@
-# Partner Staging is intentionally a separate Render Blueprint. It must never
-# share the legacy staging database, service, client secret, installation token
-# or deploy hooks. Create it as its own Blueprint in Oregon before using the
-# Partner Staging GitHub environment.
-
-databases:
-  - name: tiendaiq-partner-staging-db
-    plan: basic-256mb
-    databaseName: tiendaiq_partner_staging
-    postgresMajorVersion: "16"
+# Partner Staging web and worker. The database has its own Blueprint in
+# render.partner-staging-db.yaml: its low-privilege runtime URLs do not exist
+# until the protected bootstrap has created the PostgreSQL roles. Keeping the
+# two phases separate prevents placeholder or legacy credentials from ever
+# reaching these services.
 
 services:
   - type: web
