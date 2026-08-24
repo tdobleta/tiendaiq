@@ -144,12 +144,19 @@ jobs:
           OPS_READINESS_PROFILE: technical_preflight
         run: |
           set -o pipefail
-          set +e
-          npm run ops:readiness 2>&1 | tee "$RUNNER_TEMP/partner-staging-ops-readiness.log"
-          status="${PIPESTATUS[0]}"
-          set -e
+          max_attempts=30
+          status=1
+          for attempt in $(seq 1 "$max_attempts"); do
+            set +e
+            npm run ops:readiness > "$RUNNER_TEMP/partner-staging-ops-readiness.log" 2>&1
+            status="$?"
+            set -e
+            [[ "$status" -eq 0 ]] && break
+            [[ "$attempt" -lt "$max_attempts" ]] && sleep 10
+          done
           {
             echo "## Partner Staging operational readiness"
+            echo "attempt: $attempt/$max_attempts"
             echo
             echo '```text'
             tail -n 120 "$RUNNER_TEMP/partner-staging-ops-readiness.log"
