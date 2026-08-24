@@ -64,6 +64,12 @@ jobs:
 
       - run: npm ci --no-audit --no-fund
 
+      # GitHub-hosted runners do not provide Shopify CLI. Pin it so this
+      # isolated release publishes the reviewed Partner Staging components
+      # reproducibly instead of depending on an ambient runner tool.
+      - name: Install pinned Shopify CLI for Partner Staging app deployment
+        run: npm install --global @shopify/cli@4.1.0
+
       - name: Migrate Partner Staging with the owner credential
         env:
           MIGRATION_DATABASE_URL: ${{ secrets.PARTNER_STAGING_MIGRATION_DATABASE_URL }}
