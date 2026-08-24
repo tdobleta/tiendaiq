@@ -1056,6 +1056,8 @@ test("el contrato de billing del worker es versionado, agregado y no contiene se
   assert.match(sql, /billing_app_handle text/);
   assert.match(sql, /operational_billing_worker_status\(\)/);
   assert.match(sql, /TO tiendaiq_web_runtime, tiendaiq_worker_runtime/);
+  assert.doesNotMatch(sql, /tiendaiq_web(?:\s|,|;)/);
+  assert.doesNotMatch(sql, /tiendaiq_worker(?:\s|,|;)/);
   assert.doesNotMatch(sql, /tenant_id|payload|shopify_(?:token|client_secret)|anthropic|database_url/i);
   assert.match(repository, /record_worker_heartbeat\(\$1, \$2, \$3, \$4, \$5, \$6, \$7, \$8\)/);
   assert.match(repository, /operational_billing_worker_status\(\)/);

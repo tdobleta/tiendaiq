@@ -69,7 +69,7 @@ END
 $$;
 
 REVOKE ALL ON FUNCTION control_plane.record_worker_heartbeat(text, text, integer, integer, integer, integer, boolean, text)
-  FROM PUBLIC, tiendaiq_web, tiendaiq_worker, tiendaiq_web_runtime;
+  FROM PUBLIC, tiendaiq_web_runtime;
 GRANT EXECUTE ON FUNCTION control_plane.record_worker_heartbeat(text, text, integer, integer, integer, integer, boolean, text)
   TO tiendaiq_worker_runtime;
 
@@ -113,7 +113,7 @@ $$;
 
 REVOKE ALL ON FUNCTION control_plane.operational_billing_worker_status() FROM PUBLIC;
 REVOKE ALL ON FUNCTION control_plane.operational_billing_worker_status()
-  FROM tiendaiq_web, tiendaiq_worker;
+  FROM tiendaiq_web_runtime, tiendaiq_worker_runtime;
 GRANT EXECUTE ON FUNCTION control_plane.operational_billing_worker_status()
   TO tiendaiq_web_runtime, tiendaiq_worker_runtime;
 
