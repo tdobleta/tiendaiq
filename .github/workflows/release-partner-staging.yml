@@ -116,7 +116,7 @@ jobs:
 
       - name: Wait for the complete Partner Staging operational gate
         env:
-          CONFIRMATION: CHECK_PARTNER_STAGING_OPS_READINESS
+          CONFIRMATION: CHECK_STAGING_OPS_READINESS
           EXPECTED_RELEASE_SHA: ${{ steps.release.outputs.sha }}
           STAGING_APP_URL: https://tiendaiq-partner-staging-web.onrender.com
           OPS_STATUS_TOKEN: ${{ secrets.PARTNER_STAGING_OPS_STATUS_TOKEN }}
