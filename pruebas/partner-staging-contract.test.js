@@ -10,11 +10,16 @@ const read = (relative) => fs.readFileSync(path.join(root, relative), "utf8");
 
 test("Partner Staging declara una topología Render aislada y fail-closed", () => {
   const blueprint = read("render.partner-staging.yaml");
+  const databaseBlueprint = read("render.partner-staging-db.yaml");
 
-  assert.match(blueprint, /name:\s*tiendaiq-partner-staging-db/);
+  assert.doesNotMatch(blueprint, /^databases:/m);
+  assert.doesNotMatch(blueprint, /name:\s*tiendaiq-partner-staging-db/);
   assert.match(blueprint, /name:\s*tiendaiq-partner-staging-web/);
   assert.match(blueprint, /name:\s*tiendaiq-partner-staging-worker/);
-  assert.match(blueprint, /databaseName:\s*tiendaiq_partner_staging/);
+  assert.match(databaseBlueprint, /^databases:/m);
+  assert.match(databaseBlueprint, /name:\s*tiendaiq-partner-staging-db/);
+  assert.match(databaseBlueprint, /databaseName:\s*tiendaiq_partner_staging/);
+  assert.doesNotMatch(databaseBlueprint, /^services:/m);
   assert.doesNotMatch(blueprint, /name:\s*tiendaiq-staging-(?:web|worker|db)/);
   assert.match(blueprint, /SHOPIFY_APP_HANDLE\s*\n\s*value:\s*"tiendaiq-partner-staging"/);
   assert.match(blueprint, /SHOPIFY_APP_REGISTRATION_ID\s*\n\s*value:\s*"tiendaiq-partner-staging-v1"/);
