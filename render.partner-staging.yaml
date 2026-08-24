@@ -21,7 +21,7 @@ services:
       - key: APP_URL
         value: "https://tiendaiq-partner-staging-web.onrender.com"
       - key: SHOPIFY_CLIENT_ID
-        value: "91ac2b61f8d21cc0e788a34a81f2ad58"
+        value: "84c005c4433b94ed2d8b6b0729e6de54"
       - key: SHOPIFY_CLIENT_SECRET
         sync: false
       - key: SHOPIFY_APP_HANDLE

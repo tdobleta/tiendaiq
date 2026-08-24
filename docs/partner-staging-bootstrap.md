@@ -10,12 +10,11 @@ existen hasta que el bootstrap protegido los crea.
 
 - `shopify.app.partner-staging.toml` apunta únicamente a
   `https://tiendaiq-partner-staging-web.onrender.com`.
-- La identidad Partner Staging candidata es la aplicación existente sin
-  instalaciones declarada en ese manifiesto. Tiene versiones legacy; leer
-  `docs/partner-staging-identity-audit-2026-08-24.md` y verificar de nuevo su
-  distribución, handle, extensiones e instalaciones antes de desplegar. No
-  reutilizar `TiendaIQ Staging` ni `TiendaIQ: Páginas con IA`: ambas tienen
-  instalaciones y pertenecen al flujo legado.
+- La identidad Partner Staging es la aplicación sin instalaciones declarada en
+  ese manifiesto, creada en la organización Partner Onepilot. Leer
+  `docs/partner-staging-identity-audit-2026-08-24.md`: su distribución todavía
+  no fue elegida. No reutilizar aplicaciones de la organización merchant ni
+  las identidades staging/public ya instaladas.
 - La development store pertenece a la organización Partner Onepilot.
 - El SHA fue revisado, está en `main` y pasó `npm run probar`.
 - No existe todavía un binding de otra app dentro de la nueva base.
@@ -73,8 +72,8 @@ worker; nadie debe copiarla.
 1. Ejecutar **Release Partner Staging** sobre el mismo SHA. Debe aprobar
    `/ready`, publicar los componentes Shopify con `--config partner-staging`
    y completar `/ops/status` con `PLAN_TEST=1`. El workflow exige una segunda
-   confirmación de que el inventario remoto de la identidad fue revisado;
-   nunca inferir distribución o propiedad a partir de esta documentación.
+   confirmación de que el inventario remoto de la identidad y su distribución
+   pública fueron revisados; nunca inferirlas a partir de esta documentación.
 2. Recién entonces instalar la app Partner Staging en la tienda Partner y
    repetir OAuth, webhooks, publicación y billing de prueba conforme a los
    gates de certificación.

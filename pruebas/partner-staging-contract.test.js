@@ -46,7 +46,7 @@ test("la app Partner y los workflows usan el mismo runtime e identidad aislados"
 
   const appClientId = app.match(/^client_id\s*=\s*"([^"]+)"/m)?.[1];
   const renderClientId = blueprint.match(/SHOPIFY_CLIENT_ID\s*\n\s*value:\s*"([^"]+)"/m)?.[1];
-  assert.equal(appClientId, "91ac2b61f8d21cc0e788a34a81f2ad58");
+  assert.equal(appClientId, "84c005c4433b94ed2d8b6b0729e6de54");
   assert.equal(renderClientId, appClientId);
 
   for (const workflow of [bootstrap, release, readiness]) {
@@ -65,6 +65,7 @@ test("la app Partner y los workflows usan el mismo runtime e identidad aislados"
 
   assert.match(release, /DEPLOY_REVIEWED_PARTNER_STAGING/);
   assert.match(release, /PARTNER_STAGING_REMOTE_IDENTITY_AUDITED/);
+  assert.match(release, /PARTNER_STAGING_PUBLIC_DISTRIBUTION_AUDITED/);
   assert.match(release, /RENDER_PARTNER_STAGING_WEB_DEPLOY_HOOK/);
   assert.match(release, /RENDER_PARTNER_STAGING_WORKER_DEPLOY_HOOK/);
   assert.match(release, /PARTNER_STAGING_SHOPIFY_APP_AUTOMATION_TOKEN/);
