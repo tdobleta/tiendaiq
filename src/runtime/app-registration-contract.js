@@ -18,6 +18,14 @@ function appRegistrationContract(runtimeEnv = process.env) {
   });
 }
 
+function appRegistrationBindingContract(runtimeEnv = process.env) {
+  const registration = appRegistrationContract(runtimeEnv);
+  return Object.freeze({
+    ...registration,
+    enforced: String(runtimeEnv?.SHOPIFY_APP_REGISTRATION_BINDING_ENFORCED || "").trim() === "1"
+  });
+}
+
 function requireAppRegistration(runtimeEnv = process.env) {
   const registration = appRegistrationContract(runtimeEnv);
   if (!registration.id) {
@@ -28,10 +36,17 @@ function requireAppRegistration(runtimeEnv = process.env) {
   return registration;
 }
 
+function requireEnforcedAppRegistration(runtimeEnv = process.env) {
+  const binding = appRegistrationBindingContract(runtimeEnv);
+  if (!binding.enforced) return binding;
+  return Object.freeze({ ...requireAppRegistration(runtimeEnv), enforced: true });
+}
+
 function appRegistrationDiagnostic(registration) {
   return Object.freeze({
     version: CONTRACT_VERSION,
     configured: Boolean(registration?.id),
+    enforced: registration?.enforced === true,
     fingerprint: registration?.fingerprint || null
   });
 }
@@ -39,7 +54,9 @@ function appRegistrationDiagnostic(registration) {
 module.exports = {
   CONTRACT_VERSION,
   appRegistrationContract,
+  appRegistrationBindingContract,
   requireAppRegistration,
+  requireEnforcedAppRegistration,
   registrationFingerprint,
   appRegistrationDiagnostic
 };

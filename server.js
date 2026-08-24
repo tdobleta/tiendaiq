@@ -58,7 +58,7 @@ const {
 const { nubeServible, urlVideo, urlPoster } = require("./inspiracion-nube");
 const { estadoPlan, mesActual, PLAN_NOMBRE, configuracionPaginasGratis } = require("./facturacion");
 const { billingRuntimeContract, billingRuntimeCompatible } = require("./src/runtime/billing-runtime-contract");
-const { appRegistrationContract, appRegistrationDiagnostic } = require("./src/runtime/app-registration-contract");
+const { appRegistrationBindingContract, appRegistrationDiagnostic } = require("./src/runtime/app-registration-contract");
 const { reportarError, metrica } = require("./monitoreo");
 const { TenantContext } = require("./src/tenancy/tenant-context");
 const { verifyAndNormalizeWebhook } = require("./src/webhooks/verify-and-normalize");
@@ -333,7 +333,7 @@ async function estadoOperativo(req, res) {
     // Este endpoint muestra configuración no secreta. La coincidencia con la
     // base se demuestra en el preflight y en /ready; así ops local sigue siendo
     // consultable sin convertirlo en una conexión Postgres implícita.
-    appRegistration: appRegistrationDiagnostic(appRegistrationContract(env)),
+    appRegistration: appRegistrationDiagnostic(appRegistrationBindingContract(env)),
     billing: {
       planTest: String(env.PLAN_TEST || "") === "1"
     },

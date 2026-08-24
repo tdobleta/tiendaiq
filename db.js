@@ -25,7 +25,11 @@ const { createGenerationRepository } = require("./src/platform/postgres/generati
 const { createInboxRepository } = require("./src/platform/postgres/inbox-repository");
 const { createShopifyCertificationRepository } = require("./src/platform/postgres/shopify-certification-repository");
 const { createAppRegistrationRepository } = require("./src/platform/postgres/app-registration-repository");
-const { requireAppRegistration, appRegistrationDiagnostic } = require("./src/runtime/app-registration-contract");
+const {
+  appRegistrationBindingContract,
+  requireEnforcedAppRegistration,
+  appRegistrationDiagnostic
+} = require("./src/runtime/app-registration-contract");
 const {
   normalizeStoredPageRecord
 } = require("./src/domain/page-contract");
@@ -1530,7 +1534,9 @@ async function verificarWorkerDB() {
 
 async function verificarRegistroAplicacionDB() {
   if (!USA_PG) return appRegistrationDiagnostic(null);
-  const registration = requireAppRegistration(env);
+  const binding = appRegistrationBindingContract(env);
+  if (!binding.enforced) return appRegistrationDiagnostic(binding);
+  const registration = requireEnforcedAppRegistration(env);
   const p = await pg();
   appRegistrationRepository ||= createAppRegistrationRepository(p);
   await appRegistrationRepository.assert(registration.id);

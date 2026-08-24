@@ -39,13 +39,12 @@ services:
       # coincidir con el singleton de la base antes de aceptar tráfico.
       - key: SHOPIFY_APP_REGISTRATION_ID
         value: "tiendaiq-production-v1"
+      # Fase preparatoria: solo 1 exige que ID y DB ya estén vinculados.
+      - key: SHOPIFY_APP_REGISTRATION_BINDING_ENFORCED
+        value: "0"
       # 32 bytes en base64. Produccion falla al arrancar si falta.
       - key: TOKEN_ENC_KEY
         sync: false
-      # Debe ser el mismo identificador no secreto que el servicio web y el
-      # singleton de esta base. No representa provider ni billing.
-      - key: SHOPIFY_APP_REGISTRATION_ID
-        value: "tiendaiq-production-v1"
       # DATABASE_URL es interna y viaja solo por la red privada de Render.
       - key: PG_PRIVATE_NETWORK
         value: "1"
@@ -96,6 +95,13 @@ services:
         sync: false
       - key: TOKEN_ENC_KEY
         sync: false
+      # Debe ser el mismo identificador no secreto que el servicio web y el
+      # singleton de esta base. No representa provider ni billing.
+      - key: SHOPIFY_APP_REGISTRATION_ID
+        value: "tiendaiq-production-v1"
+      # Debe activarse junto con web después del bind protegido.
+      - key: SHOPIFY_APP_REGISTRATION_BINDING_ENFORCED
+        value: "0"
       - key: PG_PRIVATE_NETWORK
         value: "1"
       - key: PG_RUNTIME_ROLE

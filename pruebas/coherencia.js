@@ -69,6 +69,31 @@ function servicioRender(nombre) {
 const renderWebService = servicioRender("tiendaiq");
 const renderWorkerService = servicioRender("tiendaiq-worker");
 
+function valoresEnvRender(servicio, key) {
+  const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return [...servicio.matchAll(new RegExp(`^\\s*- key:\\s*${escaped}\\s*\\r?\\n\\s*value:\\s*"([^"]+)"\\s*$`, "gm"))]
+    .map((match) => match[1]);
+}
+
+const appRegistrationsWeb = valoresEnvRender(renderWebService, "SHOPIFY_APP_REGISTRATION_ID");
+const appRegistrationsWorker = valoresEnvRender(renderWorkerService, "SHOPIFY_APP_REGISTRATION_ID");
+const appRegistrationEnforcedWeb = valoresEnvRender(renderWebService, "SHOPIFY_APP_REGISTRATION_BINDING_ENFORCED");
+const appRegistrationEnforcedWorker = valoresEnvRender(renderWorkerService, "SHOPIFY_APP_REGISTRATION_BINDING_ENFORCED");
+if (appRegistrationsWeb.length === 1 &&
+    appRegistrationsWorker.length === 1 &&
+    appRegistrationsWeb[0] === appRegistrationsWorker[0] &&
+    appRegistrationEnforcedWeb.length === 1 &&
+    appRegistrationEnforcedWorker.length === 1 &&
+    appRegistrationEnforcedWeb[0] === appRegistrationEnforcedWorker[0] &&
+    /^(?:0|1)$/.test(appRegistrationEnforcedWeb[0])) {
+  ok("Render ata exactamente una identidad Shopify no secreta a web y worker");
+} else {
+  mal(
+    "Render ata exactamente una identidad Shopify no secreta a web y worker",
+    `id web=${appRegistrationsWeb.length}, worker=${appRegistrationsWorker.length}; enforce web=${appRegistrationEnforcedWeb.length}, worker=${appRegistrationEnforcedWorker.length}; ambos deben declarar un único valor igual`
+  );
+}
+
 if (!principal) {
   mal("shopify.app.toml declara application_url", "no se encontró la línea application_url");
 } else {

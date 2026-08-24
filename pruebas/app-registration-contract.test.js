@@ -6,7 +6,9 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const {
   appRegistrationContract,
+  appRegistrationBindingContract,
   requireAppRegistration,
+  requireEnforcedAppRegistration,
   appRegistrationDiagnostic
 } = require("../src/runtime/app-registration-contract");
 const { createAppRegistrationRepository } = require("../src/platform/postgres/app-registration-repository");
@@ -19,6 +21,7 @@ test("el contrato normaliza la identidad Shopify y el diagnostico no revela el i
   assert.deepEqual(appRegistrationDiagnostic(registration), {
     version: 1,
     configured: true,
+    enforced: false,
     fingerprint: registration.fingerprint
   });
   assert.doesNotMatch(JSON.stringify(appRegistrationDiagnostic(registration)), /tiendaiq-staging-01/i);
@@ -31,6 +34,29 @@ test("el contrato falla cerrado si falta o es invalida la identidad de registro"
     () => requireAppRegistration({}),
     (error) => error?.code === "SHOPIFY_APP_REGISTRATION_INVALID"
   );
+});
+
+test("la fase preparatoria es compatible y la fase enforced exige identidad valida", () => {
+  assert.deepEqual(appRegistrationDiagnostic(appRegistrationBindingContract({})), {
+    version: 1,
+    configured: false,
+    enforced: false,
+    fingerprint: null
+  });
+  assert.equal(requireEnforcedAppRegistration({}).enforced, false);
+  assert.throws(
+    () => requireEnforcedAppRegistration({ SHOPIFY_APP_REGISTRATION_BINDING_ENFORCED: "1" }),
+    (error) => error?.code === "SHOPIFY_APP_REGISTRATION_INVALID"
+  );
+  assert.deepEqual(requireEnforcedAppRegistration({
+    SHOPIFY_APP_REGISTRATION_BINDING_ENFORCED: "1",
+    SHOPIFY_APP_REGISTRATION_ID: "tiendaiq-staging-01"
+  }), {
+    version: 1,
+    id: "tiendaiq-staging-01",
+    fingerprint: appRegistrationContract({ SHOPIFY_APP_REGISTRATION_ID: "tiendaiq-staging-01" }).fingerprint,
+    enforced: true
+  });
 });
 
 test("el repositorio solo invoca las funciones estrechas de binding", async () => {
@@ -48,6 +74,20 @@ test("el repositorio solo invoca las funciones estrechas de binding", async () =
     { sql: "SELECT control_plane.assert_app_registration($1)", values: ["tiendaiq-staging-01"] },
     { sql: "SELECT control_plane.bind_app_registration($1)", values: ["tiendaiq-staging-01"] }
   ]);
+});
+
+test("un binding enforced propaga un mismatch de la base sin habilitar side effects", async () => {
+  const repository = createAppRegistrationRepository({
+    async query(_sql, [registrationId]) {
+      if (registrationId !== "tiendaiq-staging-01") throw new Error("la identidad de la app Shopify no coincide con esta base");
+    }
+  });
+
+  await repository.assert("tiendaiq-staging-01");
+  await assert.rejects(
+    repository.assert("otra-app-01"),
+    /no coincide con esta base/
+  );
 });
 
 test("la migracion mantiene un singleton fisico, RLS forzado y activacion exclusiva del migrador", () => {
