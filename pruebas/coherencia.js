@@ -41,12 +41,27 @@ const opsReadinessScript = leer("scripts/probar-readiness-operativa.js");
 const verificationWorkflow = leer(".github/workflows/verificar.yml");
 const launchPlan = leer("docs/plan-lanzamiento-1000-tiendas.md");
 const ola1Runbook = leer("docs/runbook-ola-1.md");
+const partnerCutoverContract = leer("docs/partner-cutover-contract.md");
 const appFrontend = leer("app/app.js");
 const principal = toml.match(/^application_url\s*=\s*"([^"]+)"/m)?.[1];
 
 const productionHandle = toml.match(/^handle\s*=\s*"([^"]+)"/m)?.[1];
 const stagingHandle = stagingToml.match(/^handle\s*=\s*"([^"]+)"/m)?.[1];
 const adminUrlSource = leer("shopify-admin-url.js");
+
+if (/^# Contrato de cutover Partner para TiendaIQ/m.test(partnerCutoverContract) &&
+    /Partner staging y Partner production usan registros Shopify distintos/.test(partnerCutoverContract) &&
+    /No usar la base de legacy staging/.test(partnerCutoverContract) &&
+    /shop\/redact.*tienda sacrificable/s.test(partnerCutoverContract) &&
+    /Condición de limpieza de legacy/.test(partnerCutoverContract)) {
+  ok("el cutover Partner conserva aislamiento, evidencia y rollback antes de retirar legacy");
+} else {
+  mal(
+    "el cutover Partner conserva aislamiento, evidencia y rollback antes de retirar legacy",
+    "falta el contrato que separa identidades, bases, shop/redact y limpieza de legacy"
+  );
+}
+
 if (!productionHandle || !stagingHandle) {
   mal("producción y staging declaran un App Home handle", "falta handle en un archivo shopify.app*.toml");
 } else if (productionHandle === stagingHandle) {
