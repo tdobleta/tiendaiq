@@ -1,11 +1,11 @@
 # Configuración de la identidad Shopify que pertenece a la organización Partner
 # Onepilot. Es distinta del staging legado y de la aplicación pública futura.
 # No contiene ningún secreto: el secreto de cliente vive únicamente en Render.
-# Identity verified in the current Shopify Dev Dashboard: this existing app
-# has zero installs, but it has a legacy version history. It is a Partner
-# Staging candidate only after the separate remote-identity audit is reviewed.
-# Do not replace it with the installed Staging or public-app identities.
-client_id = "91ac2b61f8d21cc0e788a34a81f2ad58"
+# Identidad verificada directamente en la organización Partner Onepilot. Esta
+# aplicación fue creada para Partner Staging y no tiene instalaciones. La
+# distribución sigue siendo una decisión explícita y separada: no reutilizar
+# ninguna aplicación merchant, staging legado ni identidad pública.
+client_id = "84c005c4433b94ed2d8b6b0729e6de54"
 name = "TiendaIQ Partner Staging"
 handle = "tiendaiq-partner-staging"
 application_url = "https://tiendaiq-partner-staging-web.onrender.com"
