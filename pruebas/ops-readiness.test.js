@@ -16,6 +16,7 @@ const {
   expectedPlanTest,
   integer,
   normalizeAppUrl,
+  requiresAdmissionOpen,
   readinessProfile,
   summarizeQueue
 } = require("../scripts/probar-readiness-operativa");
@@ -50,6 +51,13 @@ test("normaliza el modo de billing esperado sin inferirlo", () => {
   assert.equal(expectedPlanTest("1"), true);
   assert.equal(expectedPlanTest("0"), false);
   assert.throws(() => expectedPlanTest("true"), /0 o 1/);
+});
+
+test("permite exigir admision abierta sin convertir el precheck tecnico en GO comercial", () => {
+  assert.equal(requiresAdmissionOpen("technical_preflight", ""), false);
+  assert.equal(requiresAdmissionOpen("technical_preflight", "1"), true);
+  assert.equal(requiresAdmissionOpen("technical_preflight", "true"), true);
+  assert.equal(requiresAdmissionOpen("go", ""), true);
 });
 
 test("evalua /ready con Postgres, release y aislamiento RLS", () => {

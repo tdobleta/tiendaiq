@@ -62,6 +62,10 @@ function expectedPlanTest(value) {
   return normalized === "1";
 }
 
+function requiresAdmissionOpen(profile, value) {
+  return profile === "go" || booleanFlag(value);
+}
+
 function summarizeQueue(rows) {
   const totals = {
     types: 0,
@@ -458,7 +462,7 @@ async function main() {
   const requirements = {
     requireRealBilling: profile === "go",
     requireLegalComplete: profile === "go",
-    requireAdmissionOpen: profile === "go",
+    requireAdmissionOpen: requiresAdmissionOpen(profile, process.env.OPS_REQUIRE_GENERATION_ADMISSION_OPEN),
     ignoreBacklogPressure: profile === "rollback",
     expectedPlanTest: planTest,
     requireAppRegistration: profile === "go"
@@ -516,6 +520,7 @@ module.exports = {
   fetchOpsStatus,
   integer,
   normalizeAppUrl,
+  requiresAdmissionOpen,
   readinessProfile,
   summarizeQueue
 };
