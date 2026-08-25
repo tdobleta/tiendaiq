@@ -301,7 +301,7 @@ describe("readiness de aislamiento", () => {
     assert.deepEqual(result, {
       enabled: true,
       forced: true,
-      protectedTables: 14,
+      protectedTables: 15,
       roleBypassesRls: false,
       inheritsRoles: false,
       workerCapability: false
@@ -377,7 +377,7 @@ describe("readiness de aislamiento", () => {
     ];
     const result = await verifyWorkerIsolation({ async query() { return responses.shift(); } });
     assert.equal(result.workerCapability, true);
-    assert.equal(result.protectedTables, 14);
+    assert.equal(result.protectedTables, 15);
   });
 
   test("rechaza un worker conectado con el rol web", async () => {
@@ -405,6 +405,7 @@ test("readiness inventaria todo el registro tenant y el control plane", () => {
     ["control_plane", "usage_reservations"],
     ["control_plane", "compensation_recovery_audit"],
     ["control_plane", "app_registration_binding"],
+    ["control_plane", "shopify_offline_credentials"],
     ["app_data", "pages"],
     ["app_data", "page_versions"],
     ["app_data", "publications"]

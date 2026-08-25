@@ -79,7 +79,7 @@ function sesionDeEnv() {
   return { tienda, token: env.SHOPIFY_TOKEN };
 }
 
-async function gql(query, variables = {}, sesion, { signal } = {}) {
+async function gql(query, variables = {}, sesion, { signal, refreshed = false } = {}) {
   if (!sesion?.tienda || !sesion?.token) {
     throw new Error("gql() necesita una sesión { tienda, token }. Sin sesión no se llama a Shopify.");
   }
@@ -101,11 +101,16 @@ async function gql(query, variables = {}, sesion, { signal } = {}) {
     rethrowAbort(error, signal);
   }
 
-  // 401 = el merchant desinstaló la app o rotó el token. Se distingue del
-  // resto para que el server pueda borrar la tienda y pedir reinstalación.
+  // Un 401 ya no significa automáticamente uninstall: con access tokens
+  // expiring intentamos UNA renovación serializada. Sólo la reinstalación
+  // explícita limpia la instalación durable.
   if (r.status === 401) {
-    const e = new Error(`El token de ${sesion.tienda} ya no sirve (¿desinstalaron la app?)`);
-    e.code = "TOKEN_INVALIDO";
+    if (!refreshed && typeof sesion.refresh === "function") {
+      const renovada = await sesion.refresh();
+      return gql(query, variables, renovada, { signal, refreshed: true });
+    }
+    const e = new Error(`Shopify rechazó la autorización de ${sesion.tienda}`);
+    e.code = "SHOPIFY_REAUTH_REQUIRED";
     e.status = 401;
     e.nonRetryable = true;
     throw e;

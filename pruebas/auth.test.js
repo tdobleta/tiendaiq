@@ -57,7 +57,7 @@ test("el callback valida permisos y webhooks antes de persistir la instalación"
   const permisos = callback.indexOf("alcancesFaltantes(datos.scope)");
   const webhooks = callback.indexOf("registrarWebhooksOperativos(");
   const storefront = callback.indexOf("asegurarOrigenStorefront(");
-  const guardar = callback.indexOf("guardarTienda(");
+  const guardar = callback.indexOf("guardarInstalacionExpiring(");
 
   assert.ok(permisos >= 0 && webhooks > permisos && storefront > webhooks && guardar > storefront);
 });
@@ -262,7 +262,14 @@ function respuestaTokenExchange(overrides = {}) {
     ok: true,
     status: 200,
     async json() {
-      return { access_token: "shpat_offline_prueba", scope: ALCANCES, ...overrides };
+      return {
+        access_token: "shpat_offline_prueba",
+        refresh_token: "shpat_refresh_prueba",
+        expires_in: 3600,
+        refresh_token_expires_in: 7_776_000,
+        scope: ALCANCES,
+        ...overrides
+      };
     }
   };
 }
@@ -407,8 +414,14 @@ test("token exchange offline recupera una instalacion autenticada y la persiste"
   assert.strictEqual(body.grant_type, "urn:ietf:params:oauth:grant-type:token-exchange");
   assert.strictEqual(body.subject_token_type, "urn:ietf:params:oauth:token-type:id_token");
   assert.strictEqual(body.requested_token_type, "urn:shopify:params:oauth:token-type:offline-access-token");
+  assert.strictEqual(body.expiring, "1");
   assert.strictEqual(body.subject_token, pase);
-  assert.deepStrictEqual(guardadas, [[SHOP, "shpat_offline_prueba", {
+  assert.deepStrictEqual(guardadas, [[SHOP, {
+    accessToken: "shpat_offline_prueba",
+    refreshToken: "shpat_refresh_prueba",
+    accessExpiresAt: guardadas[0][1].accessExpiresAt,
+    refreshExpiresAt: guardadas[0][1].refreshExpiresAt
+  }, {
     alcances: ALCANCES,
     alcances_faltantes: [],
     autorizacion: "token_exchange"

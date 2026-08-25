@@ -14,7 +14,7 @@
 
 const crypto = require("crypto");
 const { env } = require("./shopify");
-const { guardarTienda, normalizar, esDominioValido } = require("./tiendas");
+const { guardarInstalacionExpiring, normalizar, esDominioValido } = require("./tiendas");
 const { metrica } = require("./monitoreo");
 const { guardarEstadoDB, consumirEstadoDB } = require("./db");
 const { urlInicioAppShopify } = require("./shopify-admin-url");
@@ -42,6 +42,25 @@ const NAMESPACE_ORIGEN_STOREFRONT = "tiendaiq";
 const CLAVE_ORIGEN_STOREFRONT = "storefront_origin";
 const intercambiosEnCurso = new Map();
 const origenesStorefrontSincronizados = new Map();
+
+function credencialExpiringDesdeRespuesta(datos, { now = Date.now() } = {}) {
+  const accessSeconds = Number(datos?.expires_in);
+  const refreshSeconds = Number(datos?.refresh_token_expires_in);
+  if (typeof datos?.access_token !== "string" || !datos.access_token ||
+      typeof datos?.refresh_token !== "string" || !datos.refresh_token ||
+      !Number.isFinite(accessSeconds) || accessSeconds <= 0 ||
+      !Number.isFinite(refreshSeconds) || refreshSeconds <= 0) {
+    const error = errorTokenExchange("Shopify no entregó una autorización expiring válida");
+    error.detalle = "missing_expiring_offline_token_fields";
+    throw error;
+  }
+  return {
+    accessToken: datos.access_token,
+    refreshToken: datos.refresh_token,
+    accessExpiresAt: new Date(now + accessSeconds * 1000).toISOString(),
+    refreshExpiresAt: new Date(now + refreshSeconds * 1000).toISOString()
+  };
+}
 
 function normalizarAlcances(scope) {
   const valores = Array.isArray(scope) ? scope : String(scope || "").split(",");
@@ -389,7 +408,8 @@ async function terminarInstalacion(res, url) {
     body: JSON.stringify({
       client_id: env.SHOPIFY_CLIENT_ID,
       client_secret: env.SHOPIFY_CLIENT_SECRET,
-      code: params.code
+      code: params.code,
+      expiring: "1"
     }),
     signal: AbortSignal.timeout(Math.max(3000, Number(env.SHOPIFY_OAUTH_TIMEOUT_MS) || 15000))
   });
@@ -424,7 +444,8 @@ async function terminarInstalacion(res, url) {
       .end("No se pudo completar la configuración de la app. Volvé a iniciar la instalación.");
   }
 
-  await guardarTienda(tienda, datos.access_token, { alcances: datos.scope, alcances_faltantes: faltantes });
+  const credential = credencialExpiringDesdeRespuesta(datos);
+  await guardarInstalacionExpiring(tienda, credential, { alcances: datos.scope, alcances_faltantes: faltantes });
   console.log(`  ✚ instalada · ${tienda}`);
   metrica("instalacion", { tienda });
 
@@ -500,7 +521,7 @@ async function recuperarInstalacionDesdePase(pase, {
   tiendaEsperada,
   fetchImpl = globalThis.fetch,
   gqlClient,
-  guardar = guardarTienda,
+  guardar = guardarInstalacionExpiring,
   urlApp = env.APP_URL
 } = {}) {
   const tienda = tiendaDelPase(pase);
@@ -526,7 +547,8 @@ async function recuperarInstalacionDesdePase(pase, {
           grant_type: TIPO_GRANT_TOKEN_EXCHANGE,
           subject_token: pase,
           subject_token_type: TIPO_TOKEN_ID,
-          requested_token_type: TIPO_TOKEN_OFFLINE
+          requested_token_type: TIPO_TOKEN_OFFLINE,
+          expiring: "1"
         }),
         signal: AbortSignal.timeout(Math.max(3000, Number(env.SHOPIFY_OAUTH_TIMEOUT_MS) || 15000))
       });
@@ -551,7 +573,8 @@ async function recuperarInstalacionDesdePase(pase, {
       throw error;
     }
 
-    const sesion = { tienda, token: datos.access_token };
+    const credential = credencialExpiringDesdeRespuesta(datos);
+    const sesion = { tienda, token: credential.accessToken };
     let alcancesConcedidos = normalizarAlcances(datos.scope);
     let faltantes = alcancesFaltantes(alcancesConcedidos);
     if (faltantes.length) {
@@ -575,7 +598,7 @@ async function recuperarInstalacionDesdePase(pase, {
 
     await registrarWebhooksOperativos(sesion, urlApp, gqlClient);
     await asegurarOrigenStorefront(sesion, urlApp, gqlClient);
-    await guardar(tienda, datos.access_token, {
+    await guardar(tienda, credential, {
       alcances: alcancesConcedidos.join(","),
       alcances_faltantes: faltantes,
       autorizacion: "token_exchange"
@@ -607,6 +630,7 @@ module.exports = {
   origenStorefrontValido,
   configurarOrigenStorefront,
   asegurarOrigenStorefront,
+  credencialExpiringDesdeRespuesta,
   ALCANCES,
   TOPICOS_OPERATIVOS,
   COOKIE_ESTADO_OAUTH

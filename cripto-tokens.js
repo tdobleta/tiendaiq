@@ -21,6 +21,7 @@ const crypto = require("crypto");
 const { env } = require("./shopify");
 
 const PREFIJO = "enc:v1:";
+const PREFIJO_V2 = "enc:v2:";
 
 let CLAVE = null;
 let avisado = false;
@@ -59,6 +60,22 @@ function cifrarToken(plano) {
   return PREFIJO + iv.toString("base64") + ":" + tag.toString("base64") + ":" + ct.toString("base64");
 }
 
+// Credenciales de larga vida se atan además a su tenant, campo y versión. Así
+// un ciphertext válido no puede copiarse entre tiendas ni intercambiarse entre
+// access/refresh sin que GCM lo detecte. v1 queda sólo para compatibilidad con
+// el JSON histórico de public.tiendas.
+function cifrarTokenConAAD(plano, aad) {
+  if (plano == null) return plano;
+  if (typeof plano === "string" && plano.startsWith(PREFIJO_V2)) return plano;
+  if (!cifrado()) { avisarUnaVez(); return plano; }
+  const iv = crypto.randomBytes(12);
+  const c = crypto.createCipheriv("aes-256-gcm", CLAVE, iv);
+  c.setAAD(Buffer.from(String(aad), "utf8"));
+  const ct = Buffer.concat([c.update(String(plano), "utf8"), c.final()]);
+  const tag = c.getAuthTag();
+  return PREFIJO_V2 + iv.toString("base64") + ":" + tag.toString("base64") + ":" + ct.toString("base64");
+}
+
 // Descifra. Si el valor NO tiene el prefijo, es un token en claro (legacy) → se
 // devuelve tal cual. Si tiene prefijo pero no hay clave, es un error de config.
 function descifrarToken(valor) {
@@ -75,7 +92,20 @@ function descifrarToken(valor) {
   return Buffer.concat([d.update(ct), d.final()]).toString("utf8");
 }
 
+function descifrarTokenConAAD(valor, aad) {
+  if (valor == null || typeof valor !== "string" || !valor.startsWith(PREFIJO_V2)) return valor;
+  if (!cifrado()) throw new Error("Hay credenciales cifradas en la base pero falta TOKEN_ENC_KEY para descifrarlas.");
+  const [, , ivB64, tagB64, ctB64] = valor.split(":");
+  const d = crypto.createDecipheriv("aes-256-gcm", CLAVE, Buffer.from(ivB64, "base64"));
+  d.setAAD(Buffer.from(String(aad), "utf8"));
+  d.setAuthTag(Buffer.from(tagB64, "base64"));
+  return Buffer.concat([d.update(Buffer.from(ctB64, "base64")), d.final()]).toString("utf8");
+}
+
 // ¿Está en claro? (para el script de migración: cifra solo lo que falta).
 const estaCifrado = (valor) => typeof valor === "string" && valor.startsWith(PREFIJO);
 
-module.exports = { cifrarToken, descifrarToken, estaCifrado, cifradoActivo: cifrado };
+module.exports = {
+  cifrarToken, descifrarToken, cifrarTokenConAAD, descifrarTokenConAAD,
+  estaCifrado, cifradoActivo: cifrado
+};
