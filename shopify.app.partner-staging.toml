@@ -13,7 +13,10 @@ embedded = true
 
 [build]
 automatically_update_urls_on_dev = false
-dev_store_url = "tienda-prueba-iq.myshopify.com"
+# La app Partner pertenece a Onepilot. El picker de instalación administrada
+# sólo muestra dev stores de esa organización; la tienda histórica
+# tienda-prueba-iq pertenece a otra y no es un target instalable aquí.
+dev_store_url = "tiendaiq-partner-staging.myshopify.com"
 
 [webhooks]
 api_version = "2026-07"
