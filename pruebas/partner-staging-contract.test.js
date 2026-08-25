@@ -26,7 +26,11 @@ test("Partner Staging declara una topología Render aislada y fail-closed", () =
   assert.match(blueprint, /SHOPIFY_APP_REGISTRATION_BINDING_ENFORCED\s*\n\s*value:\s*"1"/);
   assert.match(blueprint, /TOKEN_ENC_KEY\s*\n\s*generateValue:\s*true/);
   assert.match(blueprint, /fromService:\s*\n\s*type:\s*web\s*\n\s*name:\s*tiendaiq-partner-staging-web\s*\n\s*envVarKey:\s*TOKEN_ENC_KEY/);
-  assert.match(blueprint, /GENERATION_ADMISSION_PAUSED\s*\n\s*value:\s*"1"/);
+  assert.match(blueprint, /GENERATION_ADMISSION_PAUSED\s*\n(?:\s*#.*\n)*\s*sync:\s*false/);
+  assert.match(
+    read("src/generation/admission-control.js"),
+    /String\(env\.GENERATION_ADMISSION_PAUSED \|\| ""\)\.trim\(\) !== "0"/
+  );
   assert.match(blueprint, /PLAN_TEST\s*\n\s*value:\s*"1"/);
   const workerBlueprint = blueprint.slice(blueprint.indexOf("- type: worker"));
   assert.match(workerBlueprint, /PLAN_TEST\s*\n\s*value:\s*"1"/);
