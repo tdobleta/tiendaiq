@@ -192,6 +192,69 @@ async function guardarCredencialShopifyDB(dominio, credential) {
   return null;
 }
 
+// Una instalación no existe hasta que su metadata y sus credenciales expiring
+// quedaron juntas. Separar estas escrituras deja una tienda fantasma que no
+// puede resolver sesión ni volver a hacer token exchange de forma segura.
+async function guardarInstalacionExpiringDB(dominio, datos, credential) {
+  const context = dominio instanceof TenantContext
+    ? dominio
+    : TenantContext.fromShopDomain(dominio, { source: "internal-job" });
+  if (!credential?.accessToken || !credential?.refreshToken || !credential.accessExpiresAt || !credential.refreshExpiresAt) {
+    throw new TypeError("La instalación expiring requiere access, refresh y expiraciones");
+  }
+  const registro = cifrarDatos({ ...datos, token: null });
+  if (USA_PG) {
+    if (esWorkerRuntime()) throw new Error("El worker no puede persistir instalaciones Shopify");
+    const p = await pg();
+    await withTenantTransaction(p, context, async (client, tenant) => {
+      await client.query(
+        `INSERT INTO control_plane.tenants (id, shop_domain, status, isolation_mode, updated_at)
+         VALUES ($1, $1, 'active', 'shared_rls', now())
+         ON CONFLICT (id) DO UPDATE
+         SET shop_domain = EXCLUDED.shop_domain, status = 'active', updated_at = now()`,
+        [tenant.tenantId]
+      );
+      await client.query(
+        `INSERT INTO public.tiendas (dominio, datos, actualizada) VALUES ($1, $2, now())
+         ON CONFLICT (dominio) DO UPDATE SET datos = EXCLUDED.datos, actualizada = now()`,
+        [tenant.tenantId, registro]
+      );
+      await client.query(
+        `INSERT INTO control_plane.shopify_offline_credentials
+           (tenant_id, access_ciphertext, access_expires_at, refresh_ciphertext, refresh_expires_at, credential_version, refresh_state, reauth_required_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, 1, 'active', NULL, now())
+         ON CONFLICT (tenant_id) DO UPDATE SET
+           access_ciphertext = EXCLUDED.access_ciphertext,
+           access_expires_at = EXCLUDED.access_expires_at,
+           refresh_ciphertext = EXCLUDED.refresh_ciphertext,
+           refresh_expires_at = EXCLUDED.refresh_expires_at,
+           credential_version = control_plane.shopify_offline_credentials.credential_version + 1,
+           refresh_state = 'active', refresh_lease_id = NULL, refresh_lease_until = NULL,
+           reauth_required_at = NULL, last_refresh_failure_code = NULL, updated_at = now()`,
+        [
+          tenant.tenantId,
+          cifrarTokenConAAD(credential.accessToken, aadCredencialShopify(tenant.tenantId, "access")), credential.accessExpiresAt,
+          cifrarTokenConAAD(credential.refreshToken, aadCredencialShopify(tenant.tenantId, "refresh")), credential.refreshExpiresAt
+        ]
+      );
+    });
+    return;
+  }
+  // Archivo local: un único archivo JSON hace que la operación sea atómica a
+  // nivel de registro (el modo no-Postgres nunca se usa en runtimes públicos).
+  fileGuardar(DIR_TIENDAS, context.tenantId, {
+    ...registro,
+    shopify_offline_credential: {
+      accessToken: credential.accessToken,
+      accessExpiresAt: credential.accessExpiresAt,
+      refreshToken: credential.refreshToken,
+      refreshExpiresAt: credential.refreshExpiresAt,
+      credentialVersion: 1,
+      refreshState: "active"
+    }
+  });
+}
+
 async function leerCredencialShopifyDB(dominio, { includeRefresh = false } = {}) {
   const context = dominio instanceof TenantContext
     ? dominio
@@ -1680,7 +1743,7 @@ async function leerEvidenciaCertificacionShopifyDB(context, since, pageId, relea
 module.exports = {
   USA_PG,
   guardarTiendaDB, leerTiendaDB, borrarTiendaDB, listarTiendasDB,
-  guardarCredencialShopifyDB, leerCredencialShopifyDB,
+  guardarCredencialShopifyDB, guardarInstalacionExpiringDB, leerCredencialShopifyDB,
   adquirirLeaseRefreshShopifyDB, completarRefreshShopifyDB, fallarRefreshShopifyDB,
   incrementarUsoDB, decrementarUsoDB, actualizarCamposTiendaDB,
   guardarPaginaDB, leerPaginaDB, marcarPublicacionFallidaDB,

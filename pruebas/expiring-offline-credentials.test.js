@@ -12,7 +12,8 @@ const {
 const {
   signRefreshRequest,
   verifyRefreshRequest,
-  parseRefreshRequest
+  parseRefreshRequest,
+  requestRefreshFromBroker
 } = require("../src/shopify/token-refresh-broker");
 const { credencialExpiringDesdeRespuesta } = require("../auth");
 const { gql } = require("../shopify");
@@ -60,6 +61,37 @@ test("el broker autentica HMAC, limita clock skew y rechaza replay", () => {
   assert.equal(verifyRefreshRequest({ secret, rawBody, timestamp, nonce, signature, now }), false);
   assert.deepEqual(parseRefreshRequest(rawBody), { shop: SHOP, credentialVersion: 3 });
   assert.equal(parseRefreshRequest(JSON.stringify({ shop: SHOP, credentialVersion: 0 })), null);
+});
+
+test("un rechazo de autenticación del broker no se presenta como reautorización Shopify", async () => {
+  await assert.rejects(
+    requestRefreshFromBroker({
+      url: "https://broker.example/internal/shopify-token/refresh",
+      secret: "x".repeat(32), shop: SHOP, credentialVersion: 1,
+      fetchImpl: async () => ({ ok: false, status: 403 })
+    }),
+    (error) => error.code === "SHOPIFY_REFRESH_BROKER_UNAUTHORIZED" && error.status === 503
+  );
+  await assert.rejects(
+    requestRefreshFromBroker({
+      url: "https://broker.example/internal/shopify-token/refresh",
+      secret: "x".repeat(32), shop: SHOP, credentialVersion: 1,
+      fetchImpl: async () => ({ ok: false, status: 401 })
+    }),
+    (error) => error.code === "SHOPIFY_REAUTH_REQUIRED" && error.status === 401
+  );
+});
+
+test("la instalación expiring se escribe por una única transacción y no deja fallback de token nulo", () => {
+  const db = fs.readFileSync(path.join(__dirname, "..", "db.js"), "utf8");
+  const tiendas = fs.readFileSync(path.join(__dirname, "..", "tiendas.js"), "utf8");
+  const instalacion = db.slice(db.indexOf("async function guardarInstalacionExpiringDB"), db.indexOf("async function leerCredencialShopifyDB"));
+  const sesion = tiendas.slice(tiendas.indexOf("async function sesionDe"), tiendas.indexOf("module.exports"));
+  assert.match(instalacion, /withTenantTransaction/);
+  assert.match(instalacion, /INSERT INTO public\.tiendas/);
+  assert.match(instalacion, /INSERT INTO control_plane\.shopify_offline_credentials/);
+  assert.match(tiendas, /await guardarInstalacionExpiringDB\(d, registro, credential\)/);
+  assert.match(sesion, /no tiene una autorización durable/);
 });
 
 test("la migración separa refresh tokens del worker, RLS forzado y grants por columna", () => {

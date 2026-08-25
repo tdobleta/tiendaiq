@@ -8,7 +8,7 @@
 
 const { guardarTiendaDB, leerTiendaDB, borrarTiendaDB, listarTiendasDB,
         incrementarUsoDB, decrementarUsoDB, actualizarCamposTiendaDB,
-        guardarCredencialShopifyDB, leerCredencialShopifyDB,
+        guardarInstalacionExpiringDB, leerCredencialShopifyDB,
         adquirirLeaseRefreshShopifyDB, completarRefreshShopifyDB, fallarRefreshShopifyDB } = require("./db");
 const { TenantContext } = require("./src/tenancy/tenant-context");
 const { env } = require("./shopify");
@@ -48,10 +48,16 @@ async function guardarTienda(dominio, token, extra = {}) {
 async function guardarInstalacionExpiring(dominio, credential, extra = {}) {
   const d = normalizar(dominio);
   if (!esDominioValido(d)) throw new Error(`Dominio inválido: ${dominio}`);
-  // El registro de instalación conserva sólo metadata no secreta. Nunca se
-  // duplica un refresh token en JSONB de public.tiendas.
-  await guardarTienda(d, null, extra);
-  await guardarCredencialShopifyDB(d, credential);
+  const previo = (await leerTiendaDB(d)) || {};
+  const registro = {
+    dominio: d,
+    instalada: previo.instalada || new Date().toISOString(),
+    actualizada: new Date().toISOString(),
+    ...extra
+  };
+  // El registro de instalación conserva sólo metadata no secreta; el refresh
+  // token vive en su tabla aislada y ambos se confirman juntos.
+  await guardarInstalacionExpiringDB(d, registro, credential);
 }
 
 async function leerTienda(dominio) {
@@ -174,6 +180,13 @@ async function sesionDe(dominio, { forceRefresh = false } = {}) {
   }
   // Instalaciones anteriores a los tokens expiring siguen operativas mientras
   // migran; toda instalación nueva usa el almacén separado de arriba.
+  if (typeof t.token !== "string" || !t.token) {
+    const e = new Error(`La tienda ${tienda} no tiene una autorización durable`);
+    e.code = "TIENDA_NO_INSTALADA";
+    e.status = 401;
+    e.tienda = tienda;
+    throw e;
+  }
   return { tienda: t.dominio, token: t.token };
 }
 
