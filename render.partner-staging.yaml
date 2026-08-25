@@ -54,7 +54,10 @@ services:
       - key: GENERATION_QUEUE_MAX_GLOBAL
         value: "120"
       - key: GENERATION_ADMISSION_PAUSED
-        value: "1"
+        # The application defaults to paused when absent. Keep this staging-only
+        # emergency override outside Blueprint sync so an explicitly authorized
+        # dashboard change survives a deploy and can be restored immediately.
+        sync: false
       - key: GENERATION_ADMISSION_RETRY_AFTER_SECONDS
         value: "300"
       # This value is shared manually with the protected GitHub environment;
