@@ -33,6 +33,7 @@ const partnerStagingToml = leer("shopify.app.partner-staging.toml");
 const render = leer("render.yaml");
 const partnerStagingRender = leer("render.partner-staging.yaml");
 const releaseWorkflow = leer(".github/workflows/release-staging.yml");
+const partnerStagingE2eWorkflow = leer(".github/workflows/shopify-e2e-partner-staging.yml");
 const productionReleaseWorkflow = leer(".github/workflows/release-production.yml");
 const productionRecoveryWorkflow = leer(".github/workflows/recover-production.yml");
 const productionBootstrapWorkflow = leer(".github/workflows/bootstrap-runtime-logins-production.yml");
@@ -381,6 +382,23 @@ if (/release_sha:/.test(releaseWorkflow) &&
   mal(
     "el release fija el SHA revisado, publica Shopify y espera readiness de staging",
     "debe validar un SHA completo en main, desplegar Render y la app Shopify del mismo ref, y esperar /ready"
+  );
+}
+
+if (/environment:\s*partner-staging/.test(partnerStagingE2eWorkflow) &&
+    /VERIFY_SHOPIFY_PARTNER_STAGING_E2E/.test(partnerStagingE2eWorkflow) &&
+    /\^\[a-f0-9\]\{40\}\$/.test(partnerStagingE2eWorkflow) &&
+    /tiendaiq-partner-staging-web\.onrender\.com\/ready/.test(partnerStagingE2eWorkflow) &&
+    /STAGING_APP_URL:\s*https:\/\/tiendaiq-partner-staging-web\.onrender\.com/.test(partnerStagingE2eWorkflow) &&
+    /PARTNER_STAGING_OPS_STATUS_TOKEN/.test(partnerStagingE2eWorkflow) &&
+    /ops\/shopify-certification/.test(partnerStagingE2eWorkflow) &&
+    !/tiendaiq-staging-web\.onrender\.com/.test(partnerStagingE2eWorkflow) &&
+    !/secrets\.STAGING_OPS_STATUS_TOKEN/.test(partnerStagingE2eWorkflow)) {
+  ok("la evidencia Shopify de Partner Staging usa su entorno, URL y token aislados");
+} else {
+  mal(
+    "la evidencia Shopify de Partner Staging usa su entorno, URL y token aislados",
+    "el workflow Partner debe validar el SHA exacto contra su runtime y secreto, sin reutilizar staging legado"
   );
 }
 
