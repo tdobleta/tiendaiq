@@ -750,7 +750,7 @@ async function brokerRefreshShopify(req, res) {
     timestamp,
     nonce,
     signature
-  })) return json(res, 401, { error: "unauthorized" });
+  })) return json(res, 403, { error: "broker_auth_failed" });
   const input = parseRefreshRequest(rawBody);
   if (!input) return json(res, 400, { error: "invalid_request" });
   const current = await sesionDe(input.shop);

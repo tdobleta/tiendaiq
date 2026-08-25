@@ -70,7 +70,14 @@ async function requestRefreshFromBroker({ url, secret, shop, credentialVersion, 
   });
   if (!response.ok) {
     const error = new Error("El broker de renovación no confirmó Shopify");
-    error.code = response.status === 401 ? "SHOPIFY_REAUTH_REQUIRED" : "SHOPIFY_REFRESH_BROKER_FAILED";
+    // 401 lo emite el broker sólo cuando Shopify confirmó que la autorización
+    // expiró y exige reinstalación. Un fallo de autenticación entre runtimes
+    // usa 403 para no convertir una mala configuración en falso reauth.
+    error.code = response.status === 401
+      ? "SHOPIFY_REAUTH_REQUIRED"
+      : response.status === 403
+        ? "SHOPIFY_REFRESH_BROKER_UNAUTHORIZED"
+        : "SHOPIFY_REFRESH_BROKER_FAILED";
     error.status = response.status === 401 ? 401 : 503;
     throw error;
   }

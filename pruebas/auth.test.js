@@ -48,18 +48,19 @@ function firmarParametrosOAuth(params) {
   };
 }
 
-test("el callback valida permisos y webhooks antes de persistir la instalación", () => {
+test("el callback valida credenciales expiring antes de efectos Shopify y persiste al final", () => {
   const fuente = fs.readFileSync(path.join(__dirname, "..", "auth.js"), "utf8");
   const callback = fuente.slice(
     fuente.indexOf("async function terminarInstalacion"),
     fuente.indexOf("function tiendaDelPase")
   );
   const permisos = callback.indexOf("alcancesFaltantes(datos.scope)");
+  const credencial = callback.indexOf("credencialExpiringDesdeRespuesta(datos)");
   const webhooks = callback.indexOf("registrarWebhooksOperativos(");
   const storefront = callback.indexOf("asegurarOrigenStorefront(");
   const guardar = callback.indexOf("guardarInstalacionExpiring(");
 
-  assert.ok(permisos >= 0 && webhooks > permisos && storefront > webhooks && guardar > storefront);
+  assert.ok(credencial >= 0 && permisos > credencial && webhooks > permisos && storefront > webhooks && guardar > storefront);
 });
 
 test("el request inicial exige HMAC valido y timestamp reciente en produccion", () => {

@@ -422,6 +422,18 @@ async function terminarInstalacion(res, url) {
     return void res.writeHead(502, { "Content-Type": "text/plain; charset=utf-8" }).end("No se pudo completar la instalación. Volvé a intentarlo.");
   }
 
+  // Validar el contrato expiring antes de cualquier efecto remoto. Si Shopify
+  // devuelve una respuesta parcial, no registramos webhooks/orígenes para una
+  // instalación que no podremos reanudar de forma durable.
+  let credential;
+  try {
+    credential = credencialExpiringDesdeRespuesta(datos);
+  } catch (error) {
+    console.error(`  ✖ OAuth ${tienda}: autorización expiring inválida`, error.code || error.message);
+    return void res.writeHead(502, { "Content-Type": "text/plain; charset=utf-8" })
+      .end("Shopify devolvió una autorización incompleta. Volvé a iniciar la instalación.");
+  }
+
   // Aviso si Shopify concedió MENOS alcances que los pedidos (p. ej. el merchant
   // instaló con un token viejo): la app funcionará pero puede fallar en runtime
   // (ACCESS_DENIED) en las features del alcance faltante. Se registra para que
@@ -444,7 +456,6 @@ async function terminarInstalacion(res, url) {
       .end("No se pudo completar la configuración de la app. Volvé a iniciar la instalación.");
   }
 
-  const credential = credencialExpiringDesdeRespuesta(datos);
   await guardarInstalacionExpiring(tienda, credential, { alcances: datos.scope, alcances_faltantes: faltantes });
   console.log(`  ✚ instalada · ${tienda}`);
   metrica("instalacion", { tienda });
