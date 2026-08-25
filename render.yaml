@@ -45,6 +45,8 @@ services:
       # 32 bytes en base64. Produccion falla al arrancar si falta.
       - key: TOKEN_ENC_KEY
         sync: false
+      - key: TOKEN_REFRESH_BROKER_KEY
+        sync: false
       # DATABASE_URL es interna y viaja solo por la red privada de Render.
       - key: PG_PRIVATE_NETWORK
         value: "1"
@@ -94,6 +96,10 @@ services:
       - key: DATABASE_URL
         sync: false
       - key: TOKEN_ENC_KEY
+        sync: false
+      - key: TOKEN_REFRESH_BROKER_KEY
+        sync: false
+      - key: TOKEN_REFRESH_BROKER_URL
         sync: false
       # Debe ser el mismo identificador no secreto que el servicio web y el
       # singleton de esta base. No representa provider ni billing.

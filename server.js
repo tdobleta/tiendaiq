@@ -25,6 +25,7 @@ const { listarProductos } = require("./adaptador");
 const { env, gql, sesionDeEnv } = require("./shopify");
 const { sesionDe, borrarTienda, esDominioValido, normalizar } = require("./tiendas");
 const { createSyntheticLoadHandler, safeEqual } = require("./src/capacity/synthetic-load-endpoints");
+const { verifyRefreshRequest, parseRefreshRequest } = require("./src/shopify/token-refresh-broker");
 const {
   guardarPaginaDB,
   leerPaginaDB,
@@ -730,11 +731,45 @@ async function resolverSesion(req) {
   try {
     sesion = await sesionDe(tienda);
   } catch (error) {
-    if (error.code !== "TIENDA_NO_INSTALADA") throw error;
+    if (error.code !== "TIENDA_NO_INSTALADA" && error.code !== "SHOPIFY_REAUTH_REQUIRED") throw error;
     sesion = await recuperarInstalacionDesdePase(pase, { tiendaEsperada: tienda });
   }
   await asegurarOrigenStorefront(sesion, env.APP_URL);
   return { ...sesion, tenant: TenantContext.fromShopDomain(sesion.tienda, { source: "session-token" }) };
+}
+
+async function brokerRefreshShopify(req, res) {
+  if (req.method !== "POST") return json(res, 405, { error: "method_not_allowed" }, { Allow: "POST" });
+  const rawBody = (await leerCrudo(req, 4096)).toString("utf8");
+  const timestamp = req.headers["x-tiendaiq-refresh-timestamp"];
+  const nonce = req.headers["x-tiendaiq-refresh-nonce"];
+  const signature = req.headers["x-tiendaiq-refresh-signature"];
+  if (!verifyRefreshRequest({
+    secret: env.TOKEN_REFRESH_BROKER_KEY,
+    rawBody,
+    timestamp,
+    nonce,
+    signature
+  })) return json(res, 401, { error: "unauthorized" });
+  const input = parseRefreshRequest(rawBody);
+  if (!input) return json(res, 400, { error: "invalid_request" });
+  const current = await sesionDe(input.shop);
+  if (current.credentialVersion > input.credentialVersion) {
+    return json(res, 200, { ok: true, credentialVersion: current.credentialVersion });
+  }
+  if (current.credentialVersion !== input.credentialVersion) {
+    return json(res, 409, { error: "credential_version_conflict" });
+  }
+  const session = await sesionDe(input.shop, { forceRefresh: true });
+  if (session.credentialVersion <= input.credentialVersion) {
+    const error = new Error("La renovación no avanzó la versión de credencial");
+    error.code = "SHOPIFY_REFRESH_BROKER_STALE";
+    error.status = 503;
+    throw error;
+  }
+  // Nunca retornamos access ni refresh token: el worker vuelve a leer sólo la
+  // columna access permitida por RLS/GRANT.
+  return json(res, 200, { ok: true, credentialVersion: session.credentialVersion });
 }
 
 // ---------- api ----------
@@ -1174,6 +1209,8 @@ const servidor = http.createServer(async (req, res) => {
     if (url.pathname === "/ops/shopify-certification") return await certificarShopifyStaging(req, res);
     if (await syntheticLoadHandler(req, res, url)) return;
 
+    if (url.pathname === "/internal/shopify-token/refresh") return await brokerRefreshShopify(req, res);
+
     if (url.pathname === "/auth") return await iniciarInstalacion(res, url, URL_APP);
     if (url.pathname === "/auth/callback") return await terminarInstalacion(res, url);
 
@@ -1232,6 +1269,10 @@ const servidor = http.createServer(async (req, res) => {
     }
     if (e.code === "TIENDA_NO_INSTALADA") {
       return json(res, 401, { error: "La app necesita autorización para esta tienda.", reinstalar: true });
+    }
+    if (e.code === "SHOPIFY_REAUTH_REQUIRED") {
+      res.setHeader("X-Shopify-Retry-Invalid-Session-Request", "1");
+      return json(res, 401, { error: "La autorización de Shopify debe renovarse.", reinstalar: true });
     }
     // 401 = churn de auth esperado (token rotado/desinstalado): no es un bug.
     // El resto sí se reporta (console + Sentry si hay DSN), con e.detalle si lo

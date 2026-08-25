@@ -14,7 +14,7 @@ const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 const { env } = require("./shopify");
-const { cifrarToken, descifrarToken } = require("./cripto-tokens");
+const { cifrarToken, descifrarToken, cifrarTokenConAAD, descifrarTokenConAAD } = require("./cripto-tokens");
 const { TenantContext, requireTenantContext, assertTenant } = require("./src/tenancy/tenant-context");
 const { createPostgresPool } = require("./src/platform/postgres/create-pool");
 const { withTenantTransaction } = require("./src/platform/postgres/with-tenant-transaction");
@@ -25,6 +25,7 @@ const { createGenerationRepository } = require("./src/platform/postgres/generati
 const { createInboxRepository } = require("./src/platform/postgres/inbox-repository");
 const { createShopifyCertificationRepository } = require("./src/platform/postgres/shopify-certification-repository");
 const { createAppRegistrationRepository } = require("./src/platform/postgres/app-registration-repository");
+const { createShopifyCredentialRepository } = require("./src/platform/postgres/shopify-credential-repository");
 const {
   appRegistrationBindingContract,
   requireEnforcedAppRegistration,
@@ -57,6 +58,7 @@ let generationRepository = null;
 let inboxRepository = null;
 let shopifyCertificationRepository = null;
 let appRegistrationRepository = null;
+let shopifyCredentialRepository = null;
 async function pg() {
   if (pool) return pool;
   const { Pool } = require("pg");
@@ -144,6 +146,116 @@ async function leerTiendaDB(dominio) {
   }
   const id = dominio instanceof TenantContext ? dominio.tenantId : dominio;
   return descifrarDatos(fileLeer(DIR_TIENDAS, id));
+}
+
+function esWorkerRuntime() {
+  return env.PG_RUNTIME_ROLE === "tiendaiq_worker_runtime";
+}
+
+function aadCredencialShopify(tenantId, field) {
+  return `shopify-offline:${tenantId}:${field}`;
+}
+
+// Los refresh tokens viven fuera del JSON histórico de tiendas. Este borde
+// impide que el worker los lea incluso si por error un caller pide una sesión
+// completa: PostgreSQL concede únicamente las columnas de access al worker.
+async function guardarCredencialShopifyDB(dominio, credential) {
+  const context = dominio instanceof TenantContext
+    ? dominio
+    : TenantContext.fromShopDomain(dominio, { source: "internal-job" });
+  if (!credential?.accessToken || !credential?.refreshToken || !credential.accessExpiresAt || !credential.refreshExpiresAt) {
+    throw new TypeError("La credencial Shopify expiring requiere access, refresh y expiraciones");
+  }
+  if (USA_PG) {
+    if (esWorkerRuntime()) throw new Error("El worker no puede persistir refresh credentials de Shopify");
+    const p = await pg();
+    shopifyCredentialRepository ||= createShopifyCredentialRepository(p);
+    return shopifyCredentialRepository.saveInstallation(context, {
+      accessCiphertext: cifrarTokenConAAD(credential.accessToken, aadCredencialShopify(context.tenantId, "access")),
+      accessExpiresAt: credential.accessExpiresAt,
+      refreshCiphertext: cifrarTokenConAAD(credential.refreshToken, aadCredencialShopify(context.tenantId, "refresh")),
+      refreshExpiresAt: credential.refreshExpiresAt
+    });
+  }
+  const current = fileLeer(DIR_TIENDAS, context.tenantId) || {};
+  fileGuardar(DIR_TIENDAS, context.tenantId, {
+    ...current,
+    shopify_offline_credential: {
+      accessToken: credential.accessToken,
+      accessExpiresAt: credential.accessExpiresAt,
+      refreshToken: credential.refreshToken,
+      refreshExpiresAt: credential.refreshExpiresAt,
+      credentialVersion: Number(current.shopify_offline_credential?.credentialVersion || 0) + 1,
+      refreshState: "active"
+    }
+  });
+  return null;
+}
+
+async function leerCredencialShopifyDB(dominio, { includeRefresh = false } = {}) {
+  const context = dominio instanceof TenantContext
+    ? dominio
+    : TenantContext.fromShopDomain(dominio, { source: "internal-job" });
+  if (includeRefresh && esWorkerRuntime()) throw new Error("El worker no puede leer refresh credentials de Shopify");
+  if (USA_PG) {
+    const p = await pg();
+    shopifyCredentialRepository ||= createShopifyCredentialRepository(p);
+    const row = await shopifyCredentialRepository.get(context, { includeRefresh });
+    if (!row) return null;
+    return {
+      ...row,
+      accessToken: descifrarTokenConAAD(row.accessCiphertext, aadCredencialShopify(context.tenantId, "access")),
+      ...(includeRefresh ? {
+        refreshToken: descifrarTokenConAAD(row.refreshCiphertext, aadCredencialShopify(context.tenantId, "refresh"))
+      } : {})
+    };
+  }
+  const row = fileLeer(DIR_TIENDAS, context.tenantId)?.shopify_offline_credential;
+  if (!row) return null;
+  const { refreshToken, ...publicRow } = row;
+  return includeRefresh ? row : publicRow;
+}
+
+async function adquirirLeaseRefreshShopifyDB(dominio, credentialVersion) {
+  if (!USA_PG || esWorkerRuntime()) return null;
+  const context = dominio instanceof TenantContext ? dominio : TenantContext.fromShopDomain(dominio, { source: "internal-job" });
+  const p = await pg();
+  shopifyCredentialRepository ||= createShopifyCredentialRepository(p);
+  const row = await shopifyCredentialRepository.acquireRefreshLease(context, credentialVersion);
+  if (!row) return null;
+  return {
+    ...row,
+    accessToken: descifrarTokenConAAD(row.accessCiphertext, aadCredencialShopify(context.tenantId, "access")),
+    refreshToken: descifrarTokenConAAD(row.refreshCiphertext, aadCredencialShopify(context.tenantId, "refresh"))
+  };
+}
+
+async function completarRefreshShopifyDB(dominio, lease, credential) {
+  if (!USA_PG || esWorkerRuntime()) throw new Error("Solo el web puede completar un refresh Shopify");
+  const context = dominio instanceof TenantContext ? dominio : TenantContext.fromShopDomain(dominio, { source: "internal-job" });
+  const p = await pg();
+  shopifyCredentialRepository ||= createShopifyCredentialRepository(p);
+  return shopifyCredentialRepository.completeRefresh(context, {
+    credentialVersion: lease.credentialVersion,
+    leaseId: lease.refreshLeaseId,
+    accessCiphertext: cifrarTokenConAAD(credential.accessToken, aadCredencialShopify(context.tenantId, "access")),
+    accessExpiresAt: credential.accessExpiresAt,
+    refreshCiphertext: cifrarTokenConAAD(credential.refreshToken, aadCredencialShopify(context.tenantId, "refresh")),
+    refreshExpiresAt: credential.refreshExpiresAt
+  });
+}
+
+async function fallarRefreshShopifyDB(dominio, lease, { code, reauthRequired = false } = {}) {
+  if (!USA_PG || esWorkerRuntime()) return;
+  const context = dominio instanceof TenantContext ? dominio : TenantContext.fromShopDomain(dominio, { source: "internal-job" });
+  const p = await pg();
+  shopifyCredentialRepository ||= createShopifyCredentialRepository(p);
+  await shopifyCredentialRepository.failRefresh(context, {
+    credentialVersion: lease.credentialVersion,
+    leaseId: lease.refreshLeaseId,
+    code,
+    reauthRequired
+  });
 }
 
 async function borrarTiendaDB(dominio) {
@@ -1553,6 +1665,7 @@ async function cerrarAlmacenamientoDB() {
   inboxRepository = null;
   shopifyCertificationRepository = null;
   appRegistrationRepository = null;
+  shopifyCredentialRepository = null;
   await activePool.end();
 }
 
@@ -1567,6 +1680,8 @@ async function leerEvidenciaCertificacionShopifyDB(context, since, pageId, relea
 module.exports = {
   USA_PG,
   guardarTiendaDB, leerTiendaDB, borrarTiendaDB, listarTiendasDB,
+  guardarCredencialShopifyDB, leerCredencialShopifyDB,
+  adquirirLeaseRefreshShopifyDB, completarRefreshShopifyDB, fallarRefreshShopifyDB,
   incrementarUsoDB, decrementarUsoDB, actualizarCamposTiendaDB,
   guardarPaginaDB, leerPaginaDB, marcarPublicacionFallidaDB,
   encolarPublicacionDB, encolarDespublicacionDB,

@@ -35,6 +35,10 @@ services:
       # value only through Render's encrypted service-to-service reference.
       - key: TOKEN_ENC_KEY
         generateValue: true
+      # Separate from TOKEN_ENC_KEY. It authenticates a worker request to the
+      # web-only refresh broker; it never authorizes Shopify directly.
+      - key: TOKEN_REFRESH_BROKER_KEY
+        generateValue: true
       - key: PG_PRIVATE_NETWORK
         value: "1"
       - key: PG_RUNTIME_ROLE
@@ -84,6 +88,13 @@ services:
           type: web
           name: tiendaiq-partner-staging-web
           envVarKey: TOKEN_ENC_KEY
+      - key: TOKEN_REFRESH_BROKER_KEY
+        fromService:
+          type: web
+          name: tiendaiq-partner-staging-web
+          envVarKey: TOKEN_REFRESH_BROKER_KEY
+      - key: TOKEN_REFRESH_BROKER_URL
+        value: "https://tiendaiq-partner-staging-web.onrender.com/internal/shopify-token/refresh"
       - key: SHOPIFY_APP_HANDLE
         value: "tiendaiq-partner-staging"
       # Billing test mode is a versioned runtime contract: worker and web must
