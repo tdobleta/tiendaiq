@@ -64,6 +64,7 @@ const { reportarError, metrica } = require("./monitoreo");
 const { TenantContext } = require("./src/tenancy/tenant-context");
 const { verifyAndNormalizeWebhook } = require("./src/webhooks/verify-and-normalize");
 const { generationAdmissionPause } = require("./src/generation/admission-control");
+const { resolveTemplateForCreation } = require("./src/domain/template-registry");
 const {
   queryShopifyCertification,
   queryStorefrontCertification,
@@ -1032,6 +1033,10 @@ async function api(req, res, url) {
     if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(request_id || "")) {
       return json(res, 400, { error: "Falta un request_id válido para generar de forma segura" });
     }
+
+    // Validar antes de cupo/encolado. El worker vuelve a resolverlo como
+    // defensa de profundidad para jobs ya persistidos o reenviados.
+    resolveTemplateForCreation(estilo);
 
     const admissionPause = generationAdmissionPause(env);
     if (admissionPause.paused) {

@@ -9,12 +9,10 @@ const {
   templateMetadata
 } = require("../src/domain/template-registry");
 
-test("las plantillas conocidas resuelven a un descriptor versionado estable", () => {
+test("las plantillas activas resuelven a un descriptor versionado estable", () => {
   const expected = [
     ["clasico", "tiendaiq/classic", "classic", "active"],
-    ["premium", "tiendaiq/premium", "premium", "active"],
-    ["pagepilot", "legacy/pagepilot", "pagepilot", "frozen"],
-    ["pagepilot-blue", "legacy/pagepilot-blue", "pagepilot-blue", "frozen"]
+    ["premium", "tiendaiq/premium", "premium", "active"]
   ];
 
   for (const [style, id, rendererKey, status] of expected) {
@@ -23,6 +21,17 @@ test("las plantillas conocidas resuelven a un descriptor versionado estable", ()
     assert.equal(metadata.legacyStyle, style);
     assert.equal(metadata.rendererKey, rendererKey);
     assert.equal(metadata.status, status);
+  }
+});
+
+test("las plantillas congeladas siguen siendo legibles, pero no se pueden crear", () => {
+  for (const style of ["pagepilot", "pagepilot-blue"]) {
+    assert.throws(
+      () => resolveTemplateForCreation(style),
+      (error) => error instanceof TemplateContractError
+        && error.code === "PAGE_TEMPLATE_INVALID"
+        && error.status === 400
+    );
   }
 });
 
