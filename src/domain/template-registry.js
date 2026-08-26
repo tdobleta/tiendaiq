@@ -39,6 +39,7 @@ class TemplateContractError extends Error {
   constructor(message) {
     super(message);
     this.code = "PAGE_TEMPLATE_INVALID";
+    this.status = 400;
   }
 }
 
@@ -76,6 +77,13 @@ function resolveTemplateForCreation(style = "clasico") {
   const normalized = typeof style === "string" && style.trim() ? style.trim() : "clasico";
   const entry = byLegacyStyle(normalized);
   if (!entry) throw new TemplateContractError("La plantilla solicitada no está soportada");
+  // "frozen" conserva compatibilidad de lectura para páginas históricas, pero
+  // no es una opción comercial ni puede iniciar trabajos nuevos. Así evitamos
+  // que una generación nueva herede superficies de contenido que ya no
+  // mantenemos ni certificamos.
+  if (entry.status !== "active") {
+    throw new TemplateContractError("La plantilla solicitada ya no está disponible para páginas nuevas");
+  }
   return entry;
 }
 

@@ -1293,9 +1293,9 @@
   }
 
   async function pantallaPlantillas() {
-    // Se mantiene el DISEÑO del selector; ofrece los modelos reales que arma
-    // el pipeline normal (no plantillas fijas). El render branchea por
-    // global.estilo con estos ids (ver adaptador.crearPagina y tiendaiq.js).
+    // Sólo se ofrecen plantillas activas. Los modelos legacy quedan
+    // renderizables para páginas existentes, pero no pueden iniciar una
+    // generación nueva: no deben volver a entrar al catálogo comercial.
     const plantillas = [
       {
         id: "clasico",
@@ -1308,24 +1308,8 @@
       {
         id: "premium",
         nombre: "Premium",
-        subtitulo: "Más secciones para productos con más explicación.",
-        tags: ["Oferta", "Comparación", "Reviews"],
-        activa: true,
-        tipo: "premium"
-      },
-      {
-        id: "pagepilot",
-        nombre: "PagePilot",
-        subtitulo: "Galería editorial, prueba social, beneficios y preguntas frecuentes.",
-        tags: ["Editorial", "Galería", "Reviews"],
-        activa: true,
-        tipo: "premium"
-      },
-      {
-        id: "pagepilot-blue",
-        nombre: "PagePilot Blue",
-        subtitulo: "Producto editorial azul, prueba social, comparación y CTA fijo.",
-        tags: ["Editorial", "Comparación", "Azul"],
+        subtitulo: "Más secciones para productos que necesitan explicación.",
+        tags: ["Hero", "Beneficios", "FAQ"],
         activa: true,
         tipo: "premium"
       }
