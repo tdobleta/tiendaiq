@@ -206,6 +206,25 @@
 
   // ---------- facetas ----------
 
+  // El renderer se selecciona por descriptor estable. El alias sólo se lee
+  // para páginas históricas que todavía no tenían `global.template`.
+  const DESCRIPTOR_RENDERER_KEYS = Object.freeze({
+    "tiendaiq/classic@1": "classic",
+    "tiendaiq/premium@1": "premium",
+    "legacy/pagepilot@1": "pagepilot",
+    "legacy/pagepilot-blue@1": "pagepilot-blue"
+  });
+
+  function rendererKey(global = {}) {
+    const descriptor = global?.template;
+    const key = descriptor && `${descriptor.id}@${descriptor.version}`;
+    if (key && DESCRIPTOR_RENDERER_KEYS[key]) return DESCRIPTOR_RENDERER_KEYS[key];
+    if (global?.estilo === "pagepilot-blue") return "pagepilot-blue";
+    if (global?.estilo === "pagepilot") return "pagepilot";
+    if (global?.estilo === "premium") return "premium";
+    return "classic";
+  }
+
   function hero(f, fuente, global) {
     const h = f.hero;
 
@@ -296,7 +315,7 @@
             <div class="hero__miniaturas">${miniaturas}</div>
           </div>
           <div>
-            ${global && global.estilo === "premium"
+            ${rendererKey(global) === "premium"
               ? heroTimer(global)
               : `<div class="hero__urgencia">${esc(h.urgencia ?? "Ya es viral | Pocas unidades")}</div>`}
             ${heroResenas}
@@ -1558,11 +1577,10 @@
   function render(data, opts = {}) {
     const f = data.facetas;
     const g = data.global;
-    if (g && g.estilo === "pagepilot-blue") return renderPagepilotBlue(data, opts);
-    if (g && g.estilo === "pagepilot") return renderPagepilot(data, opts);
-    // Modelo de página elegido en la creación. "clasico" = comportamiento de
-    // siempre; "premium" = armado alternativo (timer + comparación + marquee).
-    if (g && g.estilo === "premium") return renderPremium(data, opts);
+    const renderer = rendererKey(g);
+    if (renderer === "pagepilot-blue") return renderPagepilotBlue(data, opts);
+    if (renderer === "pagepilot") return renderPagepilot(data, opts);
+    if (renderer === "premium") return renderPremium(data, opts);
     // Bloques fijos, cada uno con su id: las sections del merchant se
     // intercalan según su `ancla` (= id del bloque tras el cual va).
     const fijos = [
