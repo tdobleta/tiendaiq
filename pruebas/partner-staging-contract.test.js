@@ -6,7 +6,10 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 
 const root = path.join(__dirname, "..");
-const read = (relative) => fs.readFileSync(path.join(root, relative), "utf8");
+// Los contratos se expresan contra texto lógico. Git puede materializar el
+// mismo archivo con CRLF en Windows, por lo que normalizamos antes de aplicar
+// regex que describen la estructura YAML y no el sistema operativo.
+const read = (relative) => fs.readFileSync(path.join(root, relative), "utf8").replace(/\r\n/g, "\n");
 
 test("Partner Staging declara una topología Render aislada y fail-closed", () => {
   const blueprint = read("render.partner-staging.yaml");
