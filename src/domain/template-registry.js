@@ -20,6 +20,13 @@ const TEMPLATE_REGISTRY = Object.freeze([
     status: "active"
   }),
   Object.freeze({
+    id: "tiendaiq/performance-story",
+    version: 1,
+    legacyStyle: "performance-story",
+    rendererKey: "performance-story",
+    status: "active"
+  }),
+  Object.freeze({
     id: "legacy/pagepilot",
     version: 1,
     legacyStyle: "pagepilot",

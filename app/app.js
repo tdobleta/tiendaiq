@@ -1312,6 +1312,14 @@
         tags: ["Hero", "Beneficios", "FAQ"],
         activa: true,
         tipo: "premium"
+      },
+      {
+        id: "performance-story",
+        nombre: "Performance Story",
+        subtitulo: "Para productos técnicos que se explican con claridad y detalle.",
+        tags: ["Producto", "Detalles", "FAQ"],
+        activa: true,
+        tipo: "performance-story"
       }
     ];
 

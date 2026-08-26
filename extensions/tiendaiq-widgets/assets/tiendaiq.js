@@ -211,6 +211,7 @@
   const DESCRIPTOR_RENDERER_KEYS = Object.freeze({
     "tiendaiq/classic@1": "classic",
     "tiendaiq/premium@1": "premium",
+    "tiendaiq/performance-story@1": "performance-story",
     "legacy/pagepilot@1": "pagepilot",
     "legacy/pagepilot-blue@1": "pagepilot-blue"
   });
@@ -221,6 +222,7 @@
     if (key && DESCRIPTOR_RENDERER_KEYS[key]) return DESCRIPTOR_RENDERER_KEYS[key];
     if (global?.estilo === "pagepilot-blue") return "pagepilot-blue";
     if (global?.estilo === "pagepilot") return "pagepilot";
+    if (global?.estilo === "performance-story") return "performance-story";
     if (global?.estilo === "premium") return "premium";
     return "classic";
   }
@@ -1546,6 +1548,66 @@
     return partes.concat(secs).join("\n");
   }
 
+  // Plantilla editorial para productos donde el comprador necesita entender
+  // materiales, uso o especificaciones antes de decidir. Es deliberadamente
+  // sobria: no agrega reseñas, garantías, urgencia, porcentajes ni comparativas
+  // que el merchant no haya demostrado por separado.
+  function renderPerformanceStory(data, opts = {}) {
+    const f = data.facetas || {};
+    const g = data.global || {};
+    const h = f.hero || {};
+    const fuente = data.fuente || {};
+    const title = h.titulo || fuente.titulo_crudo || "Producto";
+    const subtitle = h.subtitulo || "";
+    const gallery = Array.isArray(h.galeria) ? h.galeria.filter(Boolean) : [];
+    const purchaseGlobal = { ...g, cta: g.cta || "Agregar al carrito" };
+    const bullets = (Array.isArray(h.bullets) ? h.bullets : [])
+      .map((item) => {
+        const text = typeof item === "string" ? item : [item?.fuerte, item?.resto].filter(Boolean).join(" — ");
+        return text ? `<li>${ICONOS_BULLET.check}<span>${esc(text)}</span></li>` : "";
+      })
+      .filter(Boolean)
+      .join("");
+    const details = (Array.isArray(h.acordeones) ? h.acordeones : [])
+      .filter((item) => item?.titulo && item?.contenido)
+      .map((item) => `<details><summary>${esc(item.titulo)}</summary><p>${esc(item.contenido)}</p></details>`)
+      .join("");
+    const features = (Array.isArray(f.iconos?.items) ? f.iconos.items : [])
+      .filter((item) => item?.titulo || item?.frase)
+      .slice(0, 4)
+      .map((item) => `<article><span aria-hidden="true">${esc(item.emoji || "•")}</span><h3>${esc(item.titulo || "")}</h3><p>${esc(item.frase || "")}</p></article>`)
+      .join("");
+    const story = [f.dupla1, f.dupla2]
+      .filter((item) => item?.titular || item?.parrafo || item?.imagen)
+      .map((item, index) => `<section class="tiq-ps__story${index % 2 ? " tiq-ps__story--reverse" : ""}"><div>${item.imagen ? img(item.imagen, item.titular || title) : ""}</div><div><p class="tiq-ps__eyebrow">${esc(index ? "Detalles" : "Diseñado para usar")}</p><h2>${esc(item.titular || "")}</h2><p>${esc(item.parrafo || "")}</p></div></section>`)
+      .join("");
+    const questions = (Array.isArray(f.faq?.items) ? f.faq.items : [])
+      .filter((item) => item?.pregunta && item?.respuesta)
+      .map((item) => `<details><summary>${esc(item.pregunta)}</summary><p>${esc(item.respuesta)}</p></details>`)
+      .join("");
+    const merchantSections = Array.isArray(data.secciones) ? data.secciones.map(seccionHTML).join("\n") : "";
+
+    const hero = `
+      <section class="tiq-ps__hero" data-bloque="hero">
+        <div class="tiq-ps__wrap tiq-ps__hero-grid">
+          <div class="tiq-ps__gallery">
+            <div class="tiq-ps__main" id="imagen-principal">${img(gallery[0] || null, title, { hero: true })}</div>
+            ${gallery.length > 1 ? `<div class="tiq-ps__thumbs">${gallery.map((id, index) => `<button type="button" class="${index === 0 ? "activa" : ""}" onclick="cambiarPrincipal('${esc(id)}', this)" aria-label="Ver imagen ${index + 1}">${img(id, "", { ancho: 160 })}</button>`).join("")}</div>` : ""}
+          </div>
+          <div class="tiq-ps__buy">
+            ${subtitle ? `<p class="tiq-ps__eyebrow">${esc(subtitle)}</p>` : ""}
+            <h1>${esc(title)}</h1>
+            <div class="tiq-ps__price"><strong>${esc(precioBonito(fuente.moneda, fuente.precio))}</strong>${fuente.precio_comparativo ? `<del>${esc(precioBonito(fuente.moneda, fuente.precio_comparativo))}</del>` : ""}</div>
+            ${bullets ? `<ul class="tiq-ps__benefits">${bullets}</ul>` : ""}
+            ${botonComprar(purchaseGlobal)}
+            ${details ? `<div class="tiq-ps__details">${details}</div>` : ""}
+          </div>
+        </div>
+      </section>`;
+
+    return `<div class="tiq-ps">${opts.sinHero ? "" : hero}${story}${features ? `<section class="tiq-ps__features"><div class="tiq-ps__wrap">${f.iconos?.titular ? `<h2>${esc(f.iconos.titular)}</h2>` : ""}<div>${features}</div></div></section>` : ""}${questions ? `<section class="tiq-ps__faq"><div class="tiq-ps__wrap"><h2>${esc(f.faq?.titular || "Preguntas frecuentes")}</h2>${questions}</div></section>` : ""}${merchantSections}</div>`;
+  }
+
   // Cuenta regresiva: end guardado por producto en localStorage (persistente).
   function iniciarTimers() {
     document.querySelectorAll("[data-timer]").forEach((el) => {
@@ -1581,6 +1643,7 @@
     if (renderer === "pagepilot-blue") return renderPagepilotBlue(data, opts);
     if (renderer === "pagepilot") return renderPagepilot(data, opts);
     if (renderer === "premium") return renderPremium(data, opts);
+    if (renderer === "performance-story") return renderPerformanceStory(data, opts);
     // Bloques fijos, cada uno con su id: las sections del merchant se
     // intercalan según su `ancla` (= id del bloque tras el cual va).
     const fijos = [

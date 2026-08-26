@@ -1492,3 +1492,66 @@ body.publicada #app .resena-destacada__editar { display: none; }
 #app.tiq-claims-unverified .tiq-ppb__recommendations {
   display: none !important;
 }
+
+/* Performance Story: producto técnico, sobrio y escaneable. No depende de
+   reseñas, timers o promesas comerciales; escala con los datos reales que ya
+   existen en el contrato universal. */
+#app .tiq-ps { color: #17191c; background: #fff; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; overflow: hidden; }
+#app .tiq-ps__wrap { width: min(1180px, calc(100% - 40px)); margin: 0 auto; }
+#app .tiq-ps__hero { padding: clamp(28px, 5vw, 76px) 0 clamp(48px, 7vw, 100px); }
+#app .tiq-ps__hero-grid { display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(320px, .92fr); align-items: start; gap: clamp(28px, 5vw, 76px); }
+#app .tiq-ps__main { aspect-ratio: 1 / 1; background: #f3f4f4; overflow: hidden; }
+#app .tiq-ps__main > img, #app .tiq-ps__story img { display: block; width: 100%; height: 100%; object-fit: cover; }
+#app .tiq-ps__thumbs { display: flex; gap: 10px; margin-top: 12px; overflow-x: auto; padding-bottom: 2px; }
+#app .tiq-ps__thumbs button { width: 72px; height: 72px; flex: 0 0 auto; padding: 0; border: 1px solid #d8dcda; background: #fff; overflow: hidden; cursor: pointer; }
+#app .tiq-ps__thumbs button.activa { border: 2px solid #17191c; }
+#app .tiq-ps__thumbs img { width: 100%; height: 100%; object-fit: cover; }
+#app .tiq-ps__buy { padding-top: clamp(4px, 2vw, 28px); }
+#app .tiq-ps__eyebrow { margin: 0 0 12px; color: #5b625f; font-size: 12px; font-weight: 700; letter-spacing: .11em; line-height: 1.35; text-transform: uppercase; }
+#app .tiq-ps h1, #app .tiq-ps h2, #app .tiq-ps h3 { margin: 0; letter-spacing: -.035em; color: #17191c; }
+#app .tiq-ps h1 { max-width: 12ch; font-size: clamp(38px, 5vw, 66px); font-weight: 650; line-height: .98; }
+#app .tiq-ps h2 { font-size: clamp(30px, 3.8vw, 50px); font-weight: 620; line-height: 1.02; }
+#app .tiq-ps__price { display: flex; align-items: baseline; gap: 13px; margin: 24px 0; }
+#app .tiq-ps__price strong { font-size: 24px; letter-spacing: -.03em; }
+#app .tiq-ps__price del { color: #737b77; font-size: 16px; }
+#app .tiq-ps .cta { min-height: 56px; border-radius: 0; background: #17191c; color: #fff; font-size: 15px; font-weight: 700; letter-spacing: .01em; }
+#app .tiq-ps .cta:hover { background: #303531; }
+#app .tiq-ps__benefits { display: grid; gap: 11px; margin: 0 0 28px; padding: 0; list-style: none; }
+#app .tiq-ps__benefits li { display: flex; align-items: flex-start; gap: 10px; color: #343a37; line-height: 1.5; }
+#app .tiq-ps__benefits svg { width: 18px; height: 18px; flex: 0 0 18px; margin-top: 3px; color: #205c42; }
+#app .tiq-ps__details { margin-top: 24px; border-top: 1px solid #dfe3e0; }
+#app .tiq-ps__details details, #app .tiq-ps__faq details { border-bottom: 1px solid #dfe3e0; }
+#app .tiq-ps__details summary, #app .tiq-ps__faq summary { position: relative; padding: 17px 28px 17px 0; color: #202521; cursor: pointer; font-weight: 650; list-style: none; }
+#app .tiq-ps__details summary::-webkit-details-marker, #app .tiq-ps__faq summary::-webkit-details-marker { display: none; }
+#app .tiq-ps__details summary::after, #app .tiq-ps__faq summary::after { content: "+"; position: absolute; right: 2px; font-size: 22px; font-weight: 400; }
+#app .tiq-ps__details details[open] summary::after, #app .tiq-ps__faq details[open] summary::after { content: "−"; }
+#app .tiq-ps__details p, #app .tiq-ps__faq p { margin: 0 0 18px; color: #5b625f; line-height: 1.6; }
+#app .tiq-ps__story { display: grid; grid-template-columns: 1fr 1fr; min-height: 500px; background: #f1f3f1; }
+#app .tiq-ps__story--reverse > :first-child { order: 2; }
+#app .tiq-ps__story > div { min-width: 0; }
+#app .tiq-ps__story > div:first-child { min-height: 400px; }
+#app .tiq-ps__story > div:last-child { display: flex; flex-direction: column; justify-content: center; padding: clamp(36px, 7vw, 112px); }
+#app .tiq-ps__story p:not(.tiq-ps__eyebrow) { max-width: 48ch; margin: 22px 0 0; color: #4e5652; font-size: 17px; line-height: 1.65; }
+#app .tiq-ps__features { padding: clamp(64px, 10vw, 136px) 0; }
+#app .tiq-ps__features > .tiq-ps__wrap > h2 { max-width: 14ch; margin-bottom: 44px; }
+#app .tiq-ps__features > .tiq-ps__wrap > div { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1px solid #dfe3e0; border-left: 1px solid #dfe3e0; }
+#app .tiq-ps__features article { min-height: 210px; padding: 26px; border-right: 1px solid #dfe3e0; border-bottom: 1px solid #dfe3e0; }
+#app .tiq-ps__features article > span { display: block; min-height: 30px; color: #205c42; font-size: 25px; }
+#app .tiq-ps__features h3 { margin-top: 28px; font-size: 20px; line-height: 1.1; }
+#app .tiq-ps__features p { margin: 11px 0 0; color: #5b625f; line-height: 1.55; }
+#app .tiq-ps__faq { padding: clamp(60px, 9vw, 120px) 0; background: #1b211e; color: #fff; }
+#app .tiq-ps__faq .tiq-ps__wrap { max-width: 820px; }
+#app .tiq-ps__faq h2, #app .tiq-ps__faq summary { color: #fff; }
+#app .tiq-ps__faq h2 { margin-bottom: 34px; }
+#app .tiq-ps__faq details { border-color: rgba(255,255,255,.25); }
+#app .tiq-ps__faq p { color: #ced4d0; }
+@media (max-width: 760px) {
+  #app .tiq-ps__wrap { width: min(100% - 28px, 1180px); }
+  #app .tiq-ps__hero-grid, #app .tiq-ps__story { grid-template-columns: 1fr; }
+  #app .tiq-ps__story { min-height: 0; }
+  #app .tiq-ps__story--reverse > :first-child { order: 0; }
+  #app .tiq-ps__story > div:first-child { min-height: 300px; }
+  #app .tiq-ps__story > div:last-child { padding: 42px 28px 52px; }
+  #app .tiq-ps__features > .tiq-ps__wrap > div { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #app .tiq-ps__features article { min-height: 180px; padding: 20px; }
+}
