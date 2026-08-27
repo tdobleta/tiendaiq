@@ -14,6 +14,7 @@ test("la evidencia de capacidad conserva sólo métricas agregadas de la cola", 
     log: [
       "texto crudo no permitido en el artefacto",
       JSON.stringify({ event: "queue_load_started", runId: "0123456789ab", tenants: 100, jobs: 100 }),
+      JSON.stringify({ event: "queue_load_phase", phase: "tenant_setup" }),
       JSON.stringify({
         passed: true,
         runId: "0123456789ab",
@@ -53,7 +54,11 @@ test("una falla no copia la salida cruda al artefacto", () => {
     release: RELEASE,
     mode: "cleanup",
     exitCode: 2,
-    log: "Prueba de capacidad no ejecutada: detalle crudo no permitido"
+    log: [
+      JSON.stringify({ event: "queue_load_started", runId: "0123456789ab", tenants: 100, jobs: 100 }),
+      JSON.stringify({ event: "queue_load_phase", phase: "tenant_setup" }),
+      "Prueba de capacidad no ejecutada: permission denied for table control_plane.tenants; password=must-not-appear"
+    ].join("\n")
   });
 
   assert.deepEqual(artifact, {
@@ -62,6 +67,9 @@ test("una falla no copia la salida cruda al artefacto", () => {
     release_sha: RELEASE,
     mode: "cleanup",
     completed: false,
-    result_detected: false
+    result_detected: true,
+    result: { runId: "0123456789ab", tenants: 100, jobs: 100 },
+    failure: { class: "database_authorization", phase: "tenant_setup" }
   });
+  assert.doesNotMatch(JSON.stringify(artifact), /password|must-not-appear|permission denied/i);
 });
