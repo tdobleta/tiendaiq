@@ -19,7 +19,6 @@
         .map((id) => ({ id, url: URLS[id] }))
         .filter((item) => /^https:\/\//.test(item.url || ""));
       await window.TiendaIQPinzaPagepilotV1.mount(document.getElementById("app"), {
-        assetUrl: "../extensions/tiendaiq-widgets/assets/tiq-pinzapilot-v1.html",
         view: {
           product: {
             title: hero.titulo || source.titulo_crudo,

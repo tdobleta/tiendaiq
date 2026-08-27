@@ -1929,7 +1929,6 @@
         payments: false
       };
       await window.TiendaIQPinzaPagepilotV1.mount(app, {
-        assetUrl: `${window.TIENDAIQ_ASSET_BASE || ""}tiq-pinzapilot-v1.html`,
         view: {
           product: {
             title: hero.titulo || source.titulo_crudo || "",

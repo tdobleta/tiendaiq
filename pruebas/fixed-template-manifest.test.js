@@ -11,6 +11,13 @@ const { sanitizeFixedTemplateSource, sourceFingerprint } = require("../scripts/i
 const fs = require("node:fs");
 const path = require("node:path");
 
+function fixedTemplateSource(assetDirectory) {
+  const runtime = fs.readFileSync(path.join(assetDirectory, "tiq-pinzapilot-v1.js"), "utf8");
+  const encoded = runtime.match(/FIXED_TEMPLATE_SOURCE_BASE64 = "([A-Za-z0-9+/=]+)"/);
+  assert.ok(encoded, "el runtime debe contener la fuente visual congelada");
+  return Buffer.from(encoded[1], "base64").toString("utf8");
+}
+
 test("la plantilla fija conserva identidad y slots explícitos", () => {
   assert.equal(PINZA_PAGEPILOT_V1.id, "tiendaiq/pinza-pagepilot");
   assert.equal(PINZA_PAGEPILOT_V1.version, 1);
@@ -58,10 +65,11 @@ test("el view model conecta producto real y falla cerrado para evidencia sin ate
 });
 
 test("el artefacto distribuible no conserva hotlinks ni marcas de la fuente", () => {
-  const artifact = fs.readFileSync(
-    path.join(__dirname, "..", "extensions", "tiendaiq-widgets", "assets", "tiq-pinzapilot-v1.html"),
-    "utf8"
-  );
+  const assetDirectory = path.join(__dirname, "..", "extensions", "tiendaiq-widgets", "assets");
+  const artifact = fixedTemplateSource(assetDirectory);
+  assert.ok(fs.existsSync(path.join(assetDirectory, PINZA_PAGEPILOT_V1.sourceFile)));
+  assert.equal(fs.readdirSync(assetDirectory).some((filename) => /\.(?:html|json)$/.test(filename)), false);
+  assert.equal(sourceFingerprint(artifact), PINZA_PAGEPILOT_V1.sourceSha256);
   assert.doesNotMatch(artifact, /(?:pagepilot\.ai|Ventmar|Pinza Recogedora|Bloomberg|Cosmopolitan)/i);
   assert.doesNotMatch(artifact, /<script/i);
   assert.match(artifact, /class="hero"/);
