@@ -96,10 +96,36 @@ function errorReautorizacion(tienda) {
   return e;
 }
 
+// Dos requests del mismo admin pueden llegar al mismo tiempo al expirar el
+// token offline (por ejemplo, la home carga plan, páginas y bundles en
+// paralelo). Sólo uno adquiere el lease cross-instance; los demás esperan un
+// intervalo pequeño por la credencial nueva. Si no aparece, se conserva el
+// 503 fail-closed en vez de asumir que la renovación terminó.
+const REFRESH_LEASE_WAIT_DELAYS_MS = [100, 150, 250, 400, 600, 900, 1000, 1000];
+
+async function esperarCredencialRefrescada(context, {
+  readCredential = leerCredencialShopifyDB,
+  shouldRefresh = needsRefresh,
+  sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+  delaysMs = REFRESH_LEASE_WAIT_DELAYS_MS
+} = {}) {
+  let current = null;
+  for (const delayMs of delaysMs) {
+    await sleep(delayMs);
+    current = await readCredential(context);
+    if (current && !shouldRefresh(current)) return current;
+    if (current?.refreshState === "reauth_required") return current;
+  }
+  return current;
+}
+
 async function refrescarEnWeb(context, credential) {
   const lease = await adquirirLeaseRefreshShopifyDB(context, credential.credentialVersion);
   if (!lease) {
-    const current = await leerCredencialShopifyDB(context);
+    let current = await leerCredencialShopifyDB(context);
+    if (current && !needsRefresh(current)) return current;
+    current = await esperarCredencialRefrescada(context);
+    if (current?.refreshState === "reauth_required") throw errorReautorizacion(context.tenantId);
     if (current && !needsRefresh(current)) return current;
     const e = new Error("La renovación Shopify ya está en curso");
     e.code = "SHOPIFY_REFRESH_IN_PROGRESS";
@@ -201,5 +227,6 @@ module.exports = {
   consumirCupoTienda,
   revertirCupoTienda,
   actualizarCamposTienda,
+  esperarCredencialRefrescada,
   sesionDe
 };
