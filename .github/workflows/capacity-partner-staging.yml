@@ -1,0 +1,155 @@
+name: Capacity Partner Staging
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: SHA completo revisado, HEAD de main y desplegado en Partner Staging
+        required: true
+        type: string
+      mode:
+        description: Ejecutar la prueba o limpiar un run sintético interrumpido
+        required: true
+        type: choice
+        options: [run, cleanup]
+      confirmation:
+        description: RUN_PARTNER_STAGING_QUEUE_CAPACITY o CLEAN_PARTNER_STAGING_QUEUE_CAPACITY
+        required: true
+        type: string
+      cleanup_run_id:
+        description: Sólo cleanup; runId hexadecimal de 12 caracteres registrado al iniciar
+        required: false
+        type: string
+      tenants:
+        description: Cantidad de tenants sintéticos para run
+        required: true
+        default: "1000"
+        type: choice
+        options: ["100", "500", "1000", "2000"]
+      jobs:
+        description: Cantidad de jobs sintéticos para run
+        required: true
+        default: "1000"
+        type: choice
+        options: ["100", "500", "1000", "2000"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tiendaiq-partner-staging-capacity
+  cancel-in-progress: false
+
+jobs:
+  queue-capacity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: partner-staging
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Nunca ejecuta el workflow mutable de la rama seleccionada en la UI.
+          ref: ${{ inputs.release_sha }}
+          fetch-depth: 0
+
+      - id: release
+        name: Validate deliberate authorization and reviewed Partner release
+        shell: bash
+        env:
+          MODE: ${{ inputs.mode }}
+          CONFIRMATION: ${{ inputs.confirmation }}
+          CLEANUP_RUN_ID: ${{ inputs.cleanup_run_id }}
+          REQUESTED_SHA: ${{ inputs.release_sha }}
+        run: |
+          set -euo pipefail
+          [[ "$REQUESTED_SHA" =~ ^[a-f0-9]{40}$ ]] || { echo "release_sha debe ser un SHA completo" >&2; exit 1; }
+          [[ "$(git rev-parse HEAD)" == "$REQUESTED_SHA" ]] || { echo "checkout distinto al SHA solicitado" >&2; exit 1; }
+          git fetch origin main --depth=1
+          [[ "$(git rev-parse origin/main)" == "$REQUESTED_SHA" ]] || { echo "el SHA debe ser HEAD de main" >&2; exit 1; }
+          if [[ "$MODE" == "run" && "$CONFIRMATION" == "RUN_PARTNER_STAGING_QUEUE_CAPACITY" ]]; then
+            echo "sha=$REQUESTED_SHA" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [[ "$MODE" == "cleanup" && "$CONFIRMATION" == "CLEAN_PARTNER_STAGING_QUEUE_CAPACITY" && "$CLEANUP_RUN_ID" =~ ^[a-fA-F0-9]{12}$ ]]; then
+            echo "sha=$REQUESTED_SHA" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "Confirmación o runId inválidos para el modo seleccionado" >&2
+          exit 1
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "20"
+
+      - run: npm ci --no-audit --no-fund
+
+      - name: Verify Partner Staging web runs the reviewed SHA
+        shell: bash
+        env:
+          EXPECTED_RELEASE_SHA: ${{ steps.release.outputs.sha }}
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent --show-error --max-time 5 https://tiendaiq-partner-staging-web.onrender.com/ready \
+              | node -e 'let body="";process.stdin.on("data",(chunk)=>body+=chunk).on("end",()=>{const ready=JSON.parse(body);process.exit(ready.ok===true&&ready.release===process.env.EXPECTED_RELEASE_SHA?0:1)})'; then
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Partner Staging web no confirma el SHA revisado" >&2
+          exit 1
+
+      - name: Exercise Partner durable queue with synthetic data and runtime credentials
+        id: capacity
+        shell: bash
+        env:
+          ALLOW_QUEUE_LOAD_TEST: "1"
+          ALLOW_REMOTE_QUEUE_LOAD_TEST: I_UNDERSTAND_THIS_WRITES_SYNTHETIC_STAGING_DATA
+          TEST_DATABASE_URL: ${{ secrets.PARTNER_STAGING_WEB_DATABASE_URL }}
+          TEST_WORKER_DATABASE_URL: ${{ secrets.PARTNER_STAGING_WORKER_DATABASE_URL }}
+          LOAD_CLEANUP_RUN_ID: ${{ inputs.cleanup_run_id }}
+          LOAD_TENANTS: ${{ inputs.tenants }}
+          LOAD_JOBS: ${{ inputs.jobs }}
+          LOAD_SETUP_CONCURRENCY: "40"
+          LOAD_WORKER_LANES: "16"
+          LOAD_FAKE_WORK_MS: "5"
+          LOAD_MAX_DRAIN_SECONDS: "900"
+          PG_POOL_MAX: "10"
+          EXPECTED_RELEASE_SHA: ${{ steps.release.outputs.sha }}
+        run: |
+          set -euo pipefail
+          artifact_dir="$RUNNER_TEMP/partner-staging-capacity"
+          mkdir -p "$artifact_dir"
+          if [[ "${{ inputs.mode }}" == "cleanup" ]]; then
+            export LOAD_TENANTS=2000
+          fi
+          set +e
+          npm run carga:cola > "$artifact_dir/raw.log" 2>&1
+          status="$?"
+          set -e
+          echo "QUEUE_CAPACITY_STATUS=$status" >> "$GITHUB_ENV"
+          echo "QUEUE_CAPACITY_LOG=$artifact_dir/raw.log" >> "$GITHUB_ENV"
+          echo "QUEUE_CAPACITY_ARTIFACT=$artifact_dir/evidence.json" >> "$GITHUB_ENV"
+          exit "$status"
+
+      - name: Create allowlisted sanitized capacity artifact
+        if: ${{ always() && steps.capacity.outcome != 'skipped' }}
+        shell: bash
+        env:
+          RELEASE_SHA: ${{ steps.release.outputs.sha }}
+          MODE: ${{ inputs.mode }}
+          EXIT_CODE: ${{ env.QUEUE_CAPACITY_STATUS }}
+        run: |
+          set -euo pipefail
+          node scripts/sanitizar-evidencia-capacidad.js \
+            "$QUEUE_CAPACITY_LOG" "$QUEUE_CAPACITY_ARTIFACT" "$RELEASE_SHA" "$MODE" "${EXIT_CODE:-255}"
+          cat "$QUEUE_CAPACITY_ARTIFACT" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload sanitized Partner Staging capacity evidence
+        if: ${{ always() && steps.capacity.outcome != 'skipped' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: partner-staging-capacity-${{ github.run_id }}
+          path: ${{ env.QUEUE_CAPACITY_ARTIFACT }}
+          if-no-files-found: error
+          retention-days: 14

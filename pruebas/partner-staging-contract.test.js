@@ -107,3 +107,26 @@ test("la app Partner y los workflows usan el mismo runtime e identidad aislados"
   assert.match(release, /max_attempts=30/);
   assert.match(release, /for attempt in \$\(seq 1 "\$max_attempts"\)/);
 });
+
+test("la capacidad Partner Staging nunca puede reutilizar el destino o secretos legacy", () => {
+  const workflow = read(".github/workflows/capacity-partner-staging.yml");
+
+  assert.match(workflow, /environment:\s*partner-staging/);
+  assert.match(workflow, /release_sha:/);
+  assert.match(workflow, /ref:\s*\$\{\{ inputs\.release_sha \}\}/);
+  assert.match(workflow, /git fetch origin main --depth=1/);
+  assert.match(workflow, /RUN_PARTNER_STAGING_QUEUE_CAPACITY/);
+  assert.match(workflow, /CLEAN_PARTNER_STAGING_QUEUE_CAPACITY/);
+  assert.match(workflow, /https:\/\/tiendaiq-partner-staging-web\.onrender\.com\/ready/);
+  assert.match(workflow, /PARTNER_STAGING_WEB_DATABASE_URL/);
+  assert.match(workflow, /PARTNER_STAGING_WORKER_DATABASE_URL/);
+  assert.match(workflow, /ALLOW_REMOTE_QUEUE_LOAD_TEST/);
+  assert.match(workflow, /npm run carga:cola/);
+  assert.match(workflow, /sanitizar-evidencia-capacidad\.js/);
+  assert.match(workflow, /actions\/upload-artifact@[a-f0-9]{40}/);
+  assert.doesNotMatch(workflow, /tiendaiq-staging-web\.onrender\.com/);
+  assert.doesNotMatch(workflow, /secrets\.STAGING_/);
+  assert.doesNotMatch(workflow, /MIGRATION_DATABASE_URL/);
+  assert.doesNotMatch(workflow, /PRODUCTION_/);
+  assert.doesNotMatch(workflow, /ANTHROPIC|SHOPIFY|billing/i);
+});

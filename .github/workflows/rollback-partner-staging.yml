@@ -1,0 +1,146 @@
+name: Rollback Partner Staging
+
+on:
+  workflow_dispatch:
+    inputs:
+      rollback_sha:
+        description: SHA completo ya existente en el historial de origin/main a restaurar
+        required: true
+        type: string
+      confirmation:
+        description: Escribir ROLLBACK_REVIEWED_PARTNER_STAGING
+        required: true
+        type: string
+      identity_audit_confirmation:
+        description: Escribir PARTNER_STAGING_REMOTE_IDENTITY_AUDITED tras revisar app, handle, extensiones e instalaciones
+        required: true
+        type: string
+      migration_compatibility:
+        description: Escribir PARTNER_STAGING_MIGRATIONS_ARE_BACKWARD_COMPATIBLE
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+# Serialize with bootstrap and ordinary releases. A rollback changes application
+# versions only; it must never race a migration or silently target another DB.
+concurrency:
+  group: tiendaiq-partner-staging-database-maintenance
+  queue: max
+  cancel-in-progress: false
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    environment: partner-staging
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.rollback_sha }}
+          fetch-depth: 0
+
+      - id: rollback
+        name: Validate the reviewed Partner Staging rollback target
+        shell: bash
+        env:
+          REQUESTED_SHA: ${{ inputs.rollback_sha }}
+          CONFIRMATION: ${{ inputs.confirmation }}
+          IDENTITY_AUDIT_CONFIRMATION: ${{ inputs.identity_audit_confirmation }}
+          MIGRATION_COMPATIBILITY: ${{ inputs.migration_compatibility }}
+        run: |
+          set -euo pipefail
+          [[ "$REQUESTED_SHA" =~ ^[a-f0-9]{40}$ ]] || { echo "rollback_sha debe ser un SHA completo" >&2; exit 1; }
+          [[ "$CONFIRMATION" == "ROLLBACK_REVIEWED_PARTNER_STAGING" ]] || { echo "confirmacion de rollback invalida" >&2; exit 1; }
+          [[ "$IDENTITY_AUDIT_CONFIRMATION" == "PARTNER_STAGING_REMOTE_IDENTITY_AUDITED" ]] || { echo "auditoria de identidad Partner Staging no confirmada" >&2; exit 1; }
+          [[ "$MIGRATION_COMPATIBILITY" == "PARTNER_STAGING_MIGRATIONS_ARE_BACKWARD_COMPATIBLE" ]] || { echo "el rollback no puede revertir migraciones; confirmar compatibilidad expand/contract" >&2; exit 1; }
+          ACTUAL_SHA="$(git rev-parse HEAD)"
+          [[ "$ACTUAL_SHA" == "$REQUESTED_SHA" ]] || { echo "el checkout no coincide con el SHA solicitado" >&2; exit 1; }
+          git fetch origin main --depth=1
+          git merge-base --is-ancestor "$ACTUAL_SHA" origin/main || { echo "el SHA de rollback no existe en el historial de origin/main" >&2; exit 1; }
+          echo "sha=$ACTUAL_SHA" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22"
+
+      - run: npm ci --no-audit --no-fund
+
+      - name: Install pinned Shopify CLI for Partner Staging rollback
+        run: npm install --global @shopify/cli@4.1.0
+
+      # This workflow deliberately has no migration credential or migration
+      # step. A rollback restores app code only, over the already-migrated
+      # isolated Partner Staging database.
+      - name: Request rollback of Partner Staging web
+        env:
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_PARTNER_STAGING_WEB_DEPLOY_HOOK }}
+        run: curl --fail-with-body --connect-timeout 5 --max-time 20 --request POST --get --data-urlencode "ref=${{ steps.rollback.outputs.sha }}" "$RENDER_DEPLOY_HOOK"
+
+      - name: Request rollback of Partner Staging worker
+        env:
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_PARTNER_STAGING_WORKER_DEPLOY_HOOK }}
+        run: curl --fail-with-body --connect-timeout 5 --max-time 20 --request POST --get --data-urlencode "ref=${{ steps.rollback.outputs.sha }}" "$RENDER_DEPLOY_HOOK"
+
+      - name: Wait for restored Partner Staging web readiness
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ steps.rollback.outputs.sha }}
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent --show-error --max-time 5 https://tiendaiq-partner-staging-web.onrender.com/ready \
+              | node -e 'let body="";process.stdin.on("data",c=>body+=c).on("end",()=>{const ready=JSON.parse(body);process.exit(ready.ok===true&&ready.release===process.env.EXPECTED_SHA?0:1)})'; then
+              echo "Partner Staging web restauro /ready con el SHA esperado"
+              exit 0
+            fi
+            echo "Esperando readiness de rollback Partner Staging ($attempt/60)"
+            sleep 10
+          done
+          echo "Partner Staging no aprobo /ready dentro de 10 minutos" >&2
+          exit 1
+
+      # Render and Shopify must converge on the same immutable target. The
+      # Partner config is explicit to prevent a staging or production identity
+      # from being deployed by accident.
+      - name: Restore Partner Staging Shopify components for the reviewed SHA
+        shell: bash
+        env:
+          SHOPIFY_APP_AUTOMATION_TOKEN: ${{ secrets.PARTNER_STAGING_SHOPIFY_APP_AUTOMATION_TOKEN }}
+          SHOPIFY_CLI_NO_ANALYTICS: "1"
+          COMMIT_URL: ${{ github.server_url }}/${{ github.repository }}/commit/${{ steps.rollback.outputs.sha }}
+        run: |
+          set -euo pipefail
+          [[ -n "$SHOPIFY_APP_AUTOMATION_TOKEN" ]] || { echo "falta PARTNER_STAGING_SHOPIFY_APP_AUTOMATION_TOKEN" >&2; exit 1; }
+          shopify app deploy --config partner-staging --allow-updates --source-control-url "$COMMIT_URL"
+
+      - name: Certify the restored Partner Staging web and worker
+        env:
+          CONFIRMATION: CHECK_STAGING_OPS_READINESS
+          EXPECTED_RELEASE_SHA: ${{ steps.rollback.outputs.sha }}
+          STAGING_APP_URL: https://tiendaiq-partner-staging-web.onrender.com
+          OPS_STATUS_TOKEN: ${{ secrets.PARTNER_STAGING_OPS_STATUS_TOKEN }}
+          OPS_READINESS_PROFILE: rollback
+        run: |
+          set -o pipefail
+          max_attempts=30
+          status=1
+          for attempt in $(seq 1 "$max_attempts"); do
+            set +e
+            npm run ops:readiness > "$RUNNER_TEMP/partner-staging-rollback-readiness.log" 2>&1
+            status="$?"
+            set -e
+            [[ "$status" -eq 0 ]] && break
+            [[ "$attempt" -lt "$max_attempts" ]] && sleep 10
+          done
+          {
+            echo "## Partner Staging rollback readiness"
+            echo "target: ${{ steps.rollback.outputs.sha }}"
+            echo "attempt: $attempt/$max_attempts"
+            echo
+            echo '```text'
+            tail -n 120 "$RUNNER_TEMP/partner-staging-rollback-readiness.log"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit "$status"
