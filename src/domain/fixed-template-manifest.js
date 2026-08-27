@@ -13,7 +13,17 @@ const PINZA_PAGEPILOT_V1 = Object.freeze({
     product: Object.freeze(["title", "description", "price", "compareAtPrice", "currency", "variantId", "media"]),
     content: Object.freeze(["hero", "timeline", "feature", "faq", "recommendations"]),
     evidence: Object.freeze(["reviews", "ugc", "policies", "comparison", "logos", "statistics", "payments"])
-  })
+  }),
+  // `slots` are values the frozen renderer may consume. They are deliberately
+  // broader than merchant editing: product identity is Shopify-owned and
+  // evidence must arrive through an attestation, never through the browser.
+  merchantEditablePaths: Object.freeze([
+    "facetas.hero.bullets[].fuerte",
+    "facetas.hero.bullets[].resto",
+    "facetas.faq.titular",
+    "facetas.faq.items[].pregunta",
+    "facetas.faq.items[].respuesta"
+  ])
 });
 
 // El workspace de edición puede tener una experiencia rica, pero no convierte
@@ -41,7 +51,7 @@ const PINZA_PAGEPILOT_EDITOR_CONTRACT_V1 = Object.freeze({
       id: "approved-content",
       label: "Contenido autorizado",
       editable: true,
-      slots: Object.freeze(["content.hero", "content.timeline", "content.feature", "content.faq", "content.recommendations"])
+      slots: PINZA_PAGEPILOT_V1.merchantEditablePaths
     }),
     Object.freeze({
       id: "evidence",

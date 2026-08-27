@@ -65,6 +65,7 @@ const { TenantContext } = require("./src/tenancy/tenant-context");
 const { verifyAndNormalizeWebhook } = require("./src/webhooks/verify-and-normalize");
 const { generationAdmissionPause } = require("./src/generation/admission-control");
 const { resolveTemplateForCreation } = require("./src/domain/template-registry");
+const { applyTemplateBoundEdit } = require("./src/domain/fixed-template-edit-policy");
 const {
   queryShopifyCertification,
   queryStorefrontCertification,
@@ -1069,7 +1070,10 @@ async function api(req, res, url) {
     }
     const { data } = await leerCuerpo(req);
     if (!data) return json(res, 400, { error: "Falta data" });
-    existente.data = data;
+    existente.data = applyTemplateBoundEdit({
+      persistedData: existente.data,
+      submittedData: data
+    });
     if (existente.estado === "publicada") existente.cambios_sin_publicar = true;
     await guardarPagina(sesion.tenant, existente);
     return json(res, 200, existente);

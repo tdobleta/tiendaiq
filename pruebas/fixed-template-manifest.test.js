@@ -16,6 +16,7 @@ test("la plantilla fija conserva identidad y slots explícitos", () => {
   assert.equal(PINZA_PAGEPILOT_V1.version, 1);
   assert.ok(PINZA_PAGEPILOT_V1.slots.product.includes("media"));
   assert.ok(PINZA_PAGEPILOT_V1.slots.evidence.includes("reviews"));
+  assert.ok(PINZA_PAGEPILOT_V1.merchantEditablePaths.includes("facetas.faq.items[].respuesta"));
 });
 
 test("el contrato de editor conserva el diseño fijo y separa Shopify de evidencia", () => {
@@ -29,6 +30,8 @@ test("el contrato de editor conserva el diseño fijo y separa Shopify de evidenc
   assert.ok(product.slots.includes("product.media"));
   assert.equal(evidence.requiresAttestation, true);
   assert.equal(evidence.editable, false);
+  const content = PINZA_PAGEPILOT_EDITOR_CONTRACT_V1.groups.find((group) => group.id === "approved-content");
+  assert.deepEqual(content.slots, PINZA_PAGEPILOT_V1.merchantEditablePaths);
 });
 
 test("el importador quita hotlinks y scripts, sin rediseñar el HTML fijo", () => {
@@ -62,4 +65,5 @@ test("el artefacto distribuible no conserva hotlinks ni marcas de la fuente", ()
   assert.doesNotMatch(artifact, /(?:pagepilot\.ai|Ventmar|Pinza Recogedora|Bloomberg|Cosmopolitan)/i);
   assert.doesNotMatch(artifact, /<script/i);
   assert.match(artifact, /class="hero"/);
+  assert.match(artifact, /\[hidden\]\s*\{\s*display:\s*none\s*!important/);
 });

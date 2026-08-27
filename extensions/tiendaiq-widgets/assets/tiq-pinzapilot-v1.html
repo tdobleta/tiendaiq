@@ -20,6 +20,9 @@
     }
 
     * { box-sizing: border-box; }
+    /* Evidence modules fail closed even when a component declares display:flex
+       or display:grid. The HTML hidden attribute alone can lose that cascade. */
+    [hidden] { display: none !important; }
     html { scroll-behavior: smooth; }
     body {
       margin: 0;
