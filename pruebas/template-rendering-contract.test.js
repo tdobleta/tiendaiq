@@ -21,6 +21,15 @@ test("el widget selecciona renderer por descriptor y conserva sólo fallback leg
   assert.doesNotMatch(widget, /if \(g && g\.estilo === "premium"\) return renderPremium/);
 });
 
+test("los fallbacks de imágenes no ejecutan HTML inline de datos del catálogo", () => {
+  assert.match(widget, /document\.addEventListener\("error", \(event\) =>/);
+  assert.match(widget, /data-tiq-fallback="media"/);
+  assert.match(widget, /placeholder\.textContent = image\.dataset\.tiqFallbackLabel/);
+  assert.match(widget, /data-tiq-fallback="asset"/);
+  assert.doesNotMatch(widget, /onerror="/);
+  assert.doesNotMatch(widget, /this\.outerHTML=this\.dataset/);
+});
+
 test("el SSR Liquid resuelve el mismo descriptor antes del alias legacy", () => {
   assert.match(liquid, /assign tq_renderer = g\.estilo \| default: 'clasico'/);
   assert.match(liquid, /g\.template\.id == 'tiendaiq\/classic' and g\.template\.version == 1/);

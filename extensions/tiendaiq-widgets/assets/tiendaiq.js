@@ -4,7 +4,8 @@
 // Reglas del contrato que se implementan acá:
 //  - Todo slot de imagen acepta null → placeholder punteado.
 //  - media_id se resuelve a img/{id}.jpg; si el archivo no existe,
-//    cae al mismo placeholder (onerror). La plantilla nunca rompe.
+//    cae al mismo placeholder mediante un listener DOM seguro. La plantilla
+//    nunca rompe ni ejecuta atributos inline.
 //  - Precio comparativo: solo se renderiza tachado si existe.
 //  - Variantes: si la única opción es "Title"/"Default Title",
 //    el bloque no se renderiza (passthrough sucio de Shopify).
@@ -33,6 +34,31 @@
     String(s ?? "").replace(/[&<>"']/g, (c) =>
       ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])
     );
+
+  // Las imágenes se renderizan como HTML de plantilla, pero sus fallbacks no
+  // se evalúan como código inline. Los atributos onerror convierten entidades
+  // HTML a texto antes de ejecutar JavaScript, una frontera innecesaria para
+  // datos que pueden venir del catálogo. Este listener conserva el mismo
+  // resultado visual y usa textContent para el fallback de media.
+  document.addEventListener("error", (event) => {
+    const image = event.target;
+    if (!(image instanceof HTMLImageElement)) return;
+    const fallback = image.dataset.tiqFallback;
+    if (fallback === "media") {
+      const placeholder = document.createElement("div");
+      placeholder.className = "ph-img";
+      placeholder.textContent = image.dataset.tiqFallbackLabel || "Imagen pendiente";
+      image.replaceWith(placeholder);
+      return;
+    }
+    if (fallback === "asset") {
+      const placeholder = image.nextElementSibling;
+      if (placeholder?.matches("[data-tiq-asset-fallback]")) {
+        placeholder.hidden = false;
+        image.remove();
+      }
+    }
+  }, true);
 
   // Older generated payloads can contain UTF-8 decoded as Latin-1. Repair it
   // at the renderer boundary so published pages do not expose mojibake.
@@ -73,7 +99,7 @@
       respons = ` srcset="${esc(ss)}" sizes="${esc(sizes)}"`;
     }
     return `<img src="${esc(url)}" alt="${esc(alt)}"${respons} ${carga}
-      onerror="this.outerHTML='<div class=\\'ph-img\\'>${esc(mediaId)}</div>'">`;
+      data-tiq-fallback="media" data-tiq-fallback-label="${esc(mediaId)}">`;
   };
 
   // Asset de la plantilla (avatares, iconos): ruta directa, no media_id.
@@ -86,10 +112,10 @@
     if (EN_TIENDA && window.TIENDAIQ_ASSET_BASE && !/^https?:/.test(ruta)) {
       src = window.TIENDAIQ_ASSET_BASE + ruta.split("/").pop();
     }
-    // encodeURI: los nombres de archivo pueden traer espacios y comas.
-    // El fallback viaja en un atributo propio. Inyectarlo dentro de un
-    // atributo onerror rompe el HTML cuando el fallback contiene comillas.
-    return `<img src="${esc(encodeURI(src))}" alt="" data-fallback="${esc(respaldo)}" onerror="this.outerHTML=this.dataset.fallback">`;
+    // encodeURI: los nombres de archivo pueden traer espacios y comas. El
+    // fallback se entrega como hermano oculto ya escapado por su renderer; el
+    // listener de arriba sólo lo revela si el asset no carga.
+    return `<img src="${esc(encodeURI(src))}" alt="" data-tiq-fallback="asset"><span data-tiq-asset-fallback hidden>${respaldo}</span>`;
   };
 
   // role="img" + aria-label: el lector de pantalla anuncia "N de 5 estrellas"
