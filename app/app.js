@@ -3346,6 +3346,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       const def = defSeccion(s.id);
       return def ? `<div class="sp-sub">Contenido</div><div class="sp-content">${def.html()}</div>` : "";
     }
+    if (esPlantillaPinzaFija()) return panelPlantillaPinzaFijaHTML(id);
     const def = seccionesPagina()[id];
     if (!def) return "";
     return `<div class="sp-sub">Contenido</div><div class="sp-content">
@@ -3358,7 +3359,37 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       const s = (estado.pagina.data.secciones || []).find((x) => x.id === id.slice(4));
       return catSeccion(s?.tipo)?.nombre || "Sección";
     }
+    if (esPlantillaPinzaFija()) {
+      return ({ bullets: "Beneficios verificables", faq: "Preguntas frecuentes" })[id] || "Plantilla fija";
+    }
     return seccionesPagina()[id]?.titulo || "Sección";
+  }
+
+  function esPlantillaPinzaFija() {
+    const global = estado.pagina?.data?.global || {};
+    return global.template?.id === "tiendaiq/pinza-pagepilot" || global.estilo === "pinza-pagepilot";
+  }
+
+  // El inspector de una plantilla fija nunca llama al formulario genérico: ese
+  // formulario admite layout, pruebas sociales y otros campos que no pertenecen
+  // al artefacto versionado. Acá sólo se exponen los slots declarados.
+  function panelPlantillaPinzaFijaHTML(id) {
+    const facetas = estado.pagina.data.facetas || {};
+    if (id === "bullets") {
+      const bullets = Array.isArray(facetas.hero?.bullets) ? facetas.hero.bullets : [];
+      if (!bullets.length) return `<div class="editor__ayuda">No hay beneficios cargados para esta página. El diseño permanecerá sin este bloque hasta que exista información real del producto.</div>`;
+      return `<div class="sp-sub">Beneficios verificables</div><div class="sp-content">${bullets.map((bullet, index) => {
+        const value = typeof bullet === "string" ? { fuerte: "", resto: bullet } : bullet || {};
+        return `<section class="sp-item-card"><div class="sp-item-card__head"><strong>Beneficio ${index + 1}</strong><span>slot</span></div>${campo(`facetas.hero.bullets.${index}.fuerte`, "Título")}${campo(`facetas.hero.bullets.${index}.resto`, "Detalle", 2)}</section>`;
+      }).join("")}</div>`;
+    }
+    if (id === "faq") {
+      const faq = facetas.faq || {};
+      const items = Array.isArray(faq.items) ? faq.items : [];
+      if (!items.length) return `<div class="editor__ayuda">No hay preguntas cargadas. La plantilla no inventa preguntas ni respuestas: podés agregarlas desde el contenido de producto antes de publicar.</div>`;
+      return `<div class="sp-sub">Preguntas frecuentes</div><div class="sp-content">${campo("facetas.faq.titular", "Título")}${items.map((_, index) => `<section class="sp-item-card"><div class="sp-item-card__head"><strong>Pregunta ${index + 1}</strong><span>slot</span></div>${campo(`facetas.faq.items.${index}.pregunta`, "Pregunta")}${campo(`facetas.faq.items.${index}.respuesta`, "Respuesta", 3)}</section>`).join("")}</div>`;
+    }
+    return `<div class="editor__ayuda">Este bloque está vinculado a Shopify o requiere evidencia verificable. No se puede modificar desde la plantilla.</div>`;
   }
 
   function panelEsV2(id) { return id.startsWith("sec:"); }
@@ -3666,18 +3697,16 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       `<div class="pe-tree__row pe-tree__row--locked" aria-disabled="true"><span class="pe-tree__lead"></span><span class="pe-tree__ico">${ico}</span><span class="pe-tree__label">${esc(label)}</span><span class="pe-tree__lock-hint">${esc(hint)}</span></div>`;
     const grupo = (nombre, filas, meta) =>
       `<section class="pe-tree__group"><div class="pe-tree__row pe-tree__row--group" tabindex="0"><span class="pe-tree__lead pe-tree__chevron">${I.chev}</span><span class="pe-tree__ico pe-tree__ico--group">${I.grupo}</span><span class="pe-tree__label">${esc(nombre)}</span>${meta ? `<span class="pe-tree__group-meta">${esc(meta)}</span>` : ""}</div><div class="pe-tree__children">${filas}</div></section>`;
-    const fixedTemplate = estado.pagina?.data?.global?.template?.id === "tiendaiq/pinza-pagepilot" ||
-      estado.pagina?.data?.global?.estilo === "pinza-pagepilot";
+    const fixedTemplate = esPlantillaPinzaFija();
     if (fixedTemplate) {
       const source = locked("Producto", I.encabezado) + locked("Galería de producto", I.galeria) +
         locked("Precio y variantes", I.lista) + locked("Agregar al carrito", I.beneficios);
-      const approved = row("encabezado", "Texto de presentación", I.encabezado) +
-        row("bullets", "Beneficios verificables", I.beneficios) + row("faq", "Preguntas frecuentes", I.lista);
+      const approved = row("bullets", "Beneficios verificables", I.beneficios) + row("faq", "Preguntas frecuentes", I.lista);
       const evidence = locked("Prueba social", I.estrella, "Requiere fuente") +
         locked("Comparación", I.lista, "Requiere fuente") + locked("Garantías", I.beneficios, "Política Shopify");
       return `<nav class="pe-tree" aria-label="Bloques de la plantilla fija">
         <div class="pe-tree__head"><span class="pe-tree__head-title">Plantilla fija</span><span class="pe-tree__head-sub">Pinza PagePilot · v1</span></div>
-        <div class="pe-tree__body">${grupo("Datos de Shopify", source, "solo lectura")}${grupo("Contenido autorizado", approved, "3 grupos")}${grupo("Evidencia", evidence, "validada")}</div>
+        <div class="pe-tree__body">${grupo("Datos de Shopify", source, "solo lectura")}${grupo("Contenido autorizado", approved, "2 grupos")}${grupo("Evidencia", evidence, "validada")}</div>
       </nav>`;
     }
     const info = row("encabezado", "Encabezado", I.encabezado) + row("galeria", "Galería de producto", I.galeria) +

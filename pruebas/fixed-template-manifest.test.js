@@ -47,7 +47,7 @@ test("el view model conecta producto real y falla cerrado para evidencia sin ate
     compliance: { claims_verified: false, review_source: "inventada", policy_source: "inventada" }
   };
   const view = fixedTemplateViewModel(data, { "gid://shopify/MediaImage/1": "https://cdn.shopify.com/a.webp" }, { variantId: 42 });
-  assert.equal(view.product.title, "Título publicado");
+  assert.equal(view.product.title, "Producto Shopify");
   assert.equal(view.product.media.length, 1);
   assert.equal(view.product.variantId, "42");
   assert.equal(view.evidence.reviews, false);

@@ -77,8 +77,10 @@ function fixedTemplateViewModel(data = {}, urls = {}, options = {}) {
   return Object.freeze({
     template: Object.freeze({ id: PINZA_PAGEPILOT_V1.id, version: PINZA_PAGEPILOT_V1.version }),
     product: Object.freeze({
-      title: String(hero.titulo || source.titulo_crudo || ""),
-      description: String(hero.subtitulo || source.descripcion_cruda || ""),
+      // Product identity remains catalog-owned. A generated/persisted draft
+      // cannot replace the title or description visible to a buyer.
+      title: String(source.titulo_crudo || hero.titulo || ""),
+      description: String(source.descripcion_cruda || hero.subtitulo || ""),
       price: source.precio ?? null,
       compareAtPrice: source.precio_comparativo ?? null,
       currency: String(source.moneda || ""),
