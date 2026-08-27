@@ -2,7 +2,11 @@
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { PINZA_PAGEPILOT_V1, fixedTemplateViewModel } = require("../src/domain/fixed-template-manifest");
+const {
+  PINZA_PAGEPILOT_V1,
+  PINZA_PAGEPILOT_EDITOR_CONTRACT_V1,
+  fixedTemplateViewModel
+} = require("../src/domain/fixed-template-manifest");
 const { sanitizeFixedTemplateSource, sourceFingerprint } = require("../scripts/import-fixed-template-source");
 const fs = require("node:fs");
 const path = require("node:path");
@@ -12,6 +16,19 @@ test("la plantilla fija conserva identidad y slots explícitos", () => {
   assert.equal(PINZA_PAGEPILOT_V1.version, 1);
   assert.ok(PINZA_PAGEPILOT_V1.slots.product.includes("media"));
   assert.ok(PINZA_PAGEPILOT_V1.slots.evidence.includes("reviews"));
+});
+
+test("el contrato de editor conserva el diseño fijo y separa Shopify de evidencia", () => {
+  assert.equal(PINZA_PAGEPILOT_EDITOR_CONTRACT_V1.mode, "fixed-slots");
+  assert.equal(PINZA_PAGEPILOT_EDITOR_CONTRACT_V1.permissions.structure, false);
+  assert.equal(PINZA_PAGEPILOT_EDITOR_CONTRACT_V1.permissions.layout, false);
+  assert.equal(PINZA_PAGEPILOT_EDITOR_CONTRACT_V1.permissions.customCss, false);
+  const product = PINZA_PAGEPILOT_EDITOR_CONTRACT_V1.groups.find((group) => group.id === "shopify-product");
+  const evidence = PINZA_PAGEPILOT_EDITOR_CONTRACT_V1.groups.find((group) => group.id === "evidence");
+  assert.equal(product.editable, false);
+  assert.ok(product.slots.includes("product.media"));
+  assert.equal(evidence.requiresAttestation, true);
+  assert.equal(evidence.editable, false);
 });
 
 test("el importador quita hotlinks y scripts, sin rediseñar el HTML fijo", () => {

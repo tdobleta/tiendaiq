@@ -16,6 +16,43 @@ const PINZA_PAGEPILOT_V1 = Object.freeze({
   })
 });
 
+// El workspace de edición puede tener una experiencia rica, pero no convierte
+// una plantilla fija en un page builder. Este contrato es la frontera que una
+// futura API de editor puede exponer al admin: qué se puede editar, qué viene
+// de Shopify y qué evidencia permanece apagada hasta ser verificable.
+const PINZA_PAGEPILOT_EDITOR_CONTRACT_V1 = Object.freeze({
+  template: Object.freeze({ id: PINZA_PAGEPILOT_V1.id, version: PINZA_PAGEPILOT_V1.version }),
+  mode: "fixed-slots",
+  permissions: Object.freeze({
+    structure: false,
+    layout: false,
+    customCss: false,
+    sourceBoundProduct: true,
+    evidenceRequiresAttestation: true
+  }),
+  groups: Object.freeze([
+    Object.freeze({
+      id: "shopify-product",
+      label: "Datos de Shopify",
+      editable: false,
+      slots: Object.freeze(["product.title", "product.description", "product.price", "product.variantId", "product.media"])
+    }),
+    Object.freeze({
+      id: "approved-content",
+      label: "Contenido autorizado",
+      editable: true,
+      slots: Object.freeze(["content.hero", "content.timeline", "content.feature", "content.faq", "content.recommendations"])
+    }),
+    Object.freeze({
+      id: "evidence",
+      label: "Evidencia",
+      editable: false,
+      requiresAttestation: true,
+      slots: Object.freeze(["evidence.reviews", "evidence.ugc", "evidence.policies", "evidence.comparison", "evidence.logos", "evidence.statistics"])
+    })
+  ])
+});
+
 function isHttpsUrl(value) {
   try {
     return new URL(String(value)).protocol === "https:";
@@ -71,4 +108,9 @@ function fixedTemplateViewModel(data = {}, urls = {}, options = {}) {
   });
 }
 
-module.exports = Object.freeze({ PINZA_PAGEPILOT_V1, isHttpsUrl, fixedTemplateViewModel });
+module.exports = Object.freeze({
+  PINZA_PAGEPILOT_V1,
+  PINZA_PAGEPILOT_EDITOR_CONTRACT_V1,
+  isHttpsUrl,
+  fixedTemplateViewModel
+});
