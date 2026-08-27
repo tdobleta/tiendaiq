@@ -16,6 +16,13 @@ entorno protegido.
 - El entorno GitHub `partner-staging` contiene
   `PARTNER_STAGING_OPS_STATUS_TOKEN`; el valor nunca se copia a Actions,
   documentación ni logs.
+- El servicio Render `tiendaiq-partner-staging-web` tiene configurado, sólo
+  para la tienda Partner instalada:
+  `SHOPIFY_CERTIFICATION_ENABLED=1`,
+  `SHOPIFY_CERTIFICATION_SHOP`, `SHOPIFY_CERTIFICATION_PAGE_ID` y
+  `SHOPIFY_CERTIFICATION_MAX_AGE_HOURS=24`. El ID corresponde a una página
+  real publicada por el worker del SHA solicitado; no reutilizar evidencia de
+  staging histórico ni inventar IDs.
 - La evidencia durable de página, publicación Shopify y privacy corresponde al
   mismo SHA. El workflow no genera contenido ni muta Shopify.
 

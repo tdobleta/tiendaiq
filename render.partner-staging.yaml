@@ -68,6 +68,18 @@ services:
         value: "0"
       - key: PLAN_TEST
         value: "1"
+      # El gate E2E no se habilita por defecto: requiere una tienda Partner
+      # instalada y evidencia real de una página publicada por este release.
+      # Estas claves no contienen secretos y se completan sólo en Render
+      # cuando exista esa evidencia; no deben apuntar a staging histórico.
+      - key: SHOPIFY_CERTIFICATION_ENABLED
+        sync: false
+      - key: SHOPIFY_CERTIFICATION_SHOP
+        sync: false
+      - key: SHOPIFY_CERTIFICATION_PAGE_ID
+        sync: false
+      - key: SHOPIFY_CERTIFICATION_MAX_AGE_HOURS
+        value: "24"
       - key: EMAIL_SOPORTE
         sync: false
       - key: RAZON_SOCIAL
