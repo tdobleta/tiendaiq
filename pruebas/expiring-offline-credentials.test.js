@@ -17,6 +17,7 @@ const {
 } = require("../src/shopify/token-refresh-broker");
 const { credencialExpiringDesdeRespuesta } = require("../auth");
 const { gql } = require("../shopify");
+const { esperarCredencialRefrescada } = require("../tiendas");
 
 const SHOP = "tienda-prueba-iq.myshopify.com";
 
@@ -29,6 +30,32 @@ test("el contrato expiring exige access/refresh/expiraciones y refresca antes de
   assert.equal(needsRefresh(credential, { now }), false);
   assert.equal(needsRefresh(credential, { now: now + 3_400_000 }), true);
   assert.throws(() => credencialExpiringDesdeRespuesta({ access_token: "a" }, { now }), /expiring válida/);
+});
+
+test("una solicitud concurrente espera la credencial renovada sin ejecutar otro refresh", async () => {
+  const expired = { accessToken: "old", accessExpiresAt: "2020-01-01T00:00:00.000Z" };
+  const renewed = { accessToken: "new", accessExpiresAt: "2099-01-01T00:00:00.000Z" };
+  const values = [expired, renewed];
+  const waits = [];
+  const result = await esperarCredencialRefrescada("tienda-prueba-iq.myshopify.com", {
+    readCredential: async () => values.shift() || renewed,
+    shouldRefresh: (credential) => credential === expired,
+    sleep: async (ms) => waits.push(ms),
+    delaysMs: [10, 20]
+  });
+  assert.equal(result, renewed);
+  assert.deepEqual(waits, [10, 20]);
+});
+
+test("una renovación concurrente que no termina conserva el resultado fail-closed", async () => {
+  const expired = { accessToken: "old", accessExpiresAt: "2020-01-01T00:00:00.000Z" };
+  const result = await esperarCredencialRefrescada("tienda-prueba-iq.myshopify.com", {
+    readCredential: async () => expired,
+    shouldRefresh: () => true,
+    sleep: async () => {},
+    delaysMs: [10, 20]
+  });
+  assert.equal(result, expired);
 });
 
 test("refresh Shopify usa form encoding y nunca devuelve la respuesta remota como error", async () => {
