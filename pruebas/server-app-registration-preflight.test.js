@@ -2,7 +2,7 @@
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { iniciarServidor } = require("../server");
+const { iniciarServidor, requierePostgresRuntime } = require("../server");
 
 function fakeServer() {
   return {
@@ -46,4 +46,11 @@ test("la web verifica antes de escuchar cuando usa Postgres", async () => {
 
   assert.deepEqual(events, ["verified"]);
   assert.equal(server.listenCalls, 1);
+});
+
+test("un runtime deployable exige PostgreSQL aunque DATABASE_URL falte", () => {
+  assert.equal(requierePostgresRuntime({ DEV_MODE: "0", DATABASE_URL: "" }), true);
+  assert.equal(requierePostgresRuntime({ NODE_ENV: "production", DATABASE_URL: "" }), true);
+  assert.equal(requierePostgresRuntime({ DEV_MODE: "1", DATABASE_URL: "" }), false);
+  assert.equal(requierePostgresRuntime({}), false);
 });

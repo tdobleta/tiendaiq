@@ -1340,11 +1340,19 @@ async function cerrarPorFallo(error, tipo) {
 process.on("unhandledRejection", (error) => void cerrarPorFallo(error, "unhandledRejection"));
 process.on("uncaughtException", (error) => void cerrarPorFallo(error, "uncaughtException"));
 
+// El almacenamiento de archivos existe exclusivamente para el flujo local.
+// Render declara DEV_MODE=0; también aceptamos las señales estándar de un
+// runtime deployable. Así una web publicada no abre un puerto antes de
+// demostrar PostgreSQL, sin imponer variables al runner local de pruebas.
+function requierePostgresRuntime(runtimeEnv = env) {
+  return runtimeEnv?.DEV_MODE === "0" || runtimeEnv?.NODE_ENV === "production" || Boolean(runtimeEnv?.DATABASE_URL);
+}
+
 async function iniciarServidor({
   server = servidor,
   port = PUERTO,
   verificar = verificarAlmacenamientoDB,
-  usaPostgres = Boolean(env.DATABASE_URL),
+  usaPostgres = requierePostgresRuntime(env),
   iniciarWorkerLocal = null
 } = {}) {
   // Antes de abrir un puerto HTTP, la instancia web con Postgres debe demostrar
@@ -1405,4 +1413,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { servidor, iniciarServidor };
+module.exports = { servidor, iniciarServidor, requierePostgresRuntime };
