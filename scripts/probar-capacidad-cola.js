@@ -110,6 +110,16 @@ async function cleanupSyntheticRun({ workerPool, webPool, tenants, setupConcurre
   let storesDeleted = 0;
   let tenantsDeleted = 0;
 
+  function evidence() {
+    return {
+      jobsDeleted,
+      storesDeleted,
+      tenantsDeleted,
+      failedJobDeletion: errors.some((entry) => entry.scope === "jobs"),
+      failedTenantDeletions: errors.filter((entry) => entry.scope === "tenant").length
+    };
+  }
+
   try {
     const client = await workerPool.connect();
     try {
@@ -128,7 +138,7 @@ async function cleanupSyntheticRun({ workerPool, webPool, tenants, setupConcurre
       client.release();
     }
   } catch (error) {
-    errors.push(new Error(`jobs: ${error.message}`));
+    errors.push({ scope: "jobs" });
   }
 
   await parallelMap(tenants, setupConcurrency, async (tenant) => {
@@ -140,12 +150,17 @@ async function cleanupSyntheticRun({ workerPool, webPool, tenants, setupConcurre
         tenantsDeleted += registry.rowCount;
       });
     } catch (error) {
-      errors.push(new Error(`${tenant.tenantId}: ${error.message}`));
+      errors.push({ scope: "tenant" });
     }
   });
 
-  if (errors.length) throw new AggregateError(errors, `Limpieza incompleta para ${prefix}`);
-  return { jobsDeleted, storesDeleted, tenantsDeleted };
+  const result = evidence();
+  if (errors.length) {
+    const failure = new Error(`Limpieza incompleta para ${prefix}`);
+    failure.cleanupEvidence = result;
+    throw failure;
+  }
+  return result;
 }
 
 async function main() {
@@ -309,6 +324,10 @@ async function main() {
       const remaining = await inspectRunJobs(workerPool, `${prefix}:metrics:cleanup`, prefix);
       if (remaining.total !== 0) throw new Error(`Persisten ${remaining.total} jobs despues de limpiar`);
     } catch (error) {
+      const cleanupEvidence = error && typeof error === "object" ? error.cleanupEvidence : null;
+      if (cleanupEvidence) {
+        console.log(JSON.stringify({ event: "queue_load_cleanup_result", cleanup: cleanupEvidence }));
+      }
       primaryError = primaryError
         ? new AggregateError([primaryError, error], `Prueba y limpieza fallaron para ${prefix}`)
         : error;
@@ -317,7 +336,10 @@ async function main() {
     }
   }
 
-  if (primaryError) throw primaryError;
+  if (primaryError) {
+    console.log(JSON.stringify({ event: "queue_load_failure", runId, ...(cleanup ? { cleanup } : {}) }));
+    throw primaryError;
+  }
   if (cleanupOnly) {
     console.log(JSON.stringify({ passed: true, mode: "cleanup", runId, cleanup }));
     return;

@@ -7,7 +7,13 @@ const RESULT_FIELDS = Object.freeze([
   "setupMs", "enqueueMs", "enqueueP95Ms", "oldestQueuedSeconds", "drainMs",
   "jobsPerSecond", "maxDrainSeconds", "webPoolPeak", "workerPoolPeak", "cleanup"
 ]);
-const CLEANUP_FIELDS = Object.freeze(["jobsDeleted", "storesDeleted", "tenantsDeleted"]);
+const CLEANUP_FIELDS = Object.freeze([
+  "jobsDeleted",
+  "storesDeleted",
+  "tenantsDeleted",
+  "failedJobDeletion",
+  "failedTenantDeletions"
+]);
 const FAILURE_CLASSES = Object.freeze([
   "authorization_configuration",
   "database_connection",
@@ -44,6 +50,10 @@ function sanitizeCleanup(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
   const safe = {};
   for (const field of CLEANUP_FIELDS) {
+    if (field === "failedJobDeletion") {
+      if (typeof value.failedJobDeletion === "boolean") safe.failedJobDeletion = value.failedJobDeletion;
+      continue;
+    }
     const valueForField = number(value[field]);
     if (valueForField !== undefined) safe[field] = valueForField;
   }
@@ -104,6 +114,17 @@ function lastResultObject(log) {
   return undefined;
 }
 
+function lastFailureCleanup(log) {
+  const values = parsedJsonLines(log);
+  for (let index = values.length - 1; index >= 0; index -= 1) {
+    const value = values[index];
+    if (value.event !== "queue_load_failure" && value.event !== "queue_load_cleanup_result") continue;
+    const cleanup = sanitizeCleanup(value.cleanup);
+    if (cleanup) return cleanup;
+  }
+  return undefined;
+}
+
 function classifyFailure(log) {
   const normalized = String(log || "").toLowerCase();
   if (/allow_queue_load_test|allow_remote_queue_load_test|expected_release_sha|test_database_url|load_cleanup_run_id/.test(normalized)) {
@@ -142,6 +163,7 @@ function createArtifact({ log, release, mode, exitCode }) {
   const numericExitCode = Number(exitCode);
   if (!Number.isInteger(numericExitCode) || numericExitCode < 0 || numericExitCode > 255) throw new Error("exitCode invalido");
   const result = sanitizeResult(lastResultObject(log));
+  const failureCleanup = lastFailureCleanup(log);
   const failureClass = numericExitCode === 0 ? undefined : classifyFailure(log);
   return {
     schema_version: 1,
@@ -151,6 +173,7 @@ function createArtifact({ log, release, mode, exitCode }) {
     completed: numericExitCode === 0,
     result_detected: Boolean(result),
     ...(result ? { result } : {}),
+    ...(failureCleanup ? { cleanup: failureCleanup } : {}),
     ...(failureClass ? { failure: { class: failureClass, phase: lastPhase(log) } } : {})
   };
 }

@@ -57,6 +57,17 @@ test("una falla no copia la salida cruda al artefacto", () => {
     log: [
       JSON.stringify({ event: "queue_load_started", runId: "0123456789ab", tenants: 100, jobs: 100 }),
       JSON.stringify({ event: "queue_load_phase", phase: "tenant_setup" }),
+      JSON.stringify({
+        event: "queue_load_cleanup_result",
+        cleanup: {
+          jobsDeleted: 100,
+          storesDeleted: 98,
+          tenantsDeleted: 98,
+          failedJobDeletion: false,
+          failedTenantDeletions: 2,
+          rawError: "password=must-not-appear"
+        }
+      }),
       "Prueba de capacidad no ejecutada: permission denied for table control_plane.tenants; password=must-not-appear"
     ].join("\n")
   });
@@ -69,6 +80,13 @@ test("una falla no copia la salida cruda al artefacto", () => {
     completed: false,
     result_detected: true,
     result: { runId: "0123456789ab", tenants: 100, jobs: 100 },
+    cleanup: {
+      jobsDeleted: 100,
+      storesDeleted: 98,
+      tenantsDeleted: 98,
+      failedJobDeletion: false,
+      failedTenantDeletions: 2
+    },
     failure: { class: "database_authorization", phase: "tenant_setup" }
   });
   assert.doesNotMatch(JSON.stringify(artifact), /password|must-not-appear|permission denied/i);
