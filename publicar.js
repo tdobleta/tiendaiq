@@ -24,6 +24,7 @@ const fs = require("fs");
 const path = require("path");
 const { gql, sesionDeEnv } = require("./shopify");
 const { subirImagenTienda } = require("./imagenes");
+const { assertFixedTemplatePublishable } = require("./src/shopify/fixed-template-publish-guard");
 
 const RUTA_JSON = path.join(__dirname, "ultima-pagina.json");
 const DIR_PLANTILLA = path.join(__dirname, "plantilla-producto");
@@ -78,6 +79,11 @@ const M_SUFIJO = `mutation($product: ProductUpdateInput!) {
 // `log` deja que el CLI escriba a consola y el server no.
 async function publicarPagina(data, sesion, log = () => {}, { signal, onAvatarUploaded } = {}) {
   const idProducto = data.fuente.shopify_product_id;
+
+  // This runs in the worker immediately before any remote mutation. It is the
+  // authoritative guard even if a queued job was created before the catalog
+  // changed or another API caller bypassed the web preflight.
+  await assertFixedTemplatePublishable(data, sesion, { signal });
 
   // --- copia para la tienda: el avatar pasa a ser URL del CDN de Files ---
   const dataTienda = JSON.parse(JSON.stringify(data));

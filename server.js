@@ -66,6 +66,7 @@ const { verifyAndNormalizeWebhook } = require("./src/webhooks/verify-and-normali
 const { generationAdmissionPause } = require("./src/generation/admission-control");
 const { resolveTemplateForCreation } = require("./src/domain/template-registry");
 const { applyTemplateBoundEdit } = require("./src/domain/fixed-template-edit-policy");
+const { assertFixedTemplatePublishable } = require("./src/shopify/fixed-template-publish-guard");
 const {
   queryShopifyCertification,
   queryStorefrontCertification,
@@ -1130,6 +1131,9 @@ async function api(req, res, url) {
   if (req.method === "POST" && mPub) {
     const registro = await leerPagina(sesion.tenant, mPub[1]);
     if (!registro) return json(res, 404, { error: "No existe esa página" });
+    // Fast, authenticated preflight. The worker repeats it immediately before
+    // Shopify mutations so a product change cannot invalidate this result.
+    await assertFixedTemplatePublishable(registro.data, sesion);
     const publication = await encolarPublicacionDB(sesion.tenant, registro.id, { maxAttempts: 3 });
     if (!publication) return json(res, 404, { error: "No existe esa página" });
     if (publication.conflict) return json(res, 409, { error: "La pagina tiene otra operacion en curso." });
