@@ -74,7 +74,7 @@ test("la app Partner y los workflows usan el mismo runtime e identidad aislados"
 
   assert.match(release, /DEPLOY_REVIEWED_PARTNER_STAGING/);
   assert.match(release, /PARTNER_STAGING_REMOTE_IDENTITY_AUDITED/);
-  assert.match(release, /PARTNER_STAGING_PUBLIC_DISTRIBUTION_AUDITED/);
+  assert.doesNotMatch(release, /PARTNER_STAGING_PUBLIC_DISTRIBUTION_AUDITED/);
   assert.match(release, /RENDER_PARTNER_STAGING_WEB_DEPLOY_HOOK/);
   assert.match(release, /RENDER_PARTNER_STAGING_WORKER_DEPLOY_HOOK/);
   assert.match(release, /PARTNER_STAGING_SHOPIFY_APP_AUTOMATION_TOKEN/);
