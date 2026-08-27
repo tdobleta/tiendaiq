@@ -196,6 +196,12 @@ async function main() {
   let result = null;
   let primaryError = null;
   let cleanup = null;
+  let phase = "authorization";
+
+  function recordPhase(nextPhase) {
+    phase = nextPhase;
+    console.log(JSON.stringify({ event: "queue_load_phase", phase }));
+  }
 
   console.log(JSON.stringify({
     event: cleanupOnly ? "queue_load_cleanup_started" : "queue_load_started",
@@ -206,6 +212,7 @@ async function main() {
 
   try {
     if (!cleanupOnly) {
+      recordPhase("tenant_setup");
       const setupStarted = performance.now();
       await parallelMap(tenants, setupConcurrency, (tenant) =>
         withTenantTransaction(webPool, tenant, async (client) => {
@@ -223,6 +230,7 @@ async function main() {
       );
       const setupMs = performance.now() - setupStarted;
 
+      recordPhase("enqueue");
       const enqueueStarted = performance.now();
       const jobs = Array.from({ length: jobsCount }, (_, index) => index);
       await parallelMap(jobs, setupConcurrency, async (index) => {
@@ -242,6 +250,7 @@ async function main() {
         throw new Error(`La cola persistio ${queued.queued}/${jobsCount} jobs sinteticos`);
       }
 
+      recordPhase("drain");
       const drainStarted = performance.now();
       async function lane(index) {
         while (!processError) {
@@ -267,6 +276,7 @@ async function main() {
       const drainMs = performance.now() - drainStarted;
       if (processError) throw processError;
       if (processed !== jobsCount) throw new Error(`Se procesaron ${processed}/${jobsCount} jobs`);
+      recordPhase("verification");
       const drained = await inspectRunJobs(workerPool, `${prefix}:metrics:drained`, prefix);
       if (drained.succeeded !== jobsCount || drained.queued || drained.running || drained.failed) {
         throw new Error(`Estado final invalido: ${JSON.stringify(drained)}`);
@@ -294,6 +304,7 @@ async function main() {
     primaryError = error;
   } finally {
     try {
+      recordPhase("cleanup");
       cleanup = await cleanupSyntheticRun({ workerPool, webPool, tenants, setupConcurrency, prefix });
       const remaining = await inspectRunJobs(workerPool, `${prefix}:metrics:cleanup`, prefix);
       if (remaining.total !== 0) throw new Error(`Persisten ${remaining.total} jobs despues de limpiar`);

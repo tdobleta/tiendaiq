@@ -8,6 +8,23 @@ const RESULT_FIELDS = Object.freeze([
   "jobsPerSecond", "maxDrainSeconds", "webPoolPeak", "workerPoolPeak", "cleanup"
 ]);
 const CLEANUP_FIELDS = Object.freeze(["jobsDeleted", "storesDeleted", "tenantsDeleted"]);
+const FAILURE_CLASSES = Object.freeze([
+  "authorization_configuration",
+  "database_connection",
+  "database_authorization",
+  "database_schema",
+  "queue_integrity",
+  "cleanup",
+  "unclassified"
+]);
+const LOAD_PHASES = Object.freeze([
+  "authorization",
+  "tenant_setup",
+  "enqueue",
+  "drain",
+  "verification",
+  "cleanup"
+]);
 
 function releaseSha(value) {
   const normalized = String(value || "").trim().toLowerCase();
@@ -62,15 +79,61 @@ function sanitizeResult(value) {
   return Object.keys(safe).length ? safe : undefined;
 }
 
-function lastJsonObject(log) {
+function parsedJsonLines(log) {
   const lines = String(log || "").split(/\r?\n/);
-  for (let index = lines.length - 1; index >= 0; index -= 1) {
+  const parsed = [];
+  for (const line of lines) {
     try {
-      const parsed = JSON.parse(lines[index]);
-      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) return parsed;
+      const value = JSON.parse(line);
+      if (value && typeof value === "object" && !Array.isArray(value)) parsed.push(value);
     } catch {}
   }
+  return parsed;
+}
+
+function lastJsonObject(log) {
+  return parsedJsonLines(log).at(-1);
+}
+
+function lastResultObject(log) {
+  const values = parsedJsonLines(log);
+  for (let index = values.length - 1; index >= 0; index -= 1) {
+    const value = values[index];
+    if (typeof value.passed === "boolean" || value.event === "queue_load_started") return value;
+  }
   return undefined;
+}
+
+function classifyFailure(log) {
+  const normalized = String(log || "").toLowerCase();
+  if (/allow_queue_load_test|allow_remote_queue_load_test|expected_release_sha|test_database_url|load_cleanup_run_id/.test(normalized)) {
+    return "authorization_configuration";
+  }
+  if (/permission denied|row-level security|not authorized|must be member|insufficient privilege/.test(normalized)) {
+    return "database_authorization";
+  }
+  if (/relation .* does not exist|column .* does not exist|schema .* does not exist|undefined table/.test(normalized)) {
+    return "database_schema";
+  }
+  if (/cleanup|persisten .* jobs|limpieza incompleta|limpieza no verificable/.test(normalized)) {
+    return "cleanup";
+  }
+  if (/lease perdido|se procesaron|estado final invalido|cola persistio/.test(normalized)) {
+    return "queue_integrity";
+  }
+  if (/econn|connect|connection|timeout|certificate|tls|ssl|authentication failed|enotfound/.test(normalized)) {
+    return "database_connection";
+  }
+  return "unclassified";
+}
+
+function lastPhase(log) {
+  const values = parsedJsonLines(log);
+  for (let index = values.length - 1; index >= 0; index -= 1) {
+    const phase = string(values[index].phase, /^(?:authorization|tenant_setup|enqueue|drain|verification|cleanup)$/);
+    if (phase) return phase;
+  }
+  return "unknown";
 }
 
 function createArtifact({ log, release, mode, exitCode }) {
@@ -78,7 +141,8 @@ function createArtifact({ log, release, mode, exitCode }) {
   if (!["run", "cleanup"].includes(safeMode)) throw new Error("mode invalido");
   const numericExitCode = Number(exitCode);
   if (!Number.isInteger(numericExitCode) || numericExitCode < 0 || numericExitCode > 255) throw new Error("exitCode invalido");
-  const result = sanitizeResult(lastJsonObject(log));
+  const result = sanitizeResult(lastResultObject(log));
+  const failureClass = numericExitCode === 0 ? undefined : classifyFailure(log);
   return {
     schema_version: 1,
     scope: "partner-staging-synthetic-queue",
@@ -86,7 +150,8 @@ function createArtifact({ log, release, mode, exitCode }) {
     mode: safeMode,
     completed: numericExitCode === 0,
     result_detected: Boolean(result),
-    ...(result ? { result } : {})
+    ...(result ? { result } : {}),
+    ...(failureClass ? { failure: { class: failureClass, phase: lastPhase(log) } } : {})
   };
 }
 
@@ -106,4 +171,4 @@ if (require.main === module) {
   }
 }
 
-module.exports = { createArtifact, lastJsonObject, sanitizeResult };
+module.exports = { createArtifact, lastJsonObject, sanitizeResult, classifyFailure, lastPhase, FAILURE_CLASSES, LOAD_PHASES };
