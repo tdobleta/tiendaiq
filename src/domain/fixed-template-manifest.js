@@ -7,8 +7,8 @@ const PINZA_PAGEPILOT_V1 = Object.freeze({
   id: "tiendaiq/pinza-pagepilot",
   version: 1,
   rendererKey: "pinza-pagepilot",
-  sourceSha256: "1b401ccb2004bdef955d1c0a63c858e48860e2d78c27bf9378758156d00bfc93",
-  sourceFile: "tiq-pinzapilot-v1.html",
+  sourceSha256: "51f84ed4c4ccd6e107451fe16cfb079c448ed81f8fda5b40d26937ba097174a0",
+  sourceFile: "tiq-pinzapilot-v1.js",
   slots: Object.freeze({
     product: Object.freeze(["title", "description", "price", "compareAtPrice", "currency", "variantId", "media"]),
     content: Object.freeze(["hero", "timeline", "feature", "faq", "recommendations"]),

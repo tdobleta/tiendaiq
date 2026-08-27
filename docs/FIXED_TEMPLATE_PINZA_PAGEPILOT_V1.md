@@ -1,10 +1,12 @@
 # Plantilla fija: Pinza PagePilot v1
 
 Esta plantilla no es un editor visual ni un renderer genérico. El artefacto
-visual fijo es `extensions/tiendaiq-widgets/assets/tiq-pinzapilot-v1.html`.
+visual fijo queda empaquetado dentro de
+`extensions/tiendaiq-widgets/assets/tiq-pinzapilot-v1.js`, un tipo de asset
+admitido por Shopify. El runtime no descarga ni regenera el HTML.
 Su origen se identifica con el SHA-256:
 
-`1b401ccb2004bdef955d1c0a63c858e48860e2d78c27bf9378758156d00bfc93`
+`51f84ed4c4ccd6e107451fe16cfb079c448ed81f8fda5b40d26937ba097174a0`
 
 ## Regla de cambio
 
