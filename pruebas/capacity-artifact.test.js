@@ -65,6 +65,7 @@ test("una falla no copia la salida cruda al artefacto", () => {
           tenantsDeleted: 98,
           failedJobDeletion: false,
           failedTenantDeletions: 2,
+          tenantFailureClass: "referential_integrity",
           rawError: "password=must-not-appear"
         }
       }),
@@ -85,7 +86,8 @@ test("una falla no copia la salida cruda al artefacto", () => {
       storesDeleted: 98,
       tenantsDeleted: 98,
       failedJobDeletion: false,
-      failedTenantDeletions: 2
+      failedTenantDeletions: 2,
+      tenantFailureClass: "referential_integrity"
     },
     failure: { class: "database_authorization", phase: "tenant_setup" }
   });

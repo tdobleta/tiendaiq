@@ -49,6 +49,15 @@ function errorSummary(error) {
   return String(error?.message || error);
 }
 
+function cleanupFailureClass(error) {
+  const message = String(error?.message || error || "").toLowerCase();
+  if (/permission denied|row-level security|not authorized|must be member|insufficient privilege/.test(message)) return "authorization";
+  if (/foreign key|violates.*constraint|referential integrity/.test(message)) return "referential_integrity";
+  if (/relation .* does not exist|column .* does not exist|schema .* does not exist|undefined table/.test(message)) return "schema";
+  if (/econn|connect|connection|timeout|certificate|tls|ssl|authentication failed|enotfound/.test(message)) return "connection";
+  return "unclassified";
+}
+
 function assertAuthorized(urlValue, name) {
   if (!urlValue) throw new Error(`Falta ${name}`);
   const url = new URL(urlValue);
@@ -116,7 +125,19 @@ async function cleanupSyntheticRun({ workerPool, webPool, tenants, setupConcurre
       storesDeleted,
       tenantsDeleted,
       failedJobDeletion: errors.some((entry) => entry.scope === "jobs"),
-      failedTenantDeletions: errors.filter((entry) => entry.scope === "tenant").length
+      failedTenantDeletions: errors.filter((entry) => entry.scope === "tenant").length,
+      ...(errors.find((entry) => entry.scope === "jobs")
+        ? { jobFailureClass: errors.find((entry) => entry.scope === "jobs").classification }
+        : {}),
+      ...(errors.some((entry) => entry.scope === "tenant")
+        ? {
+            tenantFailureClass: new Set(errors
+              .filter((entry) => entry.scope === "tenant")
+              .map((entry) => entry.classification)).size === 1
+              ? errors.find((entry) => entry.scope === "tenant").classification
+              : "mixed"
+          }
+        : {})
     };
   }
 
@@ -138,7 +159,7 @@ async function cleanupSyntheticRun({ workerPool, webPool, tenants, setupConcurre
       client.release();
     }
   } catch (error) {
-    errors.push({ scope: "jobs" });
+    errors.push({ scope: "jobs", classification: cleanupFailureClass(error) });
   }
 
   await parallelMap(tenants, setupConcurrency, async (tenant) => {
@@ -150,7 +171,7 @@ async function cleanupSyntheticRun({ workerPool, webPool, tenants, setupConcurre
         tenantsDeleted += registry.rowCount;
       });
     } catch (error) {
-      errors.push({ scope: "tenant" });
+      errors.push({ scope: "tenant", classification: cleanupFailureClass(error) });
     }
   });
 

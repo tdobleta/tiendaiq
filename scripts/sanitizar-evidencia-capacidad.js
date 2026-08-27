@@ -12,8 +12,11 @@ const CLEANUP_FIELDS = Object.freeze([
   "storesDeleted",
   "tenantsDeleted",
   "failedJobDeletion",
-  "failedTenantDeletions"
+  "failedTenantDeletions",
+  "jobFailureClass",
+  "tenantFailureClass"
 ]);
+const CLEANUP_FAILURE_CLASSES = /^(?:authorization|referential_integrity|schema|connection|unclassified|mixed)$/;
 const FAILURE_CLASSES = Object.freeze([
   "authorization_configuration",
   "database_connection",
@@ -52,6 +55,11 @@ function sanitizeCleanup(value) {
   for (const field of CLEANUP_FIELDS) {
     if (field === "failedJobDeletion") {
       if (typeof value.failedJobDeletion === "boolean") safe.failedJobDeletion = value.failedJobDeletion;
+      continue;
+    }
+    if (field === "jobFailureClass" || field === "tenantFailureClass") {
+      const classification = string(value[field], CLEANUP_FAILURE_CLASSES);
+      if (classification) safe[field] = classification;
       continue;
     }
     const valueForField = number(value[field]);
