@@ -1,0 +1,1059 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TiendaIQ fixed template</title>
+  <style>
+    :root {
+      --ink: #313131;
+      --muted: #6a6a6a;
+      --line: #dedede;
+      --cream: #fff8df;
+      --cream-2: #fff3c8;
+      --yellow: #ffcd00;
+      --orange: #d95c08;
+      --dark: #343434;
+      --blue: #1896ff;
+      --shadow: 0 16px 38px rgba(20, 20, 20, .08);
+      --max: 1180px;
+    }
+
+    * { box-sizing: border-box; }
+    /* Evidence modules fail closed even when a component declares display:flex
+       or display:grid. The HTML hidden attribute alone can lose that cascade. */
+    [hidden] { display: none !important; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: #fff;
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 14px;
+      line-height: 1.42;
+    }
+    button, a { font: inherit; }
+    img, video { display: block; max-width: 100%; }
+    .wrap { width: min(var(--max), calc(100% - 34px)); margin: 0 auto; }
+    .stars { color: var(--yellow); letter-spacing: 1px; font-weight: 900; white-space: nowrap; }
+    .micro-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      width: fit-content;
+      padding: 5px 9px;
+      border: 1px solid rgba(217, 92, 8, .38);
+      border-radius: 7px;
+      background: #fffaf0;
+      color: var(--orange);
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .cta {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      min-height: 52px;
+      padding: 13px 22px;
+      border: 2px solid #1d1d1d;
+      border-radius: 999px;
+      background: var(--yellow);
+      color: #282828;
+      box-shadow: 0 5px 0 #1d1d1d;
+      font-weight: 800;
+      text-decoration: none;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: transform .15s ease, box-shadow .15s ease;
+    }
+    .cta:hover { transform: translateY(1px); box-shadow: 0 4px 0 #1d1d1d; }
+    .cta svg { width: 19px; height: 19px; }
+    .section-title {
+      margin: 0;
+      color: #242424;
+      font-size: clamp(28px, 3vw, 38px);
+      line-height: 1.12;
+      letter-spacing: 0;
+      text-align: center;
+    }
+    .section-title em { font-style: italic; font-weight: 800; }
+    .section-copy {
+      max-width: 640px;
+      margin: 12px auto 0;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .hero {
+      padding: 22px 0 30px;
+      background: #fff;
+    }
+    .hero-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.05fr) minmax(420px, .95fr);
+      gap: 34px;
+      align-items: start;
+    }
+    .gallery-main {
+      position: relative;
+      display: grid;
+      place-items: center;
+      min-height: 585px;
+      overflow: hidden;
+      border-radius: 3px;
+      background: #fff;
+    }
+    .gallery-main img {
+      width: 100%;
+      height: 585px;
+      object-fit: contain;
+    }
+    .gallery-arrow {
+      position: absolute;
+      top: 50%;
+      z-index: 2;
+      display: grid;
+      place-items: center;
+      width: 42px;
+      height: 42px;
+      border: 0;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, .86);
+      color: #3f3f3f;
+      font-size: 31px;
+      cursor: pointer;
+    }
+    .gallery-arrow.prev { left: 12px; }
+    .gallery-arrow.next { right: 12px; }
+    .thumbs {
+      display: flex;
+      gap: 10px;
+      margin-top: 11px;
+      overflow-x: auto;
+      padding-bottom: 2px;
+    }
+    .thumb {
+      flex: 0 0 86px;
+      height: 86px;
+      padding: 0;
+      overflow: hidden;
+      border: 1px solid transparent;
+      border-radius: 13px;
+      background: #f3f3f3;
+      cursor: pointer;
+      opacity: .62;
+    }
+    .thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .thumb.active { border-color: #171717; opacity: 1; }
+
+    .product-info { padding-top: 4px; }
+    .rating-line {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 7px;
+      color: #4c4c4c;
+      font-size: 15px;
+    }
+    .rating-line b { color: #282828; }
+    .product-info h1 {
+      max-width: 650px;
+      margin: 0 0 12px;
+      color: #343434;
+      font-size: clamp(34px, 4vw, 48px);
+      line-height: 1.08;
+      letter-spacing: 0;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+    .lead {
+      max-width: 570px;
+      margin: 12px 0;
+      color: #363636;
+      font-size: 17px;
+      line-height: 1.35;
+    }
+    .benefits {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px 10px;
+      margin: 14px 0 9px;
+    }
+    .benefit {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-height: 37px;
+      padding: 8px 11px;
+      border-radius: 10px;
+      background: #fff8dc;
+      color: #444;
+    }
+    .benefit svg { width: 20px; height: 20px; flex: 0 0 20px; stroke-width: 1.9; }
+    .price-row {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      flex-wrap: wrap;
+      margin: 8px 0 17px;
+      font-size: 18px;
+    }
+    .price-row del { color: #858585; }
+    .price-row strong { font-size: 22px; }
+    .save-badge {
+      padding: 4px 9px;
+      border-radius: 999px;
+      background: #d45d07;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .hero-cta { width: 100%; font-size: 19px; }
+    .assurances {
+      display: flex;
+      justify-content: center;
+      gap: 18px;
+      flex-wrap: wrap;
+      margin: 12px 0 8px;
+      color: #575757;
+      font-size: 14px;
+    }
+    .assurances span {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+    }
+    .payments {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin: 9px 0 17px;
+    }
+    .payments img { width: 32px; height: 22px; object-fit: contain; }
+    .featured-review {
+      display: grid;
+      grid-template-columns: 34px 60px minmax(0, 1fr) 34px;
+      gap: 13px;
+      align-items: center;
+      min-height: 96px;
+      padding: 14px 13px;
+      border: 1px solid #e0d7b8;
+      border-radius: 14px;
+      background: #fff8dc;
+    }
+    .featured-review button {
+      border: 0;
+      background: transparent;
+      color: #222;
+      font-size: 30px;
+      cursor: pointer;
+    }
+    .featured-review img {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+    .featured-review p {
+      margin: 3px 0 4px;
+      color: #444;
+      font-size: 13px;
+      line-height: 1.35;
+    }
+    .verified {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      color: #343434;
+      font-size: 12px;
+    }
+    .verified::before {
+      content: "";
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--blue);
+    }
+    .ugc-title {
+      margin: 15px 0 9px;
+      text-align: center;
+      font-size: 18px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+    .ugc-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 13px;
+    }
+    .ugc-card {
+      position: relative;
+      overflow: hidden;
+      border-radius: 13px;
+      aspect-ratio: 9 / 16;
+      background: #111;
+    }
+    .ugc-card video { width: 100%; height: 100%; object-fit: cover; }
+
+    .timeline {
+      padding: 45px 0 52px;
+      background: var(--cream);
+    }
+    .timeline-grid {
+      display: grid;
+      grid-template-columns: minmax(0, .95fr) minmax(430px, 1fr);
+      gap: 42px;
+      align-items: center;
+      margin-top: 34px;
+    }
+    .timeline-image {
+      overflow: hidden;
+      border-radius: 18px;
+      background: #ddd;
+    }
+    .timeline-image img {
+      width: 100%;
+      height: 505px;
+      object-fit: cover;
+    }
+    .week-list {
+      display: grid;
+      gap: 12px;
+    }
+    .week-card {
+      padding: 17px 19px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, .74);
+      box-shadow: 0 1px 0 rgba(0, 0, 0, .03);
+    }
+    .week-card b {
+      display: inline-flex;
+      margin-bottom: 9px;
+      padding: 4px 10px;
+      border: 1px solid rgba(217, 92, 8, .35);
+      border-radius: 7px;
+      color: var(--orange);
+      font-weight: 500;
+    }
+    .week-card h3 { margin: 0 0 8px; font-size: 20px; }
+    .week-card p { margin: 0; color: #3e3e3e; font-size: 15px; }
+
+    .reviews {
+      padding: 42px 0 54px;
+      background: #fff;
+    }
+    .rating-pill {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: fit-content;
+      margin: 0 auto 12px;
+      padding: 7px 12px;
+      border: 1px solid #d9d0b6;
+      border-radius: 8px;
+      background: #fffaf0;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .review-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+      max-width: 980px;
+      margin: 28px auto 0;
+    }
+    .review-card {
+      min-height: 420px;
+      padding: 10px 11px 18px;
+      border: 1px solid #2a2a2a;
+      border-radius: 8px;
+      background: #fff;
+    }
+    .review-image {
+      display: grid;
+      place-items: center;
+      height: 270px;
+      border-radius: 7px;
+      background: #eee;
+      color: #cfd2d2;
+    }
+    .review-image svg { width: 108px; height: 108px; opacity: .85; }
+    .review-card strong { display: block; margin-top: 10px; }
+    .review-card p { margin: 7px 0 0; color: #555; font-size: 13px; line-height: 1.38; }
+
+    .feature-card-section {
+      padding: 54px 0 54px;
+      background: var(--cream);
+    }
+    .feature-card {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(400px, 1fr);
+      gap: 42px;
+      align-items: center;
+      max-width: 980px;
+      margin: auto;
+      padding: 28px;
+      border: 1px solid #1e1e1e;
+      border-radius: 7px;
+      background: #fff;
+    }
+    .feature-card img { width: 100%; height: 420px; object-fit: contain; }
+    .feature-copy h2 {
+      margin: 0 0 12px;
+      font-size: clamp(28px, 3.2vw, 42px);
+      line-height: 1.07;
+    }
+    .feature-copy p { color: #383838; }
+    .feature-list {
+      display: grid;
+      gap: 12px;
+      margin: 20px 0;
+    }
+    .feature-list li {
+      display: grid;
+      grid-template-columns: 28px 1fr;
+      gap: 12px;
+      padding: 13px 15px;
+      border-radius: 8px;
+      background: #fff1ea;
+      list-style: none;
+    }
+    .feature-list svg { width: 21px; height: 21px; color: var(--orange); }
+    .feature-list b { display: block; }
+    .feature-list span { color: #4b4b4b; }
+    .feature-card .cta { width: 100%; }
+
+    .problem {
+      padding: 74px 0 65px;
+      background: var(--dark);
+      color: #fff;
+    }
+    .problem-grid {
+      display: grid;
+      grid-template-columns: .95fr 1.05fr;
+      gap: 72px;
+      align-items: center;
+      max-width: 920px;
+      margin: auto;
+    }
+    .problem h2 {
+      margin: 0;
+      color: #fff9da;
+      font-size: clamp(28px, 4vw, 40px);
+      line-height: 1.12;
+      text-align: center;
+      text-transform: uppercase;
+    }
+    .problem h2 em {
+      display: inline-block;
+      margin-top: 9px;
+      padding: 3px 10px;
+      border-radius: 5px;
+      background: var(--yellow);
+      color: #272727;
+      font-style: italic;
+    }
+    .problem-copy {
+      max-width: 420px;
+      margin: 16px auto 0;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+      text-align: center;
+    }
+    .stat-list { display: grid; gap: 0; }
+    .stat {
+      display: grid;
+      grid-template-columns: 66px 1fr;
+      gap: 20px;
+      align-items: center;
+      padding: 17px 0;
+      border-bottom: 1px solid rgba(255,255,255,.22);
+    }
+    .stat b {
+      display: grid;
+      place-items: center;
+      width: 54px;
+      height: 54px;
+      border: 5px solid var(--yellow);
+      border-radius: 50%;
+      color: var(--yellow);
+      font-size: 14px;
+    }
+    .stat span { font-weight: 800; }
+    .study-note {
+      margin-top: 20px;
+      padding: 12px 14px;
+      border-radius: 6px;
+      background: #fff7dc;
+      color: #333;
+      font-size: 12px;
+      font-style: italic;
+    }
+
+    .simplicity {
+      padding: 42px 0 60px;
+      background: #fff;
+    }
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 18px;
+      margin-top: 36px;
+      text-align: center;
+    }
+    .feature-tile img {
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      object-fit: cover;
+      border-radius: 16px;
+    }
+    .feature-tile h3 {
+      margin: 15px 0 4px;
+      color: var(--orange);
+      font-size: 18px;
+    }
+    .feature-tile p {
+      margin: 0;
+      color: #333;
+      font-size: 13px;
+    }
+
+    .steps {
+      position: relative;
+      padding: 48px 0 56px;
+      overflow: hidden;
+      background: var(--cream);
+    }
+    .steps::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 90px;
+      background: #fff;
+      clip-path: polygon(0 0, 100% 0, 100% 100%, 0 32%);
+    }
+    .steps .wrap { position: relative; }
+    .step-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      max-width: 920px;
+      margin: 34px auto 0;
+    }
+    .step {
+      overflow: hidden;
+      border: 1px solid #222;
+      border-radius: 8px;
+      background: #fff;
+      text-align: center;
+    }
+    .step img {
+      width: 100%;
+      height: 245px;
+      object-fit: cover;
+    }
+    .step h3 {
+      margin: 14px 0 4px;
+      color: var(--orange);
+      font-size: 18px;
+    }
+    .step p {
+      min-height: 44px;
+      margin: 0;
+      padding: 0 16px 18px;
+      font-size: 13px;
+    }
+
+    .logo-strip {
+      padding: 20px 0;
+      overflow: hidden;
+      background: #333;
+      color: #fff;
+      text-align: center;
+    }
+    .logo-strip b { display: block; margin-bottom: 15px; font-size: 17px; }
+    .logo-track {
+      display: flex;
+      width: max-content;
+      gap: 46px;
+      align-items: center;
+      animation: marquee 28s linear infinite;
+      white-space: nowrap;
+      opacity: .92;
+    }
+    .logo-track span {
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 22px;
+      font-weight: 800;
+    }
+    @keyframes marquee { to { transform: translateX(-50%); } }
+
+    .comparison {
+      padding: 48px 0 62px;
+      background: var(--cream);
+    }
+    .compare-table {
+      max-width: 620px;
+      margin: 34px auto 0;
+      overflow: hidden;
+      border: 1px solid var(--orange);
+      border-radius: 9px;
+      background: #fff;
+    }
+    .compare-row {
+      display: grid;
+      grid-template-columns: 1.5fr .8fr .8fr;
+      min-height: 48px;
+      border-bottom: 1px solid #ecd5b6;
+    }
+    .compare-row:last-child { border-bottom: 0; }
+    .compare-row > * {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 14px;
+    }
+    .compare-row > span:first-child { justify-content: flex-start; font-weight: 700; }
+    .compare-row.head strong {
+      min-height: 84px;
+      background: var(--yellow);
+      color: #262626;
+      text-transform: uppercase;
+    }
+    .yes { color: #202020; font-size: 19px; font-weight: 900; }
+    .no { color: var(--orange); font-size: 20px; font-weight: 900; }
+
+    .faq {
+      padding: 52px 0;
+      background: #fff;
+    }
+    .faq-list {
+      max-width: 760px;
+      margin: 26px auto 0;
+      display: grid;
+      gap: 10px;
+    }
+    details {
+      border-radius: 8px;
+      background: #fff8dc;
+    }
+    summary {
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 13px 15px;
+      list-style: none;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    summary::-webkit-details-marker { display: none; }
+    summary::after { content: "+"; font-size: 18px; font-weight: 500; }
+    details[open] summary::after { content: "-"; }
+    details p {
+      margin: 0;
+      padding: 0 15px 15px;
+      color: #555;
+    }
+
+    .guarantee {
+      padding: 56px 0 60px;
+      background: var(--cream);
+    }
+    .guarantee-grid {
+      display: grid;
+      grid-template-columns: minmax(0, .9fr) minmax(360px, .78fr) minmax(0, .9fr);
+      gap: 18px;
+      align-items: center;
+      max-width: 1040px;
+      margin: auto;
+    }
+    .guarantee-side {
+      display: grid;
+      gap: 14px;
+    }
+    .guarantee-side img {
+      width: 100%;
+      height: 250px;
+      object-fit: cover;
+      border-radius: 16px;
+    }
+    .guarantee-copy {
+      text-align: center;
+      padding: 18px 8px;
+    }
+    .shield {
+      display: grid;
+      place-items: center;
+      width: 46px;
+      height: 46px;
+      margin: 0 auto 18px;
+      border-radius: 50%;
+      background: #363636;
+      color: #fff;
+    }
+    .shield svg { width: 26px; height: 26px; }
+    .guarantee-copy h2 {
+      margin: 0 0 12px;
+      font-size: clamp(27px, 3vw, 38px);
+    }
+    .guarantee-copy p {
+      margin: 0 auto 18px;
+      max-width: 440px;
+      color: #363636;
+      font-size: 13px;
+    }
+    .guarantee-copy .cta { width: 100%; max-width: 470px; min-height: 48px; }
+
+    .recommended {
+      padding: 45px 0 112px;
+      background: #fff;
+    }
+    .product-rail {
+      display: grid;
+      grid-auto-flow: column;
+      grid-auto-columns: 185px;
+      gap: 16px;
+      overflow-x: auto;
+      max-width: 940px;
+      margin: 30px auto 0;
+      padding-bottom: 8px;
+    }
+    .rec-image {
+      display: grid;
+      place-items: center;
+      height: 185px;
+      border-radius: 8px;
+      background: #f3f3f3;
+    }
+    .rec-image svg { width: 84px; height: 84px; stroke: #111; }
+    .rec h3 { margin: 8px 0 4px; font-size: 13px; }
+    .rec-price { display: flex; gap: 6px; align-items: center; font-size: 12px; }
+    .rec-price del { color: #777; }
+    .rec-price b { color: #111; }
+    .rec-price span { padding: 2px 5px; border-radius: 999px; background: var(--yellow); font-size: 10px; font-weight: 800; }
+
+    .sticky-cart {
+      position: fixed;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      z-index: 30;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+      gap: 24px;
+      align-items: center;
+      min-height: 61px;
+      padding: 8px max(18px, calc((100vw - var(--max)) / 2));
+      background: var(--yellow);
+      transform: translateY(100%);
+      transition: transform .22s ease;
+    }
+    .sticky-cart.visible { transform: translateY(0); }
+    .sticky-product {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+    .sticky-product img { width: 45px; height: 45px; border-radius: 7px; object-fit: cover; background: #fff; }
+    .sticky-product strong {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: #151515;
+      font-size: 15px;
+    }
+    .sticky-cart .cta {
+      min-height: 39px;
+      padding: 9px 23px;
+      border: 0;
+      background: #333;
+      color: var(--yellow);
+      box-shadow: none;
+      font-size: 12px;
+    }
+
+    @media (max-width: 980px) {
+      .hero-grid, .timeline-grid, .feature-card, .problem-grid, .guarantee-grid {
+        grid-template-columns: 1fr;
+      }
+      .product-info h1 { font-size: 40px; }
+      .gallery-main, .gallery-main img { min-height: 480px; height: 480px; }
+      .ugc-row { grid-template-columns: repeat(4, minmax(120px, 1fr)); overflow-x: auto; }
+      .review-grid, .feature-grid { grid-template-columns: repeat(2, 1fr); }
+      .guarantee-grid { max-width: 650px; }
+      .guarantee-side { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 620px) {
+      .wrap { width: min(100% - 24px, var(--max)); }
+      .hero { padding-top: 8px; }
+      .gallery-main, .gallery-main img { min-height: 390px; height: 390px; }
+      .product-info h1 { font-size: 32px; }
+      .benefits { grid-template-columns: 1fr; }
+      .hero-cta { font-size: 15px; }
+      .assurances { gap: 8px 12px; font-size: 12px; }
+      .featured-review { grid-template-columns: 24px 50px minmax(0, 1fr) 24px; }
+      .featured-review img { width: 50px; height: 50px; }
+      .ugc-row { grid-template-columns: repeat(4, 128px); }
+      .timeline-image img { height: 360px; }
+      .review-grid, .feature-grid, .step-grid { grid-template-columns: 1fr; }
+      .feature-card { padding: 16px; }
+      .feature-card img { height: 300px; }
+      .compare-row { grid-template-columns: 1.25fr .75fr .75fr; font-size: 12px; }
+      .guarantee-side { grid-template-columns: 1fr; }
+      .guarantee-side img { height: 220px; }
+      .sticky-cart {
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 10px;
+        padding: 8px 10px;
+      }
+      .sticky-cart::after { display: none; }
+      .sticky-product strong { font-size: 12px; }
+      .sticky-cart .cta { padding: 9px 12px; font-size: 10px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      * { scroll-behavior: auto; }
+      .logo-track { animation: none; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="hero" id="comprar">
+      <div class="wrap hero-grid">
+        <div>
+          <div class="gallery-main">
+            <button class="gallery-arrow prev" type="button" aria-label="Imagen anterior">‹</button>
+            <img id="mainImage" data-tiq-remote-asset="removed" alt="">
+            <button class="gallery-arrow next" type="button" aria-label="Imagen siguiente">›</button>
+          </div>
+          <div class="thumbs" aria-label="Galería de producto">
+            <button class="thumb active" type="button" data-tiq-remote-asset="removed"><img data-tiq-remote-asset="removed" alt=""></button>
+            <button class="thumb" type="button" data-tiq-remote-asset="removed"><img data-tiq-remote-asset="removed" alt=""></button>
+            <button class="thumb" type="button" data-tiq-remote-asset="removed"><img data-tiq-remote-asset="removed" alt=""></button>
+            <button class="thumb" type="button" data-tiq-remote-asset="removed"><img data-tiq-remote-asset="removed" alt=""></button>
+            <button class="thumb" type="button" data-tiq-remote-asset="removed"><img data-tiq-remote-asset="removed" alt=""></button>
+          </div>
+        </div>
+
+        <div class="product-info">
+          <div class="rating-line"><span class="stars">★★★★★</span><span>Contenido del producto <b>4.9/5</b> Contenido del producto <b>907</b> Contenido del producto</span></div>
+          <h1>Contenido del producto</h1>
+          <span class="micro-label">Contenido del producto</span>
+          <p class="lead">Contenido del producto</p>
+          <div class="benefits">
+            <div class="benefit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M7 22V10l5-8 1 2c.7 1.5.7 3.2-.2 4.6L12 10h7.2c1.5 0 2.6 1.4 2.2 2.9l-1.5 6A4 4 0 0 1 16 22H7Z"/><path d="M2 10h5v12H2z"/></svg>Contenido del producto</div>
+            <div class="benefit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m4 12 5 5L20 6"/></svg>Contenido del producto</div>
+            <div class="benefit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01M15 9h.01"/></svg>Contenido del producto</div>
+            <div class="benefit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M6 7h12l-1 14H7L6 7Z"/><path d="M9 7V4h6v3"/></svg>Contenido del producto</div>
+          </div>
+          <div class="price-row"><del>Contenido del producto</del><strong>Contenido del producto</strong><span class="save-badge">Contenido del producto</span></div>
+          <a class="cta hero-cta" href="#comprar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M3 4h2l2.4 11.6a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.5L21 8H7"/></svg>Contenido del producto</a>
+          <div class="assurances">
+            <span><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-5"/></svg>Contenido del producto</span>
+            <span><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 7h11v10H3z"/><path d="M14 10h4l3 3v4h-7z"/><circle cx="7" cy="19" r="1.5"/><circle cx="18" cy="19" r="1.5"/></svg>Contenido del producto</span>
+          </div>
+          <div class="payments" aria-label="Métodos de pago">
+            <img data-tiq-remote-asset="removed" alt="">
+            <img data-tiq-remote-asset="removed" alt="">
+            <img data-tiq-remote-asset="removed" alt="">
+            <img data-tiq-remote-asset="removed" alt="">
+            <img data-tiq-remote-asset="removed" alt="">
+            <img data-tiq-remote-asset="removed" alt="">
+            <img data-tiq-remote-asset="removed" alt="">
+          </div>
+          <article class="featured-review">
+            <button type="button" aria-label="Reseña anterior">‹</button>
+            <img data-tiq-remote-asset="removed" alt="">
+            <div>
+              <span class="stars">★★★★★</span>
+              <p>Contenido del producto</p>
+              <span class="verified">Contenido del producto</span>
+            </div>
+            <button type="button" aria-label="Reseña siguiente">›</button>
+          </article>
+          <div class="ugc-title">Contenido del producto</div>
+          <div class="ugc-row">
+            <div class="ugc-card"><video data-tiq-remote-asset="removed" autoplay muted loop playsinline></video></div>
+            <div class="ugc-card"><video data-tiq-remote-asset="removed" autoplay muted loop playsinline></video></div>
+            <div class="ugc-card"><video data-tiq-remote-asset="removed" autoplay muted loop playsinline></video></div>
+            <div class="ugc-card"><video data-tiq-remote-asset="removed" autoplay muted loop playsinline></video></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="timeline">
+      <div class="wrap">
+        <h2 class="section-title">Contenido del producto</h2>
+        <p class="section-copy">Contenido del producto</p>
+        <div class="timeline-grid">
+          <div class="timeline-image"><img data-tiq-remote-asset="removed" alt=""></div>
+          <div class="week-list">
+            <article class="week-card"><b>Contenido del producto</b><h3>Contenido del producto</h3><p>Contenido del producto</p></article>
+            <article class="week-card"><b>Contenido del producto</b><h3>Contenido del producto</h3><p>Contenido del producto</p></article>
+            <article class="week-card"><b>Contenido del producto</b><h3>Contenido del producto</h3><p>Contenido del producto</p></article>
+            <article class="week-card"><b>Contenido del producto</b><h3>Contenido del producto</h3><p>Contenido del producto</p></article>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="reviews">
+      <div class="wrap">
+        <div class="rating-pill"><span class="stars">★★★★★</span> Contenido del producto <b>Contenido del producto</b></div>
+        <h2 class="section-title">Contenido del producto</h2>
+        <p class="section-copy">Contenido del producto</p>
+        <div class="review-grid">
+          <article class="review-card"><div class="review-image"><svg viewBox="0 0 120 120" fill="none" stroke="currentColor"><rect x="20" y="25" width="80" height="70" rx="12"/><path d="m32 82 22-24 18 18 10-10 16 16"/><circle cx="78" cy="46" r="7"/></svg></div><strong>Contenido del producto</strong><span class="stars">★★★★★</span><p>Contenido del producto</p></article>
+          <article class="review-card"><div class="review-image"><svg viewBox="0 0 120 120" fill="none" stroke="currentColor"><rect x="20" y="25" width="80" height="70" rx="12"/><path d="m32 82 22-24 18 18 10-10 16 16"/><circle cx="78" cy="46" r="7"/></svg></div><strong>Contenido del producto</strong><span class="stars">★★★★★</span><p>Contenido del producto</p></article>
+          <article class="review-card"><div class="review-image"><svg viewBox="0 0 120 120" fill="none" stroke="currentColor"><rect x="20" y="25" width="80" height="70" rx="12"/><path d="m32 82 22-24 18 18 10-10 16 16"/><circle cx="78" cy="46" r="7"/></svg></div><strong>Contenido del producto</strong><span class="stars">★★★★☆</span><p>Contenido del producto</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="feature-card-section">
+      <div class="feature-card">
+        <img data-tiq-remote-asset="removed" alt="">
+        <div class="feature-copy">
+          <h2>Contenido del producto</h2>
+          <p><b>Contenido del producto</b> Contenido del producto</p>
+          <ul class="feature-list">
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 3c3 3.4 5.5 6.3 5.5 9.4a5.5 5.5 0 0 1-11 0c0-3.1 2.5-6 5.5-9.4Z"/></svg><span><b>Contenido del producto</b> Contenido del producto</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></svg><span><b>Contenido del producto</b> Contenido del producto</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M7 22V10l5-8 1 2c.7 1.5.7 3.2-.2 4.6L12 10h7.2c1.5 0 2.6 1.4 2.2 2.9l-1.5 6A4 4 0 0 1 16 22H7Z"/><path d="M2 10h5v12H2z"/></svg><span><b>Contenido del producto</b> Contenido del producto</span></li>
+          </ul>
+          <a class="cta" href="#comprar">Contenido del producto</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="problem">
+      <div class="problem-grid wrap">
+        <div>
+          <h2>Contenido del producto <em>Contenido del producto</em></h2>
+          <p class="problem-copy">Contenido del producto</p>
+        </div>
+        <div>
+          <div class="stat-list">
+            <div class="stat"><b>96%</b><span>Contenido del producto</span></div>
+            <div class="stat"><b>96%</b><span>Contenido del producto</span></div>
+            <div class="stat"><b>99%</b><span>Contenido del producto</span></div>
+          </div>
+          <div class="study-note">Contenido del producto</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="simplicity">
+      <div class="wrap">
+        <h2 class="section-title">Contenido del producto</h2>
+        <p class="section-copy">Contenido del producto</p>
+        <div class="feature-grid">
+          <article class="feature-tile"><img data-tiq-remote-asset="removed" alt=""><h3>Contenido del producto</h3><p>Contenido del producto</p></article>
+          <article class="feature-tile"><img data-tiq-remote-asset="removed" alt=""><h3>Contenido del producto</h3><p>Contenido del producto</p></article>
+          <article class="feature-tile"><img data-tiq-remote-asset="removed" alt=""><h3>Contenido del producto</h3><p>Contenido del producto</p></article>
+          <article class="feature-tile"><img data-tiq-remote-asset="removed" alt=""><h3>Contenido del producto</h3><p>Contenido del producto</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="steps">
+      <div class="wrap">
+        <h2 class="section-title">Contenido del producto <em>Contenido del producto</em></h2>
+        <p class="section-copy">Contenido del producto</p>
+        <div class="step-grid">
+          <article class="step"><img data-tiq-remote-asset="removed" alt=""><h3>Contenido del producto</h3><p>Contenido del producto</p></article>
+          <article class="step"><img data-tiq-remote-asset="removed" alt=""><h3>Contenido del producto</h3><p>Contenido del producto</p></article>
+          <article class="step"><img data-tiq-remote-asset="removed" alt=""><h3>Contenido del producto</h3><p>Contenido del producto</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="logo-strip">
+      <b>Contenido del producto</b>
+      <div class="logo-track" aria-hidden="true">
+        <span>Contenido del producto</span><span>Contenido del producto</span><span>Contenido del producto</span><span>Contenido del producto</span><span>Contenido del producto</span>
+        <span>Contenido del producto</span><span>Contenido del producto</span><span>Contenido del producto</span><span>Contenido del producto</span><span>Contenido del producto</span>
+      </div>
+    </section>
+
+    <section class="comparison">
+      <div class="wrap">
+        <h2 class="section-title">Contenido del producto</h2>
+        <p class="section-copy">Contenido del producto</p>
+        <div class="compare-table">
+          <div class="compare-row head"><span></span><strong>Contenido del producto</strong><span>Contenido del producto</span></div>
+          <div class="compare-row"><span>Contenido del producto</span><span class="yes">⊙</span><span class="no">×</span></div>
+          <div class="compare-row"><span>Contenido del producto</span><span class="yes">⊙</span><span class="no">×</span></div>
+          <div class="compare-row"><span>Contenido del producto</span><span class="yes">⊙</span><span class="no">×</span></div>
+          <div class="compare-row"><span>Contenido del producto</span><span class="yes">⊙</span><span class="no">×</span></div>
+          <div class="compare-row"><span>Contenido del producto</span><span class="yes">⊙</span><span class="no">×</span></div>
+          <div class="compare-row"><span>Contenido del producto</span><span class="yes">⊙</span><span class="no">×</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="faq">
+      <div class="wrap">
+        <h2 class="section-title">Contenido del producto <em>Contenido del producto</em></h2>
+        <div class="faq-list">
+          <details><summary>Contenido del producto</summary><p>Contenido del producto</p></details>
+          <details><summary>Contenido del producto</summary><p>Contenido del producto</p></details>
+          <details><summary>Contenido del producto</summary><p>Contenido del producto</p></details>
+          <details><summary>Contenido del producto</summary><p>Contenido del producto</p></details>
+          <details><summary>Contenido del producto</summary><p>Contenido del producto</p></details>
+        </div>
+      </div>
+    </section>
+
+    <section class="guarantee">
+      <div class="guarantee-grid wrap">
+        <div class="guarantee-side">
+          <img data-tiq-remote-asset="removed" alt="">
+          <img data-tiq-remote-asset="removed" alt="">
+        </div>
+        <div class="guarantee-copy">
+          <span class="shield"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m8.5 12 2.4 2.4 4.9-5.2"/></svg></span>
+          <h2>Contenido del producto <em>Contenido del producto</em></h2>
+          <p>Contenido del producto</p>
+          <a class="cta" href="#comprar">Contenido del producto</a>
+        </div>
+        <div class="guarantee-side">
+          <img data-tiq-remote-asset="removed" alt="">
+          <img data-tiq-remote-asset="removed" alt="">
+        </div>
+      </div>
+    </section>
+
+    <section class="recommended">
+      <div class="wrap">
+        <h2 class="section-title">Contenido del producto</h2>
+        <div class="product-rail">
+          <article class="rec"><div class="rec-image"><svg viewBox="0 0 80 80" fill="none" stroke="currentColor"><path d="M23 30h34l5 28H18l5-28Z"/><path d="M30 30c0-9 20-9 20 0"/><path d="M22 43h38"/></svg></div><h3>Contenido del producto</h3><div class="rec-price"><b>Contenido del producto</b><del>Contenido del producto</del><span>Contenido del producto</span></div></article>
+          <article class="rec"><div class="rec-image"><svg viewBox="0 0 80 80" fill="none" stroke="currentColor"><path d="M16 52c15 2 33-1 50-9l-4 10H18Z"/><path d="M23 49V34l11 11"/></svg></div><h3>Contenido del producto</h3><div class="rec-price"><b>Contenido del producto</b><del>Contenido del producto</del><span>Contenido del producto</span></div></article>
+          <article class="rec"><div class="rec-image"><svg viewBox="0 0 80 80" fill="none" stroke="currentColor"><path d="M12 36c9-7 20-7 28 0 8-7 19-7 28 0"/><path d="M18 38l7 16h18l-3-16M62 38l-7 16H37l3-16"/></svg></div><h3>Contenido del producto</h3><div class="rec-price"><b>Contenido del producto</b><del>Contenido del producto</del><span>Contenido del producto</span></div></article>
+          <article class="rec"><div class="rec-image"><svg viewBox="0 0 80 80" fill="none" stroke="currentColor"><path d="M17 40c3-15 42-15 46 0v18H17Z"/><path d="M22 40h36"/><path d="M31 22v10M49 22v10"/></svg></div><h3>Contenido del producto</h3><div class="rec-price"><b>Contenido del producto</b><del>Contenido del producto</del><span>Contenido del producto</span></div></article>
+          <article class="rec"><div class="rec-image"><svg viewBox="0 0 80 80" fill="none" stroke="currentColor"><circle cx="40" cy="40" r="21"/><path d="M40 20v20l13 9"/></svg></div><h3>Contenido del producto</h3><div class="rec-price"><b>Contenido del producto</b><del>Contenido del producto</del><span>Contenido del producto</span></div></article>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div class="sticky-cart" id="stickyCart">
+    <div class="sticky-product">
+      <img data-tiq-remote-asset="removed" alt="">
+      <strong>Contenido del producto</strong>
+    </div>
+    <a class="cta" href="#comprar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M3 4h2l2.4 11.6a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.5L21 8H7"/></svg>Contenido del producto</a>
+    <span></span>
+  </div>
+
+
+</body>
+</html>

@@ -1,8 +1,10 @@
-# Editor de página — spec de diseño (réplica de PagePilot)
+# Editor de página — workspace de edición inspirado en PagePilot
 
-Extraído de capturas del editor real de PagePilot. Objetivo: reconstruir nuestro
-editor de página (`pantallaPreview` en `app/app.js`) como un **builder de 3 paneles**
-idéntico en look al de PagePilot. Este doc es la fuente de verdad de diseño.
+Extraído de observaciones del editor real de PagePilot. Objetivo: ofrecer un
+workspace TiendaIQ de **tres paneles** con el mismo patrón de trabajo (árbol,
+canvas e inspector), sin copiar su marca, código, assets ni contenido. Este doc
+describe la experiencia de TiendaIQ; no constituye un contrato de compatibilidad
+ni una autorización para importar contenido de terceros.
 
 Paleta / tokens del proyecto (ya existen en app.css): negro `#202223`, texto `#303030`,
 subdued `#6d7175`, borde `#e6e6ea`, acento azul Polaris `#005bd3`, superficie `#fff`,
@@ -72,3 +74,19 @@ Barra superior arriba de todo (volver, título, estado, Guardar/Publicar) — se
   árbol, toolbar) se hace bespoke pero estilado nativo.
 - Interacción: click en bloque (árbol o preview) → lo selecciona + abre su panel derecho. Edición
   EN VIVO (refleja en el preview al instante); persistencia por la barra superior / Save Bar nativo.
+
+## Plantillas fijas y datos verificables
+
+La superficie visual no define qué puede alterar el merchant. Para una plantilla
+fija versionada, el editor consulta su contrato de capacidades:
+
+- **Datos de Shopify** (producto, variantes, precio, medios y carrito) son de
+  solo lectura en el editor: provienen del catálogo real.
+- **Contenido autorizado** expone únicamente los slots declarados por la
+  plantilla; no permite añadir, quitar, arrastrar ni reordenar estructura.
+- **Evidencia** (reseñas, logos, comparativas, métricas, políticas) permanece
+  desactivada hasta existir fuente o atestación verificable. El editor nunca la
+  rellena con ejemplos, placeholders presentados como reales o IA.
+- Ningún control de layout, CSS libre o HTML arbitrario puede modificar el
+  artefacto visual congelado. La plantilla y su versión son parte del contrato
+  publicado y el canvas debe usar el mismo renderer que storefront.

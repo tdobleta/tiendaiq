@@ -32,3 +32,6 @@ app/portadas/_cod-tarjeta-completa-VIEJA.png
 # Videos de "Inspírate de los mejores" (pesados, no versionar; solo el .gitkeep)
 inspiracion-organica/*
 !inspiracion-organica/.gitkeep
+
+# Fuente local de referencia de la plantilla fija; el artefacto saneado vive en extensions/.
+plantilla-producto/referencias/pinza-pagepilot/

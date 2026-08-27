@@ -26,6 +26,16 @@ const TEMPLATE_REGISTRY = Object.freeze([
     rendererKey: "performance-story",
     status: "active"
   }),
+  // A fixed visual artifact imported from a merchant-provided source. Unlike
+  // the older PagePilot aliases below, this is an actively maintained TiendaIQ
+  // contract: only named data slots may change its frozen structure.
+  Object.freeze({
+    id: "tiendaiq/pinza-pagepilot",
+    version: 1,
+    legacyStyle: "pinza-pagepilot",
+    rendererKey: "pinza-pagepilot",
+    status: "active"
+  }),
   Object.freeze({
     id: "legacy/pagepilot",
     version: 1,

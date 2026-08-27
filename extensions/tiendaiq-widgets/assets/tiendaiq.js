@@ -4,7 +4,8 @@
 // Reglas del contrato que se implementan acá:
 //  - Todo slot de imagen acepta null → placeholder punteado.
 //  - media_id se resuelve a img/{id}.jpg; si el archivo no existe,
-//    cae al mismo placeholder (onerror). La plantilla nunca rompe.
+//    cae al mismo placeholder mediante un listener DOM seguro. La plantilla
+//    nunca rompe ni ejecuta atributos inline.
 //  - Precio comparativo: solo se renderiza tachado si existe.
 //  - Variantes: si la única opción es "Title"/"Default Title",
 //    el bloque no se renderiza (passthrough sucio de Shopify).
@@ -33,6 +34,31 @@
     String(s ?? "").replace(/[&<>"']/g, (c) =>
       ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])
     );
+
+  // Las imágenes se renderizan como HTML de plantilla, pero sus fallbacks no
+  // se evalúan como código inline. Los atributos onerror convierten entidades
+  // HTML a texto antes de ejecutar JavaScript, una frontera innecesaria para
+  // datos que pueden venir del catálogo. Este listener conserva el mismo
+  // resultado visual y usa textContent para el fallback de media.
+  document.addEventListener("error", (event) => {
+    const image = event.target;
+    if (!(image instanceof HTMLImageElement)) return;
+    const fallback = image.dataset.tiqFallback;
+    if (fallback === "media") {
+      const placeholder = document.createElement("div");
+      placeholder.className = "ph-img";
+      placeholder.textContent = image.dataset.tiqFallbackLabel || "Imagen pendiente";
+      image.replaceWith(placeholder);
+      return;
+    }
+    if (fallback === "asset") {
+      const placeholder = image.nextElementSibling;
+      if (placeholder?.matches("[data-tiq-asset-fallback]")) {
+        placeholder.hidden = false;
+        image.remove();
+      }
+    }
+  }, true);
 
   // Older generated payloads can contain UTF-8 decoded as Latin-1. Repair it
   // at the renderer boundary so published pages do not expose mojibake.
@@ -73,7 +99,7 @@
       respons = ` srcset="${esc(ss)}" sizes="${esc(sizes)}"`;
     }
     return `<img src="${esc(url)}" alt="${esc(alt)}"${respons} ${carga}
-      onerror="this.outerHTML='<div class=\\'ph-img\\'>${esc(mediaId)}</div>'">`;
+      data-tiq-fallback="media" data-tiq-fallback-label="${esc(mediaId)}">`;
   };
 
   // Asset de la plantilla (avatares, iconos): ruta directa, no media_id.
@@ -86,10 +112,10 @@
     if (EN_TIENDA && window.TIENDAIQ_ASSET_BASE && !/^https?:/.test(ruta)) {
       src = window.TIENDAIQ_ASSET_BASE + ruta.split("/").pop();
     }
-    // encodeURI: los nombres de archivo pueden traer espacios y comas.
-    // El fallback viaja en un atributo propio. Inyectarlo dentro de un
-    // atributo onerror rompe el HTML cuando el fallback contiene comillas.
-    return `<img src="${esc(encodeURI(src))}" alt="" data-fallback="${esc(respaldo)}" onerror="this.outerHTML=this.dataset.fallback">`;
+    // encodeURI: los nombres de archivo pueden traer espacios y comas. El
+    // fallback se entrega como hermano oculto ya escapado por su renderer; el
+    // listener de arriba sólo lo revela si el asset no carga.
+    return `<img src="${esc(encodeURI(src))}" alt="" data-tiq-fallback="asset"><span data-tiq-asset-fallback hidden>${respaldo}</span>`;
   };
 
   // role="img" + aria-label: el lector de pantalla anuncia "N de 5 estrellas"
@@ -212,6 +238,7 @@
     "tiendaiq/classic@1": "classic",
     "tiendaiq/premium@1": "premium",
     "tiendaiq/performance-story@1": "performance-story",
+    "tiendaiq/pinza-pagepilot@1": "pinza-pagepilot",
     "legacy/pagepilot@1": "pagepilot",
     "legacy/pagepilot-blue@1": "pagepilot-blue"
   });
@@ -223,6 +250,7 @@
     if (global?.estilo === "pagepilot-blue") return "pagepilot-blue";
     if (global?.estilo === "pagepilot") return "pagepilot";
     if (global?.estilo === "performance-story") return "performance-story";
+    if (global?.estilo === "pinza-pagepilot") return "pinza-pagepilot";
     if (global?.estilo === "premium") return "premium";
     return "classic";
   }
@@ -1859,7 +1887,7 @@
     return false;
   };
 
-  function montar(datos) {
+  async function montar(datos) {
     if (EN_TIENDA) document.body.classList.add("publicada");
     const app = document.getElementById("app");
     app.classList.toggle("tiq-claims-unverified", datos?.compliance?.claims_verified !== true);
@@ -1873,6 +1901,61 @@
     // SOLO el resto y dejamos el hero server-side intacto (mejor LCP/CLS/SEO).
     // Los handlers del hero son inline globales (cambiarPrincipal / tiendaiqAgregar)
     // → funcionan sobre el DOM del SSR sin re-montar nada. Fallback: render total.
+    const renderer = rendererKey(datos?.global || {});
+    if (renderer === "pinza-pagepilot") {
+      if (!window.TiendaIQPinzaPagepilotV1) {
+        await new Promise((resolve, reject) => {
+          const script = document.createElement("script");
+          script.src = `${window.TIENDAIQ_ASSET_BASE || ""}tiq-pinzapilot-v1.js`;
+          script.defer = true;
+          script.onload = resolve;
+          script.onerror = () => reject(new Error("No se pudo cargar el runtime de la plantilla fija"));
+          document.head.append(script);
+        });
+      }
+      const source = datos?.fuente || {};
+      const hero = datos?.facetas?.hero || {};
+      const gallery = Array.isArray(hero.galeria) ? hero.galeria : [];
+      const media = gallery
+        .map((id) => ({ id, url: MAPA_URLS[id] }))
+        .filter((item) => typeof item.url === "string" && /^https:\/\//.test(item.url));
+      const evidence = {
+        reviews: datos?.compliance?.claims_verified === true && Boolean(datos?.compliance?.review_source),
+        ugc: datos?.compliance?.claims_verified === true && Boolean(datos?.compliance?.ugc_source),
+        policies: datos?.compliance?.claims_verified === true && Boolean(datos?.compliance?.policy_source),
+        comparison: datos?.compliance?.claims_verified === true && Boolean(datos?.compliance?.comparison_source),
+        logos: datos?.compliance?.claims_verified === true && Boolean(datos?.compliance?.logo_source),
+        statistics: datos?.compliance?.claims_verified === true && Boolean(datos?.compliance?.statistics_source),
+        payments: false
+      };
+      await window.TiendaIQPinzaPagepilotV1.mount(app, {
+        assetUrl: `${window.TIENDAIQ_ASSET_BASE || ""}tiq-pinzapilot-v1.html`,
+        view: {
+          product: {
+            title: hero.titulo || source.titulo_crudo || "",
+            description: hero.subtitulo || source.descripcion_cruda || "",
+            price: source.precio ?? null,
+            compareAtPrice: source.precio_comparativo ?? null,
+            currency: source.moneda || "",
+            variantId: window.TIENDAIQ_VARIANT || null,
+            money: window.TIENDAIQ_VARIANT_MONEY || null,
+            media
+          },
+          content: {
+            hero: { bullets: Array.isArray(hero.bullets) ? hero.bullets : [] },
+            timeline: datos?.facetas?.texto_img_1 || null,
+            feature: datos?.facetas?.texto_img_2 || datos?.facetas?.iconos || null,
+            iconItems: Array.isArray(datos?.facetas?.iconos?.items) ? datos.facetas.iconos.items : [],
+            faq: datos?.facetas?.faq || null,
+            recommendations: datos?.facetas?.recomendados || null,
+            cta: datos?.global?.cta || "Agregar al carrito"
+          },
+          evidence
+        }
+      });
+      app.style.minHeight = "";
+      return;
+    }
     const resto = app.dataset.ssr === "1" ? document.getElementById("tiq-resto") : null;
     if (resto) resto.innerHTML = filtrarClaimsSinFuente(render(datos, { sinHero: true }), datos);
     else app.innerHTML = filtrarClaimsSinFuente(render(datos), datos);
@@ -1894,14 +1977,18 @@
 
   if (DATOS) {
     // Tienda (TIENDAIQ_DATA) o preview local por archivo (data.js).
-    montar(DATOS);
+    montar(DATOS).catch((error) => {
+      const app = document.getElementById("app");
+      if (app) app.textContent = "No se pudo cargar la plantilla de producto.";
+      console.error("TiendaIQ renderer", error);
+    });
   } else {
     // Preview de la app: el padre manda los datos de SU página por mensaje.
     // Así cada merchant ve la suya y no un data.js global compartido.
     window.addEventListener("message", (e) => {
       if (!e.data || !e.data.tiendaiq) return;
       Object.assign(MAPA_URLS, e.data.urls || {});
-      montar(e.data.data);
+      montar(e.data.data).catch((error) => console.error("TiendaIQ renderer", error));
     });
   }
 })();

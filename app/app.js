@@ -35,6 +35,7 @@
     seccionesElegidas: [], // tipos mandados desde la galería a la columna "Secciones"
     galeriaCat: "popular", // pestaña activa de la galería de secciones
     galeriaQ: "", // búsqueda de la galería
+    previewViewport: "desktop", // viewport del canvas del editor: desktop | mobile
     error: null
   };
   // Chips de la columna sobreviven recargas del editor.
@@ -3345,6 +3346,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       const def = defSeccion(s.id);
       return def ? `<div class="sp-sub">Contenido</div><div class="sp-content">${def.html()}</div>` : "";
     }
+    if (esPlantillaPinzaFija()) return panelPlantillaPinzaFijaHTML(id);
     const def = seccionesPagina()[id];
     if (!def) return "";
     return `<div class="sp-sub">Contenido</div><div class="sp-content">
@@ -3357,7 +3359,37 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       const s = (estado.pagina.data.secciones || []).find((x) => x.id === id.slice(4));
       return catSeccion(s?.tipo)?.nombre || "Sección";
     }
+    if (esPlantillaPinzaFija()) {
+      return ({ bullets: "Beneficios verificables", faq: "Preguntas frecuentes" })[id] || "Plantilla fija";
+    }
     return seccionesPagina()[id]?.titulo || "Sección";
+  }
+
+  function esPlantillaPinzaFija() {
+    const global = estado.pagina?.data?.global || {};
+    return global.template?.id === "tiendaiq/pinza-pagepilot" || global.estilo === "pinza-pagepilot";
+  }
+
+  // El inspector de una plantilla fija nunca llama al formulario genérico: ese
+  // formulario admite layout, pruebas sociales y otros campos que no pertenecen
+  // al artefacto versionado. Acá sólo se exponen los slots declarados.
+  function panelPlantillaPinzaFijaHTML(id) {
+    const facetas = estado.pagina.data.facetas || {};
+    if (id === "bullets") {
+      const bullets = Array.isArray(facetas.hero?.bullets) ? facetas.hero.bullets : [];
+      if (!bullets.length) return `<div class="editor__ayuda">No hay beneficios cargados para esta página. El diseño permanecerá sin este bloque hasta que exista información real del producto.</div>`;
+      return `<div class="sp-sub">Beneficios verificables</div><div class="sp-content">${bullets.map((bullet, index) => {
+        const value = typeof bullet === "string" ? { fuerte: "", resto: bullet } : bullet || {};
+        return `<section class="sp-item-card"><div class="sp-item-card__head"><strong>Beneficio ${index + 1}</strong><span>slot</span></div>${campo(`facetas.hero.bullets.${index}.fuerte`, "Título")}${campo(`facetas.hero.bullets.${index}.resto`, "Detalle", 2)}</section>`;
+      }).join("")}</div>`;
+    }
+    if (id === "faq") {
+      const faq = facetas.faq || {};
+      const items = Array.isArray(faq.items) ? faq.items : [];
+      if (!items.length) return `<div class="editor__ayuda">No hay preguntas cargadas. La plantilla no inventa preguntas ni respuestas: podés agregarlas desde el contenido de producto antes de publicar.</div>`;
+      return `<div class="sp-sub">Preguntas frecuentes</div><div class="sp-content">${campo("facetas.faq.titular", "Título")}${items.map((_, index) => `<section class="sp-item-card"><div class="sp-item-card__head"><strong>Pregunta ${index + 1}</strong><span>slot</span></div>${campo(`facetas.faq.items.${index}.pregunta`, "Pregunta")}${campo(`facetas.faq.items.${index}.respuesta`, "Respuesta", 3)}</section>`).join("")}</div>`;
+    }
+    return `<div class="editor__ayuda">Este bloque está vinculado a Shopify o requiere evidencia verificable. No se puede modificar desde la plantilla.</div>`;
   }
 
   function panelEsV2(id) { return id.startsWith("sec:"); }
@@ -3378,7 +3410,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   function cerrarAiText() { document.getElementById("sp-ai-popover")?.remove(); }
 
   function abrirAiText(ruta) {
-    const p = document.getElementById("sec-panel");
+    const p = document.getElementById("pe-inspector");
     if (!p) return;
     cerrarAiText();
     p.insertAdjacentHTML("beforeend", `
@@ -3460,7 +3492,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   }
 
   async function enviarAiText(ruta) {
-    const p = document.getElementById("sec-panel");
+    const p = document.getElementById("pe-inspector");
     const send = p?.querySelector("#sp-ai-send");
     if (!p || !send) return;
     const mode = p.querySelector(".sp-ai-mode.is-selected")?.dataset.aiMode || "rewrite";
@@ -3524,25 +3556,18 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     const s = secActual();
     const def = editorId.startsWith("sec:") ? null : seccionesPagina()[editorId];
     if (!s && !def) { panelSecId = null; panelEditorId = null; return; }
-    document.body.classList.add("sec-panel-abierto");
-    const p = document.createElement("aside");
-    p.className = "sec-panel";
-    p.id = "sec-panel";
-    p.setAttribute("role", "dialog");
-    p.setAttribute("aria-labelledby", "sec-panel-tit");
+    const p = document.getElementById("pe-inspector");
+    if (!p) return;
+    p.classList.add("is-editing");
+    p.setAttribute("aria-label", `Inspector: ${panelTitulo(editorId)}`);
     p.innerHTML = `
       <div class="sec-panel__cab">
-        <div class="sec-panel__heading"><span class="sec-panel__eyebrow">Editor de página</span><span class="sec-panel__tit" id="sec-panel-tit">${esc(panelTitulo(editorId))}</span></div>
+        <div class="sec-panel__heading"><span class="sec-panel__eyebrow">Inspector</span><span class="sec-panel__tit" id="sec-panel-tit">${esc(panelTitulo(editorId))}</span></div>
         <button class="sec-panel__x" type="button" aria-label="Cerrar">${ico("x")}</button>
       </div>
       <div class="sec-panel__body" id="sp-body">${panelEditorHTML(panelEditorId)}</div>
       ${editorId.startsWith("sec:") ? `<div class="sec-panel__footer"><s-button variant="tertiary" tone="critical" class="sp-del" data-panel-del="${esc(s.id)}">${ico("basura")} Eliminar sección</s-button></div>` : ""}`;
-    document.body.appendChild(p);
-    // A11y: Esc cierra el panel.
-    p._onKey = (e) => { if (e.key === "Escape") cerrarPanelSeccion(); };
-    document.addEventListener("keydown", p._onKey);
-
-    p.addEventListener("input", (e) => {
+    p.oninput = (e) => {
       const t = e.target;
       if (t.dataset.vk !== undefined) {
         const s2 = secActual(); if (!s2) return;
@@ -3568,9 +3593,9 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       }
       // Campos de bloque (url/título/estrellas/ancla): rutas absolutas del data.
       if (t.dataset.ruta) actualizarDato(t);
-    });
+    };
 
-    p.addEventListener("click", (e) => {
+    p.onclick = (e) => {
       const t = e.target;
       const ppbPago = t.closest("[data-ppb-payment]");
       if (ppbPago) {
@@ -3630,21 +3655,23 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       if (uno) { fijar(estado.pagina.data, uno.dataset.imgUno, uno.dataset.id); marcarSucio(); repintarPreview(); refrescarPanelSeccion(); return; }
       const quitar = t.closest("[data-img-quitar]");
       if (quitar) { fijar(estado.pagina.data, quitar.dataset.imgQuitar, null); marcarSucio(); repintarPreview(); refrescarPanelSeccion(); return; }
-    });
+    };
 
-    p.addEventListener("change", (e) => {
+    p.onchange = (e) => {
       const t = e.target;
       if (t.dataset.subir && t.files?.length) subirImagenNueva(t.files[0], t.dataset.subir, t.dataset.rutaSubir, t);
       if (t.dataset.videoEl && t.files?.length) subirVideoNuevo(t.files[0], t.dataset.videoEl, t);
-    });
+    };
   }
 
   function cerrarPanelSeccion() {
     cerrarAiText();
-    const p = document.getElementById("sec-panel");
-    if (p?._onKey) document.removeEventListener("keydown", p._onKey);
-    p?.remove();
-    document.body.classList.remove("sec-panel-abierto");
+    const p = document.getElementById("pe-inspector");
+    if (p) {
+      p.classList.remove("is-editing");
+      p.setAttribute("aria-label", "Inspector de propiedades");
+      p.innerHTML = `<div class="pe-inspector__empty"><span class="pe-inspector__empty-icon">✦</span><strong>Seleccioná un bloque</strong><p>Elegí una sección del árbol o hacé clic sobre el canvas para editar únicamente los campos permitidos por la plantilla.</p></div>`;
+    }
     panelSecId = null;
     panelEditorId = null;
   }
@@ -3666,8 +3693,22 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     };
     const row = (id, label, ico) =>
       `<div class="pe-tree__row" tabindex="0" data-tree="${esc(id)}"><span class="pe-tree__lead pe-tree__drag">${I.drag}</span><span class="pe-tree__ico">${ico}</span><span class="pe-tree__label">${esc(label)}</span></div>`;
+    const locked = (label, ico, hint = "Shopify") =>
+      `<div class="pe-tree__row pe-tree__row--locked" aria-disabled="true"><span class="pe-tree__lead"></span><span class="pe-tree__ico">${ico}</span><span class="pe-tree__label">${esc(label)}</span><span class="pe-tree__lock-hint">${esc(hint)}</span></div>`;
     const grupo = (nombre, filas, meta) =>
       `<section class="pe-tree__group"><div class="pe-tree__row pe-tree__row--group" tabindex="0"><span class="pe-tree__lead pe-tree__chevron">${I.chev}</span><span class="pe-tree__ico pe-tree__ico--group">${I.grupo}</span><span class="pe-tree__label">${esc(nombre)}</span>${meta ? `<span class="pe-tree__group-meta">${esc(meta)}</span>` : ""}</div><div class="pe-tree__children">${filas}</div></section>`;
+    const fixedTemplate = esPlantillaPinzaFija();
+    if (fixedTemplate) {
+      const source = locked("Producto", I.encabezado) + locked("Galería de producto", I.galeria) +
+        locked("Precio y variantes", I.lista) + locked("Agregar al carrito", I.beneficios);
+      const approved = row("bullets", "Beneficios verificables", I.beneficios) + row("faq", "Preguntas frecuentes", I.lista);
+      const evidence = locked("Prueba social", I.estrella, "Requiere fuente") +
+        locked("Comparación", I.lista, "Requiere fuente") + locked("Garantías", I.beneficios, "Política Shopify");
+      return `<nav class="pe-tree" aria-label="Bloques de la plantilla fija">
+        <div class="pe-tree__head"><span class="pe-tree__head-title">Plantilla fija</span><span class="pe-tree__head-sub">Pinza PagePilot · v1</span></div>
+        <div class="pe-tree__body">${grupo("Datos de Shopify", source, "solo lectura")}${grupo("Contenido autorizado", approved, "2 grupos")}${grupo("Evidencia", evidence, "validada")}</div>
+      </nav>`;
+    }
     const info = row("encabezado", "Encabezado", I.encabezado) + row("galeria", "Galería de producto", I.galeria) +
       row("bullets", "Beneficios", I.beneficios) + row("destacada", "Reseña destacada", I.estrella) +
       row("resenas", "Reseñas", I.estrella);
@@ -3726,6 +3767,10 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
             : ""}
         </div>
         <div class="preview-barra__acciones">
+          <div class="pe-viewport" role="group" aria-label="Vista del canvas">
+            <button type="button" data-viewport="desktop" aria-pressed="${estado.previewViewport === "desktop"}">Escritorio</button>
+            <button type="button" data-viewport="mobile" aria-pressed="${estado.previewViewport === "mobile"}">Móvil</button>
+          </div>
           <s-button variant="secondary" id="guardar" disabled>Guardar cambios</s-button>
           <s-button variant="secondary" id="regenerar">Regenerar</s-button>
           ${publicada ? `<s-button variant="tertiary" id="despublicar">Volver a la página nativa</s-button>` : ""}
@@ -3754,10 +3799,15 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       <div class="pe-editor">
         ${arbolPaginaHTML()}
         <div class="pe-editor__centro">
+          <div class="pe-canvas-shell ${estado.previewViewport === "mobile" ? "is-mobile" : ""}" id="marco-shell">
           <div class="marco marco--full">
             <iframe id="marco" src="/preview/index.html?app=1&t=${Date.now()}"></iframe>
           </div>
+          </div>
         </div>
+        <aside class="pe-prop pe-inspector" id="pe-inspector" aria-label="Inspector de propiedades">
+          <div class="pe-inspector__empty"><span class="pe-inspector__empty-icon">✦</span><strong>Seleccioná un bloque</strong><p>Elegí una sección del árbol o hacé clic sobre el canvas para editar únicamente los campos permitidos por la plantilla.</p></div>
+        </aside>
       </div>`;
 
     // El iframe no lee ningún archivo global: recibe LOS DATOS DE ESTA página
@@ -3780,6 +3830,14 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     });
     vista.querySelectorAll(".pe-tree__row--group .pe-tree__chevron").forEach((ch) => {
       ch.onclick = (e) => { e.stopPropagation(); ch.closest(".pe-tree__group").classList.toggle("is-collapsed"); };
+    });
+    vista.querySelectorAll("[data-viewport]").forEach((button) => {
+      button.onclick = () => {
+        estado.previewViewport = button.dataset.viewport;
+        const shell = $("marco-shell");
+        shell?.classList.toggle("is-mobile", estado.previewViewport === "mobile");
+        vista.querySelectorAll("[data-viewport]").forEach((item) => item.setAttribute("aria-pressed", String(item === button)));
+      };
     });
 
     $("volver").onclick = () => {

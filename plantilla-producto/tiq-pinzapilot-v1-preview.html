@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TiendaIQ · Pinza PagePilot v1</title>
+  <style>body { margin: 0; background: #fff; } #app { min-height: 100vh; }</style>
+</head>
+<body>
+  <div id="app" aria-label="Vista local de la plantilla fija"></div>
+  <script src="data.js"></script>
+  <script src="../extensions/tiendaiq-widgets/assets/tiq-pinzapilot-v1.js"></script>
+  <script>
+    (async () => {
+      const page = DATA;
+      const source = page.fuente || {};
+      const hero = page.facetas?.hero || {};
+      const media = (hero.galeria || [])
+        .map((id) => ({ id, url: URLS[id] }))
+        .filter((item) => /^https:\/\//.test(item.url || ""));
+      await window.TiendaIQPinzaPagepilotV1.mount(document.getElementById("app"), {
+        assetUrl: "../extensions/tiendaiq-widgets/assets/tiq-pinzapilot-v1.html",
+        view: {
+          product: {
+            title: hero.titulo || source.titulo_crudo,
+            description: hero.subtitulo || source.descripcion_cruda,
+            price: source.precio,
+            compareAtPrice: source.precio_comparativo,
+            currency: source.moneda,
+            variantId: null,
+            media
+          },
+          content: {
+            hero: { bullets: hero.bullets || [] },
+            timeline: page.facetas?.texto_img_1 || null,
+            feature: page.facetas?.texto_img_2 || page.facetas?.iconos || null,
+            iconItems: Array.isArray(page.facetas?.iconos?.items) ? page.facetas.iconos.items : [],
+            faq: page.facetas?.faq || null,
+            recommendations: page.facetas?.recomendados || null,
+            cta: page.global?.cta || "Agregar al carrito"
+          },
+          // Local preview intentionally starts fail-closed. It demonstrates
+          // the product template without inventing reviews, percentages,
+          // payment methods, policies, logos, or UGC.
+          evidence: { reviews: false, ugc: false, policies: false, comparison: false, logos: false, statistics: false, payments: false }
+        }
+      });
+    })().catch((error) => {
+      document.getElementById("app").textContent = `No se pudo cargar la plantilla: ${error.message}`;
+    });
+  </script>
+</body>
+</html>

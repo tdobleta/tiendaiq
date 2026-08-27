@@ -65,6 +65,8 @@ const { TenantContext } = require("./src/tenancy/tenant-context");
 const { verifyAndNormalizeWebhook } = require("./src/webhooks/verify-and-normalize");
 const { generationAdmissionPause } = require("./src/generation/admission-control");
 const { resolveTemplateForCreation } = require("./src/domain/template-registry");
+const { applyTemplateBoundEdit } = require("./src/domain/fixed-template-edit-policy");
+const { assertFixedTemplatePublishable } = require("./src/shopify/fixed-template-publish-guard");
 const {
   queryShopifyCertification,
   queryStorefrontCertification,
@@ -1069,7 +1071,10 @@ async function api(req, res, url) {
     }
     const { data } = await leerCuerpo(req);
     if (!data) return json(res, 400, { error: "Falta data" });
-    existente.data = data;
+    existente.data = applyTemplateBoundEdit({
+      persistedData: existente.data,
+      submittedData: data
+    });
     if (existente.estado === "publicada") existente.cambios_sin_publicar = true;
     await guardarPagina(sesion.tenant, existente);
     return json(res, 200, existente);
@@ -1126,6 +1131,9 @@ async function api(req, res, url) {
   if (req.method === "POST" && mPub) {
     const registro = await leerPagina(sesion.tenant, mPub[1]);
     if (!registro) return json(res, 404, { error: "No existe esa página" });
+    // Fast, authenticated preflight. The worker repeats it immediately before
+    // Shopify mutations so a product change cannot invalidate this result.
+    await assertFixedTemplatePublishable(registro.data, sesion);
     const publication = await encolarPublicacionDB(sesion.tenant, registro.id, { maxAttempts: 3 });
     if (!publication) return json(res, 404, { error: "No existe esa página" });
     if (publication.conflict) return json(res, 409, { error: "La pagina tiene otra operacion en curso." });
@@ -1332,11 +1340,19 @@ async function cerrarPorFallo(error, tipo) {
 process.on("unhandledRejection", (error) => void cerrarPorFallo(error, "unhandledRejection"));
 process.on("uncaughtException", (error) => void cerrarPorFallo(error, "uncaughtException"));
 
+// El almacenamiento de archivos existe exclusivamente para el flujo local.
+// Render declara DEV_MODE=0; también aceptamos las señales estándar de un
+// runtime deployable. Así una web publicada no abre un puerto antes de
+// demostrar PostgreSQL, sin imponer variables al runner local de pruebas.
+function requierePostgresRuntime(runtimeEnv = env) {
+  return runtimeEnv?.DEV_MODE === "0" || runtimeEnv?.NODE_ENV === "production" || Boolean(runtimeEnv?.DATABASE_URL);
+}
+
 async function iniciarServidor({
   server = servidor,
   port = PUERTO,
   verificar = verificarAlmacenamientoDB,
-  usaPostgres = Boolean(env.DATABASE_URL),
+  usaPostgres = requierePostgresRuntime(env),
   iniciarWorkerLocal = null
 } = {}) {
   // Antes de abrir un puerto HTTP, la instancia web con Postgres debe demostrar
@@ -1397,4 +1413,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { servidor, iniciarServidor };
+module.exports = { servidor, iniciarServidor, requierePostgresRuntime };
