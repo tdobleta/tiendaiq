@@ -35,6 +35,18 @@ test("Partner Staging declara una topología Render aislada y fail-closed", () =
     /String\(env\.GENERATION_ADMISSION_PAUSED \|\| ""\)\.trim\(\) !== "0"/
   );
   assert.match(blueprint, /PLAN_TEST\s*\n\s*value:\s*"1"/);
+  for (const key of [
+    "SHOPIFY_CERTIFICATION_ENABLED",
+    "SHOPIFY_CERTIFICATION_SHOP",
+    "SHOPIFY_CERTIFICATION_PAGE_ID"
+  ]) {
+    assert.match(
+      blueprint,
+      new RegExp(`${key}\\s*\\n\\s*sync:\\s*false`),
+      `${key} se completa manualmente sólo cuando exista evidencia Partner real`
+    );
+  }
+  assert.match(blueprint, /SHOPIFY_CERTIFICATION_MAX_AGE_HOURS\s*\n\s*value:\s*"24"/);
   const workerBlueprint = blueprint.slice(blueprint.indexOf("- type: worker"));
   assert.match(workerBlueprint, /PLAN_TEST\s*\n\s*value:\s*"1"/);
   assert.doesNotMatch(blueprint, /ANTHROPIC_API_KEY\s*\n\s*value:/);
