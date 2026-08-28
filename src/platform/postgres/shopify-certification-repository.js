@@ -63,12 +63,23 @@ function createShopifyCertificationRepository(pool) {
           client.query(
             `SELECT pr.type, max(pr.completed_at) AS completed_at, count(*)::int AS evidence_count,
                     max(pr.worker_release_sha) AS worker_release_sha
-               FROM control_plane.privacy_requests pr
+              FROM control_plane.privacy_requests pr
                JOIN control_plane.inbox_events e
                  ON e.id = pr.webhook_id
-                AND e.tenant_id = pr.tenant_id
+                AND (
+                  e.tenant_id = pr.tenant_id
+                  OR (e.tenant_id IS NULL AND pr.tenant_id = e.shop_domain)
+                )
                 AND replace(e.topic, '/', '_') = pr.type
-              WHERE pr.tenant_id = $1
+              WHERE (
+                    pr.tenant_id = $1
+                    -- Shopify CLI entrega los webhooks de muestra con un shop-domain
+                    -- sintético. El ingreso ya verificó su HMAC, pero no hay tenant
+                    -- instalado que asociar; conservar esa evidencia app-wide permite
+                    -- certificar que el handler y el worker procesaron el contrato sin
+                    -- atribuir el evento a una tienda real.
+                    OR (e.tenant_id IS NULL AND pr.tenant_id = e.shop_domain)
+                  )
                 AND pr.status = 'completed'
                 AND pr.type = ANY($2::text[])
                 AND pr.completed_at >= $3

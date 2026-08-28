@@ -412,6 +412,9 @@ test("lee evidencia bajo TenantContext y fija la pagina exacta dentro de la tran
   assert.doesNotMatch(publication.sql, /result\s*->/);
   const privacy = calls.find((call) => call.sql.includes?.("FROM control_plane.privacy_requests"));
   assert.match(privacy.sql, /JOIN control_plane\.inbox_events e/);
+  assert.match(privacy.sql, /e\.tenant_id IS NULL/);
+  assert.match(privacy.sql, /pr\.tenant_id = e\.shop_domain/);
+  assert.match(privacy.sql, /e\.tenant_id = pr\.tenant_id/);
   assert.match(privacy.sql, /e\.status = 'processed'/);
   assert.match(privacy.sql, /e\.worker_release_sha = \$4/);
   assert.deepEqual(calls.filter((call) => ["BEGIN", "COMMIT", "RELEASE"].includes(call.sql)).map((call) => call.sql), [
