@@ -414,7 +414,9 @@ async function limpiezaCapacidadOperativa(req, res, url) {
       type: "capacity-cleanup",
       payload: { runId: command.runId, tenants: command.tenants },
       idempotencyKey: key,
-      maxAttempts: 1
+      // Borrar el rango sintético es idempotente. Un lease perdido puede
+      // reanudarse sin volver a tocar datos ajenos al run solicitado.
+      maxAttempts: 3
     });
     return json(res, 202, { accepted: true, mode: "cleanup", jobId: job.id });
   }
@@ -426,14 +428,20 @@ async function limpiezaCapacidadOperativa(req, res, url) {
   if (!job || job.type !== "capacity-cleanup" || job.idempotencyKey !== key) {
     return json(res, 404, { error: "not_found" });
   }
-  if (job.status === "queued" || job.status === "running") return json(res, 202, { completed: false });
+  if (job.status === "queued" || job.status === "running") {
+    return json(res, 202, { completed: false, stage: "worker_cleanup" });
+  }
   if (job.status !== "succeeded") return json(res, 409, { completed: false, error: "cleanup_jobs_not_completed" });
 
-  // El worker confirma primero el borrado de capacity-probe con su rol. Sólo
-  // entonces la web elimina los tenants bajo su contexto RLS.
-  for (let index = 1; index <= command.tenants; index += 1) {
-    await borrarTiendaDB(`${command.prefix}-${index}.myshopify.com`);
+  // El worker ya procesó por lotes los tenants 2..N y confirmó su resultado
+  // durable. Este request sólo elimina el tenant-ancla que contiene el job;
+  // por eso el polling nunca concentra una limpieza larga ni supera el límite
+  // HTTP del runtime.
+  if (job.result?.mode !== "cleanup" || job.result?.runId !== command.runId ||
+      job.result?.tenants !== command.tenants || job.result?.tenantCleanup?.anchorPending !== 1) {
+    return json(res, 409, { completed: false, error: "cleanup_result_invalid" });
   }
+  await borrarTiendaDB(command.anchorDomain);
   return json(res, 200, { completed: true, mode: "cleanup", tenantsDeleted: command.tenants });
 }
 

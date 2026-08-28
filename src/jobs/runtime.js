@@ -27,7 +27,8 @@ const {
   redactarInboxTiendaDB,
   registrarPrivacidadWebhookDB,
   depurarInboxDB,
-  borrarJobsCapacidadDB
+  borrarJobsCapacidadDB,
+  borrarTiendaDB
 } = require("../../db");
 const { sesionDe, borrarTienda } = require("../../tiendas");
 const billing = require("../../facturacion");
@@ -114,7 +115,10 @@ function createRuntime({
     sessions: { get: sesionDe },
     metrics: metrica
   });
-  const capacityCleanup = createCapacityCleanupHandler({ deleteJobs: borrarJobsCapacidadDB });
+  const capacityCleanup = createCapacityCleanupHandler({
+    deleteJobs: borrarJobsCapacidadDB,
+    deleteTenant: borrarTiendaDB
+  });
 
   const jobRepository = {
     claim: reclamarJobDB,

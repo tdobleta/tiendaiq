@@ -9,16 +9,38 @@ function parseCleanupCommand(value) {
   if (!Number.isInteger(tenants) || tenants < 1 || tenants > 2000) {
     throw new TypeError("tenants invalido");
   }
-  return Object.freeze({ runId, tenants, prefix: `capacity-${runId}` });
+  const prefix = `capacity-${runId}`;
+  // El job durable vive en el tenant 1. Nunca puede borrarlo el worker antes
+  // de que el runner haya persistido su resultado, porque perdería su propio
+  // lease/evidencia. La web elimina ese único tenant final después de observar
+  // el éxito durable del job.
+  return Object.freeze({
+    runId,
+    tenants,
+    prefix,
+    anchorIndex: 1,
+    anchorDomain: `${prefix}-1.myshopify.com`
+  });
 }
 
-function createCapacityCleanupHandler({ deleteJobs } = {}) {
+function syntheticTenantDomain(command, index) {
+  if (!Number.isInteger(index) || index < 1 || index > command.tenants) {
+    throw new RangeError("indice de tenant sintetico invalido");
+  }
+  return `${command.prefix}-${index}.myshopify.com`;
+}
+
+function createCapacityCleanupHandler({ deleteJobs, deleteTenant, batchSize = 20 } = {}) {
   if (typeof deleteJobs !== "function") throw new TypeError("El handler requiere deleteJobs");
+  if (typeof deleteTenant !== "function") throw new TypeError("El handler requiere deleteTenant");
+  if (!Number.isInteger(batchSize) || batchSize < 1 || batchSize > 100) {
+    throw new TypeError("batchSize invalido");
+  }
   return Object.freeze({
     needsCompensation() {
       return false;
     },
-    async run(job, { workerId } = {}) {
+    async run(job, { workerId, signal } = {}) {
       const command = parseCleanupCommand(job.payload);
       const jobsDeleted = await deleteJobs(command.prefix, workerId);
       if (!Number.isInteger(jobsDeleted) || jobsDeleted < 0) {
@@ -26,9 +48,35 @@ function createCapacityCleanupHandler({ deleteJobs } = {}) {
         error.nonRetryable = true;
         throw error;
       }
-      return { mode: "cleanup", runId: command.runId, tenants: command.tenants, jobsDeleted };
+
+      // La limpieza larga se ejecuta en el worker, no durante el polling HTTP.
+      // Cada borrado es idempotente, por lo que un reintento después de perder
+      // un lease continúa de forma segura desde el mismo rango estricto.
+      let tenantsProcessed = 0;
+      let batches = 0;
+      for (let start = command.anchorIndex + 1; start <= command.tenants; start += batchSize) {
+        const end = Math.min(command.tenants, start + batchSize - 1);
+        for (let index = start; index <= end; index += 1) {
+          if (signal?.aborted) throw signal.reason || new Error("cleanup abortado");
+          await deleteTenant(syntheticTenantDomain(command, index));
+          tenantsProcessed += 1;
+        }
+        batches += 1;
+      }
+
+      return {
+        mode: "cleanup",
+        runId: command.runId,
+        tenants: command.tenants,
+        jobsDeleted,
+        tenantCleanup: {
+          batches,
+          tenantsProcessed,
+          anchorPending: 1
+        }
+      };
     }
   });
 }
 
-module.exports = { parseCleanupCommand, createCapacityCleanupHandler };
+module.exports = { parseCleanupCommand, syntheticTenantDomain, createCapacityCleanupHandler };
