@@ -181,6 +181,7 @@ jobs:
           OPS_APP_URL: https://tiendaiq.com
           OPS_STATUS_TOKEN: ${{ secrets.PRODUCTION_OPS_STATUS_TOKEN }}
           OPS_READINESS_PROFILE: rollback
+          OPS_REQUIRE_APP_REGISTRATION: "1"
           ROLLBACK_READINESS_DEADLINE_SECONDS: "900"
         run: |
           set -euo pipefail

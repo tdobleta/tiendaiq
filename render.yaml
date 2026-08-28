@@ -39,9 +39,10 @@ services:
       # coincidir con el singleton de la base antes de aceptar tráfico.
       - key: SHOPIFY_APP_REGISTRATION_ID
         value: "tiendaiq-production-v1"
-      # Fase preparatoria: solo 1 exige que ID y DB ya estén vinculados.
+      # El bootstrap protegido vincula primero la base; cualquier runtime
+      # posterior falla cerrado si esta identidad no coincide con ese binding.
       - key: SHOPIFY_APP_REGISTRATION_BINDING_ENFORCED
-        value: "0"
+        value: "1"
       # 32 bytes en base64. Produccion falla al arrancar si falta.
       - key: TOKEN_ENC_KEY
         sync: false
@@ -105,9 +106,9 @@ services:
       # singleton de esta base. No representa provider ni billing.
       - key: SHOPIFY_APP_REGISTRATION_ID
         value: "tiendaiq-production-v1"
-      # Debe activarse junto con web después del bind protegido.
+      # Debe coincidir con web y con el singleton ligado por el bootstrap.
       - key: SHOPIFY_APP_REGISTRATION_BINDING_ENFORCED
-        value: "0"
+        value: "1"
       - key: PG_PRIVATE_NETWORK
         value: "1"
       - key: PG_RUNTIME_ROLE
