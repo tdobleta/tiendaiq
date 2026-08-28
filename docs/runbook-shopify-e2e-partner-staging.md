@@ -23,6 +23,11 @@ entorno protegido.
   `SHOPIFY_CERTIFICATION_MAX_AGE_HOURS=24`. El ID corresponde a una página
   real publicada por el worker del SHA solicitado; no reutilizar evidencia de
   staging histórico ni inventar IDs.
+- Si la Development Store mantiene la pantalla de contraseña, el servicio web
+  puede recibir además `SHOPIFY_CERTIFICATION_STOREFRONT_PASSWORD` como secreto
+  de Render. No se agrega a GitHub, archivos ni logs: el verificador sólo la
+  envía por HTTPS al dominio exacto de `SHOPIFY_CERTIFICATION_SHOP`, conserva
+  la cookie durante una única consulta y no devuelve contraseña, cookie ni HTML.
 - La evidencia durable de página, publicación Shopify y privacy corresponde al
   mismo SHA. El workflow no genera contenido ni muta Shopify.
 
@@ -38,7 +43,6 @@ confirmation=VERIFY_SHOPIFY_PARTNER_STAGING_E2E
 ## Límites deliberados
 
 El workflow conserva los mismos límites del gate de staging: no sustituye una
-prueba manual de instalación/reinstalación OAuth, no certifica visualmente una
-development store protegida por contraseña, no crea billing y no ejecuta el
-destructivo `shop/redact`. Esos controles continúan siendo evidencia separada
+prueba manual de instalación/reinstalación OAuth, no crea billing y no ejecuta
+el destructivo `shop/redact`. Esos controles continúan siendo evidencia separada
 para App Store y producción.

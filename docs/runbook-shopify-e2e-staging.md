@@ -64,6 +64,9 @@ SHOPIFY_CERTIFICATION_ENABLED=1
 SHOPIFY_CERTIFICATION_SHOP=development-store.myshopify.com
 SHOPIFY_CERTIFICATION_PAGE_ID=<id interno de la pagina de certificacion>
 SHOPIFY_CERTIFICATION_MAX_AGE_HOURS=24
+# Solo si la QA Development Store conserva password protection. Cargarlo
+# exclusivamente como secreto de Render, nunca en GitHub ni en este archivo.
+SHOPIFY_CERTIFICATION_STOREFRONT_PASSWORD=<password actual de la tienda QA>
 PLAN_TEST=1
 OPS_STATUS_TOKEN=<token existente de staging, minimo 32 caracteres>
 ```

@@ -38,7 +38,8 @@ test("Partner Staging declara una topología Render aislada y fail-closed", () =
   for (const key of [
     "SHOPIFY_CERTIFICATION_ENABLED",
     "SHOPIFY_CERTIFICATION_SHOP",
-    "SHOPIFY_CERTIFICATION_PAGE_ID"
+    "SHOPIFY_CERTIFICATION_PAGE_ID",
+    "SHOPIFY_CERTIFICATION_STOREFRONT_PASSWORD"
   ]) {
     assert.match(
       blueprint,

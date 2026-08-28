@@ -523,7 +523,11 @@ async function certificarShopifyStaging(req, res) {
         fetch,
         remote.product.onlineStoreUrl,
         evidence.publication.publicUrl,
-        { signal: timeoutSignal() }
+        {
+          signal: timeoutSignal(),
+          storefrontPassword: String(env.SHOPIFY_CERTIFICATION_STOREFRONT_PASSWORD || ""),
+          passwordShopDomain: shop
+        }
       );
     } catch {
       remote.storefront = {
