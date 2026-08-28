@@ -198,3 +198,43 @@ test("la evidencia conserva el bloqueo causal de tenants sin campos libres", () 
   });
   assert.doesNotMatch(JSON.stringify(artifact), /42501|must-not-appear/i);
 });
+
+test("el artefacto de probe no expone conexión ni errores crudos", () => {
+  const artifact = createArtifact({
+    release: RELEASE,
+    mode: "probe",
+    exitCode: 1,
+    log: JSON.stringify({
+      event: "queue_load_connection_probe",
+      passed: false,
+      mode: "probe",
+      probe: {
+        web: { ok: true },
+        worker: {
+          ok: false,
+          failureClass: "unclassified",
+          failureOrigin: "runtime",
+          failureStage: "connect",
+          rawError: "password=must-not-appear"
+        }
+      }
+    })
+  });
+  assert.deepEqual(artifact, {
+    schema_version: 1,
+    scope: "partner-staging-runtime-db-connectivity",
+    release_sha: RELEASE,
+    mode: "probe",
+    completed: false,
+    result_detected: true,
+    result: {
+      passed: false,
+      probe: {
+        web: { ok: true },
+        worker: { ok: false, failureClass: "unclassified", failureOrigin: "runtime", failureStage: "connect" }
+      }
+    },
+    failure: { class: "database_connection", phase: "unknown" }
+  });
+  assert.doesNotMatch(JSON.stringify(artifact), /password|must-not-appear/i);
+});
