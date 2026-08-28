@@ -3,7 +3,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const { parseCleanupCommand, syntheticTenantDomain, createCapacityCleanupHandler } = require("../src/capacity/cleanup-command");
-const { command, cleanupRemote, ORIGIN } = require("../scripts/probar-limpieza-remota-capacidad");
+const { command, cleanupRemote, cleanupFailureEvent, ORIGIN } = require("../scripts/probar-limpieza-remota-capacidad");
 
 test("el comando de cleanup sólo acepta el rango sintético explícito", () => {
   assert.deepEqual(parseCleanupCommand({ runId: "a1b2c3d4e5f6", tenants: 100 }), {
@@ -87,4 +87,41 @@ test("el cliente remoto no contiene URL de base ni sigue redirecciones", async (
   assert.match(calls[0].url, new RegExp(`^${ORIGIN}`));
   assert.equal(calls[0].options.redirect, "error");
   assert.doesNotMatch(JSON.stringify(calls), /DATABASE_URL|postgres/i);
+});
+
+test("el cliente clasifica el rechazo inicial sin exponer el cuerpo remoto", async () => {
+  const config = command({ LOAD_CLEANUP_RUN_ID: "a1b2c3d4e5f6", CLEANUP_TENANTS: "2", OPS_STATUS_TOKEN: "x".repeat(32) });
+  let error;
+  await assert.rejects(
+    cleanupRemote(config, { fetchFn: async () => ({ status: 403, json: async () => ({ token: "must-not-appear" }) }) }),
+    (value) => { error = value; return true; }
+  );
+  assert.deepEqual(cleanupFailureEvent(error), {
+    event: "capacity_remote_cleanup_failure",
+    mode: "cleanup",
+    phase: "remote_cleanup",
+    failure: { stage: "init_rejected", status: 403 }
+  });
+  assert.doesNotMatch(JSON.stringify(cleanupFailureEvent(error)), /must-not-appear|token/i);
+});
+
+test("el cliente distingue poll not found y conflicto terminal", async () => {
+  const config = command({ LOAD_CLEANUP_RUN_ID: "a1b2c3d4e5f6", CLEANUP_TENANTS: "2", OPS_STATUS_TOKEN: "x".repeat(32) });
+  for (const [status, stage] of [[404, "poll_not_found"], [409, "poll_conflict"]]) {
+    let calls = 0;
+    let error;
+    await assert.rejects(
+      cleanupRemote(config, {
+        fetchFn: async () => {
+          calls += 1;
+          return calls === 1
+            ? { status: 202, json: async () => ({ jobId: "12345678-1234-1234-1234-123456789abc" }) }
+            : { status, json: async () => ({ error: "raw remote error" }) };
+        },
+        sleep: async () => {}
+      }),
+      (value) => { error = value; return true; }
+    );
+    assert.deepEqual(cleanupFailureEvent(error).failure, { stage, status });
+  }
 });
