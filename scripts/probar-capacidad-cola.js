@@ -56,21 +56,49 @@ function errorSummary(error) {
   return String(error?.message || error);
 }
 
-function cleanupFailureClass(error) {
-  // SQLSTATE is useful to classify an operational failure, but it is never
-  // persisted or printed. Evidence exposes only this bounded vocabulary.
-  const code = String(error?.code || "").trim().toUpperCase();
-  if (/^(?:28000|28P01|42501)$/.test(code)) return "authorization";
-  if (/^(?:23001|23503)$/.test(code)) return "referential_integrity";
-  if (/^(?:3F000|42P01|42703)$/.test(code)) return "schema";
-  if (/^08[0-9A-Z]{3}$/.test(code) || /^(?:57P01|57P02|57P03|53300)$/.test(code)) return "connection";
+function errorChain(error, limit = 16) {
+  const result = [];
+  const pending = [error];
+  const seen = new Set();
+  while (pending.length && result.length < limit) {
+    const current = pending.shift();
+    if (!current || (typeof current !== "object" && typeof current !== "function") || seen.has(current)) continue;
+    seen.add(current);
+    result.push(current);
+    if (current.cause) pending.push(current.cause);
+    if (current instanceof AggregateError && Array.isArray(current.errors)) pending.push(...current.errors);
+  }
+  return result;
+}
 
-  const message = String(error?.message || error || "").toLowerCase();
-  if (/permission denied|row-level security|not authorized|must be member|insufficient privilege/.test(message)) return "authorization";
-  if (/foreign key|violates.*constraint|referential integrity/.test(message)) return "referential_integrity";
-  if (/relation .* does not exist|column .* does not exist|schema .* does not exist|undefined table/.test(message)) return "schema";
-  if (/econn|connect|connection|timeout|certificate|tls|ssl|authentication failed|enotfound/.test(message)) return "connection";
+function cleanupFailureClass(error) {
+  // SQLSTATE can identify the category, but codes/messages/stacks are never
+  // persisted or printed. Evidence exposes only this bounded vocabulary.
+  const entries = errorChain(error);
+  const codes = entries.map((entry) => String(entry?.code || "").trim().toUpperCase());
+  if (codes.some((code) => /^(?:28000|28P01|42501)$/.test(code))) return "authorization";
+  if (codes.some((code) => /^23[0-9A-Z]{3}$/.test(code))) return "referential_integrity";
+  if (codes.some((code) => /^(?:3F000|42P01|42703)$/.test(code))) return "schema";
+  if (codes.some((code) => /^08[0-9A-Z]{3}$/.test(code))) return "connection";
+  if (codes.some((code) => /^40[0-9A-Z]{3}$/.test(code))) return "transaction";
+  if (codes.some((code) => /^53[0-9A-Z]{3}$/.test(code))) return "resource";
+  if (codes.some((code) => /^55[0-9A-Z]{3}$/.test(code))) return "lock_state";
+  if (codes.some((code) => /^57[0-9A-Z]{3}$/.test(code))) return "interrupted";
+
+  const messages = entries.map((entry) => String(entry?.message || entry || "").toLowerCase());
+  if (messages.some((message) => /permission denied|row-level security|not authorized|must be member|insufficient privilege/.test(message))) return "authorization";
+  if (messages.some((message) => /foreign key|violates.*constraint|referential integrity/.test(message))) return "referential_integrity";
+  if (messages.some((message) => /relation .* does not exist|column .* does not exist|schema .* does not exist|undefined table/.test(message))) return "schema";
+  if (messages.some((message) => /econn|connect|connection|timeout|certificate|tls|ssl|authentication failed|enotfound/.test(message))) return "connection";
   return "unclassified";
+}
+
+function cleanupFailureOrigin(error) {
+  const entries = errorChain(error);
+  if (entries.some((entry) => /^[0-9A-Z]{5}$/i.test(String(entry?.code || "")))) return "postgres";
+  if (entries.some((entry) => /^(?:ERR_|E(?:CONN|PIPE|AI_AGAIN|HOSTUNREACH|NETUNREACH|TIMEDOUT))/.test(String(entry?.code || "").toUpperCase()))) return "runtime";
+  if (entries.some((entry) => entry instanceof Error)) return "runtime";
+  return "unknown";
 }
 
 function assertAuthorized(urlValue, name) {
@@ -133,6 +161,8 @@ async function cleanupSyntheticRun({ workerPool, webPool, tenants, setupConcurre
   let jobsDeleted = 0;
   let storesDeleted = 0;
   let tenantsDeleted = 0;
+  let attemptedTenantDeletions = 0;
+  let tenantCleanupStatus = "completed";
 
   function evidence() {
     return {
@@ -141,8 +171,14 @@ async function cleanupSyntheticRun({ workerPool, webPool, tenants, setupConcurre
       tenantsDeleted,
       failedJobDeletion: errors.some((entry) => entry.scope === "jobs"),
       failedTenantDeletions: errors.filter((entry) => entry.scope === "tenant").length,
+      attemptedTenantDeletions,
+      tenantCleanupStatus,
       ...(errors.find((entry) => entry.scope === "jobs")
-        ? { jobFailureClass: errors.find((entry) => entry.scope === "jobs").classification }
+        ? {
+            jobFailureClass: errors.find((entry) => entry.scope === "jobs").classification,
+            jobFailureStage: errors.find((entry) => entry.scope === "jobs").stage,
+            jobFailureOrigin: errors.find((entry) => entry.scope === "jobs").origin
+          }
         : {}),
       ...(errors.some((entry) => entry.scope === "tenant")
         ? {
@@ -156,16 +192,21 @@ async function cleanupSyntheticRun({ workerPool, webPool, tenants, setupConcurre
     };
   }
 
+  let jobFailureStage = "connect";
   try {
     const client = await workerPool.connect();
     try {
+      jobFailureStage = "begin";
       await client.query("BEGIN");
+      jobFailureStage = "set_worker_context";
       await client.query("SELECT set_config('app.worker_id', $1, true)", [`${prefix}:cleanup`]);
+      jobFailureStage = "delete_capacity_jobs";
       const deleted = await client.query(
         "DELETE FROM control_plane.jobs WHERE type = 'capacity-probe' AND idempotency_key LIKE $1",
         [`${prefix}:%`]
       );
       jobsDeleted = deleted.rowCount;
+      jobFailureStage = "commit";
       await client.query("COMMIT");
     } catch (error) {
       await client.query("ROLLBACK").catch(() => {});
@@ -174,21 +215,34 @@ async function cleanupSyntheticRun({ workerPool, webPool, tenants, setupConcurre
       client.release();
     }
   } catch (error) {
-    errors.push({ scope: "jobs", classification: cleanupFailureClass(error) });
+    errors.push({
+      scope: "jobs",
+      classification: cleanupFailureClass(error),
+      stage: jobFailureStage,
+      origin: cleanupFailureOrigin(error)
+    });
   }
 
-  await parallelMap(tenants, setupConcurrency, async (tenant) => {
-    try {
-      await withTenantTransaction(webPool, tenant, async (client) => {
-        const store = await client.query("DELETE FROM public.tiendas WHERE dominio = $1", [tenant.tenantId]);
-        const registry = await client.query("DELETE FROM control_plane.tenants WHERE id = $1", [tenant.tenantId]);
-        storesDeleted += store.rowCount;
-        tenantsDeleted += registry.rowCount;
-      });
-    } catch (error) {
-      errors.push({ scope: "tenant", classification: cleanupFailureClass(error) });
-    }
-  });
+  if (errors.some((entry) => entry.scope === "jobs")) {
+    // Jobs reference tenants. A tenant delete after a failed job delete would
+    // only add derived FK failures and obscures the primary cause.
+    tenantCleanupStatus = "blocked_by_job_cleanup";
+  } else {
+    await parallelMap(tenants, setupConcurrency, async (tenant) => {
+      attemptedTenantDeletions += 1;
+      try {
+        await withTenantTransaction(webPool, tenant, async (client) => {
+          const store = await client.query("DELETE FROM public.tiendas WHERE dominio = $1", [tenant.tenantId]);
+          const registry = await client.query("DELETE FROM control_plane.tenants WHERE id = $1", [tenant.tenantId]);
+          storesDeleted += store.rowCount;
+          tenantsDeleted += registry.rowCount;
+        });
+      } catch (error) {
+        errors.push({ scope: "tenant", classification: cleanupFailureClass(error) });
+      }
+    });
+    if (errors.some((entry) => entry.scope === "tenant")) tenantCleanupStatus = "completed_with_failures";
+  }
 
   const result = evidence();
   if (errors.length) {
@@ -399,4 +453,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { assertAuthorized, cleanupFailureClass, normalizeRunId, percentile, requiredInteger };
+module.exports = { assertAuthorized, cleanupFailureClass, cleanupFailureOrigin, errorChain, normalizeRunId, percentile, requiredInteger, cleanupSyntheticRun };
