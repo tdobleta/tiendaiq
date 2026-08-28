@@ -5,7 +5,7 @@ const fs = require("fs");
 const RESULT_FIELDS = Object.freeze([
   "passed", "mode", "runId", "tenants", "jobs", "workerLanes", "fakeWorkMs",
   "setupMs", "enqueueMs", "enqueueP95Ms", "oldestQueuedSeconds", "drainMs",
-  "jobsPerSecond", "maxDrainSeconds", "webPoolPeak", "workerPoolPeak", "cleanup"
+  "jobsPerSecond", "maxDrainSeconds", "webPoolPeak", "workerPoolPeak", "cleanup", "probe"
 ]);
 const CLEANUP_FIELDS = Object.freeze([
   "jobsDeleted",
@@ -24,6 +24,7 @@ const CLEANUP_FAILURE_CLASSES = /^(?:authorization|referential_integrity|schema|
 const CLEANUP_JOB_STAGES = /^(?:connect|begin|set_worker_context|delete_capacity_jobs|commit)$/;
 const CLEANUP_FAILURE_ORIGINS = /^(?:postgres|runtime|unknown)$/;
 const TENANT_CLEANUP_STATUSES = /^(?:completed|completed_with_failures|blocked_by_job_cleanup)$/;
+const PROBE_STAGES = /^(?:connect|select_1)$/;
 const FAILURE_CLASSES = Object.freeze([
   "authorization_configuration",
   "database_connection",
@@ -90,6 +91,24 @@ function sanitizeCleanup(value) {
   return Object.keys(safe).length ? safe : undefined;
 }
 
+function sanitizeProbeTarget(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  if (typeof value.ok === "boolean" && value.ok) return { ok: true };
+  if (value.ok !== false) return undefined;
+  const failureClass = string(value.failureClass, CLEANUP_FAILURE_CLASSES);
+  const failureOrigin = string(value.failureOrigin, CLEANUP_FAILURE_ORIGINS);
+  const failureStage = string(value.failureStage, PROBE_STAGES);
+  if (!failureClass || !failureOrigin || !failureStage) return undefined;
+  return { ok: false, failureClass, failureOrigin, failureStage };
+}
+
+function sanitizeProbe(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const web = sanitizeProbeTarget(value.web);
+  const worker = sanitizeProbeTarget(value.worker);
+  return web && worker ? { web, worker } : undefined;
+}
+
 function sanitizeResult(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
   const safe = {};
@@ -111,6 +130,11 @@ function sanitizeResult(value) {
     if (field === "cleanup") {
       const cleanup = sanitizeCleanup(value.cleanup);
       if (cleanup) safe.cleanup = cleanup;
+      continue;
+    }
+    if (field === "probe") {
+      const probe = sanitizeProbe(value.probe);
+      if (probe) safe.probe = probe;
       continue;
     }
     const valueForField = number(value[field]);
@@ -189,7 +213,7 @@ function lastPhase(log) {
 
 function createArtifact({ log, release, mode, exitCode }) {
   const safeMode = String(mode || "").trim();
-  if (!["run", "cleanup"].includes(safeMode)) throw new Error("mode invalido");
+  if (!["run", "cleanup", "probe"].includes(safeMode)) throw new Error("mode invalido");
   const numericExitCode = Number(exitCode);
   if (!Number.isInteger(numericExitCode) || numericExitCode < 0 || numericExitCode > 255) throw new Error("exitCode invalido");
   const result = sanitizeResult(lastResultObject(log));
@@ -197,7 +221,7 @@ function createArtifact({ log, release, mode, exitCode }) {
   const failureClass = numericExitCode === 0 ? undefined : classifyFailure(log);
   return {
     schema_version: 1,
-    scope: "partner-staging-synthetic-queue",
+    scope: safeMode === "probe" ? "partner-staging-runtime-db-connectivity" : "partner-staging-synthetic-queue",
     release_sha: releaseSha(release),
     mode: safeMode,
     completed: numericExitCode === 0,
