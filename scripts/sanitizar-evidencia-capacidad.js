@@ -24,7 +24,7 @@ const CLEANUP_FAILURE_CLASSES = /^(?:authorization|referential_integrity|schema|
 const CLEANUP_JOB_STAGES = /^(?:connect|begin|set_worker_context|delete_capacity_jobs|commit)$/;
 const CLEANUP_FAILURE_ORIGINS = /^(?:postgres|runtime|unknown)$/;
 const TENANT_CLEANUP_STATUSES = /^(?:completed|completed_with_failures|blocked_by_job_cleanup)$/;
-const PROBE_STAGES = /^(?:connect|select_1)$/;
+const PROBE_STAGES = /^(?:ops_status)$/;
 const FAILURE_CLASSES = Object.freeze([
   "authorization_configuration",
   "database_connection",

@@ -212,9 +212,9 @@ test("el artefacto de probe no expone conexión ni errores crudos", () => {
         web: { ok: true },
         worker: {
           ok: false,
-          failureClass: "unclassified",
+          failureClass: "connection",
           failureOrigin: "runtime",
-          failureStage: "connect",
+          failureStage: "ops_status",
           rawError: "password=must-not-appear"
         }
       }
@@ -231,7 +231,7 @@ test("el artefacto de probe no expone conexión ni errores crudos", () => {
       passed: false,
       probe: {
         web: { ok: true },
-        worker: { ok: false, failureClass: "unclassified", failureOrigin: "runtime", failureStage: "connect" }
+        worker: { ok: false, failureClass: "connection", failureOrigin: "runtime", failureStage: "ops_status" }
       }
     },
     failure: { class: "database_connection", phase: "unknown" }
