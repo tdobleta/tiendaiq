@@ -238,3 +238,28 @@ test("el artefacto de probe no expone conexión ni errores crudos", () => {
   });
   assert.doesNotMatch(JSON.stringify(artifact), /password|must-not-appear/i);
 });
+
+test("el artefacto conserva sólo el diagnóstico allowlisted de cleanup remoto", () => {
+  const artifact = createArtifact({
+    release: RELEASE,
+    mode: "cleanup",
+    exitCode: 2,
+    log: JSON.stringify({
+      event: "capacity_remote_cleanup_failure",
+      mode: "cleanup",
+      phase: "remote_cleanup",
+      failure: { stage: "poll_conflict", status: 409, body: "password=must-not-appear" }
+    })
+  });
+  assert.deepEqual(artifact, {
+    schema_version: 1,
+    scope: "partner-staging-synthetic-queue",
+    release_sha: RELEASE,
+    mode: "cleanup",
+    completed: false,
+    result_detected: false,
+    remote_cleanup: { stage: "poll_conflict", status: 409 },
+    failure: { class: "cleanup", phase: "remote_cleanup" }
+  });
+  assert.doesNotMatch(JSON.stringify(artifact), /password|must-not-appear/i);
+});

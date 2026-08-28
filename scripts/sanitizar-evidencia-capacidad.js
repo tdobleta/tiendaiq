@@ -7,6 +7,7 @@ const RESULT_FIELDS = Object.freeze([
   "setupMs", "enqueueMs", "enqueueP95Ms", "oldestQueuedSeconds", "drainMs",
   "jobsPerSecond", "maxDrainSeconds", "webPoolPeak", "workerPoolPeak", "cleanup", "probe"
 ]);
+const REMOTE_CLEANUP_STAGES = /^(?:command_invalid|init_request_failed|init_rejected|init_not_found|init_conflict|init_invalid_response|init_unexpected_status|poll_request_failed|poll_rejected|poll_not_found|poll_conflict|poll_invalid_result|poll_unexpected_status|poll_timeout)$/;
 const CLEANUP_FIELDS = Object.freeze([
   "jobsDeleted",
   "storesDeleted",
@@ -40,7 +41,8 @@ const LOAD_PHASES = Object.freeze([
   "enqueue",
   "drain",
   "verification",
-  "cleanup"
+  "cleanup",
+  "remote_cleanup"
 ]);
 
 function releaseSha(value) {
@@ -107,6 +109,17 @@ function sanitizeProbe(value) {
   const web = sanitizeProbeTarget(value.web);
   const worker = sanitizeProbeTarget(value.worker);
   return web && worker ? { web, worker } : undefined;
+}
+
+function sanitizeRemoteCleanupFailure(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const stage = string(value.failure?.stage, REMOTE_CLEANUP_STAGES);
+  const status = number(value.failure?.status);
+  if (!stage) return undefined;
+  return {
+    stage,
+    ...(Number.isInteger(status) && status >= 100 && status <= 599 ? { status } : {})
+  };
 }
 
 function sanitizeResult(value) {
@@ -179,6 +192,17 @@ function lastFailureCleanup(log) {
   return undefined;
 }
 
+function lastRemoteCleanupFailure(log) {
+  const values = parsedJsonLines(log);
+  for (let index = values.length - 1; index >= 0; index -= 1) {
+    const value = values[index];
+    if (value.event !== "capacity_remote_cleanup_failure" || value.phase !== "remote_cleanup") continue;
+    const failure = sanitizeRemoteCleanupFailure(value);
+    if (failure) return failure;
+  }
+  return undefined;
+}
+
 function classifyFailure(log) {
   const normalized = String(log || "").toLowerCase();
   if (/allow_queue_load_test|allow_remote_queue_load_test|expected_release_sha|test_database_url|load_cleanup_run_id/.test(normalized)) {
@@ -205,7 +229,7 @@ function classifyFailure(log) {
 function lastPhase(log) {
   const values = parsedJsonLines(log);
   for (let index = values.length - 1; index >= 0; index -= 1) {
-    const phase = string(values[index].phase, /^(?:authorization|tenant_setup|enqueue|drain|verification|cleanup)$/);
+    const phase = string(values[index].phase, /^(?:authorization|tenant_setup|enqueue|drain|verification|cleanup|remote_cleanup)$/);
     if (phase) return phase;
   }
   return "unknown";
@@ -218,6 +242,7 @@ function createArtifact({ log, release, mode, exitCode }) {
   if (!Number.isInteger(numericExitCode) || numericExitCode < 0 || numericExitCode > 255) throw new Error("exitCode invalido");
   const result = sanitizeResult(lastResultObject(log));
   const failureCleanup = lastFailureCleanup(log);
+  const remoteCleanup = lastRemoteCleanupFailure(log);
   const failureClass = numericExitCode === 0 ? undefined : classifyFailure(log);
   return {
     schema_version: 1,
@@ -228,6 +253,7 @@ function createArtifact({ log, release, mode, exitCode }) {
     result_detected: Boolean(result),
     ...(result ? { result } : {}),
     ...(failureCleanup ? { cleanup: failureCleanup } : {}),
+    ...(remoteCleanup ? { remote_cleanup: remoteCleanup } : {}),
     ...(failureClass ? { failure: { class: failureClass, phase: lastPhase(log) } } : {})
   };
 }
@@ -248,4 +274,13 @@ if (require.main === module) {
   }
 }
 
-module.exports = { createArtifact, lastJsonObject, sanitizeResult, classifyFailure, lastPhase, FAILURE_CLASSES, LOAD_PHASES };
+module.exports = {
+  createArtifact,
+  lastJsonObject,
+  sanitizeResult,
+  sanitizeRemoteCleanupFailure,
+  classifyFailure,
+  lastPhase,
+  FAILURE_CLASSES,
+  LOAD_PHASES
+};
