@@ -404,8 +404,10 @@ test("lee evidencia bajo TenantContext y fija la pagina exacta dentro de la tran
   assert.equal(evidence.publication.pageId, "page-certification");
   assert.equal(evidence.privacy.customers_redact.count, 1);
   const tenantConfig = calls.find((call) => call.sql.includes?.("set_config('app.tenant_id'"));
+  const certificationConfig = calls.find((call) => call.sql.includes?.("set_config('app.certification_evidence'"));
   const publication = calls.find((call) => call.sql.includes?.("FROM public.paginas"));
   assert.deepEqual(tenantConfig.params, ["certification.myshopify.com"]);
+  assert.deepEqual(certificationConfig.params, ["certification.myshopify.com"]);
   assert.deepEqual(publication.params, ["certification.myshopify.com", since, "page-certification", RELEASE_SHA]);
   assert.match(publication.sql, /j\.worker_release_sha = \$4/);
   assert.match(publication.sql, /j\.id::text = p\.datos->>'last_completed_job_id'/);

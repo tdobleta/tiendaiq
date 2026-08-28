@@ -27,6 +27,11 @@ function createShopifyCertificationRepository(pool) {
       }
 
       return withTenantTransaction(pool, tenant, async (client) => {
+        // La evidencia que emite `shopify app webhook trigger` no pertenece a
+        // una instalacion real. El setting local habilita exclusivamente las
+        // politicas RLS de certificacion para sus metadatos procesados; nunca
+        // expone el payload ni se reutiliza fuera de esta transaccion.
+        await client.query("SELECT set_config('app.certification_evidence', $1, true)", [tenant.tenantId]);
         const [publication, privacy] = await Promise.all([
           client.query(
             `SELECT p.id AS page_id,
