@@ -74,7 +74,11 @@
             <div><span>Páginas</span><strong>${data.created}</strong></div>
             <div><span>Publicadas</span><strong>${data.published}</strong></div>
             <div><span>Bundles activos</span><strong>${data.activeBundles}</strong></div>
-            <div><span>Plan</span><strong>${esc(data.planName)}</strong></div>
+            <div>
+              <span>Plan</span>
+              <strong>${esc(data.planName)}</strong>
+              ${data.isPro ? "" : '<button class="tiq-v2-plan-link" type="button" data-action="plan">Actualizar plan</button>'}
+            </div>
           </div>
           <div class="tiq-v2-console__main">
             <div class="tiq-v2-next">
@@ -133,6 +137,7 @@
       pages: actions.pages,
       bundles: actions.bundles,
       inspiration: actions.inspiration,
+      plan: actions.plan,
       support: actions.support,
       legal: actions.legal
     };

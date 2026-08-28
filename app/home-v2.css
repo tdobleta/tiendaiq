@@ -53,6 +53,9 @@ body.tiq-v2-home-active .barra__tag { color: var(--v2-muted); border-left-color:
 .tiq-v2-metrics > div:last-child { border-right: 0; }
 .tiq-v2-metrics span { color: var(--v2-muted); font-size: 11px; }
 .tiq-v2-metrics strong { font-size: 23px; line-height: 1; font-weight: 620; }
+.tiq-v2-plan-link { align-self: flex-start; margin: 1px 0 0; padding: 0; border: 0; background: transparent; color: var(--v2-accent); font: inherit; font-size: 11px; font-weight: 650; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.tiq-v2-plan-link:hover { color: var(--v2-ink); }
+.tiq-v2-plan-link:focus-visible { outline: 2px solid var(--v2-accent); outline-offset: 3px; border-radius: 2px; }
 .tiq-v2-console__main { min-height: 286px; display: grid; grid-template-columns: .8fr 1.2fr; }
 .tiq-v2-next { padding: 38px; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; border-right: 1px solid var(--v2-border); }
 .tiq-v2-next h2 { margin: 11px 0 8px; font-size: 24px; line-height: 1.2; font-weight: 560; }
