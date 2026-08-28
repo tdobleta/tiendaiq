@@ -1,4 +1,4 @@
-name: Bootstrap production runtime logins
+name: Bootstrap and bind production database
 
 on:
   workflow_dispatch:
@@ -52,14 +52,33 @@ jobs:
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: "20"
+          node-version: "22"
 
       - run: npm ci --no-audit --no-fund
 
       - name: Create isolated PostgreSQL runtime logins for the prelaunch cutover
         env:
           ALLOW_ROLE_BOOTSTRAP: "1"
+          # Las migraciones históricas nombran estos roles NOLOGIN. Crearlos
+          # durante el bootstrap permite migrar una base realmente nueva sin
+          # convertirlos en credenciales de servicio.
+          BOOTSTRAP_LEGACY_COMPATIBILITY_ROLES: "1"
           MIGRATION_DATABASE_URL: ${{ secrets.PRODUCTION_MIGRATION_DATABASE_URL }}
           WEB_RUNTIME_LOGIN_PASSWORD: ${{ secrets.PRODUCTION_WEB_RUNTIME_LOGIN_PASSWORD }}
           WORKER_RUNTIME_LOGIN_PASSWORD: ${{ secrets.PRODUCTION_WORKER_RUNTIME_LOGIN_PASSWORD }}
         run: node scripts/preparar-roles-runtime.js
+
+      - name: Migrate the prelaunch production database after runtime roles exist
+        env:
+          MIGRATION_DATABASE_URL: ${{ secrets.PRODUCTION_MIGRATION_DATABASE_URL }}
+        run: npm run db:migrate
+
+      - name: Bind the database to the reviewed production Shopify registration
+        env:
+          APP_REGISTRATION_BIND_CONFIRMATION: BIND_ONE_SHOPIFY_APP_REGISTRATION
+          # This is deliberately source-controlled rather than user input: a
+          # protected run cannot bind a reviewed production database to an
+          # arbitrary registration supplied at dispatch time.
+          SHOPIFY_APP_REGISTRATION_ID: tiendaiq-production-v1
+          MIGRATION_DATABASE_URL: ${{ secrets.PRODUCTION_MIGRATION_DATABASE_URL }}
+        run: node scripts/vincular-registro-shopify.js

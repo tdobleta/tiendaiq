@@ -66,6 +66,10 @@ function requiresAdmissionOpen(profile, value) {
   return profile === "go" || booleanFlag(value);
 }
 
+function requiresAppRegistration(profile, value) {
+  return profile === "go" || booleanFlag(value);
+}
+
 function summarizeQueue(rows) {
   const totals = {
     types: 0,
@@ -465,7 +469,10 @@ async function main() {
     requireAdmissionOpen: requiresAdmissionOpen(profile, process.env.OPS_REQUIRE_GENERATION_ADMISSION_OPEN),
     ignoreBacklogPressure: profile === "rollback",
     expectedPlanTest: planTest,
-    requireAppRegistration: profile === "go"
+    // A production technical preflight can keep billing and generation closed,
+    // but it must never certify a runtime that has not enforced the immutable
+    // Shopify-app-to-database binding.
+    requireAppRegistration: requiresAppRegistration(profile, process.env.OPS_REQUIRE_APP_REGISTRATION)
   };
 
   const ready = await fetchReady(appUrl, expectedSha, {
@@ -520,6 +527,7 @@ module.exports = {
   fetchOpsStatus,
   integer,
   normalizeAppUrl,
+  requiresAppRegistration,
   requiresAdmissionOpen,
   readinessProfile,
   summarizeQueue

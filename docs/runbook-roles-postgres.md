@@ -31,10 +31,13 @@ ese prefijo por `PRODUCTION_` y se usa exclusivamente el entorno protegido
    guardarlas como `STAGING_WEB_RUNTIME_LOGIN_PASSWORD` y
    `STAGING_WORKER_RUNTIME_LOGIN_PASSWORD`, o sus equivalentes
    `PRODUCTION_*`, en el entorno protegido correspondiente.
-3. En staging, disparar `Rotate staging runtime logins`. En produccion, antes de
-   recibir trafico externo, disparar una sola vez `Bootstrap production runtime
-   logins` con las dos confirmaciones exactas del workflow. Ese bootstrap es un
-   cutover pre-lanzamiento, no un mecanismo de rotacion ordinaria.
+3. En staging, disparar `Rotate staging runtime logins`. En producción, antes
+   de recibir tráfico externo, disparar una sola vez **Bootstrap and bind
+   production database** con las dos confirmaciones exactas del workflow. Ese
+   bootstrap es un cutover pre-lanzamiento, no un mecanismo de rotación
+   ordinaria: crea los roles, aplica las migraciones pendientes y vincula de
+   forma irreversible el singleton de la base a
+   `tiendaiq-production-v1`.
 4. Construir dos URLs internas con el host/base de staging y los usuarios
    `tiendaiq_web_login` y `tiendaiq_worker_login`; guardar cada una como
    `DATABASE_URL` del servicio correspondiente.
@@ -55,23 +58,35 @@ ese prefijo por `PRODUCTION_` y se usa exclusivamente el entorno protegido
 
 1. Proteger el entorno GitHub `production`, limitarlo a `main` y exigir revisión.
 2. Configurar todos los secretos `PRODUCTION_*` anteriores.
-3. Ejecutar `Bootstrap production runtime logins` una sola vez, durante una
-   ventana pre-lanzamiento sin merchants, y construir las URLs internas runtime
-   con esas contrasenas. La URL web usa `tiendaiq_web_login`; la del worker usa
-   `tiendaiq_worker_login`.
-4. Guardar cada URL como `DATABASE_URL` en su servicio Render y verificar los
+3. Ejecutar **Bootstrap and bind production database** una sola vez, durante
+   una ventana pre-lanzamiento sin merchants. El workflow debe terminar verde
+   después de crear los roles, migrar y devolver el diagnóstico sanitizado del
+   binding. Si el binding falla o informa otra identidad, detenerse: no
+   cambiar la configuración de runtime ni intentar un segundo registro.
+4. Construir las URLs internas runtime con esas contraseñas. La URL web usa
+   `tiendaiq_web_login`; la del worker usa `tiendaiq_worker_login`.
+5. Guardar cada URL como `DATABASE_URL` en su servicio Render y verificar los
    `PG_RUNTIME_ROLE` correspondientes. Nunca guardar
    `PRODUCTION_MIGRATION_DATABASE_URL` en Render.
-5. Reiniciar ambos servicios y comprobar que `/ready` falla cerrado si falta el
-   worker o el aislamiento.
-6. Ejecutar `Release production` con el SHA completo actual de `main` y la
+6. En los dos servicios Render, fijar
+   `SHOPIFY_APP_REGISTRATION_BINDING_ENFORCED=1` y comprobar que conservan
+   `SHOPIFY_APP_REGISTRATION_ID=tiendaiq-production-v1`. El valor `1` se aplica
+   **solamente** después del paso anterior; el blueprint versionado también lo
+   declara para que una infraestructura nueva falle cerrada por defecto. No
+   desplegar ni reiniciar entre crear los logins y terminar el binding.
+7. Reiniciar ambos servicios y comprobar que `/ready` falla cerrado si falta el
+   worker, el aislamiento o el binding de aplicación.
+8. Ejecutar `Release production` con el SHA completo actual de `main` y la
    confirmacion `DEPLOY_REVIEWED_PRODUCTION`. Confirmar tambien
    `MIGRATIONS_ARE_BACKWARD_COMPATIBLE`: el release anterior debe poder operar
    sobre el esquema migrado. Solo en el primer despliegue, cuando todavia no
    existe un SHA recuperable desde `https://tiendaiq.com/ready`, se permite
    `ALLOW_NO_PREVIOUS_RELEASE` durante una ventana sin merchants.
 
-Un release ordinario nunca cambia contrasenas. Una rotacion posterior al
+El release técnico exige además que `/ready` y `/ops/status` reporten el
+binding Shopify configurado y enforced, aunque `PLAN_TEST` y la admisión de
+generación permanezcan cerrados. Un release ordinario nunca cambia contraseñas.
+Una rotación posterior al
 lanzamiento requiere un procedimiento blue/green con logins alternos y no debe
 reutilizar el bootstrap, porque cambiar primero PostgreSQL o primero las URLs de
 Render produciria una interrupcion. Release, recuperacion y bootstrap comparten

@@ -190,6 +190,7 @@ jobs:
           OPS_MIN_PUBLICATION_CONCURRENCY: "4"
           OPS_MIN_WEBHOOK_CONCURRENCY: "2"
           OPS_READINESS_PROFILE: technical_preflight
+          OPS_REQUIRE_APP_REGISTRATION: "1"
         run: |
           set -euo pipefail
           for attempt in $(seq 1 60); do
