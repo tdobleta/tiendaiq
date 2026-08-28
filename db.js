@@ -940,6 +940,32 @@ async function estadoInboxDB() {
   return status;
 }
 
+// Sólo el worker puede borrar jobs de una corrida sintética. La web no recibe
+// esta capacidad: primero debe esperar la confirmación durable del worker y
+// recién entonces elimina los tenants con su propio rol RLS.
+async function borrarJobsCapacidadDB(prefix, workerId) {
+  if (!/^capacity-[a-f0-9]{12}$/.test(String(prefix || ""))) throw new TypeError("prefix de capacidad invalido");
+  if (!USA_PG) return 0;
+  if (!esWorkerRuntime()) throw new Error("Sólo el worker puede limpiar jobs sintéticos");
+  const p = await pg();
+  const client = await p.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query("SELECT set_config('app.worker_id', $1, true)", [String(workerId || "capacity-cleanup")]);
+    const deleted = await client.query(
+      "DELETE FROM control_plane.jobs WHERE type = 'capacity-probe' AND idempotency_key LIKE $1",
+      [`${prefix}:%`]
+    );
+    await client.query("COMMIT");
+    return Number(deleted.rowCount || 0);
+  } catch (error) {
+    await client.query("ROLLBACK").catch(() => {});
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 async function completarJobDB(context, job, result) {
   const tenant = assertTenant(context, job.tenantId);
   if (USA_PG) {
@@ -1754,6 +1780,7 @@ module.exports = {
   encolarJobDB, encolarJobExclusivoDB, leerJobDB, reclamarJobDB, renovarLeaseJobDB, completarJobDB, fallarJobDB,
   reclamarCompensacionJobDB, renovarCompensacionJobDB, completarCompensacionJobDB, fallarCompensacionJobDB,
   estadoColaDB, registrarHeartbeatWorkerDB, estadoWorkerDB, estadoBillingWorkerDB, estadoInboxDB,
+  borrarJobsCapacidadDB,
   encolarGeneracionDB, leerReservaGeneracionDB, finalizarGeneracionDB, liberarReservaGeneracionDB,
   transicionarProveedorGeneracionDB, reconciliarGeneracionAmbiguaDB,
   recibirWebhookDB, reclamarWebhookDB, renovarLeaseWebhookDB, completarWebhookDB, fallarWebhookDB,
