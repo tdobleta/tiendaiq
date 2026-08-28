@@ -1,6 +1,7 @@
 "use strict";
 
 const { Pool } = require("pg");
+const { appendFileSync } = require("node:fs");
 const { createPostgresPool } = require("../src/platform/postgres/create-pool");
 const { appRegistrationContract, appRegistrationDiagnostic } = require("../src/runtime/app-registration-contract");
 
@@ -26,11 +27,28 @@ async function readBoundRegistration({ databaseUrl, caCertificate, PoolImplement
   }
 }
 
+function appendRegistrationSummary(result, summaryPath = process.env.GITHUB_STEP_SUMMARY) {
+  if (!summaryPath) return;
+  appendFileSync(
+    summaryPath,
+    [
+      "## Shopify registration binding",
+      "",
+      "This is the immutable, non-secret internal identifier read from the database.",
+      "",
+      `- Registration ID: \`${result.registrationId}\``,
+      `- Contract fingerprint: \`${result.diagnostic.fingerprint}\``,
+      ""
+    ].join("\n")
+  );
+}
+
 async function main() {
   const result = await readBoundRegistration({
     databaseUrl: process.env.MIGRATION_DATABASE_URL,
     caCertificate: process.env.PG_CA_CERT
   });
+  appendRegistrationSummary(result);
   console.log(JSON.stringify({ ok: true, ...result }));
 }
 
@@ -41,4 +59,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { readBoundRegistration };
+module.exports = { appendRegistrationSummary, readBoundRegistration };
