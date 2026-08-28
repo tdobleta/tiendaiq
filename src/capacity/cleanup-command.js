@@ -30,6 +30,29 @@ function syntheticTenantDomain(command, index) {
   return `${command.prefix}-${index}.myshopify.com`;
 }
 
+// An interrupted legacy cleanup may have removed the sole tenant that holds
+// the durable cleanup job. Recreate only that derived, synthetic anchor before
+// enqueueing. The caller supplies the persistence operations so this boundary
+// remains independently testable and cannot create an arbitrary tenant.
+async function ensureSyntheticCleanupAnchor(command, { readStore, saveStore } = {}) {
+  if (!command || typeof command.anchorDomain !== "string" || !RUN_ID.test(command.runId)) {
+    throw new TypeError("comando de cleanup invalido");
+  }
+  if (typeof readStore !== "function" || typeof saveStore !== "function") {
+    throw new TypeError("el ancla de cleanup requiere almacenamiento");
+  }
+  if (command.anchorDomain !== syntheticTenantDomain(command, command.anchorIndex)) {
+    throw new TypeError("ancla de cleanup invalida");
+  }
+  const existing = await readStore(command.anchorDomain);
+  if (existing) return { created: false, domain: command.anchorDomain };
+  await saveStore(command.anchorDomain, {
+    syntheticCapacityCleanup: true,
+    cleanupRunId: command.runId
+  });
+  return { created: true, domain: command.anchorDomain };
+}
+
 function createCapacityCleanupHandler({ deleteJobs, deleteTenant, batchSize = 20 } = {}) {
   if (typeof deleteJobs !== "function") throw new TypeError("El handler requiere deleteJobs");
   if (typeof deleteTenant !== "function") throw new TypeError("El handler requiere deleteTenant");
@@ -79,4 +102,9 @@ function createCapacityCleanupHandler({ deleteJobs, deleteTenant, batchSize = 20
   });
 }
 
-module.exports = { parseCleanupCommand, syntheticTenantDomain, createCapacityCleanupHandler };
+module.exports = {
+  parseCleanupCommand,
+  syntheticTenantDomain,
+  ensureSyntheticCleanupAnchor,
+  createCapacityCleanupHandler
+};

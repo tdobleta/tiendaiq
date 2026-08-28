@@ -25,7 +25,7 @@ const { listarProductos } = require("./adaptador");
 const { env, gql, sesionDeEnv } = require("./shopify");
 const { sesionDe, borrarTienda, esDominioValido, normalizar } = require("./tiendas");
 const { createSyntheticLoadHandler, safeEqual } = require("./src/capacity/synthetic-load-endpoints");
-const { parseCleanupCommand } = require("./src/capacity/cleanup-command");
+const { parseCleanupCommand, ensureSyntheticCleanupAnchor } = require("./src/capacity/cleanup-command");
 const { verifyRefreshRequest, parseRefreshRequest } = require("./src/shopify/token-refresh-broker");
 const {
   guardarPaginaDB,
@@ -43,6 +43,8 @@ const {
   estadoBillingWorkerDB,
   estadoInboxDB,
   borrarTiendaDB,
+  leerTiendaDB,
+  guardarTiendaDB,
   leerEvidenciaCertificacionShopifyDB,
   verificarAlmacenamientoDB,
   cerrarAlmacenamientoDB
@@ -410,6 +412,10 @@ async function limpiezaCapacidadOperativa(req, res, url) {
     if (body?.confirmation !== "CLEAN_PARTNER_STAGING_QUEUE_CAPACITY") {
       return json(res, 403, { error: "cleanup_not_confirmed" });
     }
+    await ensureSyntheticCleanupAnchor(command, {
+      readStore: leerTiendaDB,
+      saveStore: guardarTiendaDB
+    });
     const job = await encolarJobExclusivoDB(tenant, {
       type: "capacity-cleanup",
       payload: { runId: command.runId, tenants: command.tenants },

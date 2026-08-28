@@ -2,7 +2,12 @@
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { parseCleanupCommand, syntheticTenantDomain, createCapacityCleanupHandler } = require("../src/capacity/cleanup-command");
+const {
+  parseCleanupCommand,
+  syntheticTenantDomain,
+  ensureSyntheticCleanupAnchor,
+  createCapacityCleanupHandler
+} = require("../src/capacity/cleanup-command");
 const { command, cleanupRemote, cleanupFailureEvent, ORIGIN } = require("../scripts/probar-limpieza-remota-capacidad");
 
 test("el comando de cleanup sólo acepta el rango sintético explícito", () => {
@@ -45,6 +50,41 @@ test("el dominio sintético sólo puede derivarse dentro del rango declarado", (
   assert.equal(syntheticTenantDomain(command, 2), "capacity-a1b2c3d4e5f6-2.myshopify.com");
   assert.throws(() => syntheticTenantDomain(command, 0), /invalido/);
   assert.throws(() => syntheticTenantDomain(command, 4), /invalido/);
+});
+
+test("recrea sólo el ancla sintético ausente de un cleanup interrumpido", async () => {
+  const command = parseCleanupCommand({ runId: "a1b2c3d4e5f6", tenants: 3 });
+  const saves = [];
+  const result = await ensureSyntheticCleanupAnchor(command, {
+    readStore: async (domain) => {
+      assert.equal(domain, "capacity-a1b2c3d4e5f6-1.myshopify.com");
+      return null;
+    },
+    saveStore: async (...args) => saves.push(args)
+  });
+  assert.deepEqual(result, { created: true, domain: "capacity-a1b2c3d4e5f6-1.myshopify.com" });
+  assert.deepEqual(saves, [[
+    "capacity-a1b2c3d4e5f6-1.myshopify.com",
+    { syntheticCapacityCleanup: true, cleanupRunId: "a1b2c3d4e5f6" }
+  ]]);
+});
+
+test("preserva un ancla sintético existente y rechaza cualquier dominio no derivado", async () => {
+  const command = parseCleanupCommand({ runId: "a1b2c3d4e5f6", tenants: 3 });
+  let saves = 0;
+  const result = await ensureSyntheticCleanupAnchor(command, {
+    readStore: async () => ({ syntheticCapacityCleanup: true }),
+    saveStore: async () => { saves += 1; }
+  });
+  assert.deepEqual(result, { created: false, domain: command.anchorDomain });
+  assert.equal(saves, 0);
+  await assert.rejects(
+    ensureSyntheticCleanupAnchor({ ...command, anchorDomain: "other.myshopify.com" }, {
+      readStore: async () => null,
+      saveStore: async () => {}
+    }),
+    /ancla.*invalida/
+  );
 });
 
 test("un fallo reanudable vuelve a recorrer sólo el mismo rango estricto", async () => {
