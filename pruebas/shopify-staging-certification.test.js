@@ -320,6 +320,66 @@ test("verifica el HTML real del storefront sin devolver su contenido", async () 
   assert.equal(Object.hasOwn(result, "body"), false);
 });
 
+test("verifica una Development Store protegida sin exponer la contraseña ni la cookie", async () => {
+  const url = "https://certification.myshopify.com/products/demo";
+  const storefrontHtml = '<script>window.TIENDAIQ_DATA = {}</script><div id="app" data-ssr="1"></div><script src="/assets/tiendaiq.js"></script>';
+  const calls = [];
+  const fetchFn = async (receivedUrl, options) => {
+    calls.push({ url: String(receivedUrl), options });
+    if (calls.length === 1) {
+      return {
+        ok: true, status: 200, url,
+        headers: { get(name) { return name === "content-type" ? "text/html" : null; } },
+        body: null, async text() { return "<title>Password</title>"; }
+      };
+    }
+    if (calls.length === 2) {
+      return {
+        ok: false, status: 302, url: "https://certification.myshopify.com/password",
+        headers: { get(name) { return name === "set-cookie" ? "_shopify=private-cookie; Path=/; HttpOnly" : null; } }
+      };
+    }
+    return {
+      ok: true, status: 200, url,
+      headers: { get(name) { return name === "content-type" ? "text/html" : null; } },
+      body: null, async text() { return storefrontHtml; }
+    };
+  };
+  const result = await queryStorefrontCertification(fetchFn, url, url, {
+    storefrontPassword: "password-only-for-test",
+    passwordShopDomain: "certification.myshopify.com"
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.authenticated, true);
+  assert.equal(result.authenticationAttempted, true);
+  assert.equal(JSON.stringify(result).includes("password-only-for-test"), false);
+  assert.equal(JSON.stringify(result).includes("private-cookie"), false);
+  assert.equal(calls.length, 3);
+  assert.equal(calls[1].url, "https://certification.myshopify.com/password");
+  assert.match(calls[1].options.body, /password=password-only-for-test/);
+  assert.equal(calls[2].options.headers.Cookie, "_shopify=private-cookie");
+});
+
+test("nunca envía una contraseña de storefront a un dominio distinto de la tienda configurada", async () => {
+  const url = "https://certification.myshopify.com/products/demo";
+  let calls = 0;
+  const result = await queryStorefrontCertification(async () => {
+    calls += 1;
+    return {
+      ok: true, status: 200, url,
+      headers: { get(name) { return name === "content-type" ? "text/html" : null; } },
+      body: null, async text() { return "<title>Password</title>"; }
+    };
+  }, url, url, {
+    storefrontPassword: "password-only-for-test",
+    passwordShopDomain: "another.myshopify.com"
+  });
+  assert.equal(calls, 1);
+  assert.equal(result.ok, false);
+  assert.equal(result.authenticated, false);
+});
+
 test("admite un dominio personalizado solo cuando coincide con la URL durable", async () => {
   const html = '<script>window.TIENDAIQ_DATA = {}</script><div id="app" data-ssr="1"></div><script src="/assets/tiendaiq.js"></script>';
   const url = "https://tienda.example/products/demo";

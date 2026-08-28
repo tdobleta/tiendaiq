@@ -78,6 +78,10 @@ services:
         sync: false
       - key: SHOPIFY_CERTIFICATION_PAGE_ID
         sync: false
+      # Optional storefront QA password. It is only submitted to the exact
+      # configured Partner shop and is never returned by certification.
+      - key: SHOPIFY_CERTIFICATION_STOREFRONT_PASSWORD
+        sync: false
       - key: SHOPIFY_CERTIFICATION_MAX_AGE_HOURS
         value: "24"
       - key: EMAIL_SOPORTE

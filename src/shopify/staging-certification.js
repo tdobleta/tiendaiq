@@ -138,7 +138,54 @@ async function readTextLimited(response, maxBytes) {
   return Buffer.concat(chunks).toString("utf8");
 }
 
-async function queryStorefrontCertification(fetchFn, storefrontUrl, expectedPublishedUrl, { signal, maxBytes = 2_000_000 } = {}) {
+function storefrontMarkers(html) {
+  return {
+    data: html.includes("window.TIENDAIQ_DATA ="),
+    app: /<div[^>]+id=["']app["'][^>]+data-ssr=/.test(html),
+    asset: /<script[^>]+src=["'][^"']*tiendaiq\.js(?:\?[^"']*)?["']/.test(html)
+  };
+}
+
+async function inspectStorefrontResponse(response, requested, maxBytes) {
+  const contentType = String(response.headers?.get?.("content-type") || "").toLowerCase();
+  const finalUrl = new URL(String(response.url || requested));
+  const urlMatch = normalizedUrl(finalUrl.href) === normalizedUrl(requested.href) &&
+    finalUrl.protocol === "https:" && finalUrl.hostname.toLowerCase() === requested.hostname.toLowerCase();
+  const html = await readTextLimited(response, maxBytes);
+  const markers = storefrontMarkers(html);
+  return {
+    ok: response.ok && contentType.includes("text/html") && urlMatch && Object.values(markers).every(Boolean),
+    status: Number(response.status) || 0,
+    html: contentType.includes("text/html"),
+    urlMatch,
+    markers,
+    bytes: Buffer.byteLength(html, "utf8")
+  };
+}
+
+function cookieHeaderFrom(response) {
+  const headers = response?.headers;
+  const values = typeof headers?.getSetCookie === "function"
+    ? headers.getSetCookie()
+    : [headers?.get?.("set-cookie")].filter(Boolean);
+  return values
+    .flatMap((value) => String(value || "").split(/,(?=[^;,=\s]+=[^;,]+)/))
+    .map((value) => value.split(";", 1)[0].trim())
+    .filter((value) => /^[^=;\s]+=[^;\r\n]+$/.test(value))
+    .join("; ");
+}
+
+function passwordMayBeUsedFor({ password, passwordShopDomain, requested }) {
+  const allowedHost = String(passwordShopDomain || "").trim().toLowerCase();
+  return Boolean(password && allowedHost && requested.protocol === "https:" && requested.hostname.toLowerCase() === allowedHost);
+}
+
+async function queryStorefrontCertification(fetchFn, storefrontUrl, expectedPublishedUrl, {
+  signal,
+  maxBytes = 2_000_000,
+  storefrontPassword,
+  passwordShopDomain
+} = {}) {
   if (typeof fetchFn !== "function") throw new TypeError("Se requiere fetch para verificar el storefront");
   const requested = new URL(String(storefrontUrl || ""));
   const expected = new URL(String(expectedPublishedUrl || ""));
@@ -152,23 +199,46 @@ async function queryStorefrontCertification(fetchFn, storefrontUrl, expectedPubl
     headers: { Accept: "text/html", "User-Agent": "TiendaIQ-Staging-Certification/1.0" },
     signal
   });
-  const contentType = String(response.headers?.get?.("content-type") || "").toLowerCase();
-  const finalUrl = new URL(String(response.url || requested));
-  const urlMatch = normalizedUrl(finalUrl.href) === normalizedUrl(requested.href) &&
-    finalUrl.protocol === "https:" && finalUrl.hostname.toLowerCase() === requested.hostname.toLowerCase();
-  const html = await readTextLimited(response, maxBytes);
-  const markers = {
-    data: html.includes("window.TIENDAIQ_DATA ="),
-    app: /<div[^>]+id=["']app["'][^>]+data-ssr=/.test(html),
-    asset: /<script[^>]+src=["'][^"']*tiendaiq\.js(?:\?[^"']*)?["']/.test(html)
-  };
+  const initial = await inspectStorefrontResponse(response, requested, maxBytes);
+  if (initial.ok || !passwordMayBeUsedFor({ password: storefrontPassword, passwordShopDomain, requested })) {
+    return { ...initial, authenticated: false };
+  }
+
+  // The password is only submitted to the configured Partner shop. Its
+  // process-local cookie never appears in the certification response or logs.
+  const passwordUrl = new URL("/password", requested.origin);
+  const loginResponse = await fetchFn(passwordUrl, {
+    method: "POST",
+    redirect: "manual",
+    headers: {
+      Accept: "text/html",
+      "Content-Type": "application/x-www-form-urlencoded",
+      "User-Agent": "TiendaIQ-Staging-Certification/1.0"
+    },
+    body: new URLSearchParams({
+      form_type: "storefront_password",
+      password: String(storefrontPassword),
+      return_url: `${requested.pathname}${requested.search}`
+    }).toString(),
+    signal
+  });
+  const cookie = cookieHeaderFrom(loginResponse);
+  if (!cookie) return { ...initial, authenticated: false, authenticationAttempted: true };
+
+  const authenticatedResponse = await fetchFn(requested, {
+    method: "GET",
+    redirect: "manual",
+    headers: {
+      Accept: "text/html",
+      Cookie: cookie,
+      "User-Agent": "TiendaIQ-Staging-Certification/1.0"
+    },
+    signal
+  });
   return {
-    ok: response.ok && contentType.includes("text/html") && urlMatch && Object.values(markers).every(Boolean),
-    status: Number(response.status) || 0,
-    html: contentType.includes("text/html"),
-    urlMatch,
-    markers,
-    bytes: Buffer.byteLength(html, "utf8")
+    ...(await inspectStorefrontResponse(authenticatedResponse, requested, maxBytes)),
+    authenticated: true,
+    authenticationAttempted: true
   };
 }
 
