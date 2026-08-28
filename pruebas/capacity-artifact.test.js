@@ -3,8 +3,23 @@
 const assert = require("node:assert/strict");
 const test = require("node:test");
 const { createArtifact } = require("../scripts/sanitizar-evidencia-capacidad");
+const { cleanupFailureClass, requiredInteger } = require("../scripts/probar-capacidad-cola");
 
 const RELEASE = "a".repeat(40);
+
+test("la clasificación de cleanup deriva categorías seguras desde SQLSTATE sin exponerlo", () => {
+  assert.equal(cleanupFailureClass({ code: "42501", message: "no debe prevalecer" }), "authorization");
+  assert.equal(cleanupFailureClass({ code: "23503" }), "referential_integrity");
+  assert.equal(cleanupFailureClass({ code: "42P01" }), "schema");
+  assert.equal(cleanupFailureClass({ code: "08006" }), "connection");
+  assert.equal(cleanupFailureClass({ code: "XX000" }), "unclassified");
+});
+
+test("cleanup exige un conteo explícito y acotado de tenants", () => {
+  assert.equal(requiredInteger("100", 1, 2000, "LOAD_TENANTS"), 100);
+  assert.throws(() => requiredInteger("", 1, 2000, "LOAD_TENANTS"), /obligatorio/);
+  assert.throws(() => requiredInteger("2001", 1, 2000, "LOAD_TENANTS"), /entre 1 y 2000/);
+});
 
 test("la evidencia de capacidad conserva sólo métricas agregadas de la cola", () => {
   const artifact = createArtifact({

@@ -20,6 +20,10 @@ on:
         description: Sólo cleanup; runId hexadecimal de 12 caracteres registrado al iniciar
         required: false
         type: string
+      cleanup_tenants:
+        description: Sólo cleanup; cantidad exacta de tenants sintéticos creada por ese run
+        required: false
+        type: string
       tenants:
         description: Cantidad de tenants sintéticos para run
         required: true
@@ -59,6 +63,7 @@ jobs:
           MODE: ${{ inputs.mode }}
           CONFIRMATION: ${{ inputs.confirmation }}
           CLEANUP_RUN_ID: ${{ inputs.cleanup_run_id }}
+          CLEANUP_TENANTS: ${{ inputs.cleanup_tenants }}
           REQUESTED_SHA: ${{ inputs.release_sha }}
         run: |
           set -euo pipefail
@@ -70,7 +75,7 @@ jobs:
             echo "sha=$REQUESTED_SHA" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          if [[ "$MODE" == "cleanup" && "$CONFIRMATION" == "CLEAN_PARTNER_STAGING_QUEUE_CAPACITY" && "$CLEANUP_RUN_ID" =~ ^[a-fA-F0-9]{12}$ ]]; then
+          if [[ "$MODE" == "cleanup" && "$CONFIRMATION" == "CLEAN_PARTNER_STAGING_QUEUE_CAPACITY" && "$CLEANUP_RUN_ID" =~ ^[a-fA-F0-9]{12}$ && "$CLEANUP_TENANTS" =~ ^[1-9][0-9]{0,3}$ && "$CLEANUP_TENANTS" -le 2000 ]]; then
             echo "sha=$REQUESTED_SHA" >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -109,6 +114,7 @@ jobs:
           TEST_WORKER_DATABASE_URL: ${{ secrets.PARTNER_STAGING_WORKER_DATABASE_URL }}
           LOAD_CLEANUP_RUN_ID: ${{ inputs.cleanup_run_id }}
           LOAD_TENANTS: ${{ inputs.tenants }}
+          CLEANUP_TENANTS: ${{ inputs.cleanup_tenants }}
           LOAD_JOBS: ${{ inputs.jobs }}
           LOAD_SETUP_CONCURRENCY: "40"
           LOAD_WORKER_LANES: "16"
@@ -121,7 +127,7 @@ jobs:
           artifact_dir="$RUNNER_TEMP/partner-staging-capacity"
           mkdir -p "$artifact_dir"
           if [[ "${{ inputs.mode }}" == "cleanup" ]]; then
-            export LOAD_TENANTS=2000
+            export LOAD_TENANTS="$CLEANUP_TENANTS"
           fi
           set +e
           npm run carga:cola > "$artifact_dir/raw.log" 2>&1

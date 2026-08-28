@@ -117,6 +117,10 @@ test("la capacidad Partner Staging nunca puede reutilizar el destino o secretos 
   assert.match(workflow, /git fetch origin main --depth=1/);
   assert.match(workflow, /RUN_PARTNER_STAGING_QUEUE_CAPACITY/);
   assert.match(workflow, /CLEAN_PARTNER_STAGING_QUEUE_CAPACITY/);
+  assert.match(workflow, /cleanup_tenants:/);
+  assert.match(workflow, /CLEANUP_TENANTS/);
+  assert.match(workflow, /\$CLEANUP_TENANTS" -le 2000/);
+  assert.doesNotMatch(workflow, /export LOAD_TENANTS=2000/);
   assert.match(workflow, /https:\/\/tiendaiq-partner-staging-web\.onrender\.com\/ready/);
   assert.match(workflow, /PARTNER_STAGING_WEB_DATABASE_URL/);
   assert.match(workflow, /PARTNER_STAGING_WORKER_DATABASE_URL/);
