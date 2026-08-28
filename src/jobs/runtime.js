@@ -26,7 +26,8 @@ const {
   fallarWebhookDB,
   redactarInboxTiendaDB,
   registrarPrivacidadWebhookDB,
-  depurarInboxDB
+  depurarInboxDB,
+  borrarJobsCapacidadDB
 } = require("../../db");
 const { sesionDe, borrarTienda } = require("../../tiendas");
 const billing = require("../../facturacion");
@@ -42,6 +43,7 @@ const { createEditTextHandler } = require("./edit-text-handler");
 const { createInstallNicheContentHandler } = require("./install-niche-content-handler");
 const { createCreateSubscriptionHandler } = require("./create-subscription-handler");
 const { createSyncBundlesHandler } = require("./sync-bundles-handler");
+const { createCapacityCleanupHandler } = require("../capacity/cleanup-command");
 const { createWebhookHandlers } = require("../webhooks/handlers");
 
 function boundedInteger(value, fallback, min = 1, max = 32) {
@@ -112,6 +114,7 @@ function createRuntime({
     sessions: { get: sesionDe },
     metrics: metrica
   });
+  const capacityCleanup = createCapacityCleanupHandler({ deleteJobs: borrarJobsCapacidadDB });
 
   const jobRepository = {
     claim: reclamarJobDB,
@@ -133,7 +136,7 @@ function createRuntime({
   const publicationRunners = Array.from({ length: publicationConcurrency }, (_, index) => createJobRunner({
     workerId: `${workerId}:publish:${index + 1}`,
     releaseSha,
-    jobTypes: ["publish-page", "unpublish-page", "install-niche-content", "create-subscription", "sync-bundles"],
+    jobTypes: ["publish-page", "unpublish-page", "install-niche-content", "create-subscription", "sync-bundles", "capacity-cleanup"],
     leaseSeconds,
     pollMs,
     repository: jobRepository,
@@ -142,7 +145,8 @@ function createRuntime({
       "unpublish-page": unpublishPage,
       "install-niche-content": installNicheContent,
       "create-subscription": createSubscription,
-      "sync-bundles": syncBundles
+      "sync-bundles": syncBundles,
+      "capacity-cleanup": capacityCleanup
     },
     reportError: reportarError,
     metrics: metrica

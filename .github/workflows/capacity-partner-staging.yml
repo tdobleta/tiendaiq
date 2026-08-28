@@ -110,7 +110,7 @@ jobs:
 
       - name: Exercise Partner durable queue with synthetic data and runtime credentials
         id: capacity
-        if: ${{ inputs.mode != 'probe' }}
+        if: ${{ inputs.mode == 'run' }}
         shell: bash
         env:
           ALLOW_QUEUE_LOAD_TEST: "1"
@@ -143,6 +143,27 @@ jobs:
           echo "QUEUE_CAPACITY_ARTIFACT=$artifact_dir/evidence.json" >> "$GITHUB_ENV"
           exit "$status"
 
+      - name: Clean Partner synthetic data through the private runtime
+        id: remote_cleanup
+        if: ${{ inputs.mode == 'cleanup' }}
+        shell: bash
+        env:
+          LOAD_CLEANUP_RUN_ID: ${{ inputs.cleanup_run_id }}
+          CLEANUP_TENANTS: ${{ inputs.cleanup_tenants }}
+          OPS_STATUS_TOKEN: ${{ secrets.PARTNER_STAGING_OPS_STATUS_TOKEN }}
+        run: |
+          set -euo pipefail
+          artifact_dir="$RUNNER_TEMP/partner-staging-capacity"
+          mkdir -p "$artifact_dir"
+          set +e
+          node scripts/probar-limpieza-remota-capacidad.js > "$artifact_dir/raw.log" 2>&1
+          status="$?"
+          set -e
+          echo "QUEUE_CAPACITY_STATUS=$status" >> "$GITHUB_ENV"
+          echo "QUEUE_CAPACITY_LOG=$artifact_dir/raw.log" >> "$GITHUB_ENV"
+          echo "QUEUE_CAPACITY_ARTIFACT=$artifact_dir/evidence.json" >> "$GITHUB_ENV"
+          exit "$status"
+
       - name: Probe Partner runtime database connectivity without runner database access
         id: runtime_probe
         if: ${{ inputs.mode == 'probe' }}
@@ -165,7 +186,7 @@ jobs:
           exit "$status"
 
       - name: Create allowlisted sanitized capacity artifact
-        if: ${{ always() && (steps.capacity.outcome != 'skipped' || steps.runtime_probe.outcome != 'skipped') }}
+        if: ${{ always() && (steps.capacity.outcome != 'skipped' || steps.remote_cleanup.outcome != 'skipped' || steps.runtime_probe.outcome != 'skipped') }}
         shell: bash
         env:
           RELEASE_SHA: ${{ steps.release.outputs.sha }}
@@ -178,7 +199,7 @@ jobs:
           cat "$QUEUE_CAPACITY_ARTIFACT" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload sanitized Partner Staging capacity evidence
-        if: ${{ always() && (steps.capacity.outcome != 'skipped' || steps.runtime_probe.outcome != 'skipped') }}
+        if: ${{ always() && (steps.capacity.outcome != 'skipped' || steps.remote_cleanup.outcome != 'skipped' || steps.runtime_probe.outcome != 'skipped') }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: partner-staging-capacity-${{ github.run_id }}

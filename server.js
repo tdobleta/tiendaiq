@@ -25,6 +25,7 @@ const { listarProductos } = require("./adaptador");
 const { env, gql, sesionDeEnv } = require("./shopify");
 const { sesionDe, borrarTienda, esDominioValido, normalizar } = require("./tiendas");
 const { createSyntheticLoadHandler, safeEqual } = require("./src/capacity/synthetic-load-endpoints");
+const { parseCleanupCommand } = require("./src/capacity/cleanup-command");
 const { verifyRefreshRequest, parseRefreshRequest } = require("./src/shopify/token-refresh-broker");
 const {
   guardarPaginaDB,
@@ -41,6 +42,7 @@ const {
   estadoWorkerDB,
   estadoBillingWorkerDB,
   estadoInboxDB,
+  borrarTiendaDB,
   leerEvidenciaCertificacionShopifyDB,
   verificarAlmacenamientoDB,
   cerrarAlmacenamientoDB
@@ -374,6 +376,65 @@ async function estadoOperativo(req, res) {
     totals: totales,
     ts: new Date().toISOString()
   }, { "Cache-Control": "no-store" });
+}
+
+function autorizarOps(req, res) {
+  const token = String(env.OPS_STATUS_TOKEN || "");
+  if (token.length < 32) {
+    json(res, 404, { error: "not_found" });
+    return false;
+  }
+  if (!safeEqual(req.headers.authorization, `Bearer ${token}`)) {
+    json(res, 401, { error: "unauthorized" }, { "WWW-Authenticate": "Bearer" });
+    return false;
+  }
+  return true;
+}
+
+async function limpiezaCapacidadOperativa(req, res, url) {
+  if (!autorizarOps(req, res)) return;
+  let command;
+  try {
+    command = parseCleanupCommand({
+      runId: url.searchParams.get("run_id"),
+      tenants: url.searchParams.get("tenants")
+    });
+  } catch {
+    return json(res, 422, { error: "invalid_cleanup_command" });
+  }
+  const tenant = TenantContext.fromShopDomain(`${command.prefix}-1.myshopify.com`, { source: "internal-job" });
+  const key = `capacity-cleanup:${command.runId}`;
+
+  if (req.method === "POST") {
+    const body = await leerCuerpo(req, 4096);
+    if (body?.confirmation !== "CLEAN_PARTNER_STAGING_QUEUE_CAPACITY") {
+      return json(res, 403, { error: "cleanup_not_confirmed" });
+    }
+    const job = await encolarJobExclusivoDB(tenant, {
+      type: "capacity-cleanup",
+      payload: { runId: command.runId, tenants: command.tenants },
+      idempotencyKey: key,
+      maxAttempts: 1
+    });
+    return json(res, 202, { accepted: true, mode: "cleanup", jobId: job.id });
+  }
+
+  if (req.method !== "GET") return json(res, 405, { error: "method_not_allowed" }, { Allow: "GET, POST" });
+  const jobId = String(url.searchParams.get("job_id") || "");
+  if (!/^[a-f0-9-]{36}$/i.test(jobId)) return json(res, 422, { error: "invalid_job" });
+  const job = await leerJobDB(tenant, jobId);
+  if (!job || job.type !== "capacity-cleanup" || job.idempotencyKey !== key) {
+    return json(res, 404, { error: "not_found" });
+  }
+  if (job.status === "queued" || job.status === "running") return json(res, 202, { completed: false });
+  if (job.status !== "succeeded") return json(res, 409, { completed: false, error: "cleanup_jobs_not_completed" });
+
+  // El worker confirma primero el borrado de capacity-probe con su rol. Sólo
+  // entonces la web elimina los tenants bajo su contexto RLS.
+  for (let index = 1; index <= command.tenants; index += 1) {
+    await borrarTiendaDB(`${command.prefix}-${index}.myshopify.com`);
+  }
+  return json(res, 200, { completed: true, mode: "cleanup", tenantsDeleted: command.tenants });
 }
 
 async function configuracionBillingOperativa(req, res) {
@@ -1218,6 +1279,7 @@ const servidor = http.createServer(async (req, res) => {
       });
     }
     if (url.pathname === "/ops/status") return await estadoOperativo(req, res);
+    if (url.pathname === "/ops/capacity-cleanup") return await limpiezaCapacidadOperativa(req, res, url);
     if (url.pathname === "/ops/billing-config") return await configuracionBillingOperativa(req, res);
     if (url.pathname === "/ops/shopify-certification") return await certificarShopifyStaging(req, res);
     if (await syntheticLoadHandler(req, res, url)) return;
