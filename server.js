@@ -74,7 +74,8 @@ const { assertFixedTemplatePublishable } = require("./src/shopify/fixed-template
 const {
   queryShopifyCertification,
   queryStorefrontCertification,
-  evaluateShopifyCertification
+  evaluateShopifyCertification,
+  publicationUrlFromShopify
 } = require("./src/shopify/staging-certification");
 const {
   leerConfigBundles,
@@ -517,11 +518,16 @@ async function certificarShopifyStaging(req, res) {
     signal: timeoutSignal()
   });
   remote.storefront = null;
-  if (remote.product?.onlineStoreUrl && evidence.publication?.publicUrl) {
+  // Shopify can withhold onlineStoreUrl for a password-protected development
+  // store while returning the same canonical URL in onlineStorePreviewUrl.
+  // Reuse the already strict resolver used by the publication check so the
+  // storefront probe is made only against that exact, verified shop URL.
+  const storefrontUrl = publicationUrlFromShopify(remote.product, shop).url;
+  if (storefrontUrl && evidence.publication?.publicUrl) {
     try {
       remote.storefront = await queryStorefrontCertification(
         fetch,
-        remote.product.onlineStoreUrl,
+        storefrontUrl,
         evidence.publication.publicUrl,
         {
           signal: timeoutSignal(),
