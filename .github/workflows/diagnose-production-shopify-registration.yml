@@ -1,0 +1,56 @@
+name: Diagnose production Shopify registration
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: SHA completo revisado y presente en main
+        required: true
+        type: string
+      confirmation:
+        description: Escribir DIAGNOSE_PRODUCTION_SHOPIFY_REGISTRATION
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tiendaiq-production-database-maintenance
+  queue: max
+  cancel-in-progress: false
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.release_sha }}
+          fetch-depth: 0
+
+      - name: Validate immutable reviewed diagnostic commit
+        shell: bash
+        env:
+          REQUESTED_SHA: ${{ inputs.release_sha }}
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          [[ "$REQUESTED_SHA" =~ ^[a-f0-9]{40}$ ]] || { echo "release_sha debe ser un SHA completo" >&2; exit 1; }
+          [[ "$CONFIRMATION" == "DIAGNOSE_PRODUCTION_SHOPIFY_REGISTRATION" ]] || { echo "Confirmacion invalida" >&2; exit 1; }
+          [[ "$(git rev-parse HEAD)" == "$REQUESTED_SHA" ]] || { echo "El checkout no coincide con el SHA solicitado" >&2; exit 1; }
+          git fetch origin main --depth=1
+          [[ "$(git rev-parse origin/main)" == "$REQUESTED_SHA" ]] || { echo "El SHA debe ser el HEAD actual de main" >&2; exit 1; }
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22"
+
+      - run: npm ci --no-audit --no-fund
+
+      - name: Read the immutable production Shopify registration binding
+        env:
+          MIGRATION_DATABASE_URL: ${{ secrets.PRODUCTION_MIGRATION_DATABASE_URL }}
+        run: node scripts/diagnosticar-registro-shopify-vinculado.js
