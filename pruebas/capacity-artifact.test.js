@@ -3,7 +3,7 @@
 const assert = require("node:assert/strict");
 const test = require("node:test");
 const { createArtifact } = require("../scripts/sanitizar-evidencia-capacidad");
-const { cleanupFailureClass, requiredInteger } = require("../scripts/probar-capacidad-cola");
+const { cleanupFailureClass, cleanupFailureOrigin, cleanupSyntheticRun, requiredInteger } = require("../scripts/probar-capacidad-cola");
 
 const RELEASE = "a".repeat(40);
 
@@ -12,7 +12,52 @@ test("la clasificación de cleanup deriva categorías seguras desde SQLSTATE sin
   assert.equal(cleanupFailureClass({ code: "23503" }), "referential_integrity");
   assert.equal(cleanupFailureClass({ code: "42P01" }), "schema");
   assert.equal(cleanupFailureClass({ code: "08006" }), "connection");
+  assert.equal(cleanupFailureClass(new Error("outer", { cause: { code: "40P01" } })), "transaction");
+  assert.equal(cleanupFailureClass(new AggregateError([{ code: "53300" }])), "resource");
   assert.equal(cleanupFailureClass({ code: "XX000" }), "unclassified");
+});
+
+test("el origen de cleanup discrimina Postgres de runtime sin exponer códigos", () => {
+  assert.equal(cleanupFailureOrigin({ code: "42501" }), "postgres");
+  assert.equal(cleanupFailureOrigin(Object.assign(new Error("socket"), { code: "ECONNRESET" })), "runtime");
+  assert.equal(cleanupFailureOrigin({}), "unknown");
+});
+
+test("una falla al borrar jobs bloquea tenants sin intentar borrarlos", async () => {
+  const workerPool = {
+    async connect() {
+      throw { code: "42501", message: "no debe quedar en evidencia" };
+    }
+  };
+  const webPool = new Proxy({}, {
+    get() {
+      throw new Error("no debe tocarse el pool web cuando jobs falla");
+    }
+  });
+  await assert.rejects(
+    cleanupSyntheticRun({
+      workerPool,
+      webPool,
+      tenants: [{ tenantId: "capacity-0123456789ab-1.myshopify.com" }],
+      setupConcurrency: 1,
+      prefix: "capacity-0123456789ab"
+    }),
+    (error) => {
+      assert.deepEqual(error.cleanupEvidence, {
+        jobsDeleted: 0,
+        storesDeleted: 0,
+        tenantsDeleted: 0,
+        failedJobDeletion: true,
+        failedTenantDeletions: 0,
+        attemptedTenantDeletions: 0,
+        tenantCleanupStatus: "blocked_by_job_cleanup",
+        jobFailureClass: "authorization",
+        jobFailureStage: "connect",
+        jobFailureOrigin: "postgres"
+      });
+      return true;
+    }
+  );
 });
 
 test("cleanup exige un conteo explícito y acotado de tenants", () => {
@@ -81,6 +126,8 @@ test("una falla no copia la salida cruda al artefacto", () => {
           failedJobDeletion: false,
           failedTenantDeletions: 2,
           tenantFailureClass: "referential_integrity",
+          attemptedTenantDeletions: 100,
+          tenantCleanupStatus: "completed_with_failures",
           rawError: "password=must-not-appear"
         }
       }),
@@ -102,9 +149,52 @@ test("una falla no copia la salida cruda al artefacto", () => {
       tenantsDeleted: 98,
       failedJobDeletion: false,
       failedTenantDeletions: 2,
-      tenantFailureClass: "referential_integrity"
+      tenantFailureClass: "referential_integrity",
+      attemptedTenantDeletions: 100,
+      tenantCleanupStatus: "completed_with_failures"
     },
     failure: { class: "database_authorization", phase: "tenant_setup" }
   });
   assert.doesNotMatch(JSON.stringify(artifact), /password|must-not-appear|permission denied/i);
+});
+
+test("la evidencia conserva el bloqueo causal de tenants sin campos libres", () => {
+  const artifact = createArtifact({
+    release: RELEASE,
+    mode: "cleanup",
+    exitCode: 2,
+    log: [
+      JSON.stringify({ event: "queue_load_phase", phase: "cleanup" }),
+      JSON.stringify({
+        event: "queue_load_cleanup_result",
+        cleanup: {
+          jobsDeleted: 0,
+          storesDeleted: 0,
+          tenantsDeleted: 0,
+          failedJobDeletion: true,
+          failedTenantDeletions: 0,
+          attemptedTenantDeletions: 0,
+          tenantCleanupStatus: "blocked_by_job_cleanup",
+          jobFailureClass: "authorization",
+          jobFailureStage: "delete_capacity_jobs",
+          jobFailureOrigin: "postgres",
+          sqlState: "42501",
+          error: "must-not-appear"
+        }
+      })
+    ].join("\n")
+  });
+  assert.deepEqual(artifact.cleanup, {
+    jobsDeleted: 0,
+    storesDeleted: 0,
+    tenantsDeleted: 0,
+    failedJobDeletion: true,
+    failedTenantDeletions: 0,
+    attemptedTenantDeletions: 0,
+    tenantCleanupStatus: "blocked_by_job_cleanup",
+    jobFailureClass: "authorization",
+    jobFailureStage: "delete_capacity_jobs",
+    jobFailureOrigin: "postgres"
+  });
+  assert.doesNotMatch(JSON.stringify(artifact), /42501|must-not-appear/i);
 });

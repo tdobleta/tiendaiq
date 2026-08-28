@@ -14,9 +14,16 @@ const CLEANUP_FIELDS = Object.freeze([
   "failedJobDeletion",
   "failedTenantDeletions",
   "jobFailureClass",
-  "tenantFailureClass"
+  "tenantFailureClass",
+  "jobFailureStage",
+  "jobFailureOrigin",
+  "attemptedTenantDeletions",
+  "tenantCleanupStatus"
 ]);
-const CLEANUP_FAILURE_CLASSES = /^(?:authorization|referential_integrity|schema|connection|unclassified|mixed)$/;
+const CLEANUP_FAILURE_CLASSES = /^(?:authorization|referential_integrity|schema|connection|transaction|resource|lock_state|interrupted|unclassified|mixed)$/;
+const CLEANUP_JOB_STAGES = /^(?:connect|begin|set_worker_context|delete_capacity_jobs|commit)$/;
+const CLEANUP_FAILURE_ORIGINS = /^(?:postgres|runtime|unknown)$/;
+const TENANT_CLEANUP_STATUSES = /^(?:completed|completed_with_failures|blocked_by_job_cleanup)$/;
 const FAILURE_CLASSES = Object.freeze([
   "authorization_configuration",
   "database_connection",
@@ -60,6 +67,21 @@ function sanitizeCleanup(value) {
     if (field === "jobFailureClass" || field === "tenantFailureClass") {
       const classification = string(value[field], CLEANUP_FAILURE_CLASSES);
       if (classification) safe[field] = classification;
+      continue;
+    }
+    if (field === "jobFailureStage") {
+      const stage = string(value[field], CLEANUP_JOB_STAGES);
+      if (stage) safe[field] = stage;
+      continue;
+    }
+    if (field === "jobFailureOrigin") {
+      const origin = string(value[field], CLEANUP_FAILURE_ORIGINS);
+      if (origin) safe[field] = origin;
+      continue;
+    }
+    if (field === "tenantCleanupStatus") {
+      const status = string(value[field], TENANT_CLEANUP_STATUSES);
+      if (status) safe[field] = status;
       continue;
     }
     const valueForField = number(value[field]);
