@@ -8,6 +8,7 @@ const {
   evaluateShopifyCertification,
   queryShopifyCertification,
   queryStorefrontCertification,
+  publicationUrlFromShopify,
   certificationUrlDiagnostic
 } = require("../src/shopify/staging-certification");
 const { createShopifyCertificationRepository } = require("../src/platform/postgres/shopify-certification-repository");
@@ -220,6 +221,19 @@ test("acepta preview de Shopify solo cuando no existe URL primaria y coincide ex
   assert.equal(result.checks.publicationShopify.ok, true);
   assert.equal(result.checks.publicationShopify.publicUrlMatch, true);
   assert.equal(result.checks.publicationShopify.publicUrlComparison.source, "online_store_preview_url");
+});
+
+test("expone la misma URL preview verificada para la comprobación del storefront", () => {
+  const product = {
+    onlineStoreUrl: null,
+    onlineStorePreviewUrl: "https://certification.myshopify.com/products/demo"
+  };
+
+  const resolved = publicationUrlFromShopify(product, "certification.myshopify.com");
+  assert.deepEqual(resolved, {
+    url: "https://certification.myshopify.com/products/demo",
+    source: "online_store_preview_url"
+  });
 });
 
 test("no usa preview si la URL primaria existe pero difiere", () => {

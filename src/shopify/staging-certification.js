@@ -403,6 +403,7 @@ module.exports = {
   queryShopifyCertification,
   queryStorefrontCertification,
   evaluateShopifyCertification,
+  publicationUrlFromShopify,
   certificationUrlDiagnostic,
   normalizedUrl
 };
