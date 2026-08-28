@@ -20,6 +20,13 @@ function integer(value, fallback, min, max, name) {
   return parsed;
 }
 
+function requiredInteger(value, min, max, name) {
+  if (value == null || String(value).trim() === "") {
+    throw new Error(`${name} es obligatorio`);
+  }
+  return integer(value, 0, min, max, name);
+}
+
 function percentile(values, fraction) {
   if (!values.length) return 0;
   const sorted = [...values].sort((a, b) => a - b);
@@ -50,6 +57,14 @@ function errorSummary(error) {
 }
 
 function cleanupFailureClass(error) {
+  // SQLSTATE is useful to classify an operational failure, but it is never
+  // persisted or printed. Evidence exposes only this bounded vocabulary.
+  const code = String(error?.code || "").trim().toUpperCase();
+  if (/^(?:28000|28P01|42501)$/.test(code)) return "authorization";
+  if (/^(?:23001|23503)$/.test(code)) return "referential_integrity";
+  if (/^(?:3F000|42P01|42703)$/.test(code)) return "schema";
+  if (/^08[0-9A-Z]{3}$/.test(code) || /^(?:57P01|57P02|57P03|53300)$/.test(code)) return "connection";
+
   const message = String(error?.message || error || "").toLowerCase();
   if (/permission denied|row-level security|not authorized|must be member|insufficient privilege/.test(message)) return "authorization";
   if (/foreign key|violates.*constraint|referential integrity/.test(message)) return "referential_integrity";
@@ -196,7 +211,11 @@ async function main() {
 
   const cleanupOnly = Boolean(process.env.LOAD_CLEANUP_RUN_ID);
   const releaseSha = cleanupOnly ? null : normalizeReleaseSha(process.env.EXPECTED_RELEASE_SHA);
-  const tenantsCount = integer(process.env.LOAD_TENANTS, cleanupOnly ? 2000 : 1000, 1, 2000, "LOAD_TENANTS");
+  // A cleanup must name its exact previously-created tenant count. Never
+  // expand a destructive cleanup to an assumed upper bound.
+  const tenantsCount = cleanupOnly
+    ? requiredInteger(process.env.LOAD_TENANTS, 1, 2000, "LOAD_TENANTS")
+    : integer(process.env.LOAD_TENANTS, 1000, 1, 2000, "LOAD_TENANTS");
   const jobsCount = integer(process.env.LOAD_JOBS, 1000, 1, 2000, "LOAD_JOBS");
   const setupConcurrency = integer(process.env.LOAD_SETUP_CONCURRENCY, 40, 1, 100, "LOAD_SETUP_CONCURRENCY");
   const workerLanes = integer(process.env.LOAD_WORKER_LANES, 16, 1, 32, "LOAD_WORKER_LANES");
@@ -380,4 +399,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { assertAuthorized, normalizeRunId, percentile };
+module.exports = { assertAuthorized, cleanupFailureClass, normalizeRunId, percentile, requiredInteger };
