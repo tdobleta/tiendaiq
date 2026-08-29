@@ -1447,7 +1447,10 @@ function diagnosticoEndpointPostgres(databaseUrl = env.DATABASE_URL) {
       hostname: parsed.hostname || null,
       port: parsed.port || "5432",
       database: decodeURIComponent(parsed.pathname || "").replace(/^\//, "") || null,
-      username: decodeURIComponent(parsed.username || "") || null
+      username: decodeURIComponent(parsed.username || "") || null,
+      // Es suficiente para distinguir una configuración vieja de una rotada;
+      // jamás expone la clave ni un digest reutilizable de ella.
+      passwordLength: decodeURIComponent(parsed.password || "").length
     });
   } catch {
     return Object.freeze({ configured: true, valid: false });
