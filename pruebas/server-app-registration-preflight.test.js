@@ -2,7 +2,7 @@
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { iniciarServidor, requierePostgresRuntime } = require("../server");
+const { iniciarServidor, requierePostgresRuntime, diagnosticoEndpointPostgres } = require("../server");
 
 function fakeServer() {
   return {
@@ -53,4 +53,20 @@ test("un runtime deployable exige PostgreSQL aunque DATABASE_URL falte", () => {
   assert.equal(requierePostgresRuntime({ NODE_ENV: "production", DATABASE_URL: "" }), true);
   assert.equal(requierePostgresRuntime({ DEV_MODE: "1", DATABASE_URL: "" }), false);
   assert.equal(requierePostgresRuntime({}), false);
+});
+
+test("el diagnostico de endpoint no expone la contrasena de Postgres", () => {
+  const diagnostic = diagnosticoEndpointPostgres(
+    "postgresql://runtime_user:very-secret-password@db.internal:5432/tiendaiq"
+  );
+
+  assert.deepEqual(diagnostic, {
+    configured: true,
+    hostname: "db.internal",
+    port: "5432",
+    database: "tiendaiq",
+    username: "runtime_user"
+  });
+  assert.equal(JSON.stringify(diagnostic).includes("very-secret-password"), false);
+  assert.deepEqual(diagnosticoEndpointPostgres("not-a-url"), { configured: true, valid: false });
 });
