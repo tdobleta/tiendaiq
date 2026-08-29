@@ -30,8 +30,8 @@ existen hasta que el bootstrap protegido los crea.
 3. Crear el entorno protegido `partner-staging` en GitHub. Cargar sus secretos
    directamente allí, sin imprimirlos:
    `PARTNER_STAGING_MIGRATION_DATABASE_URL`,
-   `PARTNER_STAGING_WEB_RUNTIME_LOGIN_PASSWORD` y
-   `PARTNER_STAGING_WORKER_RUNTIME_LOGIN_PASSWORD`.
+   `PARTNER_STAGING_WEB_RUNTIME_LOGIN_PASSWORD_V2` y
+   `PARTNER_STAGING_WORKER_RUNTIME_LOGIN_PASSWORD_V2`.
 
 La URL migradora es la conexión administradora de la base nueva. Los passwords
 de runtime deben ser nuevos, distintos y de 32+ caracteres; se usan sólo para

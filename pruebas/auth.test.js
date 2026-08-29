@@ -411,12 +411,13 @@ test("token exchange offline recupera una instalacion autenticada y la persiste"
   assert.deepStrictEqual(sesion, { tienda: SHOP, token: "shpat_offline_prueba" });
   assert.strictEqual(llamadas.length, 1);
   assert.strictEqual(llamadas[0].url, `https://${SHOP}/admin/oauth/access_token`);
-  const body = JSON.parse(llamadas[0].opciones.body);
-  assert.strictEqual(body.grant_type, "urn:ietf:params:oauth:grant-type:token-exchange");
-  assert.strictEqual(body.subject_token_type, "urn:ietf:params:oauth:token-type:id_token");
-  assert.strictEqual(body.requested_token_type, "urn:shopify:params:oauth:token-type:offline-access-token");
-  assert.strictEqual(body.expiring, "1");
-  assert.strictEqual(body.subject_token, pase);
+  assert.strictEqual(llamadas[0].opciones.headers["Content-Type"], "application/x-www-form-urlencoded");
+  const body = new URLSearchParams(llamadas[0].opciones.body);
+  assert.strictEqual(body.get("grant_type"), "urn:ietf:params:oauth:grant-type:token-exchange");
+  assert.strictEqual(body.get("subject_token_type"), "urn:ietf:params:oauth:token-type:id_token");
+  assert.strictEqual(body.get("requested_token_type"), "urn:shopify:params:oauth:token-type:offline-access-token");
+  assert.strictEqual(body.get("expiring"), "1");
+  assert.strictEqual(body.get("subject_token"), pase);
   assert.deepStrictEqual(guardadas, [[SHOP, {
     accessToken: "shpat_offline_prueba",
     refreshToken: "shpat_refresh_prueba",
