@@ -483,7 +483,7 @@ test("el bootstrap crea logins y roles propios sin depender de credenciales gest
 });
 
 test("las contrasenas de logins runtime son obligatorias y no aceptan valores debiles", () => {
-  const { runtimeLoginDatabaseUrl, runtimePasswords } = require("../scripts/preparar-roles-runtime");
+  const { runtimeLoginDatabaseUrl, runtimePasswords, safeDatabaseEndpoint } = require("../scripts/preparar-roles-runtime");
   assert.throws(() => runtimePasswords({}), /32\+ caracteres/);
   assert.throws(
     () => runtimePasswords({
@@ -507,6 +507,15 @@ test("las contrasenas de logins runtime son obligatorias y no aceptan valores de
   assert.equal(runtimeUrl.username, "tiendaiq_web_login");
   assert.equal(runtimeUrl.password, "web-password");
   assert.equal(runtimeUrl.hostname, "postgres.internal");
+  assert.deepEqual(
+    safeDatabaseEndpoint("postgresql://owner:owner-password@postgres.internal:5432/tiendaiq_production"),
+    {
+      hostname: "postgres.internal",
+      port: "5432",
+      database: "tiendaiq_production",
+      username: "owner"
+    }
+  );
 });
 
 test("el bootstrap de una base nueva crea solo los roles legacy NOLOGIN indispensables para migraciones inmutables", () => {
