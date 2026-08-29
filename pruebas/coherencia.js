@@ -341,7 +341,7 @@ if (/environment:\s*production/.test(productionBootstrapWorkflow) &&
     /BOOTSTRAP_RUNTIME_LOGINS_PRODUCTION/.test(productionBootstrapWorkflow) &&
     /ACKNOWLEDGE_PRELAUNCH_DATABASE_CUTOVER/.test(productionBootstrapWorkflow) &&
     /PRODUCTION_MIGRATION_DATABASE_URL/.test(productionBootstrapWorkflow) &&
-    /PRODUCTION_WEB_RUNTIME_LOGIN_PASSWORD/.test(productionBootstrapWorkflow) &&
+    /PRODUCTION_WEB_RUNTIME_LOGIN_PASSWORD_V2/.test(productionBootstrapWorkflow) &&
     /PRODUCTION_WORKER_RUNTIME_LOGIN_PASSWORD/.test(productionBootstrapWorkflow) &&
     /git rev-parse origin\/main/.test(productionBootstrapWorkflow) &&
     /group:\s*tiendaiq-production-database-maintenance/.test(productionBootstrapWorkflow) &&

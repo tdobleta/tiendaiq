@@ -64,7 +64,9 @@ jobs:
           # convertirlos en credenciales de servicio.
           BOOTSTRAP_LEGACY_COMPATIBILITY_ROLES: "1"
           MIGRATION_DATABASE_URL: ${{ secrets.PRODUCTION_MIGRATION_DATABASE_URL }}
-          WEB_RUNTIME_LOGIN_PASSWORD: ${{ secrets.PRODUCTION_WEB_RUNTIME_LOGIN_PASSWORD }}
+          # Slot de rotacion independiente: no reutilizar un secreto legado
+          # cuyo valor no puede verificarse durante un cutover.
+          WEB_RUNTIME_LOGIN_PASSWORD: ${{ secrets.PRODUCTION_WEB_RUNTIME_LOGIN_PASSWORD_V2 }}
           WORKER_RUNTIME_LOGIN_PASSWORD: ${{ secrets.PRODUCTION_WORKER_RUNTIME_LOGIN_PASSWORD }}
         run: node scripts/preparar-roles-runtime.js
 
