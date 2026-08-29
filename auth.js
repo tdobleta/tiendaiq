@@ -551,8 +551,11 @@ async function recuperarInstalacionDesdePase(pase, {
     try {
       respuesta = await fetchImpl(`https://${tienda}/admin/oauth/access_token`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+        // Shopify token exchange is an OAuth form post.  Sending JSON works
+        // neither in the embedded recovery flow nor with Shopify's official
+        // implementation contract.
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
           client_id: env.SHOPIFY_CLIENT_ID,
           client_secret: env.SHOPIFY_CLIENT_SECRET,
           grant_type: TIPO_GRANT_TOKEN_EXCHANGE,
