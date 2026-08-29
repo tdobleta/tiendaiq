@@ -607,7 +607,7 @@ test("el alta prelaunch de logins de produccion exige entorno protegido y commit
   assert.match(workflow, /ACKNOWLEDGE_PRELAUNCH_DATABASE_CUTOVER/);
   assert.match(workflow, /git rev-parse origin\/main/);
   assert.match(workflow, /PRODUCTION_MIGRATION_DATABASE_URL/);
-  assert.match(workflow, /PRODUCTION_WEB_RUNTIME_LOGIN_PASSWORD/);
+  assert.match(workflow, /PRODUCTION_WEB_RUNTIME_LOGIN_PASSWORD_V2/);
   assert.match(workflow, /PRODUCTION_WORKER_RUNTIME_LOGIN_PASSWORD/);
   assert.match(workflow, /group: tiendaiq-production-database-maintenance/);
   assert.doesNotMatch(workflow, /RENDER_PRODUCTION_.*DEPLOY_HOOK/);
