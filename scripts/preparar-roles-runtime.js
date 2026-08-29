@@ -49,6 +49,37 @@ function runtimePasswords(env = process.env) {
   return passwords;
 }
 
+function runtimeLoginDatabaseUrl(databaseUrl, role, password) {
+  const url = new URL(databaseUrl);
+  url.username = role;
+  url.password = password;
+  return url.toString();
+}
+
+async function proveRuntimeLogin({ databaseUrl, caCertificate, privateNetwork, role, password, runtimeRole, Pool }) {
+  const loginDatabaseUrl = runtimeLoginDatabaseUrl(databaseUrl, role, password);
+  const pool = createPostgresPool({
+    databaseUrl: loginDatabaseUrl,
+    caCertificate,
+    privateNetwork,
+    runtimeRole,
+    Pool
+  });
+  try {
+    const result = await pool.query("SELECT session_user, current_user");
+    const identity = result.rows[0] || {};
+    if (identity.session_user !== role || identity.current_user !== runtimeRole) {
+      throw new Error(`La identidad runtime de ${role} no coincide con el contrato esperado`);
+    }
+  } catch (error) {
+    // Authentication diagnostics must never echo the connection URL or password.
+    if (/identidad runtime/.test(error.message)) throw error;
+    throw new Error(`No se pudo autenticar el login runtime ${role} contra la base de migracion`);
+  } finally {
+    await pool.end();
+  }
+}
+
 function bootstrapRolePlan(env = process.env) {
   const compatibilityRoles = env.BOOTSTRAP_LEGACY_COMPATIBILITY_ROLES === "1"
     ? LEGACY_COMPATIBILITY_ROLES
@@ -310,7 +341,26 @@ async function main() {
     await pool.end();
   }
 
-  console.log("  logins y roles runtime propios listos: RESET ROLE no recupera privilegios de aplicacion");
+  await proveRuntimeLogin({
+    databaseUrl,
+    caCertificate: process.env.PG_CA_CERT,
+    privateNetwork: process.env.PG_PRIVATE_NETWORK === "1",
+    role: WEB_LOGIN_ROLE,
+    password: passwords.get(WEB_LOGIN_ROLE),
+    runtimeRole: WEB_RUNTIME_ROLE,
+    Pool
+  });
+  await proveRuntimeLogin({
+    databaseUrl,
+    caCertificate: process.env.PG_CA_CERT,
+    privateNetwork: process.env.PG_PRIVATE_NETWORK === "1",
+    role: WORKER_LOGIN_ROLE,
+    password: passwords.get(WORKER_LOGIN_ROLE),
+    runtimeRole: WORKER_RUNTIME_ROLE,
+    Pool
+  });
+
+  console.log("  logins y roles runtime propios listos y autenticados: RESET ROLE no recupera privilegios de aplicacion");
 }
 
 if (require.main === module) {
@@ -320,4 +370,10 @@ if (require.main === module) {
   });
 }
 
-module.exports = { bootstrapRolePlan, isBootstrapAdministrationEdge, runtimePasswords };
+module.exports = {
+  bootstrapRolePlan,
+  isBootstrapAdministrationEdge,
+  proveRuntimeLogin,
+  runtimeLoginDatabaseUrl,
+  runtimePasswords
+};
