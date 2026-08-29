@@ -1538,29 +1538,6 @@
     }, 200);
   }
 
-  let recuperandoGeneracion = false;
-  async function recuperarGeneracionPendiente() {
-    const pending = leerGeneracionPendiente();
-    if (!pending || recuperandoGeneracion) return false;
-    recuperandoGeneracion = true;
-    try {
-      await aceptarGeneracionPendiente(pending);
-      ir("generando");
-      await completarGeneracionPendiente(pending);
-      ir("preview");
-    } catch (error) {
-      if (error.terminal || error.actualizar || error.status === 404) limpiarGeneracionPendiente();
-      estado.error = error.message;
-      ir("inicio");
-      requestAnimationFrame(() =>
-        vista.insertAdjacentHTML("afterbegin", `<div class="error">${ico("x","ico--banner")} ${esc(error.message)}</div>`)
-      );
-    } finally {
-      recuperandoGeneracion = false;
-    }
-    return true;
-  }
-
   // ---------- abrir una página ya generada (sin gastar generación) ----------
 
   async function abrirExistente() {
@@ -6552,7 +6529,6 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
 
   // Ruteo por URL: el menú lateral del admin navega por estas rutas.
   async function rutear() {
-    if (await recuperarGeneracionPendiente()) return;
     const ruta = location.pathname.replace(/\/$/, "");
     if (ruta === "/paginas") ir("paginas");
     else if (ruta === "/bundles") ir("bundles");
