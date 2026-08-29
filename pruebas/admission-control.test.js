@@ -37,21 +37,21 @@ test("el endpoint de generacion revisa la pausa antes de consultar plan o reserv
   assert.ok(enqueue > pause, "la pausa debe ocurrir antes de encolar y reservar cupo");
 });
 
-test("el frontend muestra progreso solo despues de que la cola acepta el trabajo", () => {
+test("el frontend muestra progreso solo despues de que la cola acepta el trabajo y no secuestra rutas", () => {
   const appSource = fs.readFileSync(path.join(__dirname, "..", "app", "app.js"), "utf8");
   const generationStart = appSource.indexOf("async function generar()");
-  const recoveryStart = appSource.indexOf("async function recuperarGeneracionPendiente()");
-  const generationSource = appSource.slice(generationStart, recoveryStart);
-  const recoverySource = appSource.slice(recoveryStart, appSource.indexOf("// ---------- abrir", recoveryStart));
+  const generationEnd = appSource.indexOf("// ---------- abrir", generationStart);
+  const routingStart = appSource.indexOf("async function rutear()");
+  const routingEnd = appSource.indexOf("window.addEventListener(\"popstate\", rutear)", routingStart);
+  const generationSource = appSource.slice(generationStart, generationEnd);
+  const routingSource = appSource.slice(routingStart, routingEnd);
 
-  assert.ok(generationStart > 0 && recoveryStart > generationStart, "deben existir ambos flujos de generacion");
+  assert.ok(generationStart > 0 && generationEnd > generationStart, "debe existir el flujo de generacion");
   assert.ok(
     generationSource.indexOf("await aceptarGeneracionPendiente(pending)") < generationSource.indexOf('ir("generando")'),
     "la generacion nueva debe esperar la aceptacion de la cola"
   );
-  assert.ok(
-    recoverySource.indexOf("await aceptarGeneracionPendiente(pending)") < recoverySource.indexOf('ir("generando")'),
-    "la recuperacion debe esperar la aceptacion de la cola"
-  );
+  assert.doesNotMatch(routingSource, /recuperarGeneracionPendiente/,
+    "una generacion pendiente no puede tomar control de Inicio, Paginas ni Bundles");
   assert.doesNotMatch(appSource, /en segundos|~35 segundos/i);
 });
