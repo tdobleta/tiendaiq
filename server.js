@@ -1434,6 +1434,26 @@ function requierePostgresRuntime(runtimeEnv = env) {
   return runtimeEnv?.DEV_MODE === "0" || runtimeEnv?.NODE_ENV === "production" || Boolean(runtimeEnv?.DATABASE_URL);
 }
 
+// Un preflight de Postgres debe poder identificarse sin imprimir la URL (que
+// contiene una credencial). Esto separa un rol faltante en la base correcta de
+// una URL runtime que todavía apunta a otra instancia, sin exponer secretos en
+// Render ni en la evidencia operativa.
+function diagnosticoEndpointPostgres(databaseUrl = env.DATABASE_URL) {
+  if (!databaseUrl) return Object.freeze({ configured: false });
+  try {
+    const parsed = new URL(databaseUrl);
+    return Object.freeze({
+      configured: true,
+      hostname: parsed.hostname || null,
+      port: parsed.port || "5432",
+      database: decodeURIComponent(parsed.pathname || "").replace(/^\//, "") || null,
+      username: decodeURIComponent(parsed.username || "") || null
+    });
+  } catch {
+    return Object.freeze({ configured: true, valid: false });
+  }
+}
+
 async function iniciarServidor({
   server = servidor,
   port = PUERTO,
@@ -1494,9 +1514,10 @@ async function iniciarServidor({
 if (require.main === module) {
   iniciarServidor().catch(async (error) => {
     console.error(`Servidor detenido por preflight fallido: ${error.message}`);
+    console.error(`  endpoint Postgres (sin secreto): ${JSON.stringify(diagnosticoEndpointPostgres())}`);
     await cerrarAlmacenamientoDB().catch(() => {});
     process.exitCode = 1;
   });
 }
 
-module.exports = { servidor, iniciarServidor, requierePostgresRuntime };
+module.exports = { servidor, iniciarServidor, requierePostgresRuntime, diagnosticoEndpointPostgres };
