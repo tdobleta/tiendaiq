@@ -49,6 +49,12 @@ function runtimePasswords(env = process.env) {
   return passwords;
 }
 
+function runtimePasswordLengths(passwords) {
+  return Object.freeze(Object.fromEntries(
+    [...passwords.entries()].map(([role, password]) => [role, password.length])
+  ));
+}
+
 function runtimeLoginDatabaseUrl(databaseUrl, role, password) {
   const url = new URL(databaseUrl);
   url.username = role;
@@ -192,6 +198,7 @@ async function main() {
   const rolePlan = bootstrapRolePlan();
 
   console.log(`  endpoint de migracion (sin secreto): ${JSON.stringify(migrationEndpoint)}`);
+  console.log(`  longitudes de claves runtime (sin secreto): ${JSON.stringify(runtimePasswordLengths(passwords))}`);
 
   const pool = createPostgresPool({ databaseUrl, caCertificate: process.env.PG_CA_CERT, Pool });
   const client = await pool.connect();
@@ -394,5 +401,6 @@ module.exports = {
   proveRuntimeLogin,
   safeDatabaseEndpoint,
   runtimeLoginDatabaseUrl,
+  runtimePasswordLengths,
   runtimePasswords
 };

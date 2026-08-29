@@ -483,7 +483,12 @@ test("el bootstrap crea logins y roles propios sin depender de credenciales gest
 });
 
 test("las contrasenas de logins runtime son obligatorias y no aceptan valores debiles", () => {
-  const { runtimeLoginDatabaseUrl, runtimePasswords, safeDatabaseEndpoint } = require("../scripts/preparar-roles-runtime");
+  const {
+    runtimeLoginDatabaseUrl,
+    runtimePasswordLengths,
+    runtimePasswords,
+    safeDatabaseEndpoint
+  } = require("../scripts/preparar-roles-runtime");
   assert.throws(() => runtimePasswords({}), /32\+ caracteres/);
   assert.throws(
     () => runtimePasswords({
@@ -498,6 +503,10 @@ test("las contrasenas de logins runtime son obligatorias y no aceptan valores de
   });
   assert.equal(passwords.get("tiendaiq_web_login"), "v".repeat(40));
   assert.equal(passwords.get("tiendaiq_worker_login"), "w".repeat(40));
+  assert.deepEqual(runtimePasswordLengths(passwords), {
+    tiendaiq_web_login: 40,
+    tiendaiq_worker_login: 40
+  });
 
   const runtimeUrl = new URL(runtimeLoginDatabaseUrl(
     "postgresql://owner:owner-password@postgres.internal:5432/tiendaiq_production",
