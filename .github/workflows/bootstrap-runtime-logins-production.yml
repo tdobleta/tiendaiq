@@ -63,10 +63,6 @@ jobs:
           # durante el bootstrap permite migrar una base realmente nueva sin
           # convertirlos en credenciales de servicio.
           BOOTSTRAP_LEGACY_COMPATIBILITY_ROLES: "1"
-          # Must mirror Render's production services: the migration URL is the
-          # database's internal address, and bootstrap proves each final login
-          # can authenticate through that same private path before it succeeds.
-          PG_PRIVATE_NETWORK: "1"
           MIGRATION_DATABASE_URL: ${{ secrets.PRODUCTION_MIGRATION_DATABASE_URL }}
           WEB_RUNTIME_LOGIN_PASSWORD: ${{ secrets.PRODUCTION_WEB_RUNTIME_LOGIN_PASSWORD }}
           WORKER_RUNTIME_LOGIN_PASSWORD: ${{ secrets.PRODUCTION_WORKER_RUNTIME_LOGIN_PASSWORD }}
