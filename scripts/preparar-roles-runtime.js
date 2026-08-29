@@ -56,6 +56,16 @@ function runtimeLoginDatabaseUrl(databaseUrl, role, password) {
   return url.toString();
 }
 
+function safeDatabaseEndpoint(databaseUrl) {
+  const url = new URL(databaseUrl);
+  return Object.freeze({
+    hostname: url.hostname || null,
+    port: url.port || "5432",
+    database: decodeURIComponent(url.pathname || "").replace(/^\//, "") || null,
+    username: decodeURIComponent(url.username || "") || null
+  });
+}
+
 async function proveRuntimeLogin({ databaseUrl, caCertificate, privateNetwork, role, password, runtimeRole, Pool }) {
   const loginDatabaseUrl = runtimeLoginDatabaseUrl(databaseUrl, role, password);
   const pool = createPostgresPool({
@@ -172,8 +182,16 @@ async function main() {
   }
   const databaseUrl = process.env.MIGRATION_DATABASE_URL;
   if (!databaseUrl) throw new Error("Falta MIGRATION_DATABASE_URL");
+  let migrationEndpoint;
+  try {
+    migrationEndpoint = safeDatabaseEndpoint(databaseUrl);
+  } catch {
+    throw new Error("MIGRATION_DATABASE_URL no tiene un formato valido");
+  }
   const passwords = runtimePasswords();
   const rolePlan = bootstrapRolePlan();
+
+  console.log(`  endpoint de migracion (sin secreto): ${JSON.stringify(migrationEndpoint)}`);
 
   const pool = createPostgresPool({ databaseUrl, caCertificate: process.env.PG_CA_CERT, Pool });
   const client = await pool.connect();
@@ -374,6 +392,7 @@ module.exports = {
   bootstrapRolePlan,
   isBootstrapAdministrationEdge,
   proveRuntimeLogin,
+  safeDatabaseEndpoint,
   runtimeLoginDatabaseUrl,
   runtimePasswords
 };
