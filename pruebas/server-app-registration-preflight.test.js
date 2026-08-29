@@ -65,7 +65,8 @@ test("el diagnostico de endpoint no expone la contrasena de Postgres", () => {
     hostname: "db.internal",
     port: "5432",
     database: "tiendaiq",
-    username: "runtime_user"
+    username: "runtime_user",
+    passwordLength: 20
   });
   assert.equal(JSON.stringify(diagnostic).includes("very-secret-password"), false);
   assert.deepEqual(diagnosticoEndpointPostgres("not-a-url"), { configured: true, valid: false });
