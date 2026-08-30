@@ -1195,7 +1195,7 @@
       const b = e.target.closest("[data-angulo-preset]");
       if (!b) return;
       estado.anguloPreset = b.dataset.anguloPreset;
-      angs.querySelectorAll(".angulo-card").forEach((x) => x.classList.toggle("is-sel", x === b));
+      angs.querySelectorAll(".piloto-strategy__angle").forEach((x) => x.classList.toggle("is-sel", x === b));
       syncAngulo();
     };
     const extra = $("angulo-extra");
