@@ -864,7 +864,7 @@
       .filter((p) => p.imagen)
       .slice(0, 6)
       .map((p, i) => `
-        <figure class="crear-shot crear-shot--${i + 1}" title="${esc(p.titulo)}">
+        <figure class="piloto-create__shot piloto-create__shot--${i + 1}" title="${esc(p.titulo)}">
           <img src="${esc(p.imagen)}" alt="${esc(p.titulo)}" loading="lazy">
         </figure>`)
       .join("");
@@ -894,54 +894,64 @@
       : `<s-button variant="primary" id="elegir-shopify">Elegir producto de Shopify</s-button>`;
 
     vista.innerHTML = `
-      <div class="crear">
-        <button class="volver-flecha" id="volver-inicio"></button>
-        <div class="crear-stage">
-          <section class="crear-hero-panel">
-            <div class="crear-hero-panel__copy">
-              <span class="crear__eyebrow">Páginas con IA para Shopify</span>
-              <h1>Empezá por el producto correcto.</h1>
-              <p>Piloto convierte la información real de tu catálogo en una primera versión lista para revisar.</p>
+      <div class="piloto-create">
+        <button class="volver-flecha" id="volver-inicio" aria-label="Volver al inicio"></button>
+        <div class="piloto-create__shell">
+          <aside class="piloto-create__rail" aria-label="Pasos para crear la página">
+            <span class="piloto-create__eyebrow">Crear página con IA</span>
+            <h1>Una mejor página empieza por una mejor elección.</h1>
+            <p>Elegí un producto real de tu catálogo. Piloto toma esa información como base del borrador.</p>
+
+            <div class="piloto-create__steps">
+              <div class="piloto-create__step is-active">
+                <span>01</span><div><b>Producto</b><small>Elegí qué producto querés trabajar.</small></div>
+              </div>
+              <div class="piloto-create__step">
+                <span>02</span><div><b>Estrategia</b><small>Definí idioma, público y enfoque.</small></div>
+              </div>
+              <div class="piloto-create__step">
+                <span>03</span><div><b>Plantilla</b><small>Elegí el diseño antes de generar.</small></div>
+              </div>
             </div>
 
-            <div class="crear-visual" aria-label="Productos del catálogo">
-              ${galeria || `<div class="crear-visual__empty">${ico("bolsa")} Las imágenes se leen al generar la página.</div>`}
-              <div class="crear-visual__count"><b>${totalProductos}</b><span>productos conectados</span></div>
+            <div class="piloto-create__rail-note">
+              <span>${ico("check")}</span>
+              <p>La página queda en borrador hasta que la revises y decidas publicarla.</p>
             </div>
+          </aside>
 
-            <div class="crear-card">
-              <div class="crear-card__head">
-                <div>
-                  <div class="crear-card__kicker">Catálogo conectado</div>
-                  <h2>Elegí el producto base</h2>
+          <section class="piloto-create__content">
+            <header class="piloto-create__header">
+              <div>
+                <span class="piloto-create__kicker">Paso 1 de 3 · Producto</span>
+                <h2>Elegí el producto base</h2>
+                <p>Vamos a usar sus fotos, variantes, precio y descripción para preparar la primera versión.</p>
+              </div>
+              <div class="piloto-create__catalog-status"><b>${totalProductos}</b><span>${totalProductos === 1 ? "producto conectado" : "productos conectados"}</span></div>
+            </header>
+
+            <div class="piloto-create__grid">
+              <section class="piloto-create__card piloto-create__card--picker">
+                <header>
+                  <div><span>CATÁLOGO DE SHOPIFY</span><h3>Seleccioná un producto</h3></div>
+                  <small>${productosSinPagina} sin página</small>
+                </header>
+                ${productoHTML}
+                <div class="piloto-create__actions">${accionesHTML}</div>
+              </section>
+
+              <section class="piloto-create__card piloto-create__card--gallery" aria-label="Vista del catálogo conectado">
+                <header><div><span>VISTA PREVIA</span><h3>Tu catálogo</h3></div><small>Datos reales</small></header>
+                <div class="piloto-create__gallery">
+                  ${galeria || `<div class="piloto-create__empty">${ico("bolsa")}<strong>Las imágenes aparecen acá</strong><span>Cuando elijas un producto, Piloto leerá sus archivos al generar.</span></div>`}
                 </div>
-                <span class="crear-card__meta">${productosSinPagina} sin página</span>
-              </div>
-              ${productoHTML}
-              <div class="crear-card__acciones">
-                ${accionesHTML}
-              </div>
+              </section>
             </div>
 
-            <div class="crear-market-note">
-              <b>Tu catálogo es el punto de partida.</b>
-              <p>Usamos la información del producto que elijas. Después vas a definir el enfoque y la plantilla antes de generar el borrador.</p>
-            </div>
-
-            <div class="crear-flow crear-flow--rail" aria-label="Preparación de la página">
-              <div class="crear-flow__item is-active">
-                <span></span>
-                <div><b>Producto</b><small>Elegí el ítem correcto del catálogo.</small></div>
-              </div>
-              <div class="crear-flow__item">
-                <span></span>
-                <div><b>Estrategia</b><small>Definí idioma, público y ángulo.</small></div>
-              </div>
-              <div class="crear-flow__item">
-                <span></span>
-                <div><b>Plantilla</b><small>Seleccioná el estilo antes de generar.</small></div>
-              </div>
-            </div>
+            <section class="piloto-create__next">
+              <div><span>LO QUE SIGUE</span><h3>Después vas a definir el enfoque y elegir una plantilla.</h3></div>
+              <p>Podés revisar el resultado antes de que cualquier página se publique en tu tienda.</p>
+            </section>
           </section>
         </div>
       </div>`;
