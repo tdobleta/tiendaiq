@@ -4011,3 +4011,357 @@ body.sec-panel-abierto .constructor { padding-right: 394px; }
 .be-layout .be-lv.is-open.is-def { border-color: #c9ccd0; box-shadow: 0 1px 3px rgba(0,0,0,.06), inset 3px 0 0 #1a1c1e; }
 /* Chip "Por defecto": neutro (no oro). */
 .be-lv__chip { color: #43474b; background: #eef0f2; border: 1px solid #d9dce0; font-weight: 600; }
+
+/* ============================================================
+   PILOTO · CREAR PÁGINA / PRODUCTO
+   La experiencia sigue el mismo lenguaje de la home: rail orientador a la
+   izquierda, contenido medible y tarjetas tranquilas. No se usan imágenes
+   ni métricas fabricadas: el collage se arma solo con el catálogo conectado.
+   ============================================================ */
+.piloto-create {
+  width: min(1180px, calc(100% - 40px));
+  margin: 18px auto 40px;
+  color: #303030;
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+.piloto-create > .volver-flecha {
+  margin: 0 0 12px;
+}
+.piloto-create__shell {
+  display: grid;
+  grid-template-columns: 276px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+.piloto-create__rail,
+.piloto-create__card,
+.piloto-create__next {
+  border: 1px solid #dfdfe3;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 1px 1px rgba(0,0,0,.025);
+}
+.piloto-create__rail {
+  position: sticky;
+  top: 18px;
+  padding: 20px;
+}
+.piloto-create__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  min-height: 23px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: #f3edff;
+  color: #7138ce;
+  font-size: 10px;
+  font-weight: 720;
+  letter-spacing: .01em;
+}
+.piloto-create__rail h1 {
+  margin: 15px 0 9px;
+  color: #2c2930;
+  font-size: 23px;
+  font-weight: 730;
+  line-height: 1.15;
+  letter-spacing: -.55px;
+}
+.piloto-create__rail > p {
+  margin: 0;
+  color: #747278;
+  font-size: 12px;
+  line-height: 1.48;
+}
+.piloto-create__steps {
+  display: grid;
+  gap: 3px;
+  margin-top: 22px;
+  padding-top: 14px;
+  border-top: 1px solid #ececef;
+}
+.piloto-create__step {
+  display: grid;
+  grid-template-columns: 26px minmax(0,1fr);
+  gap: 9px;
+  align-items: start;
+  padding: 10px 8px;
+  border-radius: 8px;
+  color: #77747c;
+}
+.piloto-create__step.is-active {
+  background: #f7f4fd;
+  color: #35274f;
+}
+.piloto-create__step > span {
+  width: 23px;
+  height: 23px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #ded6ec;
+  border-radius: 50%;
+  background: #fff;
+  color: #746b82;
+  font-size: 9px;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+}
+.piloto-create__step.is-active > span {
+  border-color: #8b46f6;
+  background: #8b46f6;
+  color: #fff;
+  box-shadow: 0 0 0 3px #ece3ff;
+}
+.piloto-create__step b {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.32;
+}
+.piloto-create__step small {
+  display: block;
+  margin-top: 2px;
+  font-size: 10.5px;
+  line-height: 1.35;
+}
+.piloto-create__rail-note {
+  display: grid;
+  grid-template-columns: 20px minmax(0,1fr);
+  gap: 8px;
+  margin-top: 18px;
+  padding: 11px 0 0;
+  border-top: 1px solid #ececef;
+  color: #6d6875;
+}
+.piloto-create__rail-note > span {
+  width: 19px;
+  height: 19px;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  background: #edf8f1;
+  color: #21875a;
+}
+.piloto-create__rail-note svg { width: 12px; height: 12px; }
+.piloto-create__rail-note p { margin: 1px 0 0; font-size: 10.5px; line-height: 1.42; }
+.piloto-create__content { min-width: 0; }
+.piloto-create__header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 22px;
+  margin: 4px 3px 17px;
+}
+.piloto-create__kicker {
+  display: block;
+  margin-bottom: 7px;
+  color: #7650b8;
+  font-size: 10px;
+  font-weight: 760;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.piloto-create__header h2 {
+  margin: 0;
+  color: #302d34;
+  font-size: 27px;
+  font-weight: 730;
+  letter-spacing: -.55px;
+  line-height: 1.12;
+}
+.piloto-create__header p {
+  max-width: 570px;
+  margin: 7px 0 0;
+  color: #747177;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.piloto-create__catalog-status {
+  flex: 0 0 auto;
+  min-width: 112px;
+  padding: 9px 12px;
+  border: 1px solid #e1d9ef;
+  border-radius: 9px;
+  background: #faf8fd;
+}
+.piloto-create__catalog-status b {
+  display: block;
+  color: #3b245e;
+  font-size: 20px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.piloto-create__catalog-status span {
+  display: block;
+  margin-top: 4px;
+  color: #756a82;
+  font-size: 9.5px;
+  line-height: 1.25;
+}
+.piloto-create__grid {
+  display: grid;
+  grid-template-columns: minmax(0,1.16fr) minmax(278px,.84fr);
+  gap: 16px;
+}
+.piloto-create__card { overflow: hidden; }
+.piloto-create__card > header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 17px 18px 14px;
+}
+.piloto-create__card > header span {
+  display: block;
+  margin-bottom: 5px;
+  color: #7b55bb;
+  font-size: 9px;
+  font-weight: 760;
+  letter-spacing: .075em;
+}
+.piloto-create__card h3 {
+  margin: 0;
+  color: #343039;
+  font-size: 15px;
+  font-weight: 720;
+  letter-spacing: -.12px;
+}
+.piloto-create__card > header small {
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: #f4f2f6;
+  color: #77727c;
+  font-size: 9.5px;
+  line-height: 1;
+  white-space: nowrap;
+}
+.piloto-create__card--picker { padding-bottom: 16px; }
+.piloto-create__card--picker .crear-prod {
+  min-height: 134px;
+  margin: 0 18px;
+  border-color: #ddd5e9;
+  background: #fcfbfe;
+}
+.piloto-create__card--picker .crear-prod.is-ready {
+  border-color: #b797ef;
+  box-shadow: inset 3px 0 #8b46f6;
+}
+.piloto-create__card--picker .crear-prod__thumb {
+  width: 68px;
+  height: 68px;
+  border-color: #e1d6f5;
+  background: #f5f0ff;
+  color: #7640cf;
+}
+.piloto-create__card--picker .crear-prod__txt strong { font-size: 14px; }
+.piloto-create__card--picker .crear-prod__txt span:last-child { font-size: 11.5px; }
+.piloto-create__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin: 13px 18px 0;
+}
+.piloto-create__card--gallery {
+  position: relative;
+  min-height: 252px;
+  border-color: #5a27af;
+  background:
+    radial-gradient(230px 170px at 100% 0%, rgba(206,181,255,.42), transparent 74%),
+    linear-gradient(135deg, #210643 0%, #5520ad 56%, #8850df 100%);
+  box-shadow: 0 12px 28px rgba(70,27,147,.15);
+}
+.piloto-create__card--gallery::before {
+  position: absolute;
+  inset: 0;
+  content: "";
+  pointer-events: none;
+  opacity: .68;
+  background-image: radial-gradient(rgba(255,255,255,.42) 1px, transparent 1.1px);
+  background-size: 15px 15px;
+  mask-image: linear-gradient(to bottom, #000 0%, transparent 82%);
+}
+.piloto-create__card--gallery > header,
+.piloto-create__gallery { position: relative; z-index: 1; }
+.piloto-create__card--gallery > header span { color: #d9c7ff; }
+.piloto-create__card--gallery h3 { color: #fff; }
+.piloto-create__card--gallery > header small { background: rgba(255,255,255,.16); color: #f4efff; }
+.piloto-create__gallery {
+  display: grid;
+  grid-template-columns: repeat(8,1fr);
+  grid-template-rows: repeat(6, 25px);
+  gap: 7px;
+  min-height: 168px;
+  padding: 0 18px 18px;
+}
+.piloto-create__shot {
+  overflow: hidden;
+  margin: 0;
+  border: 1px solid rgba(255,255,255,.55);
+  border-radius: 8px;
+  background: rgba(255,255,255,.16);
+  box-shadow: 0 9px 19px rgba(19,3,50,.27);
+}
+.piloto-create__shot img { width: 100%; height: 100%; display: block; object-fit: cover; }
+.piloto-create__shot--1 { grid-area: 1 / 1 / 5 / 4; }
+.piloto-create__shot--2 { grid-area: 1 / 4 / 4 / 7; }
+.piloto-create__shot--3 { grid-area: 1 / 7 / 3 / 9; }
+.piloto-create__shot--4 { grid-area: 4 / 4 / 7 / 7; }
+.piloto-create__shot--5 { grid-area: 3 / 7 / 6 / 9; }
+.piloto-create__shot--6 { grid-area: 5 / 1 / 7 / 4; }
+.piloto-create__empty {
+  grid-column: 1 / -1;
+  grid-row: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  padding: 20px;
+  border: 1px dashed rgba(255,255,255,.55);
+  border-radius: 9px;
+  background: rgba(255,255,255,.08);
+  color: #fff;
+  text-align: center;
+}
+.piloto-create__empty svg { width: 25px; height: 25px; color: #e7dcff; }
+.piloto-create__empty strong { margin-top: 9px; font-size: 12px; }
+.piloto-create__empty span { max-width: 230px; margin-top: 4px; color: #e8dfff; font-size: 10.5px; line-height: 1.42; }
+.piloto-create__next {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 22px;
+  margin-top: 16px;
+  padding: 15px 18px;
+  border-color: #e0d8ed;
+  background: linear-gradient(100deg, #fcfbff, #f5f0ff);
+}
+.piloto-create__next span {
+  display: block;
+  margin-bottom: 4px;
+  color: #7850bb;
+  font-size: 9px;
+  font-weight: 760;
+  letter-spacing: .075em;
+}
+.piloto-create__next h3 { margin: 0; color: #3d354a; font-size: 12px; font-weight: 680; }
+.piloto-create__next p { max-width: 275px; margin: 0; color: #726980; font-size: 10.5px; line-height: 1.4; }
+@media (max-width: 920px) {
+  .piloto-create__shell { grid-template-columns: 1fr; }
+  .piloto-create__rail { position: static; }
+  .piloto-create__rail h1 { max-width: 520px; }
+  .piloto-create__steps { grid-template-columns: repeat(3,1fr); gap: 8px; }
+  .piloto-create__rail-note { display: none; }
+}
+@media (max-width: 660px) {
+  .piloto-create { width: min(100% - 24px, 520px); margin-top: 12px; }
+  .piloto-create__rail { padding: 17px; }
+  .piloto-create__header { align-items: start; flex-direction: column; gap: 11px; }
+  .piloto-create__header h2 { font-size: 24px; }
+  .piloto-create__grid { grid-template-columns: 1fr; }
+  .piloto-create__steps { grid-template-columns: 1fr; }
+  .piloto-create__step { padding: 8px; }
+  .piloto-create__next { align-items: start; flex-direction: column; gap: 7px; }
+  .piloto-create__card--picker .crear-prod { margin: 0 14px; padding: 13px; }
+  .piloto-create__card--picker .crear-prod__thumb { width: 54px; height: 54px; }
+  .piloto-create__actions { margin-right: 14px; margin-left: 14px; flex-direction: column; }
+  .piloto-create__actions > * { width: 100%; }
+}
