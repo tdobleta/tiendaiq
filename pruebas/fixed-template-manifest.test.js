@@ -5,6 +5,8 @@ const assert = require("node:assert/strict");
 const {
   PINZA_PAGEPILOT_V1,
   PINZA_PAGEPILOT_EDITOR_CONTRACT_V1,
+  PILOTO_PINZA_PAGEPILOT_V1,
+  PILOTO_PINZA_PAGEPILOT_EDITOR_CONTRACT_V1,
   fixedTemplateViewModel
 } = require("../src/domain/fixed-template-manifest");
 const { sanitizeFixedTemplateSource, sourceFingerprint } = require("../scripts/import-fixed-template-source");
@@ -39,6 +41,21 @@ test("el contrato de editor conserva el diseño fijo y separa Shopify de evidenc
   assert.equal(evidence.editable, false);
   const content = PINZA_PAGEPILOT_EDITOR_CONTRACT_V1.groups.find((group) => group.id === "approved-content");
   assert.deepEqual(content.slots, PINZA_PAGEPILOT_V1.merchantEditablePaths);
+});
+
+test("Piloto Pinza conserva el ZIP canónico y distribuye sólo su derivado sin hotlinks", () => {
+  const assetDirectory = path.join(__dirname, "..", "extensions", "tiendaiq-widgets", "assets");
+  const source = fs.readFileSync(path.join(__dirname, "..", "template-sources", "piloto-pinzapilot-v1", "index.html"), "utf8");
+  const runtime = fs.readFileSync(path.join(assetDirectory, PILOTO_PINZA_PAGEPILOT_V1.sourceFile), "utf8");
+  const encoded = runtime.match(/FIXED_TEMPLATE_SOURCE_BASE64 = "([A-Za-z0-9+/=]+)"/);
+  assert.equal(sourceFingerprint(source), PILOTO_PINZA_PAGEPILOT_V1.sourceInputSha256);
+  assert.ok(encoded, "el runtime de Piloto debe contener su fuente visual congelada");
+  const artifact = Buffer.from(encoded[1], "base64").toString("utf8");
+  assert.equal(sourceFingerprint(artifact), PILOTO_PINZA_PAGEPILOT_V1.sourceSha256);
+  assert.doesNotMatch(artifact, /pagepilot\.ai/i);
+  assert.doesNotMatch(artifact, /<script/i);
+  assert.match(artifact, /class="hero"/);
+  assert.equal(PILOTO_PINZA_PAGEPILOT_EDITOR_CONTRACT_V1.template.id, "piloto/pinza-pagepilot");
 });
 
 test("el importador quita hotlinks y scripts, sin rediseñar el HTML fijo", () => {

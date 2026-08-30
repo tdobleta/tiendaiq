@@ -2,7 +2,7 @@
 
 const { isDeepStrictEqual } = require("node:util");
 const { resolveStoredTemplate } = require("./template-registry");
-const { PINZA_PAGEPILOT_V1 } = require("./fixed-template-manifest");
+const { PINZA_PAGEPILOT_V1, PILOTO_PINZA_PAGEPILOT_V1 } = require("./fixed-template-manifest");
 
 class FixedTemplateEditError extends Error {
   constructor(message) {
@@ -66,7 +66,9 @@ function pinzaEditablePaths(persistedData) {
 
 function isPinzaTemplate(persistedData) {
   const template = resolveStoredTemplate(persistedData?.global || {});
-  return template?.id === PINZA_PAGEPILOT_V1.id && template.version === PINZA_PAGEPILOT_V1.version;
+  return [PINZA_PAGEPILOT_V1, PILOTO_PINZA_PAGEPILOT_V1].some(
+    (candidate) => template?.id === candidate.id && template.version === candidate.version
+  );
 }
 
 // A fixed template is not a generic document editor. Start from persisted

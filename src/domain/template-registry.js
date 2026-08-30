@@ -34,6 +34,15 @@ const TEMPLATE_REGISTRY = Object.freeze([
     version: 1,
     legacyStyle: "pinza-pagepilot",
     rendererKey: "pinza-pagepilot",
+    status: "frozen"
+  }),
+  // The only template offered for new Piloto product pages. Its source lives
+  // in template-sources and the storefront only injects declared slots.
+  Object.freeze({
+    id: "piloto/pinza-pagepilot",
+    version: 1,
+    legacyStyle: "piloto-pinza",
+    rendererKey: "piloto-pinza",
     status: "active"
   }),
   Object.freeze({

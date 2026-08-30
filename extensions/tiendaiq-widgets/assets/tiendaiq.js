@@ -239,6 +239,7 @@
     "tiendaiq/premium@1": "premium",
     "tiendaiq/performance-story@1": "performance-story",
     "tiendaiq/pinza-pagepilot@1": "pinza-pagepilot",
+    "piloto/pinza-pagepilot@1": "piloto-pinza",
     "legacy/pagepilot@1": "pagepilot",
     "legacy/pagepilot-blue@1": "pagepilot-blue"
   });
@@ -251,6 +252,7 @@
     if (global?.estilo === "pagepilot") return "pagepilot";
     if (global?.estilo === "performance-story") return "performance-story";
     if (global?.estilo === "pinza-pagepilot") return "pinza-pagepilot";
+    if (global?.estilo === "piloto-pinza") return "piloto-pinza";
     if (global?.estilo === "premium") return "premium";
     return "classic";
   }
@@ -1902,11 +1904,13 @@
     // Los handlers del hero son inline globales (cambiarPrincipal / tiendaiqAgregar)
     // → funcionan sobre el DOM del SSR sin re-montar nada. Fallback: render total.
     const renderer = rendererKey(datos?.global || {});
-    if (renderer === "pinza-pagepilot") {
-      if (!window.TiendaIQPinzaPagepilotV1) {
+    if (renderer === "pinza-pagepilot" || renderer === "piloto-pinza") {
+      const isPilotoPinza = renderer === "piloto-pinza";
+      const fixedRuntime = isPilotoPinza ? "TiendaIQPilotoPinzaPagepilotV1" : "TiendaIQPinzaPagepilotV1";
+      if (!window[fixedRuntime]) {
         await new Promise((resolve, reject) => {
           const script = document.createElement("script");
-          script.src = `${window.TIENDAIQ_ASSET_BASE || ""}tiq-pinzapilot-v1.js`;
+          script.src = `${window.TIENDAIQ_ASSET_BASE || ""}${isPilotoPinza ? "tiq-piloto-pinzapilot-v1.js" : "tiq-pinzapilot-v1.js"}`;
           script.defer = true;
           script.onload = resolve;
           script.onerror = () => reject(new Error("No se pudo cargar el runtime de la plantilla fija"));
@@ -1928,7 +1932,7 @@
         statistics: datos?.compliance?.claims_verified === true && Boolean(datos?.compliance?.statistics_source),
         payments: false
       };
-      await window.TiendaIQPinzaPagepilotV1.mount(app, {
+      await window[fixedRuntime].mount(app, {
         view: {
           product: {
             title: hero.titulo || source.titulo_crudo || "",

@@ -2,7 +2,7 @@
 
 const { gql } = require("../../shopify");
 const { resolveStoredTemplate } = require("../domain/template-registry");
-const { PINZA_PAGEPILOT_V1 } = require("../domain/fixed-template-manifest");
+const { PINZA_PAGEPILOT_V1, PILOTO_PINZA_PAGEPILOT_V1 } = require("../domain/fixed-template-manifest");
 
 // Pinza v1 renders Shopify's selected_or_first_available_variant and does not
 // expose a picker. Publishing it for a catalog with several purchasable
@@ -29,7 +29,9 @@ class FixedTemplatePublishError extends Error {
 
 function isPinzaTemplate(data) {
   const template = resolveStoredTemplate(data?.global || {});
-  return template?.id === PINZA_PAGEPILOT_V1.id && template.version === PINZA_PAGEPILOT_V1.version;
+  return [PINZA_PAGEPILOT_V1, PILOTO_PINZA_PAGEPILOT_V1].some(
+    (candidate) => template?.id === candidate.id && template.version === candidate.version
+  );
 }
 
 function productIdFromPage(data) {
@@ -56,7 +58,7 @@ async function assertFixedTemplatePublishable(data, session, { signal, query = g
   const available = variants.filter((variant) => variant?.availableForSale === true);
   if (hasMoreVariants || available.length !== 1) {
     throw new FixedTemplatePublishError(
-      "La plantilla Pinza v1 sólo puede publicarse con exactamente una variante disponible; elegí un producto simple o usá una plantilla con selector de variantes"
+      "La plantilla Pinza sólo puede publicarse con exactamente una variante disponible; elegí un producto simple o usá una plantilla con selector de variantes"
     );
   }
 

@@ -26,6 +26,21 @@ const PINZA_PAGEPILOT_V1 = Object.freeze({
   ])
 });
 
+// Piloto Pinza is a new visual artifact, imported from the merchant-provided
+// ZIP on 2026-08-30. The original ZIP is kept under template-sources so the
+// visual source can be independently fingerprinted; the runtime artifact is
+// its sanitized derivative (same layout/CSS, no copied marketing or hotlinks).
+const PILOTO_PINZA_PAGEPILOT_V1 = Object.freeze({
+  id: "piloto/pinza-pagepilot",
+  version: 1,
+  rendererKey: "piloto-pinza",
+  sourceInputSha256: "1b401ccb2004bdef955d1c0a63c858e48860e2d78c27bf9378758156d00bfc93",
+  sourceSha256: "56929d6ae30bab05d6d951d7ca9f28e4bd4d16e5aec7c922decf1367bb24c256",
+  sourceFile: "tiq-piloto-pinzapilot-v1.js",
+  slots: PINZA_PAGEPILOT_V1.slots,
+  merchantEditablePaths: PINZA_PAGEPILOT_V1.merchantEditablePaths
+});
+
 // El workspace de edición puede tener una experiencia rica, pero no convierte
 // una plantilla fija en un page builder. Este contrato es la frontera que una
 // futura API de editor puede exponer al admin: qué se puede editar, qué viene
@@ -63,6 +78,16 @@ const PINZA_PAGEPILOT_EDITOR_CONTRACT_V1 = Object.freeze({
   ])
 });
 
+const PILOTO_PINZA_PAGEPILOT_EDITOR_CONTRACT_V1 = Object.freeze({
+  ...PINZA_PAGEPILOT_EDITOR_CONTRACT_V1,
+  template: Object.freeze({ id: PILOTO_PINZA_PAGEPILOT_V1.id, version: PILOTO_PINZA_PAGEPILOT_V1.version }),
+  groups: Object.freeze(PINZA_PAGEPILOT_EDITOR_CONTRACT_V1.groups.map((group) => (
+    group.id === "approved-content"
+      ? Object.freeze({ ...group, slots: PILOTO_PINZA_PAGEPILOT_V1.merchantEditablePaths })
+      : group
+  )))
+});
+
 function isHttpsUrl(value) {
   try {
     return new URL(String(value)).protocol === "https:";
@@ -85,7 +110,7 @@ function fixedTemplateViewModel(data = {}, urls = {}, options = {}) {
   const hasVerifiedClaims = data?.compliance?.claims_verified === true;
 
   return Object.freeze({
-    template: Object.freeze({ id: PINZA_PAGEPILOT_V1.id, version: PINZA_PAGEPILOT_V1.version }),
+    template: Object.freeze({ id: PILOTO_PINZA_PAGEPILOT_V1.id, version: PILOTO_PINZA_PAGEPILOT_V1.version }),
     product: Object.freeze({
       // Product identity remains catalog-owned. A generated/persisted draft
       // cannot replace the title or description visible to a buyer.
@@ -123,6 +148,8 @@ function fixedTemplateViewModel(data = {}, urls = {}, options = {}) {
 module.exports = Object.freeze({
   PINZA_PAGEPILOT_V1,
   PINZA_PAGEPILOT_EDITOR_CONTRACT_V1,
+  PILOTO_PINZA_PAGEPILOT_V1,
+  PILOTO_PINZA_PAGEPILOT_EDITOR_CONTRACT_V1,
   isHttpsUrl,
   fixedTemplateViewModel
 });

@@ -14,7 +14,7 @@ test("las plantillas activas resuelven a un descriptor versionado estable", () =
     ["clasico", "tiendaiq/classic", "classic", "active"],
     ["premium", "tiendaiq/premium", "premium", "active"],
     ["performance-story", "tiendaiq/performance-story", "performance-story", "active"],
-    ["pinza-pagepilot", "tiendaiq/pinza-pagepilot", "pinza-pagepilot", "active"]
+    ["piloto-pinza", "piloto/pinza-pagepilot", "piloto-pinza", "active"]
   ];
 
   for (const [style, id, rendererKey, status] of expected) {
@@ -26,8 +26,8 @@ test("las plantillas activas resuelven a un descriptor versionado estable", () =
   }
 });
 
-test("las plantillas congeladas siguen siendo legibles, pero no se pueden crear", () => {
-  for (const style of ["pagepilot", "pagepilot-blue"]) {
+test("las plantillas retiradas siguen siendo legibles, pero no se pueden crear", () => {
+  for (const style of ["pagepilot", "pagepilot-blue", "pinza-pagepilot"]) {
     assert.throws(
       () => resolveTemplateForCreation(style),
       (error) => error instanceof TemplateContractError
