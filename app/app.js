@@ -1106,95 +1106,58 @@
     ].join(" ");
 
     vista.innerHTML = `
-      <div class="estrategia">
-        <div class="estrategia__top">
-          <s-button id="volver">Elegir otro producto</s-button>
-          <div>
-            <h1>Definí la estrategia de venta</h1>
-            <p>Elegí público, enfoque y ajustes básicos antes de generar la página.</p>
-          </div>
-          <s-button variant="primary" id="continuar-top">Continuar a plantillas</s-button>
-        </div>
-
-        <div class="estrategia__panel">
-          <section class="estrategia__main" aria-label="Estrategia de copywriting">
-            <div class="estrategia__bloque">
-              <h2>Público objetivo</h2>
-              <p>La IA adapta el tono del texto, los beneficios y la forma de presentar el producto.</p>
-              <div class="audiencias" id="audiencias">
-                <button type="button" data-audiencia="mujer" class="${audiencia === "mujer" ? "is-sel" : ""}">Mujer</button>
-                <button type="button" data-audiencia="hombre" class="${audiencia === "hombre" ? "is-sel" : ""}">Hombre</button>
-                <button type="button" data-audiencia="unisex" class="${audiencia === "unisex" ? "is-sel" : ""}">Unisex</button>
-              </div>
+      <div class="piloto-strategy">
+        <button class="volver-flecha" id="volver" aria-label="Cambiar producto"></button>
+        <div class="piloto-strategy__shell">
+          <aside class="piloto-strategy__rail" aria-label="Recorrido de creación">
+            <span class="piloto-strategy__eyebrow">Crear página con IA</span>
+            <h1>Definí cómo querés presentar este producto.</h1>
+            <p>La estrategia guía el primer borrador. Después podés editar cada detalle antes de publicar.</p>
+            <div class="piloto-strategy__steps">
+              <div><span>01</span><b>Producto</b><small>Seleccionado</small></div>
+              <div class="is-active"><span>02</span><b>Estrategia</b><small>En curso</small></div>
+              <div><span>03</span><b>Plantilla</b><small>Próximo paso</small></div>
             </div>
+          </aside>
 
-            <div class="estrategia__bloque">
-              <h2>Ángulo de venta</h2>
-              <p>Seleccioná la lectura comercial que mejor encaja con este producto.</p>
-              <div class="angulos" id="angulos">
-                ${angulos.map(([k, t, d, tag]) => `
-                  <button type="button" data-angulo-preset="${k}" class="angulo-card ${preset === k ? "is-sel" : ""}">
-                    <span></span>
-                    <b>${t}</b>
-                    <small>${d}</small>
-                    <em>${tag}</em>
-                  </button>`).join("")}
-              </div>
-            </div>
+          <section class="piloto-strategy__content">
+            <header class="piloto-strategy__header">
+              <div><span>Paso 2 de 3 · Estrategia</span><h2>Elegí el enfoque de venta</h2><p>Seleccioná a quién le hablás y qué idea querés que ordene la página.</p></div>
+              <s-button variant="primary" id="continuar">Continuar a plantillas</s-button>
+            </header>
 
-            <div class="estrategia__bloque estrategia__bloque--nota">
-              <label for="angulo-extra">Detalle opcional</label>
-              <textarea id="angulo-extra" rows="3" placeholder="Ejemplo: para madres primerizas, oficinas pequeñas o piel sensible.">${esc(detalleInicial)}</textarea>
-              <input type="hidden" id="angulo" value="${esc(anguloInicial)}">
+            <div class="piloto-strategy__grid">
+              <section class="piloto-strategy__form" aria-label="Estrategia de venta">
+                <div class="piloto-strategy__section">
+                  <div class="piloto-strategy__section-head"><div><span>01</span><h3>Público objetivo</h3></div><p>Adaptamos el tono y la forma de presentar los beneficios.</p></div>
+                  <div class="piloto-strategy__audience" id="audiencias">
+                    <button type="button" data-audiencia="mujer" class="${audiencia === "mujer" ? "is-sel" : ""}">Mujer</button>
+                    <button type="button" data-audiencia="hombre" class="${audiencia === "hombre" ? "is-sel" : ""}">Hombre</button>
+                    <button type="button" data-audiencia="unisex" class="${audiencia === "unisex" ? "is-sel" : ""}">Unisex</button>
+                  </div>
+                </div>
+                <div class="piloto-strategy__section">
+                  <div class="piloto-strategy__section-head"><div><span>02</span><h3>Ángulo de venta</h3></div><p>Elegí la lectura comercial que mejor encaja con este producto.</p></div>
+                  <div class="piloto-strategy__angles" id="angulos">
+                    ${angulos.map(([k, t, d]) => `<button type="button" data-angulo-preset="${k}" class="piloto-strategy__angle ${preset === k ? "is-sel" : ""}"><i></i><b>${t}</b><small>${d}</small></button>`).join("")}
+                  </div>
+                </div>
+                <div class="piloto-strategy__section piloto-strategy__section--note">
+                  <div class="piloto-strategy__section-head"><div><span>03</span><h3>Contexto opcional</h3></div><p>Agregá un detalle que ayude a orientar el primer borrador.</p></div>
+                  <textarea id="angulo-extra" rows="3" placeholder="Ejemplo: para madres primerizas, oficinas pequeñas o piel sensible.">${esc(detalleInicial)}</textarea>
+                  <input type="hidden" id="angulo" value="${esc(anguloInicial)}">
+                </div>
+              </section>
+
+              <aside class="piloto-strategy__context" aria-label="Resumen de la estrategia">
+                <section class="piloto-strategy__product"><span>PRODUCTO</span><div><figure>${p.imagen ? `<img src="${esc(p.imagen)}" alt="${esc(p.titulo)}" loading="lazy">` : ico("bolsa")}</figure><div><strong id="f-titulo">${esc(p.titulo)}</strong><small id="f-meta">Cargando…</small></div></div><p id="f-desc">La descripción del proveedor se usa solo para preparar el borrador.</p></section>
+                <section class="piloto-strategy__summary"><span>ESTRATEGIA ELEGIDA</span><div class="strategy-chips"><span id="chip-audiencia">${esc(audienciaTexto[audiencia] || "Unisex")}</span><span id="chip-angulo">${esc(textoAngulo(preset))}</span></div><p>La plantilla del próximo paso usa estas decisiones como guía inicial.</p></section>
+                <section class="piloto-strategy__settings"><label>Idioma<s-select id="idioma" value="${esc(estado.idiomaPagina || "es")}"><s-option value="es">Español</s-option><s-option value="en">English</s-option><s-option value="pt">Português</s-option></s-select></label><label>Color de acento<div id="tema-previo">${swatchesTema(estado.temaElegido === "auto" ? null : estado.temaElegido)}</div></label></section>
+                <section class="piloto-strategy__media"><span>MEDIOS DEL PRODUCTO</span><div class="medios medios--compactos" id="medios"><span class="ayuda">Cargando…</span></div><p id="nota-medios"></p></section>
+                ${p.estado ? `<s-button id="abrir">Editar la página existente</s-button>` : ""}
+              </aside>
             </div>
           </section>
-
-          <aside class="estrategia__side" aria-label="Preparación de generación">
-            <section class="side-card side-card--producto">
-              <span class="side-card__label">Producto</span>
-              <div class="side-prod">
-                <span class="side-prod__img">${p.imagen ? `<img src="${esc(p.imagen)}" alt="${esc(p.titulo)}" loading="lazy">` : ico("bolsa")}</span>
-                <div>
-                  <strong id="f-titulo">${esc(p.titulo)}</strong>
-                  <small id="f-meta">Cargando...</small>
-                </div>
-              </div>
-              <p id="f-desc">La descripción del proveedor se lee al generar y no se muestra al cliente.</p>
-            </section>
-
-            <section class="side-card side-card--resumen">
-              <span class="side-card__label">Tu estrategia</span>
-              <div class="strategy-chips">
-                <span id="chip-audiencia">${esc(audienciaTexto[audiencia] || "Unisex")}</span>
-                <span id="chip-angulo">${esc(textoAngulo(preset))}</span>
-                <span>Copy editable</span>
-              </div>
-              <p>La plantilla del próximo paso toma esta estrategia como guía visual.</p>
-            </section>
-
-            <section class="side-card">
-              <span class="side-card__label">Idioma</span>
-              <s-select id="idioma" value="${esc(estado.idiomaPagina || "es")}">
-                <s-option value="es">Español</s-option>
-                <s-option value="en">English</s-option>
-                <s-option value="pt">Português</s-option>
-              </s-select>
-            </section>
-
-            <section class="side-card">
-              <span class="side-card__label">Color de acento</span>
-              <div id="tema-previo">${swatchesTema(estado.temaElegido === "auto" ? null : estado.temaElegido)}</div>
-            </section>
-
-            <section class="side-card">
-              <span class="side-card__label">Medios</span>
-              <div class="medios medios--compactos" id="medios"><span class="ayuda">Cargando...</span></div>
-              <div class="nota" id="nota-medios"></div>
-            </section>
-
-            <s-button variant="primary" id="continuar">Continuar a plantillas</s-button>
-            ${p.estado ? `<s-button id="abrir">Editar la página existente</s-button>` : ""}
-          </aside>
         </div>
       </div>`;
 
@@ -1219,7 +1182,6 @@
       ir("plantillas");
     };
     $("continuar").onclick = continuarPlantillas;
-    $("continuar-top").onclick = continuarPlantillas;
     const auds = $("audiencias");
     if (auds) auds.onclick = (e) => {
       const b = e.target.closest("[data-audiencia]");
