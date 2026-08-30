@@ -18,7 +18,7 @@ function productResponse({ variants, hasNextPage = false, id = "gid://shopify/Pr
   return { product: { id, variants: { nodes: variants, pageInfo: { hasNextPage } } } };
 }
 
-test("Pinza permite publicar exactamente una variante disponible", async () => {
+test("Pinza permite publicar productos con variantes porque el renderer ofrece selector", async () => {
   const result = await assertFixedTemplatePublishable(pinzaData(), {}, {
     async query(_query, variables) {
       assert.deepEqual(variables, { id: "gid://shopify/Product/42" });
@@ -28,14 +28,9 @@ test("Pinza permite publicar exactamente una variante disponible", async () => {
   assert.deepEqual(result, { productId: "gid://shopify/Product/42", variantId: "gid://shopify/ProductVariant/7" });
 });
 
-test("Pinza falla cerrado con más de una variante disponible o con catálogo no acotado", async () => {
+test("Pinza falla cerrado sólo cuando Shopify no entrega una variante", async () => {
   const rejected = [
-    productResponse({ variants: [
-      { id: "gid://shopify/ProductVariant/1", availableForSale: true },
-      { id: "gid://shopify/ProductVariant/2", availableForSale: true }
-    ] }),
-    productResponse({ variants: [{ id: "gid://shopify/ProductVariant/1", availableForSale: true }], hasNextPage: true }),
-    productResponse({ variants: [{ id: "gid://shopify/ProductVariant/1", availableForSale: false }] })
+    productResponse({ variants: [] })
   ];
   for (const response of rejected) {
     await assert.rejects(

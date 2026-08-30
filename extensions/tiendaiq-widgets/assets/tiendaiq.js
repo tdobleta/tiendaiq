@@ -1947,6 +1947,7 @@
             currency: source.moneda || "",
             variantId: window.TIENDAIQ_VARIANT || null,
             money: window.TIENDAIQ_VARIANT_MONEY || null,
+            variants: Array.isArray(window.TIENDAIQ_VARIANTS) ? window.TIENDAIQ_VARIANTS : [],
             media
           },
           content: {
