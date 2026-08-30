@@ -1910,7 +1910,12 @@
       if (!window[fixedRuntime]) {
         await new Promise((resolve, reject) => {
           const script = document.createElement("script");
-          script.src = `${window.TIENDAIQ_ASSET_BASE || ""}${isPilotoPinza ? "tiq-piloto-pinzapilot-v1.js" : "tiq-pinzapilot-v1.js"}`;
+          // En storefront Liquid provee la base CDN de assets. El canvas del
+          // editor, en cambio, vive bajo /preview/ y debe cargar el mismo
+          // runtime desde /widgets/; sin esta base el navegador pedía
+          // /preview/tiq-…js y el canvas quedaba vacío.
+          const assetBase = window.TIENDAIQ_ASSET_BASE || (MODO_APP ? "/widgets/" : "");
+          script.src = `${assetBase}${isPilotoPinza ? "tiq-piloto-pinzapilot-v1.js" : "tiq-pinzapilot-v1.js"}`;
           script.defer = true;
           script.onload = resolve;
           script.onerror = () => reject(new Error("No se pudo cargar el runtime de la plantilla fija"));
