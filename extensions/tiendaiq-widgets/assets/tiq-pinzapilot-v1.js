@@ -49,15 +49,38 @@
   }
 
   function applyEvidenceGates(root, evidence) {
-    if (!evidence.reviews) hide(root, [".rating-line", ".featured-review", ".reviews"]);
-    if (!evidence.ugc) hide(root, [".ugc-title", ".ugc-row"]);
-    if (!evidence.policies) hide(root, [".assurances", ".guarantee"]);
-    if (!evidence.statistics) hide(root, [".problem"]);
-    if (!evidence.logos) hide(root, [".logo-strip"]);
-    if (!evidence.comparison) hide(root, [".comparison"]);
-    // Payment methods must reflect the merchant's checkout configuration.
-    // The source badges are not an authority for what a shop accepts.
-    if (!evidence.payments) hide(root, [".payments"]);
+    // This frozen source has structural slots for evidence, but no structured
+    // merchant payload for its individual review, UGC, policy, comparison or
+    // payment records yet. An attestation alone must never revive the
+    // sanitized source text as if it were real evidence.
+    hide(root, [
+      ".rating-line", ".featured-review", ".ugc-title", ".ugc-row", ".reviews",
+      ".assurances", ".guarantee", ".problem", ".logo-strip", ".comparison", ".payments"
+    ]);
+  }
+
+  function hideUnboundContent(root, view) {
+    const content = view.content || {};
+    const feature = content.feature;
+    const iconItems = Array.isArray(content.iconItems) ? content.iconItems : [];
+
+    // Source-derived copy is intentionally replaced during import. A section
+    // remains visible only when the page data provides its own content.
+    hide(root, [".micro-label"]);
+    if (!content.timeline) hide(root, [".timeline"]);
+    else hide(root, [".timeline .week-list"]);
+    if (!feature) hide(root, [".feature-card-section"]);
+    if (!iconItems.length) {
+      hide(root, [".simplicity", ".steps"]);
+    } else {
+      const title = feature?.titular || view.product?.title || "";
+      const description = feature?.parrafo || feature?.subtitulo || view.product?.description || "";
+      text(root, ".simplicity .section-title", title);
+      text(root, ".simplicity .section-copy", description);
+      text(root, ".steps .section-title", title);
+      text(root, ".steps .section-copy", description);
+    }
+    if (!content.faq?.items?.length) hide(root, [".faq"]);
   }
 
   function bindGallery(root, view) {
@@ -205,6 +228,7 @@
     bindGallery(root, view);
     bindCopy(root, view);
     applyEvidenceGates(root, view.evidence || {});
+    hideUnboundContent(root, view);
     root.querySelectorAll(".cta").forEach((button) => { button.lastChild.textContent = view.content.cta; });
     root.addEventListener("click", cartAction(host, view));
     const sticky = root.querySelector("#stickyCart");

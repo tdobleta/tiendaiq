@@ -56,6 +56,8 @@ test("Piloto Pinza conserva el ZIP canónico y distribuye sólo su derivado sin 
   assert.doesNotMatch(artifact, /<script/i);
   assert.match(artifact, /class="hero"/);
   assert.equal(PILOTO_PINZA_PAGEPILOT_EDITOR_CONTRACT_V1.template.id, "piloto/pinza-pagepilot");
+  assert.match(runtime, /hideUnboundContent/, "los huecos sin contenido real deben desaparecer del render");
+  assert.match(runtime, /\.featured-review/, "la evidencia de muestra debe permanecer apagada sin payload estructurado");
 });
 
 test("el importador quita hotlinks y scripts, sin rediseñar el HTML fijo", () => {
