@@ -884,7 +884,7 @@
           <span class="crear-prod__txt">
             <span class="crear-prod__label">Producto de Shopify</span>
             <strong>Elegí el producto que querés convertir en una página de venta</strong>
-            <span>TiendaIQ toma sus fotos, precio, variantes y descripción como punto de partida.</span>
+            <span>Piloto toma sus fotos, precio, variantes y descripción como punto de partida.</span>
           </span>
         </div>`;
 
@@ -900,8 +900,8 @@
           <section class="crear-hero-panel">
             <div class="crear-hero-panel__copy">
               <span class="crear__eyebrow">Páginas con IA para Shopify</span>
-              <h1>Una página mejor para cada producto</h1>
-              <p>Elegí un producto. TiendaIQ prepara copy, estructura e imágenes listas para editar.</p>
+              <h1>Empezá por el producto correcto.</h1>
+              <p>Piloto convierte la información real de tu catálogo en una primera versión lista para revisar.</p>
             </div>
 
             <div class="crear-visual" aria-label="Productos del catálogo">
@@ -924,8 +924,8 @@
             </div>
 
             <div class="crear-market-note">
-              <b>Dropshipping, con mejor ejecución</b>
-              <p>El modelo creció fuerte en Estados Unidos y Europa. En Sudamérica todavía hay espacio para marcas que validan rápido, comunican claro y publican páginas mejores antes que el resto.</p>
+              <b>Tu catálogo es el punto de partida.</b>
+              <p>Usamos la información del producto que elijas. Después vas a definir el enfoque y la plantilla antes de generar el borrador.</p>
             </div>
 
             <div class="crear-flow crear-flow--rail" aria-label="Preparación de la página">
