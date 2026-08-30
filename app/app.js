@@ -363,8 +363,8 @@
 
     // ⚠ Reemplazar por la URL real de la comunidad (TikTok del usuario).
     const TIKTOK_URL = "https://www.tiktok.com/@tiendaiq";
-    if (window.TiendaIQHomeV2) {
-      window.TiendaIQHomeV2.mount({
+    if (window.TiendaIQPagePilotHome) {
+      window.TiendaIQPagePilotHome.mount({
         root: vista,
         data: {
           created: creadas,
