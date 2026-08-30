@@ -1,0 +1,3 @@
+# The fixed visual artifact is hash-pinned to the merchant-provided ZIP.
+# Keep its original bytes rather than applying platform line-ending conversion.
+template-sources/piloto-pinzapilot-v1/index.html -text

@@ -65,7 +65,7 @@ function createGeneratePageHandler({ sessions, generations, pages, generate, met
     },
 
     async run(job, { signal } = {}) {
-      const { reservationId, productId, idioma = "es", angulo = "", estilo = "clasico" } = job.payload || {};
+      const { reservationId, productId, idioma = "es", angulo = "", estilo = "piloto-pinza" } = job.payload || {};
       const pageId = pageIdFromProduct(productId);
       if (!reservationId || !pageId) {
         const error = new Error("El job de generación está incompleto");

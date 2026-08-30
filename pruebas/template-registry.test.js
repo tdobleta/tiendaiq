@@ -11,9 +11,6 @@ const {
 
 test("las plantillas activas resuelven a un descriptor versionado estable", () => {
   const expected = [
-    ["clasico", "tiendaiq/classic", "classic", "active"],
-    ["premium", "tiendaiq/premium", "premium", "active"],
-    ["performance-story", "tiendaiq/performance-story", "performance-story", "active"],
     ["piloto-pinza", "piloto/pinza-pagepilot", "piloto-pinza", "active"]
   ];
 
@@ -27,7 +24,7 @@ test("las plantillas activas resuelven a un descriptor versionado estable", () =
 });
 
 test("las plantillas retiradas siguen siendo legibles, pero no se pueden crear", () => {
-  for (const style of ["pagepilot", "pagepilot-blue", "pinza-pagepilot"]) {
+  for (const style of ["clasico", "premium", "performance-story", "pagepilot", "pagepilot-blue", "pinza-pagepilot"]) {
     assert.throws(
       () => resolveTemplateForCreation(style),
       (error) => error instanceof TemplateContractError

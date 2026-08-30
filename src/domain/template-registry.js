@@ -10,21 +10,21 @@ const TEMPLATE_REGISTRY = Object.freeze([
     version: 1,
     legacyStyle: "clasico",
     rendererKey: "classic",
-    status: "active"
+    status: "frozen"
   }),
   Object.freeze({
     id: "tiendaiq/premium",
     version: 1,
     legacyStyle: "premium",
     rendererKey: "premium",
-    status: "active"
+    status: "frozen"
   }),
   Object.freeze({
     id: "tiendaiq/performance-story",
     version: 1,
     legacyStyle: "performance-story",
     rendererKey: "performance-story",
-    status: "active"
+    status: "frozen"
   }),
   // A fixed visual artifact imported from a merchant-provided source. Unlike
   // the older PagePilot aliases below, this is an actively maintained TiendaIQ
@@ -99,8 +99,8 @@ function resolveStoredTemplate(global = {}) {
 // Las entradas nuevas no aceptan strings desconocidos. Antes este caso caía
 // silenciosamente a Clásico después de llamar al proveedor de IA, ocultando un
 // error de producto y pudiendo gastar una generación que no correspondía.
-function resolveTemplateForCreation(style = "clasico") {
-  const normalized = typeof style === "string" && style.trim() ? style.trim() : "clasico";
+function resolveTemplateForCreation(style = "piloto-pinza") {
+  const normalized = typeof style === "string" && style.trim() ? style.trim() : "piloto-pinza";
   const entry = byLegacyStyle(normalized);
   if (!entry) throw new TemplateContractError("La plantilla solicitada no está soportada");
   // "frozen" conserva compatibilidad de lectura para páginas históricas, pero
