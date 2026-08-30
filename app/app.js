@@ -1271,28 +1271,12 @@
     // generación nueva: no deben volver a entrar al catálogo comercial.
     const plantillas = [
       {
-        id: "clasico",
-        nombre: "Clásico",
-        subtitulo: "Estructura limpia para validar rápido.",
-        tags: ["Hero", "Beneficios", "FAQ"],
+        id: "piloto-pinza",
+        nombre: "Piloto Pinza",
+        subtitulo: "Diseño fijo de alta conversión, adaptado a los datos reales de tu producto.",
+        tags: ["Galería", "Beneficios", "FAQ", "Carrito"],
         activa: true,
-        tipo: "clasico"
-      },
-      {
-        id: "premium",
-        nombre: "Premium",
-        subtitulo: "Más secciones para productos que necesitan explicación.",
-        tags: ["Hero", "Beneficios", "FAQ"],
-        activa: true,
-        tipo: "premium"
-      },
-      {
-        id: "performance-story",
-        nombre: "Performance Story",
-        subtitulo: "Para productos técnicos que se explican con claridad y detalle.",
-        tags: ["Producto", "Detalles", "FAQ"],
-        activa: true,
-        tipo: "performance-story"
+        tipo: "piloto-pinza"
       }
     ];
 
@@ -1419,7 +1403,7 @@
       producto_id: estado.producto.id,
       idioma,
       angulo,
-      estilo: estado.modeloPagina || "clasico"
+      estilo: estado.modeloPagina || "piloto-pinza"
     };
     const tema = estado.temaElegido || "auto";
     const fingerprint = JSON.stringify({ ...body, tema });
@@ -3316,7 +3300,9 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
 
   function esPlantillaPinzaFija() {
     const global = estado.pagina?.data?.global || {};
-    return global.template?.id === "tiendaiq/pinza-pagepilot" || global.estilo === "pinza-pagepilot";
+    return global.template?.id === "tiendaiq/pinza-pagepilot" ||
+      global.template?.id === "piloto/pinza-pagepilot" ||
+      global.estilo === "pinza-pagepilot" || global.estilo === "piloto-pinza";
   }
 
   // El inspector de una plantilla fija nunca llama al formulario genérico: ese
