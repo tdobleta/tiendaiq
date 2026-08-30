@@ -198,12 +198,66 @@
     }
   }
 
+  function bindVariants(root, view) {
+    const variants = Array.isArray(view.product.variants)
+      ? view.product.variants.filter((variant) => variant && variant.id != null)
+      : [];
+    const realChoices = variants.filter((variant) => String(variant.title || "") !== "Default Title");
+    if (realChoices.length < 2) return;
+
+    const selectedId = String(view.product.variantId || "");
+    const initial = realChoices.find((variant) => String(variant.id) === selectedId)
+      || realChoices.find((variant) => variant.available !== false)
+      || realChoices[0];
+    const productInfo = root.querySelector(".product-info");
+    const priceRow = root.querySelector(".price-row");
+    if (!productInfo || !priceRow) return;
+
+    const picker = document.createElement("label");
+    picker.className = "tiq-variant-picker";
+    const label = document.createElement("span");
+    label.textContent = "Elegí una opción";
+    const select = document.createElement("select");
+    select.name = "id";
+    select.dataset.tiqVariantSelect = "";
+    realChoices.forEach((variant) => {
+      const option = document.createElement("option");
+      option.value = String(variant.id);
+      option.textContent = variant.available === false ? `${variant.title} — Agotado` : String(variant.title || "");
+      option.disabled = variant.available === false;
+      select.append(option);
+    });
+    picker.append(label, select);
+    priceRow.before(picker);
+
+    const selectVariant = (variant) => {
+      view.product.variantId = variant.id;
+      view.product.price = variant.price ?? view.product.price;
+      view.product.compareAtPrice = variant.compareAtPrice ?? null;
+      view.product.money = variant.money || money(view);
+      const price = root.querySelector(".price-row strong");
+      if (price) price.textContent = money(view);
+      const canBuy = variant.available !== false;
+      root.querySelectorAll(".cta").forEach((button) => {
+        button.toggleAttribute("aria-disabled", !canBuy);
+        button.classList.toggle("tiq-variant-unavailable", !canBuy);
+      });
+    };
+    select.value = String(initial.id);
+    selectVariant(initial);
+    select.addEventListener("change", () => {
+      const next = realChoices.find((variant) => String(variant.id) === select.value);
+      if (next) selectVariant(next);
+    });
+  }
+
   function cartAction(host, view) {
-    const variantId = view.product.variantId;
     return async (event) => {
       const button = event.target.closest(".cta");
       if (!button) return;
       event.preventDefault();
+      if (button.getAttribute("aria-disabled") === "true") return;
+      const variantId = view.product.variantId;
       if (!variantId) {
         host.dispatchEvent(new CustomEvent("tiendaiq:select-variant", { bubbles: true }));
         return;
@@ -227,6 +281,7 @@
   function bind(root, view, host) {
     bindGallery(root, view);
     bindCopy(root, view);
+    bindVariants(root, view);
     applyEvidenceGates(root, view.evidence || {});
     hideUnboundContent(root, view);
     root.querySelectorAll(".cta").forEach((button) => { button.lastChild.textContent = view.content.cta; });
@@ -245,7 +300,7 @@
     const shadow = host.shadowRoot || host.attachShadow({ mode: "open" });
     shadow.replaceChildren();
     const hostStyle = document.createElement("style");
-    hostStyle.textContent = `:host { --ink:#313131; --muted:#6a6a6a; --line:#dedede; --cream:#fff8df; --cream-2:#fff3c8; --yellow:#ffcd00; --orange:#d95c08; --dark:#343434; --blue:#1896ff; --shadow:0 16px 38px rgba(20,20,20,.08); --max:1180px; display:block; color:var(--ink); background:#fff; font-family:Arial,Helvetica,sans-serif; font-size:14px; line-height:1.42; } :host *, :host *::before, :host *::after { box-sizing:border-box; } :host img, :host video { display:block; max-width:100%; } :host button, :host a { font:inherit; }`;
+    hostStyle.textContent = `:host { --ink:#313131; --muted:#6a6a6a; --line:#dedede; --cream:#fff8df; --cream-2:#fff3c8; --yellow:#ffcd00; --orange:#d95c08; --dark:#343434; --blue:#1896ff; --shadow:0 16px 38px rgba(20,20,20,.08); --max:1180px; display:block; color:var(--ink); background:#fff; font-family:Arial,Helvetica,sans-serif; font-size:14px; line-height:1.42; } :host *, :host *::before, :host *::after { box-sizing:border-box; } :host img, :host video { display:block; max-width:100%; } :host button, :host a { font:inherit; } .tiq-variant-picker { display:grid; gap:7px; margin:18px 0 14px; color:var(--ink); font-size:13px; font-weight:800; } .tiq-variant-picker select { width:100%; min-height:45px; padding:0 12px; border:1px solid var(--line); border-radius:9px; background:#fff; color:var(--ink); font:inherit; font-weight:600; } .cta.tiq-variant-unavailable { opacity:.5; pointer-events:none; }`;
     shadow.append(hostStyle);
     for (const style of documentTemplate.head.querySelectorAll("style")) shadow.append(style.cloneNode(true));
     for (const node of documentTemplate.body.children) shadow.append(node.cloneNode(true));

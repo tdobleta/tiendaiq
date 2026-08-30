@@ -4,15 +4,14 @@ const { gql } = require("../../shopify");
 const { resolveStoredTemplate } = require("../domain/template-registry");
 const { PINZA_PAGEPILOT_V1, PILOTO_PINZA_PAGEPILOT_V1 } = require("../domain/fixed-template-manifest");
 
-// Pinza v1 renders Shopify's selected_or_first_available_variant and does not
-// expose a picker. Publishing it for a catalog with several purchasable
-// variants would make the storefront silently choose one for the buyer.
+// The fixed runtime renders the product's own variant list. The guard only
+// verifies that the durable product reference is real before assigning its
+// Shopify product template; choice and availability remain live storefront data.
 const PRODUCT_VARIANTS_QUERY = `query FixedTemplatePublishVariantCheck($id: ID!) {
   product(id: $id) {
     id
-    variants(first: 2) {
-      nodes { id availableForSale }
-      pageInfo { hasNextPage }
+    variants(first: 1) {
+      nodes { id }
     }
   }
 }`;
@@ -54,15 +53,13 @@ async function assertFixedTemplatePublishable(data, session, { signal, query = g
   }
 
   const variants = product.variants?.nodes || [];
-  const hasMoreVariants = product.variants?.pageInfo?.hasNextPage === true;
-  const available = variants.filter((variant) => variant?.availableForSale === true);
-  if (hasMoreVariants || available.length !== 1) {
+  if (variants.length === 0) {
     throw new FixedTemplatePublishError(
-      "La plantilla Pinza sólo puede publicarse con exactamente una variante disponible; elegí un producto simple o usá una plantilla con selector de variantes"
+      "La plantilla Pinza necesita al menos una variante Shopify antes de publicarse"
     );
   }
 
-  return Object.freeze({ productId, variantId: String(available[0].id) });
+  return Object.freeze({ productId, variantId: String(variants[0].id) });
 }
 
 module.exports = Object.freeze({

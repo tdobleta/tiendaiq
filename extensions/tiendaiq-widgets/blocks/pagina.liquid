@@ -39,6 +39,19 @@
     window.TIENDAIQ_DATA = {{ product.metafields.tiendaiq.pagina.value | json }};
     window.TIENDAIQ_VARIANT = {{ product.selected_or_first_available_variant.id | json }};
     window.TIENDAIQ_VARIANT_MONEY = {{ product.selected_or_first_available_variant.price | money | json }};
+    window.TIENDAIQ_VARIANTS = [
+      {%- for variant in product.variants -%}
+        {
+          id: {{ variant.id | json }},
+          title: {{ variant.title | json }},
+          available: {{ variant.available | json }},
+          price: {{ variant.price | times: 0.01 | json }},
+          money: {{ variant.price | money | json }},
+          compareAtPrice: {{ variant.compare_at_price | times: 0.01 | json }},
+          compareAtMoney: {{ variant.compare_at_price | money | json }}
+        }{% unless forloop.last %},{% endunless %}
+      {%- endfor -%}
+    ];
     window.TIENDAIQ_PRODUCT_ID = {{ product.id | json }};
     {% comment %} Base de assets de la extensión: solo se usa si algún avatar
        quedó como nombre de archivo suelto (páginas viejas). Las páginas nuevas
