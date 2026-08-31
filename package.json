@@ -26,6 +26,7 @@
     "carga:anthropic": "node scripts/probar-capacidad-anthropic.js",
     "ops:readiness": "node scripts/probar-readiness-operativa.js",
     "ops:requeue-compensation": "node scripts/reencolar-compensacion.js",
+    "audit:legacy-review-avatars": "node scripts/inventariar-avatares-publicados.js",
     "probar": "npm run verificar && npm run coherencia && npm run unidad && npm run humo"
   },
   "engines": {

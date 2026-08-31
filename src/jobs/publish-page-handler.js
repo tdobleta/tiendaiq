@@ -30,25 +30,16 @@ function createPublishPageHandler({ sessions, pages, publish, metrics }) {
 
       const wasPublished = job.payload?.previousState === "publicada";
       const publishedData = structuredClone(page.data);
-      const originalAvatar = publishedData?.facetas?.hero?.resena_destacada?.avatar;
-      const checkpointAvatar = async (avatarUrl, previousAvatar) => {
-        await pages.checkpointAvatar(job.tenant, pageId, job.id, previousAvatar, avatarUrl);
-      };
       const { url, publishedHash } = await publish(publishedData, session, undefined, {
-        signal,
-        onAvatarUploaded: checkpointAvatar
+        signal
       });
       if (!/^[a-f0-9]{64}$/.test(publishedHash || "")) {
         const error = new Error("La publicación no confirmó el hash exacto enviado a Shopify");
         error.nonRetryable = true;
         throw error;
       }
-      const publishedAvatar = publishedData?.facetas?.hero?.resena_destacada?.avatar;
-
       const completion = await pages.completePublication(job.tenant, pageId, job.id, {
         url,
-        originalAvatar,
-        publishedAvatar,
         publishedHash
       });
       if (!completion) {

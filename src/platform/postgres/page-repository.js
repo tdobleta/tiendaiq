@@ -177,21 +177,8 @@ function createPageRepository(pool) {
       });
     },
 
-    async checkpointPublicationAvatar(context, id, activeJobId, previousAvatar, uploadedAvatar) {
+    async completePublication(context, id, activeJobId, { url, publishedHash }) {
       return mutateOwnedPage(context, id, activeJobId, (page) => {
-        const review = page.data?.facetas?.hero?.resena_destacada;
-        if (!review || review.avatar !== previousAvatar) return null;
-        review.avatar = uploadedAvatar;
-        return page;
-      });
-    },
-
-    async completePublication(context, id, activeJobId, { url, originalAvatar, publishedAvatar, publishedHash }) {
-      return mutateOwnedPage(context, id, activeJobId, (page) => {
-        const review = page.data?.facetas?.hero?.resena_destacada;
-        if (review && publishedAvatar !== originalAvatar && review.avatar === originalAvatar) {
-          review.avatar = publishedAvatar;
-        }
         page.estado = "publicada";
         page.url_publica = url;
         page.active_job_id = null;
