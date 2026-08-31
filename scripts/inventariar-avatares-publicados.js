@@ -68,7 +68,7 @@ function resumirReferencia(row, { includeUrls = false } = {}) {
   return summary;
 }
 
-async function inventariarAvatares({ databaseUrl, caCertificate, PoolImplementation = Pool, includeUrls = false } = {}) {
+async function inventariarAvatares({ databaseUrl, caCertificate, PoolImplementation = Pool, includeUrls = false, summaryOnly = false } = {}) {
   if (!databaseUrl) throw new Error("MIGRATION_DATABASE_URL es obligatoria");
   const pool = createPostgresPool({ databaseUrl, caCertificate, Pool: PoolImplementation });
   try {
@@ -77,17 +77,18 @@ async function inventariarAvatares({ databaseUrl, caCertificate, PoolImplementat
       pool.query(PAGE_VERSION_SUMMARY_QUERY)
     ]);
     const referencias = result.rows.map((row) => resumirReferencia(row, { includeUrls }));
-    return {
+    const inventory = {
       ok: true,
       modo: "solo_lectura",
       total: referencias.length,
-      referencias,
       pageVersions: versionSummary.rows[0] || {
         total_versiones: 0,
         versiones_de_paginas_publicadas: 0,
         versiones_publicadas_con_avatar: 0
       }
     };
+    if (!summaryOnly) inventory.referencias = referencias;
+    return inventory;
   } finally {
     await pool.end();
   }
@@ -95,13 +96,15 @@ async function inventariarAvatares({ databaseUrl, caCertificate, PoolImplementat
 
 async function main() {
   const includeUrls = process.argv.includes("--include-urls");
+  const summaryOnly = process.argv.includes("--summary");
   if (includeUrls && process.env.ALLOW_AVATAR_URL_OUTPUT !== "1") {
     throw new Error("Para mostrar URLs completas definí ALLOW_AVATAR_URL_OUTPUT=1");
   }
   const inventory = await inventariarAvatares({
     databaseUrl: env.MIGRATION_DATABASE_URL,
     caCertificate: env.PG_CA_CERT,
-    includeUrls
+    includeUrls,
+    summaryOnly
   });
   console.log(JSON.stringify(inventory, null, 2));
 }
