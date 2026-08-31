@@ -549,22 +549,6 @@ async function encolarDespublicacionDB(context, id, options = {}) {
   return { page: updatedPage, job, reused: false, conflict: false };
 }
 
-async function checkpointAvatarPublicacionDB(context, id, activeJobId, previousAvatar, uploadedAvatar) {
-  const tenant = requireTenantContext(context);
-  if (USA_PG) {
-    const p = await pg();
-    pageRepository ||= createPageRepository(p);
-    return pageRepository.checkpointPublicationAvatar(tenant, id, activeJobId, previousAvatar, uploadedAvatar);
-  }
-  const page = await leerPaginaDB(tenant, id);
-  if (!page || page.active_job_id !== activeJobId) return null;
-  const review = page.data?.facetas?.hero?.resena_destacada;
-  if (!review || review.avatar !== previousAvatar) return { page, skipped: true };
-  review.avatar = uploadedAvatar;
-  await guardarPaginaDB(tenant, id, page);
-  return { page, replayed: false };
-}
-
 async function completarPublicacionPaginaDB(context, id, activeJobId, result) {
   const tenant = requireTenantContext(context);
   if (USA_PG) {
@@ -576,10 +560,6 @@ async function completarPublicacionPaginaDB(context, id, activeJobId, result) {
   if (!page) return null;
   if (page.last_completed_job_id === activeJobId) return { page, replayed: true };
   if (page.active_job_id !== activeJobId) return null;
-  const review = page.data?.facetas?.hero?.resena_destacada;
-  if (review && result.publishedAvatar !== result.originalAvatar && review.avatar === result.originalAvatar) {
-    review.avatar = result.publishedAvatar;
-  }
   page.estado = "publicada";
   page.url_publica = result.url;
   page.active_job_id = null;
@@ -1774,7 +1754,7 @@ module.exports = {
   incrementarUsoDB, decrementarUsoDB, actualizarCamposTiendaDB,
   guardarPaginaDB, leerPaginaDB, marcarPublicacionFallidaDB,
   encolarPublicacionDB, encolarDespublicacionDB,
-  checkpointAvatarPublicacionDB, completarPublicacionPaginaDB, completarDespublicacionPaginaDB,
+  completarPublicacionPaginaDB, completarDespublicacionPaginaDB,
   listarPaginasDB,
   guardarEstadoDB, consumirEstadoDB,
   encolarJobDB, encolarJobExclusivoDB, leerJobDB, reclamarJobDB, renovarLeaseJobDB, completarJobDB, fallarJobDB,

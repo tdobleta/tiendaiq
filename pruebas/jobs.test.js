@@ -728,7 +728,6 @@ describe("PublishPageHandler", () => {
       sessions: { async get() { return { tienda: tenant.tenantId, token: "token" }; } },
       pages: {
         async get() { return structuredClone(page); },
-        async checkpointAvatar() {},
         async completePublication(context, pageId, activeJobId, result) {
           saved = {
             context,
@@ -759,7 +758,6 @@ describe("PublishPageHandler", () => {
         async get() {
           return { id: "42", estado: "publicando", active_job_id: "job-1", data: { fuente: {} } };
         },
-        async checkpointAvatar() {},
         async completePublication() { completions += 1; }
       },
       async publish() { return { url: "https://jobs.myshopify.com/products/demo" }; },
@@ -782,7 +780,6 @@ describe("PublishPageHandler", () => {
       sessions: { async get() { return { tienda: tenant.tenantId, token: "token" }; } },
       pages: {
         async get() { return structuredClone(before); },
-        async checkpointAvatar() {},
         async completePublication(context, pageId, activeJobId, result) {
           saved = { ...structuredClone(after), estado: "publicada", active_job_id: null, url_publica: result.url, cambios_sin_publicar: true };
           return { page: saved };
@@ -802,38 +799,25 @@ describe("PublishPageHandler", () => {
     assert.equal(saved.estado, "publicada");
   });
 
-  test("persiste la URL del avatar subida sin pisar otras ediciones", async () => {
-    const review = (avatar, title) => ({
-      facetas: { hero: { resena_destacada: { avatar, titulo: title } } }
-    });
+  test("no ofrece un checkpoint de avatar al publicador", async () => {
     const before = {
       id: "42",
       estado: "publicando",
       active_job_id: "job-1",
-      data: review("data:image/png;base64,local", "Original")
+      data: { titulo: "Original" }
     };
-    const after = {
-      ...structuredClone(before),
-      data: review("data:image/png;base64,local", "Editado mientras publicaba")
-    };
-    let reads = 0;
-    let saved;
+    let completion;
     const handler = createPublishPageHandler({
       sessions: { async get() { return { tienda: tenant.tenantId, token: "token" }; } },
       pages: {
         async get() { return structuredClone(before); },
-        async checkpointAvatar() {},
         async completePublication(context, pageId, activeJobId, result) {
-          saved = structuredClone(after);
-          saved.data.facetas.hero.resena_destacada.avatar = result.publishedAvatar;
-          saved.estado = "publicada";
-          saved.active_job_id = null;
-          saved.cambios_sin_publicar = true;
-          return { page: saved };
+          completion = result;
+          return { page: before };
         }
       },
-      async publish(data) {
-        data.facetas.hero.resena_destacada.avatar = "https://cdn.shopify.com/avatar.png";
+      async publish(data, session, log, options) {
+        assert.equal(options.onAvatarUploaded, undefined);
         return { url: "https://jobs.myshopify.com/products/demo", publishedHash: "b".repeat(64) };
       },
       metrics() {}
@@ -841,9 +825,10 @@ describe("PublishPageHandler", () => {
 
     await handler.run(job({ id: "job-1", type: "publish-page", payload: { pageId: "42" } }));
 
-    assert.equal(saved.data.facetas.hero.resena_destacada.avatar, "https://cdn.shopify.com/avatar.png");
-    assert.equal(saved.data.facetas.hero.resena_destacada.titulo, "Editado mientras publicaba");
-    assert.equal(saved.cambios_sin_publicar, true);
+    assert.deepEqual(completion, {
+      url: "https://jobs.myshopify.com/products/demo",
+      publishedHash: "b".repeat(64)
+    });
   });
 
   test("el fallo terminal solo marca la página si el job sigue siendo el activo", async () => {

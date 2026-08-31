@@ -14,7 +14,6 @@ const {
   leerPaginaDB,
   guardarPaginaDB,
   marcarPublicacionFallidaDB,
-  checkpointAvatarPublicacionDB,
   completarPublicacionPaginaDB,
   completarDespublicacionPaginaDB,
   leerReservaGeneracionDB,
@@ -73,7 +72,6 @@ function createRuntime({
         await guardarPaginaDB(context, page.id, page);
         return page;
       },
-      checkpointAvatar: checkpointAvatarPublicacionDB,
       completePublication: completarPublicacionPaginaDB,
       markPublicationFailed: marcarPublicacionFallidaDB
     },

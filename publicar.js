@@ -5,7 +5,6 @@
 //
 // Compliant con el App Store: NO escribe en el tema. Hace dos cosas:
 //   1. Escribe el Producto Universal en el metafield tiendaiq.pagina
-//      (el avatar de la reseña se sube a Files de la tienda y queda su URL)
 //   2. Asigna al producto el templateSuffix "tiendaiq"
 //      (el campo que en el admin se ve como "Plantilla de tema")
 //
@@ -23,40 +22,21 @@ const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
 const { gql, sesionDeEnv } = require("./shopify");
-const { subirImagenTienda } = require("./imagenes");
 const { assertFixedTemplatePublishable } = require("./src/shopify/fixed-template-publish-guard");
 
 const RUTA_JSON = path.join(__dirname, "ultima-pagina.json");
-const DIR_PLANTILLA = path.join(__dirname, "plantilla-producto");
-const DIR_AVATARES = path.join(DIR_PLANTILLA, "avatares");
 
-// ---------- avatar ----------
-// El JSON trae una ruta local (avatares/xx.png). Se sube a Files de la tienda
-// y el JSON publicado guarda la URL del CDN (render.js la usa directo porque
-// empieza con http). Si el archivo local no existe, se re-elige uno al azar.
-
-const MIME = { ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp" };
-
-function resolverAvatar(rutaEnJson) {
-  let archivo = rutaEnJson ? path.join(DIR_PLANTILLA, rutaEnJson) : null;
-
-  if (!archivo || !fs.existsSync(archivo)) {
-    let candidatos = [];
-    try {
-      candidatos = fs.readdirSync(DIR_AVATARES).filter((f) => /\.(jpg|jpeg|png|webp)$/i.test(f));
-    } catch {
-      return null;
-    }
-    if (!candidatos.length) return null;
-    archivo = path.join(DIR_AVATARES, candidatos[Math.floor(Math.random() * candidatos.length)]);
+// Los avatares de personas no forman parte del contrato de publicación.
+// Nunca se elige ni se sube una imagen local como sustituto de una reseña.
+// Si una publicación histórica conserva una URL, se omite del nuevo metafield;
+// la limpieza de Files se hace aparte, desde un inventario revisado por tienda.
+function prepararDatosPublicacion(data) {
+  const dataTienda = JSON.parse(JSON.stringify(data));
+  const reseña = dataTienda?.facetas?.hero?.resena_destacada;
+  if (reseña && Object.prototype.hasOwnProperty.call(reseña, "avatar")) {
+    reseña.avatar = null;
   }
-
-  const ext = path.extname(archivo).toLowerCase();
-  return {
-    nombre: path.basename(archivo),
-    mime: MIME[ext] || "image/jpeg",
-    base64: fs.readFileSync(archivo).toString("base64")
-  };
+  return dataTienda;
 }
 
 // ---------- mutaciones ----------
@@ -77,7 +57,7 @@ const M_SUFIJO = `mutation($product: ProductUpdateInput!) {
 
 // Publica una página en la tienda de `sesion`.
 // `log` deja que el CLI escriba a consola y el server no.
-async function publicarPagina(data, sesion, log = () => {}, { signal, onAvatarUploaded } = {}) {
+async function publicarPagina(data, sesion, log = () => {}, { signal } = {}) {
   const idProducto = data.fuente.shopify_product_id;
 
   // This runs in the worker immediately before any remote mutation. It is the
@@ -85,47 +65,7 @@ async function publicarPagina(data, sesion, log = () => {}, { signal, onAvatarUp
   // changed or another API caller bypassed the web preflight.
   await assertFixedTemplatePublishable(data, sesion, { signal });
 
-  // --- copia para la tienda: el avatar pasa a ser URL del CDN de Files ---
-  const dataTienda = JSON.parse(JSON.stringify(data));
-  const avatarActual = data.facetas.hero.resena_destacada.avatar;
-  if (/^https?:\/\//.test(avatarActual || "")) {
-    // Re-publicación: el avatar ya está en Files de una vez anterior. Se reusa
-    // en vez de re-subirlo (evita acumular archivos huérfanos en la tienda).
-    dataTienda.facetas.hero.resena_destacada.avatar = avatarActual;
-    log(`  avatar     · reusado (ya en Files)`);
-  } else {
-    const avatar = resolverAvatar(avatarActual);
-    if (avatar) {
-      try {
-        const { url } = await subirImagenTienda(sesion, avatar.nombre, avatar.mime, avatar.base64, { signal });
-        dataTienda.facetas.hero.resena_destacada.avatar = url;
-        // Persistimos la URL en el data original: la próxima publicación la reusa
-        // (idempotencia — el server guarda este registro tras publicar).
-        data.facetas.hero.resena_destacada.avatar = url;
-        if (onAvatarUploaded) {
-          try {
-            await onAvatarUploaded(url, avatarActual);
-          } catch (error) {
-            const { ambiguousMediaError } = require("./imagenes");
-            throw ambiguousMediaError(
-              "El avatar fue creado en Shopify pero no se pudo confirmar su checkpoint",
-              error
-            );
-          }
-        }
-        log(`  avatar     · subido a Files`);
-      } catch (e) {
-        if (e?.nonRetryable) throw e;
-        if (signal?.aborted) throw signal.reason || e;
-        if (!e?.allowDegraded) throw e;
-        dataTienda.facetas.hero.resena_destacada.avatar = null;
-        log(`  avatar     · ⚠ no se pudo subir (${e.message.slice(0, 80)}) — la página sale con silueta`);
-      }
-    } else {
-      dataTienda.facetas.hero.resena_destacada.avatar = null;
-      log(`  avatar     · carpeta vacía — silueta`);
-    }
-  }
+  const dataTienda = prepararDatosPublicacion(data);
 
   // --- 1. metafield con el Producto Universal ---
   const serializedData = JSON.stringify(dataTienda);
@@ -187,7 +127,7 @@ async function despublicarPagina(data, sesion, { signal } = {}) {
   }
 }
 
-module.exports = { publicarPagina, despublicarPagina };
+module.exports = { publicarPagina, despublicarPagina, prepararDatosPublicacion };
 
 // ---------- CLI ----------
 
