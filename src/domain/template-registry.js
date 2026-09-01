@@ -43,6 +43,16 @@ const TEMPLATE_REGISTRY = Object.freeze([
     version: 1,
     legacyStyle: "piloto-pinza",
     rendererKey: "piloto-pinza",
+    status: "frozen"
+  }),
+  // Piloto 01 is the product page the merchant approved in Shopify.  The
+  // layout is a fixed app-extension artifact; generation can only populate
+  // its explicit, versioned content contract.
+  Object.freeze({
+    id: "piloto/pdp-01",
+    version: 1,
+    legacyStyle: "piloto-pdp-01",
+    rendererKey: "piloto-pdp-01",
     status: "active"
   }),
   Object.freeze({
@@ -99,8 +109,8 @@ function resolveStoredTemplate(global = {}) {
 // Las entradas nuevas no aceptan strings desconocidos. Antes este caso caía
 // silenciosamente a Clásico después de llamar al proveedor de IA, ocultando un
 // error de producto y pudiendo gastar una generación que no correspondía.
-function resolveTemplateForCreation(style = "piloto-pinza") {
-  const normalized = typeof style === "string" && style.trim() ? style.trim() : "piloto-pinza";
+function resolveTemplateForCreation(style = "piloto-pdp-01") {
+  const normalized = typeof style === "string" && style.trim() ? style.trim() : "piloto-pdp-01";
   const entry = byLegacyStyle(normalized);
   if (!entry) throw new TemplateContractError("La plantilla solicitada no está soportada");
   // "frozen" conserva compatibilidad de lectura para páginas históricas, pero

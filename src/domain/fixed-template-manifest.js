@@ -41,6 +41,30 @@ const PILOTO_PINZA_PAGEPILOT_V1 = Object.freeze({
   merchantEditablePaths: PINZA_PAGEPILOT_V1.merchantEditablePaths
 });
 
+const PILOTO_PDP_01_V1 = Object.freeze({
+  id: "piloto/pdp-01",
+  version: 1,
+  rendererKey: "piloto-pdp-01",
+  sourceFile: "piloto-pdp-01.js",
+  // The merchant-approved visual system is intentionally immutable at runtime.
+  // Only these textual leaves can ever be edited after generation.
+  merchantEditablePaths: Object.freeze([
+    "piloto_pdp_01.content.hero.claim",
+    "piloto_pdp_01.content.hero.bullets[]",
+    "piloto_pdp_01.content.why.eyebrow",
+    "piloto_pdp_01.content.why.heading",
+    "piloto_pdp_01.content.why.body",
+    "piloto_pdp_01.content.why.points[]",
+    "piloto_pdp_01.content.timeline.heading",
+    "piloto_pdp_01.content.timeline.intro",
+    "piloto_pdp_01.content.timeline.steps[].heading",
+    "piloto_pdp_01.content.timeline.steps[].body",
+    "piloto_pdp_01.content.faq.heading",
+    "piloto_pdp_01.content.faq.items[].question",
+    "piloto_pdp_01.content.faq.items[].answer"
+  ])
+});
+
 // El workspace de edición puede tener una experiencia rica, pero no convierte
 // una plantilla fija en un page builder. Este contrato es la frontera que una
 // futura API de editor puede exponer al admin: qué se puede editar, qué viene
@@ -149,6 +173,7 @@ module.exports = Object.freeze({
   PINZA_PAGEPILOT_V1,
   PINZA_PAGEPILOT_EDITOR_CONTRACT_V1,
   PILOTO_PINZA_PAGEPILOT_V1,
+  PILOTO_PDP_01_V1,
   PILOTO_PINZA_PAGEPILOT_EDITOR_CONTRACT_V1,
   isHttpsUrl,
   fixedTemplateViewModel

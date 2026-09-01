@@ -23,6 +23,7 @@ const fs = require("fs");
 const path = require("path");
 const { gql, sesionDeEnv } = require("./shopify");
 const { assertFixedTemplatePublishable } = require("./src/shopify/fixed-template-publish-guard");
+const { storefrontProjection } = require("./src/piloto/pdp01-contract");
 
 const RUTA_JSON = path.join(__dirname, "ultima-pagina.json");
 
@@ -32,6 +33,13 @@ const RUTA_JSON = path.join(__dirname, "ultima-pagina.json");
 // la limpieza de Files se hace aparte, desde un inventario revisado por tienda.
 function prepararDatosPublicacion(data) {
   const dataTienda = JSON.parse(JSON.stringify(data));
+  // Piloto 01 keeps the full source snapshot only in our private page record.
+  // The storefront gets an intentional projection: dynamic catalog information
+  // comes from Liquid/Shopify, never from an old generated document.
+  if (dataTienda?.piloto_pdp_01) {
+    dataTienda.piloto_pdp_01 = storefrontProjection(dataTienda.piloto_pdp_01);
+    dataTienda.fuente = { shopify_product_id: dataTienda?.fuente?.shopify_product_id };
+  }
   const reseña = dataTienda?.facetas?.hero?.resena_destacada;
   if (reseña && Object.prototype.hasOwnProperty.call(reseña, "avatar")) {
     reseña.avatar = null;

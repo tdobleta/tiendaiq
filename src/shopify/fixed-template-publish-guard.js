@@ -2,7 +2,7 @@
 
 const { gql } = require("../../shopify");
 const { resolveStoredTemplate } = require("../domain/template-registry");
-const { PINZA_PAGEPILOT_V1, PILOTO_PINZA_PAGEPILOT_V1 } = require("../domain/fixed-template-manifest");
+const { PINZA_PAGEPILOT_V1, PILOTO_PINZA_PAGEPILOT_V1, PILOTO_PDP_01_V1 } = require("../domain/fixed-template-manifest");
 
 // The fixed runtime renders the product's own variant list. The guard only
 // verifies that the durable product reference is real before assigning its
@@ -28,7 +28,7 @@ class FixedTemplatePublishError extends Error {
 
 function isPinzaTemplate(data) {
   const template = resolveStoredTemplate(data?.global || {});
-  return [PINZA_PAGEPILOT_V1, PILOTO_PINZA_PAGEPILOT_V1].some(
+  return [PINZA_PAGEPILOT_V1, PILOTO_PINZA_PAGEPILOT_V1, PILOTO_PDP_01_V1].some(
     (candidate) => template?.id === candidate.id && template.version === candidate.version
   );
 }
