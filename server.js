@@ -106,7 +106,7 @@ const VERSION_ASSETS = (() => {
     // sirviendo la copia vieja. Le pasó a Piloto 01 y los arreglos del
     // renderer no llegaban al merchant después del deploy.
     const archivos = [
-      path.join(DIR_APP, "app.js"), path.join(DIR_APP, "app.css"),
+      path.join(DIR_APP, "app.js"), path.join(DIR_APP, "app.css"), path.join(DIR_APP, "editor-pagepilot.css"),
       path.join(DIR_APP, "home-v2.js"), path.join(DIR_APP, "home-v2.css"),
       path.join(dirWidgets, "tiendaiq.js"), path.join(dirWidgets, "tiendaiq.css"),
       path.join(dirWidgets, "piloto-pdp-01.js"), path.join(dirWidgets, "piloto-pdp-01.css")

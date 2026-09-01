@@ -211,3 +211,94 @@
 .pe-preset--pildora, .pe-preset--pildoraBorde{ border-radius:999px; text-transform:uppercase; letter-spacing:.02em; }
 .pe-preset--bloque{ border-radius:3px; }
 .pe-preset--pildoraBorde{ border-width:2px; border-color:#1a1c1e; }
+
+/* ========================================================================
+   PILOTO 01 · Editor v2
+   El canvas, el árbol y el inspector forman una única superficie de trabajo.
+   Está scopeado al editor de Piloto: no altera Bundles ni las plantillas viejas.
+   ======================================================================== */
+body.tiq-piloto-editor-v2{ overflow:hidden; background:#eef2f7; }
+body.tiq-piloto-editor-v2 .embebida{ background:#eef2f7; }
+body.tiq-piloto-editor-v2 .preview-barra.pe-appbar{
+  position:sticky; top:0; z-index:40; display:grid; grid-template-columns:minmax(270px,1fr) auto minmax(270px,1fr);
+  align-items:center; min-height:64px; margin:0; padding:8px 16px; gap:14px;
+  border:0; border-bottom:1px solid #dfe4ec; border-radius:0; background:#f8fbff; box-shadow:0 1px 0 rgba(26,36,53,.03);
+}
+body.tiq-piloto-editor-v2 .pe-appbar__brand{ display:flex; min-width:0; align-items:center; gap:10px; }
+body.tiq-piloto-editor-v2 .pe-appbar .volver-flecha{ position:static; flex:0 0 auto; width:34px; height:34px; margin:0; border:1px solid #d7dee8; border-radius:9px; background:#fff; }
+body.tiq-piloto-editor-v2 .pe-appbar__wordmark{ display:flex; align-items:center; gap:7px; color:#172033; font-size:20px; font-weight:750; letter-spacing:-.55px; }
+body.tiq-piloto-editor-v2 .pe-appbar__mark{ display:grid; place-items:center; width:27px; height:27px; border-radius:8px; color:#fff; background:linear-gradient(135deg,#6f5cff,#4934e4); font-size:15px; box-shadow:0 4px 10px rgba(77,55,230,.24); }
+body.tiq-piloto-editor-v2 .pe-appbar__template{ overflow:hidden; max-width:190px; padding:6px 9px; border:1px solid #dfe4ec; border-radius:999px; color:#596579; background:#fff; font-size:11px; font-weight:650; text-overflow:ellipsis; white-space:nowrap; }
+body.tiq-piloto-editor-v2 .pe-appbar .preview-barra__info{ display:none; }
+body.tiq-piloto-editor-v2 .pe-appbar .preview-barra__estado{ justify-self:center; display:flex; align-items:center; gap:8px; }
+body.tiq-piloto-editor-v2 .pe-appbar .preview-barra__acciones{ justify-self:end; display:flex; align-items:center; gap:8px; }
+body.tiq-piloto-editor-v2 .pe-appbar .pe-viewport{ padding:3px; border-color:#d8e0ec; background:#eaf0f8; }
+body.tiq-piloto-editor-v2 .pe-appbar .pe-viewport button{ height:30px; padding:0 10px; color:#526076; }
+body.tiq-piloto-editor-v2 .pe-appbar .pe-viewport button[aria-pressed="true"]{ color:#192234; box-shadow:0 1px 3px rgba(30,43,62,.14); }
+body.tiq-piloto-editor-v2 .pe-history{ display:inline-flex; gap:2px; padding:3px; border:1px solid #d8e0ec; border-radius:8px; background:#fff; }
+body.tiq-piloto-editor-v2 .pe-history button{ display:grid; place-items:center; width:28px; height:28px; border:0; border-radius:6px; color:#243149; background:transparent; font:700 19px/1 system-ui,sans-serif; cursor:pointer; }
+body.tiq-piloto-editor-v2 .pe-history button:hover:not(:disabled){ background:#edf1f6; }
+body.tiq-piloto-editor-v2 .pe-history button:disabled{ opacity:.36; cursor:not-allowed; }
+body.tiq-piloto-editor-v2 .pe-appbar s-button::part(button){ min-height:34px; border-radius:8px; font-weight:650; }
+
+body.tiq-piloto-editor-v2 .pe-editor--piloto{
+  display:grid; grid-template-columns:288px minmax(0,1fr) 344px; height:calc(100dvh - 64px); min-height:580px;
+  background:#eef2f7; border:0; overflow:hidden;
+}
+body.tiq-piloto-editor-v2 .pe-editor--piloto .pe-tree{ min-width:0; height:100%; overflow:auto; border:0; border-right:1px solid #dfe4ec; border-radius:0; background:#fff; box-shadow:none; }
+body.tiq-piloto-editor-v2 .pe-editor--piloto .pe-tree__head{ padding:18px 17px 14px; border-bottom:1px solid #edf0f4; }
+body.tiq-piloto-editor-v2 .pe-editor--piloto .pe-tree__head-title{ color:#152033; font-size:14px; font-weight:750; }
+body.tiq-piloto-editor-v2 .pe-editor--piloto .pe-tree__head-sub{ color:#6d7890; font-size:11px; }
+body.tiq-piloto-editor-v2 .pe-editor--piloto .pe-tree__body{ padding:10px 9px 24px; }
+body.tiq-piloto-editor-v2 .pe-editor--piloto .pe-tree__group{ margin-bottom:12px; }
+body.tiq-piloto-editor-v2 .pe-editor--piloto .pe-tree__row{ min-height:36px; padding-right:8px; border-radius:8px; }
+body.tiq-piloto-editor-v2 .pe-editor--piloto .pe-tree__row:hover{ background:#f3f6fb; }
+body.tiq-piloto-editor-v2 .pe-editor--piloto .pe-tree__row.is-sel{ color:#2f22bd; background:#eeecff; box-shadow:inset 3px 0 #6254ee; }
+body.tiq-piloto-editor-v2 .pe-editor--piloto .pe-tree__row.is-sel .pe-tree__ico{ color:#5745e7; }
+body.tiq-piloto-editor-v2 .pe-editor--piloto .pe-tree__row--group{ margin-top:3px; color:#243149; }
+body.tiq-piloto-editor-v2 .pe-editor--piloto .pe-tree__row--group .pe-tree__label{ font-size:12px; font-weight:750; }
+body.tiq-piloto-editor-v2 .pe-editor--piloto .pe-tree__label{ color:#39465a; font-size:12.5px; }
+body.tiq-piloto-editor-v2 .pe-editor--piloto .pe-tree__lock-hint,
+body.tiq-piloto-editor-v2 .pe-editor--piloto .pe-tree__group-meta{ color:#91a0b5; font-size:10px; }
+
+body.tiq-piloto-editor-v2 .pe-editor--piloto .pe-editor__centro{ display:block; min-width:0; height:100%; padding:22px; overflow:auto; background:radial-gradient(circle at 50% -30%,#fff 0,#f4f7fb 48%,#eaf0f7 100%); }
+body.tiq-piloto-editor-v2 .pe-editor--piloto .pe-canvas-viewport{ margin:0 auto; min-height:0; }
+body.tiq-piloto-editor-v2 .pe-editor--piloto .pe-canvas-shell{ min-height:0; }
+body.tiq-piloto-editor-v2 .pe-editor--piloto .pe-canvas-shell .marco{ height:calc(100dvh - 112px); min-height:620px; overflow:hidden; border:1px solid #d8e0eb; border-radius:12px; background:#fff; box-shadow:0 12px 36px rgba(36,50,72,.14); }
+body.tiq-piloto-editor-v2 .pe-editor--piloto .pe-canvas-shell .marco iframe{ display:block; width:100%; height:100%; border:0; background:#fff; }
+body.tiq-piloto-editor-v2 .pe-editor--piloto .pe-canvas-shell.is-mobile{ width:390px; max-width:100%; margin:0 auto; }
+body.tiq-piloto-editor-v2 .pe-editor--piloto .pe-canvas-shell.is-mobile .marco{ min-height:680px; }
+
+body.tiq-piloto-editor-v2 .pe-editor--piloto .pe-inspector{ height:100%; min-width:0; overflow:auto; border:0; border-left:1px solid #dfe4ec; background:#fff; }
+body.tiq-piloto-editor-v2 .pe-editor--piloto .sec-panel__cab{ position:sticky; top:0; z-index:2; padding:17px 18px 14px; border-bottom:1px solid #e7ebf0; background:#fff; }
+body.tiq-piloto-editor-v2 .pe-editor--piloto .sec-panel__eyebrow{ color:#7469dc; font-size:10px; font-weight:800; letter-spacing:.07em; text-transform:uppercase; }
+body.tiq-piloto-editor-v2 .pe-editor--piloto .sec-panel__tit{ color:#182235; font-size:16px; font-weight:760; letter-spacing:-.2px; }
+body.tiq-piloto-editor-v2 .pe-editor--piloto .sec-panel__body{ padding:16px 18px 30px; }
+body.tiq-piloto-editor-v2 .pe-editor--piloto .pe-inspector__empty{ min-height:100%; padding:42px 31px; }
+body.tiq-piloto-editor-v2 .pe-editor--piloto .pe-inspector__empty-icon{ width:42px; height:42px; color:#5947e7; background:#eeecff; }
+body.tiq-piloto-editor-v2 .p01-field{ display:grid; gap:7px; margin:0 0 15px; }
+body.tiq-piloto-editor-v2 .p01-field__label{ color:#344158; font-size:12px; font-weight:700; }
+body.tiq-piloto-editor-v2 .p01-control{ width:100%; min-height:38px; padding:8px 10px; border:1px solid #d7dee8; border-radius:8px; color:#202b3d; background:#fff; font:500 13px/1.35 system-ui,-apple-system,"Segoe UI",sans-serif; }
+body.tiq-piloto-editor-v2 .p01-control--area{ min-height:94px; resize:vertical; }
+body.tiq-piloto-editor-v2 .p01-control:focus{ outline:none; border-color:#6958f3; box-shadow:0 0 0 3px rgba(105,88,243,.13); }
+body.tiq-piloto-editor-v2 .p01-field .sp-ai-trigger{ justify-self:start; margin-top:0; border-radius:7px; }
+
+@media (max-width:1250px){
+  body.tiq-piloto-editor-v2 .pe-editor--piloto{ grid-template-columns:250px minmax(0,1fr) 314px; }
+  body.tiq-piloto-editor-v2 .pe-appbar__template{ display:none; }
+}
+@media (max-width:960px){
+  body.tiq-piloto-editor-v2{ overflow:auto; }
+  body.tiq-piloto-editor-v2 .preview-barra.pe-appbar{ grid-template-columns:1fr auto; }
+  body.tiq-piloto-editor-v2 .pe-appbar .preview-barra__estado{ display:none; }
+  body.tiq-piloto-editor-v2 .pe-editor--piloto{ grid-template-columns:220px minmax(0,1fr); height:auto; min-height:calc(100dvh - 64px); overflow:visible; }
+  body.tiq-piloto-editor-v2 .pe-editor--piloto .pe-inspector{ grid-column:1 / -1; min-height:300px; border-top:1px solid #dfe4ec; border-left:0; }
+}
+@media (max-width:680px){
+  body.tiq-piloto-editor-v2 .preview-barra.pe-appbar{ display:flex; flex-wrap:wrap; padding:8px 10px; }
+  body.tiq-piloto-editor-v2 .pe-appbar .preview-barra__acciones{ margin-left:auto; }
+  body.tiq-piloto-editor-v2 .pe-appbar #regenerar{ display:none; }
+  body.tiq-piloto-editor-v2 .pe-editor--piloto{ display:block; }
+  body.tiq-piloto-editor-v2 .pe-editor--piloto .pe-tree{ height:auto; max-height:230px; border-right:0; border-bottom:1px solid #dfe4ec; }
+  body.tiq-piloto-editor-v2 .pe-editor--piloto .pe-editor__centro{ height:70dvh; padding:12px; }
+}

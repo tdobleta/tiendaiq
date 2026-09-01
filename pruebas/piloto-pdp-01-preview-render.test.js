@@ -155,6 +155,14 @@ test("BINDER · conserva la composición completa con slots editoriales reales",
   assert.match(codigo, /button\.addEventListener\("click", \(\) => \{/);
 });
 
+test("EDITOR · el runtime sólo marca y comunica bloques dentro del preview", () => {
+  assert.match(codigo, /if \(previewMode\) \{\s*const editorBlocks/s);
+  assert.match(codigo, /data-tiq-editor-block/);
+  assert.match(codigo, /window\.parent\?\.postMessage\(\{ tiendaiqEditor: "select-block"/);
+  assert.match(codigo, /event\.data\?\.tiendaiqEditor !== "highlight-block"/);
+  assert.match(codigo, /\.tiq-editor-active/);
+});
+
 // ---------------------------------------------------------------------- caché
 test("CACHÉ · todo asset versionado del preview participa de VERSION_ASSETS", () => {
   const indice = fs.readFileSync(path.join(RAIZ, "plantilla-producto", "index.html"), "utf8");

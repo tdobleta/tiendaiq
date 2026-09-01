@@ -1523,6 +1523,65 @@
   let sucio = false; // hay cambios sin guardar
   let cambiosSinPublicar = false; // se editó una página YA publicada (no está viva hasta re-publicar)
   let timerPreview = null;
+  // Historial local del editor: el documento sigue guardándose sólo cuando el
+  // merchant pulsa Guardar. Así Deshacer/Rehacer nunca escribe ni publica por
+  // sorpresa, pero sí revierte cualquier cambio que ya se ve en el canvas.
+  let historialEditor = [];
+  let indiceHistorialEditor = -1;
+  let snapshotInicialEditor = null;
+  let escuchadorPreviewPiloto = null;
+
+  function snapshotEditor() {
+    if (!estado.pagina?.data) return;
+    const snapshot = JSON.stringify(estado.pagina.data);
+    if (historialEditor[indiceHistorialEditor] === snapshot) return;
+    historialEditor.splice(indiceHistorialEditor + 1);
+    historialEditor.push(snapshot);
+    if (historialEditor.length > 80) historialEditor.shift();
+    indiceHistorialEditor = historialEditor.length - 1;
+    actualizarAccionesEditor();
+  }
+
+  function reiniciarHistorialEditor() {
+    historialEditor = [];
+    indiceHistorialEditor = -1;
+    snapshotEditor();
+    snapshotInicialEditor = historialEditor[0] || null;
+  }
+
+  function actualizarAccionesEditor() {
+    const undo = $("editor-deshacer");
+    const redo = $("editor-rehacer");
+    if (undo) undo.disabled = indiceHistorialEditor <= 0;
+    if (redo) redo.disabled = indiceHistorialEditor >= historialEditor.length - 1;
+  }
+
+  function moverHistorialEditor(direccion) {
+    const siguiente = indiceHistorialEditor + direccion;
+    if (siguiente < 0 || siguiente >= historialEditor.length) return;
+    try {
+      estado.pagina.data = JSON.parse(historialEditor[siguiente]);
+      indiceHistorialEditor = siguiente;
+    } catch { return; }
+    sucio = historialEditor[indiceHistorialEditor] !== snapshotInicialEditor;
+    cambiosSinPublicar = estado.pagina?.estado === "publicada" && sucio;
+    const guardar = $("guardar");
+    if (guardar) {
+      if (sucio) {
+        guardar.removeAttribute("disabled");
+        guardar.textContent = "Guardar cambios";
+        guardar.setAttribute("variant", "primary");
+      } else {
+        guardar.setAttribute("disabled", "");
+        guardar.textContent = "Guardar cambios";
+        guardar.setAttribute("variant", "secondary");
+      }
+    }
+    actualizarPill();
+    actualizarAccionesEditor();
+    repintarPreview();
+    if (panelEditorId) abrirPanelEditor(panelEditorId);
+  }
 
   const leer = (obj, ruta) => ruta.split(".").reduce((o, k) => (o == null ? o : o[k]), obj);
 
@@ -1535,15 +1594,24 @@
 
   // Campo de texto (o textarea si lleva filas). data-nulo: vacío se guarda
   // como null — así un autor borrado vuelve a ser tarjeta guía.
+  // No se habilita una acción de IA hasta que el worker y su admisión estén
+  // certificados: un control bonito que falla sería peor que no mostrarlo.
   const EDICION_TEXTO_IA_DISPONIBLE = false;
   function campo(ruta, etiqueta, filas, nulo) {
     const v = leer(estado.pagina.data, ruta) ?? "";
     const atributos = `data-ruta="${ruta}"${nulo ? ` data-nulo="1"` : ""}`;
-    const campoHTML = filas
-      ? `<s-text-area label="${esc(etiqueta)}" rows="${filas}" ${atributos} value="${esc(v)}"></s-text-area>`
-      : `<s-text-field label="${esc(etiqueta)}" ${atributos} value="${esc(v)}"></s-text-field>`;
+    // Piloto es una plantilla fija: el inspector usa controles nativos para
+    // mantener un feedback instantáneo y no depender del shadow DOM de Polaris.
+    // Las demás plantillas conservan sus controles actuales.
+    const campoHTML = esPlantillaPdp01()
+      ? (filas
+        ? `<textarea class="p01-control p01-control--area" rows="${filas}" ${atributos}>${esc(v)}</textarea>`
+        : `<input class="p01-control" type="text" ${atributos} value="${esc(v)}">`)
+      : (filas
+        ? `<s-text-area label="${esc(etiqueta)}" rows="${filas}" ${atributos} value="${esc(v)}"></s-text-area>`
+        : `<s-text-field label="${esc(etiqueta)}" ${atributos} value="${esc(v)}"></s-text-field>`);
     const admiteIA = Boolean(filas) || /título|texto|nombre|beneficio|titular|subtítulo|contenido|llamada|botón|caption/i.test(etiqueta);
-    return `<div class="sp-field">${campoHTML}${EDICION_TEXTO_IA_DISPONIBLE && admiteIA ? `<button type="button" class="sp-ai-trigger" data-ai-text="${esc(ruta)}">${ico("chispa")} Editar con IA</button>` : ""}</div>`;
+    return `<label class="sp-field ${esPlantillaPdp01() ? "p01-field" : ""}"><span class="p01-field__label">${esc(etiqueta)}</span>${campoHTML}${EDICION_TEXTO_IA_DISPONIBLE && admiteIA ? `<button type="button" class="sp-ai-trigger" data-ai-text="${esc(ruta)}">${ico("chispa")} Editar con IA</button>` : ""}</label>`;
   }
 
   function campoNumero(ruta, etiqueta) {
@@ -2769,6 +2837,9 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
 
   function marcarSucio() {
     sucio = true;
+    // El historial es local y reversible. Nunca persiste ni publica por sí
+    // solo: únicamente permite volver atrás dentro de esta sesión de edición.
+    if (esPlantillaPdp01()) snapshotEditor();
     const b = $("guardar");
     if (b) {
       b.removeAttribute("disabled");
@@ -3842,9 +3913,31 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     </nav>`;
   }
 
+  // Piloto 01 no es un editor de HTML libre: estas son las superficies reales
+  // de la plantilla fija. El mismo id viaja entre árbol, iframe e inspector.
+  // Así no existe un control que parezca editar una cosa y publique otra.
+  const BLOQUES_PILOTO_01 = new Set([
+    "hero", "offer", "quick", "why", "stories", "timeline", "faq",
+    "closing", "newsletter", "evidence"
+  ]);
+
+  function seleccionarBloquePiloto(id, { desdeCanvas = false } = {}) {
+    if (!BLOQUES_PILOTO_01.has(id)) return;
+    vista.querySelectorAll(".pe-tree__row.is-sel").forEach((row) => row.classList.remove("is-sel"));
+    const fila = vista.querySelector(`.pe-tree__row[data-tree="${CSS.escape(id)}"]`);
+    if (fila) {
+      fila.classList.add("is-sel");
+      if (desdeCanvas) fila.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    }
+    abrirPanelEditor(id);
+    const marco = $("marco");
+    marco?.contentWindow?.postMessage({ tiendaiqEditor: "highlight-block", blockId: id }, "*");
+  }
+
   function pantallaPreview() {
     const pg = estado.pagina;
     cargarWidget("/editor-pagepilot.css", "css"); // estilos del editor 3 paneles
+    document.body.classList.toggle("tiq-piloto-editor-v2", esPlantillaPdp01());
     sucio = false;
     if (!Array.isArray(pg.data.secciones)) pg.data.secciones = [];
     // Bullets viejos (string plano) → objeto {emoji, fuerte, resto} editable.
@@ -3871,10 +3964,15 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     const volverTxt = estado.volverA === "paginas" ? "Volver a mis páginas" : "Volver a los productos";
     const st = pg.paginaEstado; // "app_block" | "legacy" | "inactiva" | null
     const mostrarSetup = publicada && st !== "app_block" && pg.setupPaginaUrl;
+    const esPiloto = esPlantillaPdp01();
+    if (esPiloto) reiniciarHistorialEditor();
 
     vista.innerHTML = `
-      <div class="preview-barra" id="barra-accion">
-        <button class="volver-flecha" id="volver" title="${volverTxt}" aria-label="${volverTxt}"></button>
+      <div class="preview-barra ${esPiloto ? "pe-appbar" : ""}" id="barra-accion">
+        <div class="${esPiloto ? "pe-appbar__brand" : ""}">
+          <button class="volver-flecha" id="volver" title="${volverTxt}" aria-label="${volverTxt}"></button>
+          ${esPiloto ? `<div class="pe-appbar__wordmark"><span class="pe-appbar__mark">✦</span><span>Piloto</span></div><span class="pe-appbar__template">Piloto 01 · plantilla fija</span>` : ""}
+        </div>
         <div class="preview-barra__info">
           <div class="preview-barra__titulo">${esc(pg.data.piloto_pdp_01?.source_fields?.title || pg.data.facetas?.hero?.titulo || "Producto")}</div>
           <div class="preview-barra__sub">${esc(pg.data.piloto_pdp_01?.content?.hero?.claim || pg.data.facetas?.hero?.subtitulo || "")}</div>
@@ -3890,6 +3988,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
             <button type="button" data-viewport="desktop" aria-pressed="${estado.previewViewport === "desktop"}" aria-label="Vista de escritorio" title="Vista de escritorio">Escritorio</button>
             <button type="button" data-viewport="mobile" aria-pressed="${estado.previewViewport === "mobile"}" aria-label="Vista de móvil" title="Vista de móvil">Móvil</button>
           </div>
+          ${esPiloto ? `<div class="pe-history" role="group" aria-label="Historial de edición"><button type="button" id="editor-deshacer" title="Deshacer" aria-label="Deshacer">↶</button><button type="button" id="editor-rehacer" title="Rehacer" aria-label="Rehacer">↷</button></div>` : ""}
           <s-button variant="secondary" id="guardar" disabled>Guardar cambios</s-button>
           <s-button variant="secondary" id="regenerar">Regenerar</s-button>
           ${publicada ? `<s-button variant="tertiary" id="despublicar">Volver a la página nativa</s-button>` : ""}
@@ -3915,7 +4014,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
           : ""
       }
 
-      <div class="pe-editor">
+      <div class="pe-editor ${esPiloto ? "pe-editor--piloto" : ""}">
         ${arbolPaginaHTML()}
         <div class="pe-editor__centro">
           <div class="pe-canvas-viewport" id="marco-viewport">
@@ -3938,14 +4037,23 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     const ajustarEscalaPreview = montarEscalaPreview();
     marco.onload = () => {
       repintarPreview();
-      montarEdicionEnIframe(marco);
+      if (!esPiloto) montarEdicionEnIframe(marco);
       ajustarEscalaPreview?.();
+      if (esPiloto && panelEditorId) marco.contentWindow?.postMessage({ tiendaiqEditor: "highlight-block", blockId: panelEditorId }, "*");
     };
+
+    if (escuchadorPreviewPiloto) window.removeEventListener("message", escuchadorPreviewPiloto);
+    escuchadorPreviewPiloto = esPiloto ? (event) => {
+      if (event.source !== marco.contentWindow || event.data?.tiendaiqEditor !== "select-block") return;
+      seleccionarBloquePiloto(event.data.blockId, { desdeCanvas: true });
+    } : null;
+    if (escuchadorPreviewPiloto) window.addEventListener("message", escuchadorPreviewPiloto);
 
     // Árbol de bloques (Etapa A): click en una fila abre el editor de esa sección;
     // el chevron colapsa el grupo. Reusa la edición existente (abrirModalEdicion).
     vista.querySelectorAll(".pe-tree__row[data-tree]").forEach((el) => {
       el.onclick = () => {
+        if (esPiloto) return seleccionarBloquePiloto(el.dataset.tree);
         vista.querySelectorAll(".pe-tree__row.is-sel").forEach((r) => r.classList.remove("is-sel"));
         el.classList.add("is-sel");
         abrirModalEdicion(el.dataset.tree);
@@ -3975,6 +4083,9 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     };
     $("guardar").onclick = guardarCambios;
     $("publicar").onclick = publicar;
+    $("editor-deshacer")?.addEventListener("click", () => moverHistorialEditor(-1));
+    $("editor-rehacer")?.addEventListener("click", () => moverHistorialEditor(1));
+    actualizarAccionesEditor();
     const bDespub = $("despublicar");
     if (bDespub) bDespub.onclick = despublicar;
     // Re-verifica en vivo si la landing ya se ve (fresh=1 saltea el cache) y
@@ -6642,6 +6753,11 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     estado.pantalla = pantalla;
     document.body.classList.toggle("tiq-v2-home-active", pantalla === "inicio");
     document.body.classList.toggle("tiq-pe-editor-active", pantalla === "preview");
+    if (pantalla !== "preview") {
+      document.body.classList.remove("tiq-piloto-editor-v2");
+      if (escuchadorPreviewPiloto) window.removeEventListener("message", escuchadorPreviewPiloto);
+      escuchadorPreviewPiloto = null;
+    }
     sincronizarURL(pantalla);
     setTituloBar(pantalla);
     pintarPasos();

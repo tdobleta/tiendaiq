@@ -450,6 +450,47 @@
     show(timer);
   }
 
+  // --- puente de edición (sólo preview interno) ----------------------------
+  // La tienda nunca recibe estas marcas. En el editor, cada superficie del
+  // canvas comunica el mismo identificador que usa el árbol y el inspector.
+  // Es la diferencia entre "ver una página" y editarla de verdad.
+  if (previewMode) {
+    const editorBlocks = {
+      hero: ".phv4-gallery, .phv4-panel",
+      offer: ".phv4-packs, .phv4-atc",
+      quick: ".phv4-details",
+      why: ".scp-why, .scp-why-copy",
+      stories: ".scp-stories-v2",
+      timeline: ".scp-journey-head, .scp-timeline",
+      faq: ".scp-faq-v3, .scp-faq",
+      closing: ".scp-community",
+      newsletter: ".scp-email-wrap, .scp-email-form",
+      evidence: ".phv4-rating, .phv4-opinion-carousel, .phv4-guarantee"
+    };
+    Object.entries(editorBlocks).forEach(([id, selector]) => {
+      all(root, selector).forEach((node) => node.setAttribute("data-tiq-editor-block", id));
+    });
+
+    const editorStyle = document.createElement("style");
+    editorStyle.textContent = `
+      #piloto-pdp-01 [data-tiq-editor-block]{cursor:pointer;outline:1px solid transparent;outline-offset:4px;transition:outline-color .14s ease,box-shadow .14s ease}
+      #piloto-pdp-01 [data-tiq-editor-block]:hover{outline-color:rgba(87,64,255,.48);box-shadow:0 0 0 4px rgba(87,64,255,.08)}
+      #piloto-pdp-01 [data-tiq-editor-block].tiq-editor-active{outline:2px solid #5740ff;box-shadow:0 0 0 5px rgba(87,64,255,.14)}
+    `;
+    root.prepend(editorStyle);
+
+    root.addEventListener("click", (event) => {
+      const block = event.target.closest("[data-tiq-editor-block]");
+      if (!block) return;
+      window.parent?.postMessage({ tiendaiqEditor: "select-block", blockId: block.dataset.tiqEditorBlock }, "*");
+    });
+    window.addEventListener("message", (event) => {
+      if (event.data?.tiendaiqEditor !== "highlight-block") return;
+      const id = event.data.blockId;
+      all(root, "[data-tiq-editor-block]").forEach((node) => node.classList.toggle("tiq-editor-active", node.dataset.tiqEditorBlock === id));
+    });
+  }
+
   // --- red de seguridad -----------------------------------------------------
   // El saneador reemplaza todo el copy de origen por "Contenido del producto".
   // Lo que no quedó bindeado no puede llegar al comprador.
