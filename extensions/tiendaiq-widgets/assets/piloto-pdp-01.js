@@ -97,8 +97,16 @@
   setImg(mainImage, image(gallery[0]), productTitle);
   const thumbs = all(root, ".phv4-thumb");
   fill(thumbs, gallery, (button, id) => {
+    button.setAttribute("data-tiq-media-id", id);
     button.setAttribute("data-phv4-image", image(id));
     setImg(one(button, "img"), image(id), productTitle);
+    button.addEventListener("click", () => {
+      const selected = button.getAttribute("data-tiq-media-id");
+      const url = image(selected);
+      if (!url || !mainImage) return;
+      setImg(mainImage, url, productTitle);
+      thumbs.forEach((item) => item.classList.toggle("is-active", item === button));
+    });
   });
 
   // Las secciones posteriores conservan exactamente la composición aprobada,
@@ -113,6 +121,15 @@
   };
   setEditorialImage(".scp-compare-photo img", c.media?.comparison_media_id || gallery[1] || gallery[0]);
   setEditorialImage(".scp-faq-v3-media img", c.media?.gallery_media_ids?.[2] || gallery[2] || gallery[0]);
+  const storyMedia = c.media?.story_media_ids?.length ? c.media.story_media_ids : gallery;
+  // Una tienda puede tener una sola foto. En ese caso se reutiliza su propia
+  // imagen en las cards editoriales antes que dejar huecos visuales o traer
+  // una foto ajena a la tienda.
+  const storyCards = c.stories?.cards || [];
+  const storyImageMedia = storyMedia.length ? storyCards.map((_item, index) => storyMedia[index % storyMedia.length]) : [];
+  fill(all(root, ".scp-story-image img"), storyImageMedia, (node, id) => setImg(node, image(id), productTitle));
+  all(root, ".scp-story-product > img").forEach((node) => setImg(node, image(gallery[0]), productTitle));
+  setEditorialImage(".scp-community-photo img", c.media?.community_media_id || storyMedia[0] || gallery[0]);
   // La etiqueta "Others / Ours" de la referencia es un comparativo sin fuente:
   // preservamos la foto y la composición, pero no una afirmación no verificable.
   all(root, ".scp-compare-tags").forEach(hide);
@@ -128,6 +145,16 @@
     if (propio) propio.textContent = c.offer?.heading || "";
     else divider.textContent = c.offer?.heading || "";
   }
+
+  // --- datos rápidos del producto ------------------------------------------
+  const quickFacts = c.quick?.items || [];
+  const quickDetails = all(root, ".phv4-details details");
+  if (quickFacts.length) {
+    fill(quickDetails, quickFacts, (node, item) => {
+      text(one(node, "summary"), item.question);
+      text(one(node, ".phv4-answer") || one(node, ".scp-answer") || one(node, "p") || one(node, "div:not(:first-child)"), item.answer);
+    });
+  } else all(root, ".phv4-details").forEach(hide);
 
   // --- packs ----------------------------------------------------------------
   const variantFor = (pack) => variants.find((v) => v.adminId === pack.variant_id) || null;
@@ -216,6 +243,32 @@
   }
   fill(all(root, ".scp-point > p"), c.why?.points || [], (node, value) => { node.textContent = value; });
 
+  // La composición visual de las cards se conserva, pero no se transforma en
+  // prueba social inventada: son fichas editoriales basadas sólo en el catálogo.
+  const stories = c.stories;
+  const storySection = one(root, ".scp-stories-v2");
+  if (stories && storySection) {
+    text(one(storySection, "h2"), stories.heading);
+    text(one(storySection, ".scp-stories-sub"), stories.intro);
+    fill(all(storySection, ".scp-story-card"), storyCards, (card, item) => {
+      text(one(card, ".scp-story-meta b") || one(card, "b"), item.title);
+      text(one(card, ".scp-story-copy > p"), item.body);
+      text(one(card, ".scp-story-product small"), item.product_note);
+      text(one(card, ".scp-story-product b"), productTitle);
+    });
+    all(storySection, ".scp-stories-rating, .scp-stars, .scp-story-verified").forEach(hide);
+    const rail = one(storySection, ".scp-stories-grid");
+    const moveStories = (direction) => {
+      const card = one(rail, ".scp-story-card");
+      if (!rail || !card) return;
+      const style = typeof window.getComputedStyle === "function" ? window.getComputedStyle(rail) : null;
+      const gap = Number.parseFloat(style?.gap || "0") || 0;
+      rail.scrollBy({ left: direction * (card.getBoundingClientRect().width + gap), behavior: "smooth" });
+    };
+    one(storySection, ".scp-story-prev")?.addEventListener("click", () => moveStories(-1));
+    one(storySection, ".scp-story-next")?.addEventListener("click", () => moveStories(1));
+  } else if (storySection) hide(storySection);
+
   const journey = one(root, ".scp-journey-head");
   if (journey) {
     text(one(journey, "h2"), c.timeline?.heading);
@@ -236,6 +289,18 @@
     text(cuerpo, item.answer);
   });
   all(root, ".scp-faq h2, .scp-faq-v3 h2").forEach((h) => text(h, c.faq?.heading));
+  text(one(root, ".scp-faq-v3-copy > p"), c.faq?.intro);
+
+  const closing = c.closing;
+  const closingSection = one(root, ".scp-community");
+  if (closing && closingSection) {
+    text(one(closingSection, ".scp-eyebrow"), closing.eyebrow);
+    text(one(closingSection, "h2"), closing.heading);
+    const closingParagraphs = all(closingSection, ".scp-community-copy > p").filter((node) => !node.classList.contains("scp-eyebrow") && !node.classList.contains("scp-disclaimer"));
+    text(closingParagraphs[0], closing.body);
+    text(closingParagraphs[1], closing.secondary_body);
+    all(closingSection, ".scp-disclaimer").forEach(hide);
+  } else if (closingSection) hide(closingSection);
 
   // El cierre de newsletter no depende de copy generado ni de una promesa
   // comercial. Se envía al endpoint estándar de Shopify con el contrato que
@@ -252,14 +317,14 @@
     };
     addHidden("form_type", "customer");
     addHidden("utf8", "✓");
-    text(one(root, ".scp-email-wrap h2"), "Recibí novedades por email");
-    text(one(root, ".scp-email-wrap > p"), "Novedades y recursos de la tienda.");
+    text(one(root, ".scp-email-wrap h2"), c.newsletter?.heading || "Recibí novedades por email");
+    text(one(root, ".scp-email-wrap > p"), c.newsletter?.body || "Novedades y recursos de la tienda.");
   }
 
   // Estas superficies requieren configuración Shopify que Piloto 01 todavía
   // no recibe (suscripciones, medios de pago y políticas por tienda). No se
   // dejan placeholders de la fuente aprobada que puedan parecer datos reales.
-  all(root, ".phv4-subscribe, .phv4-payment-icons, .phv4-details").forEach(hide);
+  all(root, ".phv4-subscribe, .phv4-payment-icons").forEach(hide);
 
   // --- evidencia: apagada salvo fuente verificable --------------------------
   const conFuente = (bloque) => Boolean(bloque?.source?.kind && bloque?.source?.reference);
@@ -279,7 +344,7 @@
       setImg(one(slide, "img"), image(ev.testimonial.media_id), "");
     });
   } else {
-    all(root, ".phv4-opinion-carousel, .phv4-review, .scp-stories-v2, .scp-story").forEach(hide);
+    all(root, ".phv4-opinion-carousel, .phv4-review").forEach(hide);
   }
 
   // El diseño escribe la garantía con pseudo-elementos. La fuente canónica las
@@ -300,9 +365,6 @@
 
   // El contador de oferta es urgencia sin evidencia: no se muestra.
   all(root, ".phv4-offer-timer").forEach(hide);
-
-  // Sin comunidad verificable la sección no se muestra.
-  all(root, ".scp-community").forEach(hide);
 
   // --- red de seguridad -----------------------------------------------------
   // El saneador reemplaza todo el copy de origen por "Contenido del producto".

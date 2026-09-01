@@ -97,15 +97,29 @@ function applyPdp01Edit({ persistedData, submittedData }) {
       (comparisonContent.faq?.items || []).length !== (persistedContent.faq?.items || []).length) {
     throw new FixedTemplateEditError("Piloto 01 no permite cambiar la estructura de sus secciones");
   }
+  for (const [section, field] of [["quick", "items"], ["stories", "cards"]]) {
+    const persistedItems = persistedContent?.[section]?.[field];
+    const submittedItems = comparisonContent?.[section]?.[field];
+    if (Array.isArray(persistedItems) && (!Array.isArray(submittedItems) || submittedItems.length !== persistedItems.length)) {
+      throw new FixedTemplateEditError("Piloto 01 no permite cambiar la estructura de sus secciones");
+    }
+  }
   // Mask exactly the authorized leaves and compare every other byte. This is
   // deliberately independent from the later schema validation: a valid pack
   // is still not an editable pack.
   comparisonContent.hero.claim = persistedContent.hero.claim;
   comparisonContent.hero.bullets = clone(persistedContent.hero.bullets);
+  comparisonContent.offer.heading = persistedContent.offer.heading;
+  if (persistedContent.quick) comparisonContent.quick.items = clone(persistedContent.quick.items);
   comparisonContent.why.eyebrow = persistedContent.why.eyebrow;
   comparisonContent.why.heading = persistedContent.why.heading;
   comparisonContent.why.body = persistedContent.why.body;
   comparisonContent.why.points = clone(persistedContent.why.points);
+  if (persistedContent.stories) {
+    comparisonContent.stories.heading = persistedContent.stories.heading;
+    comparisonContent.stories.intro = persistedContent.stories.intro;
+    comparisonContent.stories.cards = clone(persistedContent.stories.cards);
+  }
   comparisonContent.timeline.heading = persistedContent.timeline.heading;
   comparisonContent.timeline.intro = persistedContent.timeline.intro;
   comparisonContent.timeline.steps.forEach((step, index) => {
@@ -113,10 +127,13 @@ function applyPdp01Edit({ persistedData, submittedData }) {
     step.body = persistedContent.timeline.steps[index].body;
   });
   comparisonContent.faq.heading = persistedContent.faq.heading;
+  if (Object.hasOwn(persistedContent.faq, "intro")) comparisonContent.faq.intro = persistedContent.faq.intro;
   comparisonContent.faq.items.forEach((item, index) => {
     item.question = persistedContent.faq.items[index].question;
     item.answer = persistedContent.faq.items[index].answer;
   });
+  if (persistedContent.closing) comparisonContent.closing = clone(persistedContent.closing);
+  if (persistedContent.newsletter) comparisonContent.newsletter = clone(persistedContent.newsletter);
   if (!isDeepStrictEqual(comparisonDocument, persistedDocument)) {
     throw new FixedTemplateEditError("Piloto 01 sólo permite editar el copy autorizado; producto, medios, packs y evidencia se protegen automáticamente");
   }
@@ -126,10 +143,17 @@ function applyPdp01Edit({ persistedData, submittedData }) {
   const nextContent = clone(persistedDocument.content);
   nextContent.hero.claim = proposed.content?.hero?.claim;
   nextContent.hero.bullets = proposed.content?.hero?.bullets;
+  nextContent.offer.heading = proposed.content?.offer?.heading;
+  if (nextContent.quick) nextContent.quick.items = proposed.content?.quick?.items;
   nextContent.why.eyebrow = proposed.content?.why?.eyebrow;
   nextContent.why.heading = proposed.content?.why?.heading;
   nextContent.why.body = proposed.content?.why?.body;
   nextContent.why.points = proposed.content?.why?.points;
+  if (nextContent.stories) {
+    nextContent.stories.heading = proposed.content?.stories?.heading;
+    nextContent.stories.intro = proposed.content?.stories?.intro;
+    nextContent.stories.cards = proposed.content?.stories?.cards;
+  }
   nextContent.timeline.heading = proposed.content?.timeline?.heading;
   nextContent.timeline.intro = proposed.content?.timeline?.intro;
   (nextContent.timeline.steps || []).forEach((step, index) => {
@@ -137,7 +161,10 @@ function applyPdp01Edit({ persistedData, submittedData }) {
     step.body = proposed.content?.timeline?.steps?.[index]?.body;
   });
   nextContent.faq.heading = proposed.content?.faq?.heading;
+  if (Object.hasOwn(nextContent.faq, "intro")) nextContent.faq.intro = proposed.content?.faq?.intro;
   nextContent.faq.items = proposed.content?.faq?.items;
+  if (nextContent.closing) nextContent.closing = proposed.content?.closing;
+  if (nextContent.newsletter) nextContent.newsletter = proposed.content?.newsletter;
   const next = clone(persisted);
   next.piloto_pdp_01 = { ...persistedDocument, content: nextContent, evidence: clone(persistedDocument.evidence) };
   try {

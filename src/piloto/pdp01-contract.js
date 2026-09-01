@@ -20,10 +20,22 @@ const GID = {
 // minimum and maximum requirement after the provider has returned its JSON.
 const COPY_TEXT = { type: "string", minLength: 1, maxLength: 600 };
 const COPY_LONG_TEXT = { type: "string", minLength: 1, maxLength: 2000 };
+const FAQ_ITEM = {
+  type: "object", additionalProperties: false, required: ["question", "answer"],
+  properties: { question: COPY_TEXT, answer: COPY_LONG_TEXT }
+};
+const TIMELINE_STEP = {
+  type: "object", additionalProperties: false, required: ["label", "heading", "body"],
+  properties: { label: COPY_TEXT, heading: COPY_TEXT, body: COPY_LONG_TEXT }
+};
+const STORY_CARD = {
+  type: "object", additionalProperties: false, required: ["title", "body", "product_note"],
+  properties: { title: COPY_TEXT, body: COPY_LONG_TEXT, product_note: COPY_TEXT }
+};
 const PDP01_COPY_OUTPUT_SCHEMA = {
   type: "object",
   additionalProperties: false,
-  required: ["hero", "offer", "why", "timeline", "faq"],
+  required: ["hero", "offer", "quick", "why", "stories", "timeline", "faq", "closing", "newsletter"],
   properties: {
     hero: {
       type: "object", additionalProperties: false, required: ["claim", "bullets"],
@@ -33,11 +45,22 @@ const PDP01_COPY_OUTPUT_SCHEMA = {
       type: "object", additionalProperties: false, required: ["heading"],
       properties: { heading: COPY_TEXT }
     },
+    quick: {
+      type: "object", additionalProperties: false, required: ["items"],
+      properties: { items: { type: "array", items: FAQ_ITEM } }
+    },
     why: {
       type: "object", additionalProperties: false, required: ["eyebrow", "heading", "body", "points"],
       properties: {
         eyebrow: COPY_TEXT, heading: COPY_TEXT, body: COPY_TEXT,
         points: { type: "array", items: COPY_TEXT }
+      }
+    },
+    stories: {
+      type: "object", additionalProperties: false, required: ["heading", "intro", "cards"],
+      properties: {
+        heading: COPY_TEXT, intro: COPY_TEXT,
+        cards: { type: "array", items: STORY_CARD }
       }
     },
     timeline: {
@@ -46,25 +69,23 @@ const PDP01_COPY_OUTPUT_SCHEMA = {
         heading: COPY_TEXT, intro: COPY_TEXT,
         steps: {
           type: "array",
-          items: {
-            type: "object", additionalProperties: false, required: ["label", "heading", "body"],
-            properties: { label: COPY_TEXT, heading: COPY_TEXT, body: COPY_TEXT }
-          }
+          items: TIMELINE_STEP
         }
       }
     },
     faq: {
-      type: "object", additionalProperties: false, required: ["heading", "items"],
+      type: "object", additionalProperties: false, required: ["heading", "intro", "items"],
       properties: {
-        heading: COPY_TEXT,
-        items: {
-          type: "array",
-          items: {
-            type: "object", additionalProperties: false, required: ["question", "answer"],
-            properties: { question: COPY_TEXT, answer: COPY_LONG_TEXT }
-          }
-        }
+        heading: COPY_TEXT, intro: COPY_TEXT, items: { type: "array", items: FAQ_ITEM }
       }
+    },
+    closing: {
+      type: "object", additionalProperties: false, required: ["eyebrow", "heading", "body", "secondary_body"],
+      properties: { eyebrow: COPY_TEXT, heading: COPY_TEXT, body: COPY_LONG_TEXT, secondary_body: COPY_LONG_TEXT }
+    },
+    newsletter: {
+      type: "object", additionalProperties: false, required: ["heading", "body"],
+      properties: { heading: COPY_TEXT, body: COPY_TEXT }
     }
   }
 };
@@ -108,35 +129,73 @@ function text(value, where, errors, max = 600) {
   if (typeof value !== "string" || !value.trim() || value.length > max) errors.push(`${where} debe ser texto de hasta ${max} caracteres`);
   if (typeof value === "string" && MONEY_OR_PERCENT.test(value)) errors.push(`${where} contiene un importe o porcentaje congelado`);
 }
-function validatePdp01Copy(copy) {
+function validatePdp01Copy(copy, { requireComplete = true } = {}) {
   const errors = [];
-  assertKeys(copy, ["hero", "offer", "why", "timeline", "faq"], "copy", errors);
-  for (const section of ["hero", "offer", "why", "timeline", "faq"]) if (!plainObject(copy?.[section])) errors.push(`copy.${section} es obligatorio`);
-  assertKeys(copy?.hero, ["claim", "bullets"], "copy.hero", errors);
-  assertKeys(copy?.offer, ["heading"], "copy.offer", errors);
-  assertKeys(copy?.why, ["eyebrow", "heading", "body", "points"], "copy.why", errors);
-  assertKeys(copy?.timeline, ["heading", "intro", "steps"], "copy.timeline", errors);
-  assertKeys(copy?.faq, ["heading", "items"], "copy.faq", errors);
-  text(copy?.hero?.claim, "copy.hero.claim", errors);
-  if (!Array.isArray(copy?.hero?.bullets) || copy.hero.bullets.length < 2 || copy.hero.bullets.length > 4) errors.push("copy.hero.bullets debe tener entre 2 y 4 elementos");
-  else copy.hero.bullets.forEach((item, index) => text(item, `copy.hero.bullets[${index}]`, errors));
-  text(copy?.offer?.heading, "copy.offer.heading", errors);
-  for (const key of ["eyebrow", "heading", "body"]) text(copy?.why?.[key], `copy.why.${key}`, errors);
-  if (!Array.isArray(copy?.why?.points) || copy.why.points.length < 2 || copy.why.points.length > 4) errors.push("copy.why.points debe tener entre 2 y 4 elementos");
-  else copy.why.points.forEach((item, index) => text(item, `copy.why.points[${index}]`, errors));
-  for (const key of ["heading", "intro"]) text(copy?.timeline?.[key], `copy.timeline.${key}`, errors);
-  if (!Array.isArray(copy?.timeline?.steps) || copy.timeline.steps.length < 2 || copy.timeline.steps.length > 4) errors.push("copy.timeline.steps debe tener entre 2 y 4 elementos");
-  else copy.timeline.steps.forEach((step, index) => {
-    assertKeys(step, ["label", "heading", "body"], `copy.timeline.steps[${index}]`, errors);
-    for (const key of ["label", "heading", "body"]) text(step?.[key], `copy.timeline.steps[${index}].${key}`, errors);
-  });
-  text(copy?.faq?.heading, "copy.faq.heading", errors);
-  if (!Array.isArray(copy?.faq?.items) || copy.faq.items.length < 3 || copy.faq.items.length > 8) errors.push("copy.faq.items debe tener entre 3 y 8 elementos");
-  else copy.faq.items.forEach((item, index) => {
-    assertKeys(item, ["question", "answer"], `copy.faq.items[${index}]`, errors);
-    text(item?.question, `copy.faq.items[${index}].question`, errors);
-    text(item?.answer, `copy.faq.items[${index}].answer`, errors, 2000);
-  });
+  const sections = ["hero", "offer", "quick", "why", "stories", "timeline", "faq", "closing", "newsletter"];
+  assertKeys(copy, sections, "copy", errors);
+  for (const section of sections) if (requireComplete && !plainObject(copy?.[section])) errors.push(`copy.${section} es obligatorio`);
+  const present = (section) => plainObject(copy?.[section]);
+  if (present("hero")) {
+    assertKeys(copy.hero, ["claim", "bullets"], "copy.hero", errors);
+    text(copy.hero.claim, "copy.hero.claim", errors);
+    if (!Array.isArray(copy.hero.bullets) || copy.hero.bullets.length < 2 || copy.hero.bullets.length > 4) errors.push("copy.hero.bullets debe tener entre 2 y 4 elementos");
+    else copy.hero.bullets.forEach((item, index) => text(item, `copy.hero.bullets[${index}]`, errors));
+  }
+  if (present("offer")) { assertKeys(copy.offer, ["heading"], "copy.offer", errors); text(copy.offer.heading, "copy.offer.heading", errors); }
+  const factList = (section, min, max) => {
+    if (!present(section)) return;
+    assertKeys(copy[section], ["items"], `copy.${section}`, errors);
+    const items = copy[section].items;
+    if (!Array.isArray(items) || items.length < min || items.length > max) { errors.push(`copy.${section}.items debe tener entre ${min} y ${max} elementos`); return; }
+    items.forEach((item, index) => {
+      assertKeys(item, ["question", "answer"], `copy.${section}.items[${index}]`, errors);
+      text(item?.question, `copy.${section}.items[${index}].question`, errors);
+      text(item?.answer, `copy.${section}.items[${index}].answer`, errors, 2000);
+    });
+  };
+  factList("quick", 2, 4);
+  if (present("why")) {
+    assertKeys(copy.why, ["eyebrow", "heading", "body", "points"], "copy.why", errors);
+    for (const key of ["eyebrow", "heading", "body"]) text(copy.why[key], `copy.why.${key}`, errors);
+    if (!Array.isArray(copy.why.points) || copy.why.points.length < 2 || copy.why.points.length > 4) errors.push("copy.why.points debe tener entre 2 y 4 elementos");
+    else copy.why.points.forEach((item, index) => text(item, `copy.why.points[${index}]`, errors));
+  }
+  if (present("stories")) {
+    assertKeys(copy.stories, ["heading", "intro", "cards"], "copy.stories", errors);
+    for (const key of ["heading", "intro"]) text(copy.stories[key], `copy.stories.${key}`, errors);
+    if (!Array.isArray(copy.stories.cards) || copy.stories.cards.length < 3 || copy.stories.cards.length > 5) errors.push("copy.stories.cards debe tener entre 3 y 5 elementos");
+    else copy.stories.cards.forEach((card, index) => {
+      assertKeys(card, ["title", "body", "product_note"], `copy.stories.cards[${index}]`, errors);
+      for (const key of ["title", "body", "product_note"]) text(card?.[key], `copy.stories.cards[${index}].${key}`, errors, key === "body" ? 2000 : 600);
+    });
+  }
+  if (present("timeline")) {
+    assertKeys(copy.timeline, ["heading", "intro", "steps"], "copy.timeline", errors);
+    for (const key of ["heading", "intro"]) text(copy.timeline[key], `copy.timeline.${key}`, errors);
+    if (!Array.isArray(copy.timeline.steps) || copy.timeline.steps.length < 2 || copy.timeline.steps.length > 4) errors.push("copy.timeline.steps debe tener entre 2 y 4 elementos");
+    else copy.timeline.steps.forEach((step, index) => {
+      assertKeys(step, ["label", "heading", "body"], `copy.timeline.steps[${index}]`, errors);
+      for (const key of ["label", "heading", "body"]) text(step?.[key], `copy.timeline.steps[${index}].${key}`, errors, key === "body" ? 2000 : 600);
+    });
+  }
+  if (present("faq")) {
+    assertKeys(copy.faq, ["heading", "intro", "items"], "copy.faq", errors);
+    text(copy.faq.heading, "copy.faq.heading", errors);
+    if (requireComplete || Object.hasOwn(copy.faq, "intro")) text(copy.faq.intro, "copy.faq.intro", errors);
+    if (!Array.isArray(copy.faq.items) || copy.faq.items.length < 3 || copy.faq.items.length > 8) errors.push("copy.faq.items debe tener entre 3 y 8 elementos");
+    else copy.faq.items.forEach((item, index) => {
+      assertKeys(item, ["question", "answer"], `copy.faq.items[${index}]`, errors);
+      text(item?.question, `copy.faq.items[${index}].question`, errors); text(item?.answer, `copy.faq.items[${index}].answer`, errors, 2000);
+    });
+  }
+  if (present("closing")) {
+    assertKeys(copy.closing, ["eyebrow", "heading", "body", "secondary_body"], "copy.closing", errors);
+    for (const key of ["eyebrow", "heading", "body", "secondary_body"]) text(copy.closing[key], `copy.closing.${key}`, errors, key.includes("body") ? 2000 : 600);
+  }
+  if (present("newsletter")) {
+    assertKeys(copy.newsletter, ["heading", "body"], "copy.newsletter", errors);
+    text(copy.newsletter.heading, "copy.newsletter.heading", errors); text(copy.newsletter.body, "copy.newsletter.body", errors);
+  }
   if (errors.length) throw new Pdp01ValidationError(errors);
   return clone(copy);
 }
@@ -164,17 +223,21 @@ function validatePdp01(document, { origin = "ai" } = {}) {
   if (!Array.isArray(source?.variants) || !source.variants.length || !source.variants.every((variant) => GID.variant.test(String(variant?.id || "")))) errors.push("source_fields.variants no es válido");
   if (value.source_hash !== hashSource(source)) errors.push("source_hash no coincide con la fuente de verdad");
   const content = value.content;
-  assertKeys(content, ["hero", "offer", "why", "timeline", "faq", "media"], "content", errors);
+  assertKeys(content, ["hero", "offer", "quick", "why", "stories", "timeline", "faq", "closing", "newsletter", "media"], "content", errors);
   const requiredSections = ["hero", "offer", "why", "timeline", "faq", "media"];
   for (const section of requiredSections) if (!plainObject(content?.[section])) errors.push(`content.${section} es obligatorio`);
   assertKeys(content?.hero, ["claim", "bullets"], "content.hero", errors);
   assertKeys(content?.offer, ["heading", "packs"], "content.offer", errors);
   assertKeys(content?.why, ["eyebrow", "heading", "body", "points"], "content.why", errors);
   assertKeys(content?.timeline, ["heading", "intro", "steps"], "content.timeline", errors);
-  assertKeys(content?.faq, ["heading", "items"], "content.faq", errors);
-  assertKeys(content?.media, ["hero_media_id", "comparison_media_id", "community_media_id", "gallery_media_ids"], "content.media", errors);
+  assertKeys(content?.faq, ["heading", "intro", "items"], "content.faq", errors);
+  if (plainObject(content?.quick)) assertKeys(content.quick, ["items"], "content.quick", errors);
+  if (plainObject(content?.stories)) assertKeys(content.stories, ["heading", "intro", "cards"], "content.stories", errors);
+  if (plainObject(content?.closing)) assertKeys(content.closing, ["eyebrow", "heading", "body", "secondary_body"], "content.closing", errors);
+  if (plainObject(content?.newsletter)) assertKeys(content.newsletter, ["heading", "body"], "content.newsletter", errors);
+  assertKeys(content?.media, ["hero_media_id", "comparison_media_id", "community_media_id", "story_media_ids", "gallery_media_ids"], "content.media", errors);
   try {
-    validatePdp01Copy({ hero: content?.hero, offer: { heading: content?.offer?.heading }, why: content?.why, timeline: content?.timeline, faq: content?.faq });
+    validatePdp01Copy({ hero: content?.hero, offer: { heading: content?.offer?.heading }, quick: content?.quick, why: content?.why, stories: content?.stories, timeline: content?.timeline, faq: content?.faq, closing: content?.closing, newsletter: content?.newsletter }, { requireComplete: false });
   } catch (error) {
     if (error instanceof Pdp01ValidationError) errors.push(...error.message.replace(/^El documento Piloto 01 no es válido:\s*/, "").split("; "));
     else throw error;
@@ -192,6 +255,7 @@ function validatePdp01(document, { origin = "ai" } = {}) {
   const knownMedia = new Set(source?.media_ids || []);
   if (!knownMedia.has(content?.media?.hero_media_id)) errors.push("content.media.hero_media_id no pertenece al producto");
   if (!Array.isArray(content?.media?.gallery_media_ids) || !content.media.gallery_media_ids.length || !content.media.gallery_media_ids.every((mediaId) => knownMedia.has(mediaId))) errors.push("la galería referencia medios ajenos al producto");
+  if (Object.hasOwn(content?.media || {}, "story_media_ids") && (!Array.isArray(content.media.story_media_ids) || !content.media.story_media_ids.every((mediaId) => knownMedia.has(mediaId)))) errors.push("las tarjetas editoriales referencian medios ajenos al producto");
   for (const slot of ["comparison_media_id", "community_media_id"]) if (Object.hasOwn(content?.media || {}, slot) && !knownMedia.has(content.media[slot])) errors.push(`content.media.${slot} no pertenece al producto`);
   sanitizeEvidence(value, origin); validateEvidence(value.evidence, origin, errors);
   if (errors.length) throw new Pdp01ValidationError(errors);
