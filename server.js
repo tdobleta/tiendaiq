@@ -69,7 +69,7 @@ const { TenantContext } = require("./src/tenancy/tenant-context");
 const { verifyAndNormalizeWebhook } = require("./src/webhooks/verify-and-normalize");
 const { generationAdmissionPause } = require("./src/generation/admission-control");
 const { resolveTemplateForCreation } = require("./src/domain/template-registry");
-const { applyTemplateBoundEdit } = require("./src/domain/fixed-template-edit-policy");
+const { applyTemplateBoundEdit, applyPdp01Evidence, attachPdp01MerchantMedia } = require("./src/domain/fixed-template-edit-policy");
 const { assertFixedTemplatePublishable } = require("./src/shopify/fixed-template-publish-guard");
 const {
   queryShopifyCertification,
@@ -1173,6 +1173,26 @@ async function api(req, res, url) {
     return json(res, 200, existente);
   }
 
+  // PUT /api/paginas/:id/evidencia — vía estrecha para los espacios que sólo
+  // puede completar el merchant: reseñas, foto, rating, garantías, oferta y
+  // comparación. No acepta un documento entero ni relaja el editor fijo.
+  const mEvidencia = ruta.match(/^\/api\/paginas\/([^/]+)\/evidencia$/);
+  if (req.method === "PUT" && mEvidencia) {
+    const existente = await leerPagina(sesion.tenant, mEvidencia[1]);
+    if (!existente) return json(res, 404, { error: "No existe esa página" });
+    if (existente.active_job_id) {
+      const active = await leerJobDB(sesion.tenant, existente.active_job_id);
+      if (active && ["queued", "running"].includes(active.status)) {
+        return json(res, 409, { error: "La página se está publicando. Esperá a que termine antes de guardar evidencia." });
+      }
+    }
+    const { evidence } = await leerCuerpo(req);
+    existente.data = applyPdp01Evidence({ persistedData: existente.data, evidence });
+    if (existente.estado === "publicada") existente.cambios_sin_publicar = true;
+    await guardarPagina(sesion.tenant, existente);
+    return json(res, 200, existente);
+  }
+
   // POST /api/paginas/:id/imagenes — subir una foto de la compu al producto.
   // Entra al pool de la página y a Shopify como media del producto, así el
   // Liquid publicado la resuelve igual que a cualquier otra foto.
@@ -1188,6 +1208,7 @@ async function api(req, res, url) {
       sesion, registro.shopify_product_id, nombre, mime || "image/jpeg", base64
     );
 
+    registro.data = attachPdp01MerchantMedia({ persistedData: registro.data, mediaId: media_id });
     registro.data.pool_imagenes = registro.data.pool_imagenes || [];
     registro.data.pool_imagenes.push({ media_id, tipo: "producto_limpio" });
     registro.urls = { ...(registro.urls || {}), [media_id]: url };

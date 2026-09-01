@@ -53,6 +53,22 @@ test("Piloto 01 elimina evidencia sin fuente antes de guardar", () => {
   const data = page(); data.evidence.testimonial = { text: "Excelente", author: "Alguien" };
   assert.equal(validatePdp01(data, { origin: "ai" }).evidence.testimonial, undefined);
 });
+test("Piloto 01 admite evidencia del merchant sólo con fuente y sin campos libres", () => {
+  const data = page();
+  data.evidence = {
+    rating: { source: { kind: "review_provider", reference: "judge-me:product:1" }, value: 4.8, count: 245 },
+    testimonial: {
+      source: { kind: "merchant_file", reference: "shopify-media:10" },
+      author: "Cliente de la tienda", text: "Una reseña aportada por el merchant.", media_id: "gid://shopify/MediaImage/10"
+    },
+    guarantee: { source: { kind: "shopify_policy", reference: "refund-policy" }, title: "Política de la tienda", body: "Consultá las condiciones disponibles antes de comprar." },
+    offer: { source: { kind: "declarado_por_merchant", reference: "campaign:september" }, ends_at: "2026-09-30T23:59:00.000Z", label: "FINALIZA EN" },
+    comparison: { source: { kind: "merchant_file", reference: "comparison:1" }, left_label: "Detalles", right_label: "Producto" }
+  };
+  assert.doesNotThrow(() => validatePdp01(data, { origin: "merchant" }));
+  const unsafe = structuredClone(data); unsafe.evidence.rating.html = "<script>";
+  assert.throws(() => validatePdp01(unsafe, { origin: "merchant" }), /no pertenece al contrato/);
+});
 test("Piloto 01 rechaza campos libres, importes y referencias ajenas", () => {
   const extra = page(); extra.content.hero.html = "<script>";
   assert.throws(() => validatePdp01(extra), /no pertenece al contrato/);

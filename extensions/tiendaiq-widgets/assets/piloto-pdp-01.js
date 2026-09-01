@@ -58,6 +58,7 @@
   // autor en varias secciones —, así que ocultar con el atributo no alcanza.
   // Se oculta con estilo inline, que gana siempre.
   const hide = (node) => { if (node) node.style.setProperty("display", "none", "important"); };
+  const show = (node) => { if (node) node.style.removeProperty("display"); };
   const text = (node, value) => {
     if (!node) return false;
     const v = value == null ? "" : String(value).trim();
@@ -67,6 +68,7 @@
   };
   const all = (scope, sel) => Array.from((scope || root).querySelectorAll(sel));
   const one = (scope, sel) => (scope || root).querySelector(sel);
+  const conFuente = (bloque) => Boolean(bloque?.source?.kind && bloque?.source?.reference);
   const setImg = (node, url, alt) => {
     if (!node) return false;
     if (!url) { hide(node.closest("picture") || node); return false; }
@@ -130,9 +132,21 @@
   fill(all(root, ".scp-story-image img"), storyImageMedia, (node, id) => setImg(node, image(id), productTitle));
   all(root, ".scp-story-product > img").forEach((node) => setImg(node, image(gallery[0]), productTitle));
   setEditorialImage(".scp-community-photo img", c.media?.community_media_id || storyMedia[0] || gallery[0]);
-  // La etiqueta "Others / Ours" de la referencia es un comparativo sin fuente:
-  // preservamos la foto y la composición, pero no una afirmación no verificable.
-  all(root, ".scp-compare-tags").forEach(hide);
+  // El comparativo permanece en su lugar. Sin una fuente cargada por el
+  // merchant no compara ni promete: nombra de forma neutral los dos espacios
+  // visuales de la composición aprobada.
+  const comparison = ev.comparison;
+  all(root, ".scp-compare-tags").forEach((tags) => {
+    const labels = all(tags, "span");
+    if (conFuente(comparison)) {
+      text(labels[0], comparison.left_label || "Comparación");
+      text(labels[1], comparison.right_label || productTitle || "Producto");
+    } else {
+      text(labels[0], "Detalles");
+      text(labels[1], productTitle || "Producto");
+    }
+    show(tags);
+  });
 
   // --- encabezado del buy box ----------------------------------------------
   text(one(root, ".phv4-panel h1") || one(root, "h1"), productTitle);
@@ -256,7 +270,19 @@
       text(one(card, ".scp-story-product small"), item.product_note);
       text(one(card, ".scp-story-product b"), productTitle);
     });
-    all(storySection, ".scp-stories-rating, .scp-stars, .scp-story-verified").forEach(hide);
+    // La franja superior conserva el espacio y se vuelve editorial hasta que
+    // exista una métrica real. Las estrellas y la condición de verificada no
+    // se muestran jamás sin una fuente del merchant.
+    const storyRating = one(storySection, ".scp-stories-rating");
+    if (conFuente(ev.rating)) {
+      text(one(storyRating, "b"), `${ev.rating.value}/5 · ${ev.rating.count} valoraciones`);
+      show(storyRating);
+      all(storySection, ".scp-stars").forEach(show);
+    } else {
+      text(one(storyRating, "b"), "Conocé el producto");
+      all(storySection, ".scp-stars, .scp-story-verified").forEach(hide);
+      show(storyRating);
+    }
     const rail = one(storySection, ".scp-stories-grid");
     const moveStories = (direction) => {
       const card = one(rail, ".scp-story-card");
@@ -326,13 +352,17 @@
   // dejan placeholders de la fuente aprobada que puedan parecer datos reales.
   all(root, ".phv4-subscribe, .phv4-payment-icons").forEach(hide);
 
-  // --- evidencia: apagada salvo fuente verificable --------------------------
-  const conFuente = (bloque) => Boolean(bloque?.source?.kind && bloque?.source?.reference);
-
+  // --- evidencia y espacios del merchant ------------------------------------
+  // Cada bloque de la plantilla siempre se conserva. La fuente verificable
+  // decide si se muestra evidencia real; su ausencia activa una versión
+  // editorial neutra, no un hueco ni una afirmación simulada.
   if (conFuente(ev.rating)) {
     all(root, ".phv4-rating-text").forEach((n) => { n.textContent = `${ev.rating.value}/5 · ${ev.rating.count} valoraciones`; });
+    all(root, ".phv4-stars").forEach(show);
   } else {
-    all(root, ".phv4-rating, .phv4-rating-text, .phv4-stars").forEach(hide);
+    all(root, ".phv4-rating-text").forEach((n) => { n.textContent = "Información del producto"; });
+    all(root, ".phv4-stars").forEach(hide);
+    all(root, ".phv4-rating").forEach(show);
   }
 
   if (conFuente(ev.testimonial)) {
@@ -341,10 +371,25 @@
       if (i > 0) return hide(slide);
       text(one(slide, ".phv4-review-copy p") || one(slide, "p"), ev.testimonial.text);
       text(one(slide, "cite") || one(slide, ".phv4-review-head strong"), ev.testimonial.author);
-      setImg(one(slide, "img"), image(ev.testimonial.media_id), "");
+      const avatar = one(slide, ".phv4-avatar");
+      const avatarUrl = image(ev.testimonial.media_id);
+      if (avatarUrl && avatar) avatar.style.backgroundImage = `url("${avatarUrl}")`;
+      all(slide, ".phv4-verified, .phv4-review-stars").forEach(show);
+      show(slide);
     });
   } else {
-    all(root, ".phv4-opinion-carousel, .phv4-review").forEach(hide);
+    const slides = all(root, ".phv4-opinion-slide");
+    slides.forEach((slide, i) => {
+      if (i > 0) return hide(slide);
+      text(one(slide, ".phv4-review-copy p") || one(slide, "p"), c.why?.body || c.hero?.claim || "Revisá los detalles del producto antes de elegir.");
+      text(one(slide, ".phv4-review-head strong"), "Sobre este producto");
+      const avatar = one(slide, ".phv4-avatar");
+      const avatarUrl = image(gallery[0]);
+      if (avatarUrl && avatar) avatar.style.backgroundImage = `url("${avatarUrl}")`;
+      all(slide, ".phv4-verified, .phv4-review-stars").forEach(hide);
+      show(slide);
+    });
+    all(root, ".phv4-opinion-carousel, .phv4-review").forEach(show);
   }
 
   // El diseño escribe la garantía con pseudo-elementos. La fuente canónica las
@@ -360,11 +405,50 @@
     cssText(".phv4-guarantee-v2 h2, .phv4-guarantee h2", ev.guarantee.title);
     cssText(".phv4-guarantee-v2 p, .phv4-guarantee p", ev.guarantee.body);
   } else {
-    all(root, ".phv4-guarantee-v2, .phv4-guarantee").forEach(hide);
+    cssText(".phv4-guarantee-v2 h2, .phv4-guarantee h2", "Información clara antes de comprar");
+    cssText(".phv4-guarantee-v2 p, .phv4-guarantee p", "Revisá los detalles, variantes y políticas de esta tienda antes de finalizar tu compra.");
+    all(root, ".phv4-guarantee-v2, .phv4-guarantee").forEach(show);
   }
 
-  // El contador de oferta es urgencia sin evidencia: no se muestra.
-  all(root, ".phv4-offer-timer").forEach(hide);
+  // La fuente original agregaba un contador ficticio con un script que se
+  // reiniciaba en cada visita. El runtime crea la misma superficie sólo si
+  // hace falta: con una fecha rastreable cuenta de verdad; si no, se presenta
+  // como estado informativo, sin urgencia inventada.
+  const ensureOfferTimer = () => {
+    const panel = one(root, ".phv4-panel");
+    if (!panel) return null;
+    let timer = one(panel, ".phv4-offer-timer");
+    if (!timer) {
+      timer = document.createElement("aside");
+      timer.className = "phv4-offer-timer";
+      timer.innerHTML = '<svg viewBox="0 0 100 100" aria-hidden="true"><circle class="phv4-timer-track" cx="50" cy="50" r="44"></circle><circle class="phv4-timer-progress" cx="50" cy="50" r="44"></circle></svg><div class="phv4-timer-copy"><strong class="phv4-timer-value"></strong><span class="phv4-timer-caption"></span></div>';
+      panel.insertBefore(timer, panel.firstChild);
+    }
+    return timer;
+  };
+  const timer = ensureOfferTimer();
+  if (timer) {
+    const deadline = conFuente(ev.offer) ? Date.parse(ev.offer.ends_at) : NaN;
+    const value = one(timer, ".phv4-timer-value");
+    const caption = one(timer, ".phv4-timer-caption");
+    const progress = one(timer, ".phv4-timer-progress");
+    if (Number.isFinite(deadline) && deadline > Date.now()) {
+      const paint = () => {
+        const remaining = Math.max(0, deadline - Date.now());
+        const seconds = Math.ceil(remaining / 1000);
+        if (value) value.textContent = `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
+        if (caption) { caption.textContent = ev.offer.label || "FINALIZA EN"; caption.setAttribute("data-tiq-text", ev.offer.label || "FINALIZA EN"); }
+        if (progress) progress.style.strokeDashoffset = String(276.46 * (1 - Math.min(1, remaining / 86400000)));
+        if (remaining) requestAnimationFrame(paint);
+      };
+      paint();
+    } else {
+      if (value) value.textContent = "";
+      if (caption) { caption.textContent = "INFORMACIÓN"; caption.setAttribute("data-tiq-text", "INFORMACIÓN"); }
+      if (progress) progress.style.strokeDashoffset = "0";
+    }
+    show(timer);
+  }
 
   // --- red de seguridad -----------------------------------------------------
   // El saneador reemplaza todo el copy de origen por "Contenido del producto".

@@ -3,7 +3,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const { hashSource } = require("../src/piloto/pdp01-contract");
-const { applyTemplateBoundEdit, FixedTemplateEditError } = require("../src/domain/fixed-template-edit-policy");
+const { applyTemplateBoundEdit, applyPdp01Evidence, attachPdp01MerchantMedia, FixedTemplateEditError } = require("../src/domain/fixed-template-edit-policy");
 
 function document() {
   const source_fields = { product_gid: "gid://shopify/Product/1", title: "Producto", description: "", vendor: "", product_type: "", options: [], media_ids: ["gid://shopify/MediaImage/1"], variants: [{ id: "gid://shopify/ProductVariant/1", title: "Única" }] };
@@ -33,4 +33,21 @@ test("Piloto 01 permite copy y bloquea packs, medios y fuente en la edición", (
   const extended = structuredClone(persisted);
   extended.piloto_pdp_01.content.stories.cards[0].body = "Detalle actualizado del producto.";
   assert.equal(applyTemplateBoundEdit({ persistedData: persisted, submittedData: extended }).piloto_pdp_01.content.stories.cards[0].body, "Detalle actualizado del producto.");
+});
+
+test("Piloto 01 recibe evidencia y fotos del merchant por una vía separada", () => {
+  const persisted = document();
+  const withMedia = attachPdp01MerchantMedia({ persistedData: persisted, mediaId: "gid://shopify/MediaImage/2" });
+  assert.deepEqual(withMedia.piloto_pdp_01.source_fields.media_ids, ["gid://shopify/MediaImage/1", "gid://shopify/MediaImage/2"]);
+  const next = applyPdp01Evidence({
+    persistedData: withMedia,
+    evidence: {
+      testimonial: {
+        source: { kind: "merchant_file", reference: "shopify-media:2" },
+        author: "Cliente de la tienda", text: "Reseña confirmada por el merchant.", media_id: "gid://shopify/MediaImage/2"
+      }
+    }
+  });
+  assert.equal(next.piloto_pdp_01.evidence.testimonial.media_id, "gid://shopify/MediaImage/2");
+  assert.throws(() => applyPdp01Evidence({ persistedData: persisted, evidence: { testimonial: { text: "Inventada" } } }), FixedTemplateEditError);
 });
