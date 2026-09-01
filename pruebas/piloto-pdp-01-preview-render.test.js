@@ -132,6 +132,12 @@ test("BINDER · las secciones posteriores usan media Shopify y no alteran el her
   assert.match(codigo, /newsletter\.setAttribute\("action", "\/contact#contact_form"\)/);
 });
 
+test("BINDER · el CTA de compra no conserva el texto saneado de la fuente", () => {
+  assert.match(codigo, /const setAtcLabel = \(label\) =>/);
+  assert.match(codigo, /setAtcLabel\(ok \? "Añadir al carrito" : "Sin stock"\)/);
+  assert.match(codigo, /\.phv4-subscribe, \.phv4-payment-icons, \.phv4-details/);
+});
+
 // ---------------------------------------------------------------------- caché
 test("CACHÉ · todo asset versionado del preview participa de VERSION_ASSETS", () => {
   const indice = fs.readFileSync(path.join(RAIZ, "plantilla-producto", "index.html"), "utf8");
