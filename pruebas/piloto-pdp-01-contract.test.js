@@ -2,8 +2,8 @@
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { hashSource, validatePdp01, storefrontProjection } = require("../src/piloto/pdp01-contract");
-const { contentFromModelJson } = require("../src/piloto/generate-pdp01");
+const { PDP01_COPY_OUTPUT_SCHEMA, hashSource, validatePdp01, storefrontProjection } = require("../src/piloto/pdp01-contract");
+const { copyFromModelJson, commerceFromSource, composePdp01Content } = require("../src/piloto/generate-pdp01");
 
 function page() {
   const source_fields = {
@@ -41,8 +41,36 @@ test("la proyección de storefront nunca expone fuente ni hash", () => {
   assert.equal(projection.source_hash, undefined);
   assert.equal(projection.content.offer.packs[0].quantity, 1);
 });
-test("Piloto 01 normaliza únicamente el sobre content de una respuesta de IA", () => {
-  const expected = page().content;
-  assert.deepEqual(contentFromModelJson(JSON.stringify({ content: expected })), expected);
-  assert.throws(() => validatePdp01({ ...page(), content: contentFromModelJson(JSON.stringify({ content: expected, extra: true })) }), /content\.content no pertenece al contrato/);
+test("Piloto 01 arma packs y medios vivos desde Shopify, no desde la IA", () => {
+  const source = page().source_fields;
+  const copy = {
+    hero: page().content.hero,
+    offer: { heading: page().content.offer.heading },
+    why: page().content.why,
+    timeline: page().content.timeline,
+    faq: page().content.faq
+  };
+  const content = composePdp01Content(copy, source);
+  assert.deepEqual(content.offer.packs.map((pack) => pack.quantity), [1, 3, 5]);
+  assert.deepEqual(content.offer.packs.map((pack) => pack.variant_id), [source.variants[0].id, source.variants[0].id, source.variants[0].id]);
+  assert.equal(content.media.hero_media_id, source.media_ids[0]);
+  assert.doesNotThrow(() => validatePdp01({ ...page(), content }));
+});
+test("Piloto 01 rechaza un sobre, campos extra y medios generados por la IA", () => {
+  const copy = {
+    hero: page().content.hero,
+    offer: { heading: page().content.offer.heading },
+    why: page().content.why,
+    timeline: page().content.timeline,
+    faq: page().content.faq
+  };
+  assert.deepEqual(copyFromModelJson(JSON.stringify(copy)), copy);
+  assert.throws(() => copyFromModelJson(JSON.stringify({ content: copy })), /copy\.content no pertenece al contrato/);
+  assert.throws(() => copyFromModelJson(JSON.stringify({ ...copy, media: {} })), /copy\.media no pertenece al contrato/);
+});
+test("el esquema estructurado deja sólo copy abierto a la IA", () => {
+  assert.deepEqual(Object.keys(PDP01_COPY_OUTPUT_SCHEMA.properties).sort(), ["faq", "hero", "offer", "timeline", "why"]);
+  assert.equal(PDP01_COPY_OUTPUT_SCHEMA.additionalProperties, false);
+  assert.equal(PDP01_COPY_OUTPUT_SCHEMA.properties.offer.properties.packs, undefined);
+  assert.deepEqual(commerceFromSource(page().source_fields).packs.map((pack) => pack.label), ["1 unidad", "3 unidades", "5 unidades"]);
 });
