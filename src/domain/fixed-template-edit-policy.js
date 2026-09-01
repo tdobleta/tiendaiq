@@ -3,7 +3,7 @@
 const { isDeepStrictEqual } = require("node:util");
 const { resolveStoredTemplate } = require("./template-registry");
 const { PINZA_PAGEPILOT_V1, PILOTO_PINZA_PAGEPILOT_V1, PILOTO_PDP_01_V1 } = require("./fixed-template-manifest");
-const { validatePdp01, Pdp01ValidationError } = require("../piloto/pdp01-contract");
+const { hashSource, validatePdp01, Pdp01ValidationError } = require("../piloto/pdp01-contract");
 
 class FixedTemplateEditError extends Error {
   constructor(message) {
@@ -176,6 +176,46 @@ function applyPdp01Edit({ persistedData, submittedData }) {
   return next;
 }
 
+// Evidencia y archivos del merchant no viajan por el PUT genérico del editor.
+// Tienen una vía estrecha propia, validada con el mismo contrato, para que una
+// pantalla no pueda desbloquearse simplemente enviando más campos en `data`.
+function applyPdp01Evidence({ persistedData, evidence }) {
+  if (!isPdp01Template(persistedData)) throw new FixedTemplateEditError("La página no usa la plantilla Piloto 01");
+  if (!isPlainObject(evidence)) throw new FixedTemplateEditError("La evidencia debe ser un objeto");
+  for (const [slot, value] of Object.entries(evidence)) {
+    if (!isPlainObject(value?.source) || !value.source.kind || !value.source.reference) {
+      throw new FixedTemplateEditError(`La evidencia ${slot} requiere una fuente verificable`);
+    }
+  }
+  const next = clone(persistedData);
+  next.piloto_pdp_01.evidence = clone(evidence || {});
+  try {
+    next.piloto_pdp_01 = validatePdp01(next.piloto_pdp_01, { origin: "merchant" });
+  } catch (error) {
+    if (error instanceof Pdp01ValidationError) throw new FixedTemplateEditError(error.message);
+    throw error;
+  }
+  return next;
+}
+
+function attachPdp01MerchantMedia({ persistedData, mediaId }) {
+  if (!isPdp01Template(persistedData)) return persistedData;
+  if (!/^gid:\/\/shopify\/MediaImage\/\d+$/.test(String(mediaId || ""))) {
+    throw new FixedTemplateEditError("La imagen subida no devolvió una media Shopify válida");
+  }
+  const next = clone(persistedData);
+  const source = next.piloto_pdp_01.source_fields;
+  source.media_ids = [...new Set([...(source.media_ids || []), String(mediaId)])];
+  next.piloto_pdp_01.source_hash = hashSource(source);
+  try {
+    next.piloto_pdp_01 = validatePdp01(next.piloto_pdp_01, { origin: "merchant" });
+  } catch (error) {
+    if (error instanceof Pdp01ValidationError) throw new FixedTemplateEditError(error.message);
+    throw error;
+  }
+  return next;
+}
+
 // A fixed template is not a generic document editor. Start from persisted
 // data, permit a narrowly declared set of text leaves, and compare the rest
 // byte-for-byte as structured data. The persisted descriptor selects policy;
@@ -211,5 +251,7 @@ module.exports = Object.freeze({
   FixedTemplateEditError,
   pinzaEditablePaths,
   isPdp01Template,
+  applyPdp01Evidence,
+  attachPdp01MerchantMedia,
   applyTemplateBoundEdit
 });

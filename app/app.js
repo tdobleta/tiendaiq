@@ -3370,8 +3370,112 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     if (id === "faq") return `<div class="sp-sub">Preguntas frecuentes</div><div class="sp-content">${campo(`${prefix}.faq.heading`, "Título")}${(content.faq?.items || []).map((_, i) => `<section class="sp-item-card"><div class="sp-item-card__head"><strong>Pregunta ${i + 1}</strong><span>slot</span></div>${campo(`${prefix}.faq.items.${i}.question`, "Pregunta")}${campo(`${prefix}.faq.items.${i}.answer`, "Respuesta", 3)}</section>`).join("")}</div>`;
     if (id === "closing") return `<div class="sp-sub">Cierre</div><div class="sp-content">${campo(`${prefix}.closing.eyebrow`, "Antetítulo")}${campo(`${prefix}.closing.heading`, "Título", 2)}${campo(`${prefix}.closing.body`, "Texto", 3)}${campo(`${prefix}.closing.secondary_body`, "Texto secundario", 3)}</div>`;
     if (id === "newsletter") return `<div class="sp-sub">Newsletter</div><div class="sp-content">${campo(`${prefix}.newsletter.heading`, "Título", 2)}${campo(`${prefix}.newsletter.body`, "Texto", 2)}</div>`;
-    if (id === "evidence") return `<div class="sp-sub">Espacios del merchant</div><div class="sp-content"><p class="editor__ayuda">La plantilla mantiene visibles sus tarjetas de rating, reseñas, fotos, comparación, garantía y contador. Cuando cargues una fuente real, cada espacio recibe esa información sin cambiar el diseño. Hasta entonces muestra contenido editorial del producto, nunca una reseña o una oferta inventada.</p></div>`;
+    if (id === "evidence") return panelEvidenciaPdp01HTML();
     return `<div class="editor__ayuda">Este bloque se alimenta con datos reales de Shopify o requiere una fuente verificable.</div>`;
+  }
+
+  function panelEvidenciaPdp01HTML() {
+    const doc = estado.pagina.data?.piloto_pdp_01 || {};
+    const evidence = doc.evidence || {};
+    const media = doc.source_fields?.media_ids || [];
+    const urls = estado.pagina.urls || {};
+    const selected = evidence.testimonial?.media_id || "";
+    const options = [`<option value="">Usar imagen principal del producto</option>`]
+      .concat(media.map((id, index) => `<option value="${esc(id)}" ${id === selected ? "selected" : ""}>Imagen ${index + 1} del producto</option>`)).join("");
+    const check = (name) => evidence[name] ? "checked" : "";
+    return `<div class="sp-sub">Espacios del merchant</div><div class="sp-content">
+      <p class="editor__ayuda">El diseño no pierde ninguna tarjeta. Sólo marcá una sección cuando tengas datos reales para respaldarla; si no, Piloto mantiene su versión editorial neutra.</p>
+      <section class="sp-item-card"><div class="sp-item-card__head"><strong>Rating real</strong><span>fuente</span></div>
+        <label class="campo"><input type="checkbox" data-p01-evidence="rating.enabled" ${check("rating")}> Confirmo que el rating proviene de mi proveedor de reseñas.</label>
+        <div class="sp-grid-2"><label class="campo">Puntaje<input type="number" min="0" max="5" step="0.1" data-p01-evidence="rating.value" value="${esc(evidence.rating?.value ?? "")}"></label><label class="campo">Cantidad de reseñas<input type="number" min="1" step="1" data-p01-evidence="rating.count" value="${esc(evidence.rating?.count ?? "")}"></label></div>
+      </section>
+      <section class="sp-item-card"><div class="sp-item-card__head"><strong>Reseña y foto reales</strong><span>merchant</span></div>
+        <label class="campo"><input type="checkbox" data-p01-evidence="testimonial.enabled" ${check("testimonial")}> Confirmo que tengo autorización para usar esta reseña.</label>
+        <label class="campo">Nombre o identificación<input data-p01-evidence="testimonial.author" value="${esc(evidence.testimonial?.author ?? "")}" placeholder="Ej.: Cliente de la tienda"></label>
+        <label class="campo">Texto de la reseña<textarea rows="3" data-p01-evidence="testimonial.text" placeholder="Pegá una reseña auténtica">${esc(evidence.testimonial?.text ?? "")}</textarea></label>
+        <label class="campo">Foto asociada<select data-p01-evidence="testimonial.media_id">${options}</select></label>
+        <label class="galeria-picker__img galeria-picker__subir" title="Subir una foto de reseña como media del producto"><span class="galeria-picker__subir-mas">${ico("mas")}</span><span class="galeria-picker__subir-txt">Subir foto</span><input type="file" accept="image/*" hidden data-p01-evidence-upload></label>
+        ${selected && urls[selected] ? `<img class="sp-evidence-preview" src="${esc(urls[selected])}" alt="Vista previa de la foto de reseña">` : ""}
+      </section>
+      <section class="sp-item-card"><div class="sp-item-card__head"><strong>Garantía o política</strong><span>Shopify</span></div>
+        <label class="campo"><input type="checkbox" data-p01-evidence="guarantee.enabled" ${check("guarantee")}> Confirmo que coincide con la política vigente de mi tienda.</label>
+        <label class="campo">Título<input data-p01-evidence="guarantee.title" value="${esc(evidence.guarantee?.title ?? "")}" placeholder="Ej.: Política de devoluciones"></label>
+        <label class="campo">Texto<textarea rows="3" data-p01-evidence="guarantee.body" placeholder="Condiciones reales de la tienda">${esc(evidence.guarantee?.body ?? "")}</textarea></label>
+      </section>
+      <section class="sp-item-card"><div class="sp-item-card__head"><strong>Oferta con fecha real</strong><span>opcional</span></div>
+        <label class="campo"><input type="checkbox" data-p01-evidence="offer.enabled" ${check("offer")}> Confirmo que la fecha corresponde a una oferta real.</label>
+        <label class="campo">Finaliza<input type="datetime-local" data-p01-evidence="offer.ends_at" value="${esc(evidence.offer?.ends_at ? String(evidence.offer.ends_at).slice(0, 16) : "")}"></label>
+      </section>
+      <section class="sp-item-card"><div class="sp-item-card__head"><strong>Comparación real</strong><span>opcional</span></div>
+        <label class="campo"><input type="checkbox" data-p01-evidence="comparison.enabled" ${check("comparison")}> Confirmo que la comparación tiene respaldo.</label>
+        <div class="sp-grid-2"><label class="campo">Etiqueta izquierda<input data-p01-evidence="comparison.left_label" value="${esc(evidence.comparison?.left_label ?? "")}"></label><label class="campo">Etiqueta derecha<input data-p01-evidence="comparison.right_label" value="${esc(evidence.comparison?.right_label ?? "")}"></label></div>
+      </section>
+      <button type="button" class="sp-evidence-save" data-p01-evidence-save>Guardar espacios del merchant</button>
+    </div>`;
+  }
+
+  function valorEvidenciaPdp01(panel, name) {
+    return panel.querySelector(`[data-p01-evidence="${name}"]`)?.value?.trim() || "";
+  }
+
+  async function guardarEvidenciaPdp01(panel) {
+    if (sucio) return toast("Guardá primero los cambios de copy antes de modificar la evidencia.");
+    const enabled = (name) => Boolean(panel.querySelector(`[data-p01-evidence="${name}.enabled"]`)?.checked);
+    const evidence = {};
+    if (enabled("rating")) evidence.rating = {
+      source: { kind: "declarado_por_merchant", reference: `merchant-rating:${estado.pagina.id}` },
+      value: Number(valorEvidenciaPdp01(panel, "rating.value")), count: Number(valorEvidenciaPdp01(panel, "rating.count"))
+    };
+    if (enabled("testimonial")) evidence.testimonial = {
+      source: { kind: "declarado_por_merchant", reference: `merchant-testimonial:${estado.pagina.id}` },
+      author: valorEvidenciaPdp01(panel, "testimonial.author"), text: valorEvidenciaPdp01(panel, "testimonial.text"),
+      ...(valorEvidenciaPdp01(panel, "testimonial.media_id") ? { media_id: valorEvidenciaPdp01(panel, "testimonial.media_id") } : {})
+    };
+    if (enabled("guarantee")) evidence.guarantee = {
+      source: { kind: "shopify_policy", reference: "merchant-policy" },
+      title: valorEvidenciaPdp01(panel, "guarantee.title"), body: valorEvidenciaPdp01(panel, "guarantee.body")
+    };
+    if (enabled("offer")) {
+      const rawEnd = valorEvidenciaPdp01(panel, "offer.ends_at");
+      const parsedEnd = new Date(rawEnd);
+      evidence.offer = {
+        source: { kind: "declarado_por_merchant", reference: `merchant-offer:${estado.pagina.id}` },
+        ends_at: Number.isNaN(parsedEnd.getTime()) ? rawEnd : parsedEnd.toISOString()
+      };
+    }
+    if (enabled("comparison")) evidence.comparison = {
+      source: { kind: "declarado_por_merchant", reference: `merchant-comparison:${estado.pagina.id}` },
+      left_label: valorEvidenciaPdp01(panel, "comparison.left_label"), right_label: valorEvidenciaPdp01(panel, "comparison.right_label")
+    };
+    const button = panel.querySelector("[data-p01-evidence-save]");
+    button?.setAttribute("disabled", "");
+    try {
+      estado.pagina = await api(`/paginas/${estado.pagina.id}/evidencia`, { method: "PUT", body: { evidence } });
+      cambiosSinPublicar = estado.pagina.cambios_sin_publicar === true;
+      actualizarPill(); repintarPreview(); refrescarPanelSeccion(); toast("Espacios del merchant actualizados");
+    } catch (error) {
+      panel.insertAdjacentHTML("afterbegin", `<div class="sp-ai-error">${ico("x")} ${esc(error.message)}</div>`);
+      button?.removeAttribute("disabled");
+    }
+  }
+
+  async function subirImagenEvidenciaPdp01(archivo, input) {
+    const tile = input.closest("label");
+    tile?.classList.add("galeria-picker__subir--ocupado");
+    const label = tile?.querySelector(".galeria-picker__subir-txt"); if (label) label.textContent = "Subiendo…";
+    try {
+      const base64 = await new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result).split(",")[1]); reader.onerror = () => reject(new Error("No se pudo leer el archivo")); reader.readAsDataURL(archivo); });
+      const uploaded = await api(`/paginas/${estado.pagina.id}/imagenes`, { method: "POST", body: { nombre: archivo.name, mime: archivo.type, base64 } });
+      estado.pagina.data.pool_imagenes = estado.pagina.data.pool_imagenes || [];
+      estado.pagina.data.pool_imagenes.push({ media_id: uploaded.media_id, tipo: "evidencia_merchant" });
+      estado.pagina.urls = { ...(estado.pagina.urls || {}), [uploaded.media_id]: uploaded.url };
+      const media = estado.pagina.data.piloto_pdp_01?.source_fields?.media_ids;
+      if (Array.isArray(media) && !media.includes(uploaded.media_id)) media.push(uploaded.media_id);
+      refrescarPanelSeccion(); toast("Foto cargada. Seleccionala y guardá la reseña.");
+    } catch (error) {
+      tile?.classList.remove("galeria-picker__subir--ocupado"); if (label) label.textContent = "Subir foto";
+      document.getElementById("sp-body")?.insertAdjacentHTML("afterbegin", `<div class="sp-ai-error">${ico("x")} ${esc(error.message)}</div>`);
+    }
   }
 
   // El inspector de una plantilla fija nunca llama al formulario genérico: ese
@@ -3614,6 +3718,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       if (t === p.querySelector(".sec-panel__x") || t.closest(".sec-panel__x")) return cerrarPanelSeccion();
       const aiTrigger = t.closest("[data-ai-text]");
       if (aiTrigger) { abrirAiText(aiTrigger.dataset.aiText); return; }
+      if (t.closest("[data-p01-evidence-save]")) { guardarEvidenciaPdp01(p); return; }
       if (t.closest("[data-ai-cancel]")) { cerrarAiText(); return; }
       const aiMode = t.closest("[data-ai-mode]");
       if (aiMode) {
@@ -3663,6 +3768,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
 
     p.onchange = (e) => {
       const t = e.target;
+      if (t.dataset.p01EvidenceUpload !== undefined && t.files?.length) { subirImagenEvidenciaPdp01(t.files[0], t); return; }
       if (t.dataset.subir && t.files?.length) subirImagenNueva(t.files[0], t.dataset.subir, t.dataset.rutaSubir, t);
       if (t.dataset.videoEl && t.files?.length) subirVideoNuevo(t.files[0], t.dataset.videoEl, t);
     };
