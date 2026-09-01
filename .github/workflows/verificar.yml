@@ -4,9 +4,8 @@
 # Render autodeploya de `main`: sin esto, un error de sintaxis o un server que
 # no arranca llega a las tiendas de los merchants y el rollback es a mano.
 #
-# No pretende ser una suite de tests (todavía no hay). Es la red mínima:
-# que todo parsee y que el proceso levante y conteste lo que tiene que
-# contestar. Ver pruebas/humo.js.
+# Ejecuta sintaxis, coherencia, unidad, humo y aislamiento real sobre una base
+# PostgreSQL 17 desechable antes de permitir que un cambio llegue a producción.
 # ============================================================
 
 name: verificar
@@ -19,6 +18,18 @@ on:
 jobs:
   verificar:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v4
 
@@ -26,8 +37,7 @@ jobs:
         with:
           node-version: "20"
 
-      # Sin lockfile de dependencias raras: `pg` es la única nativa y el smoke
-      # test corre sin base, así que alcanza con instalar.
+      # Instala exactamente las dependencias declaradas por el proyecto.
       - run: npm install --no-audit --no-fund
 
       - name: Sintaxis de todos los .js
@@ -36,7 +46,25 @@ jobs:
       - name: Coherencia entre archivos de config
         run: npm run coherencia
 
-      - name: Pruebas de unidad (facturación y COD)
+      - name: Preparar PostgreSQL con rol sin bypass
+        env:
+          ALLOW_DB_BOOTSTRAP: "1"
+          TEST_DATABASE_ADMIN_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable
+          TEST_MIGRATION_DATABASE_URL: postgresql://tiendaiq_migrator:migrator_test@127.0.0.1:5432/tiendaiq_staging?sslmode=disable
+          TEST_DATABASE_URL: postgresql://tiendaiq_web:web_test@127.0.0.1:5432/tiendaiq_staging?sslmode=disable
+          TEST_WORKER_DATABASE_URL: postgresql://tiendaiq_worker:worker_test@127.0.0.1:5432/tiendaiq_staging?sslmode=disable
+        run: node scripts/preparar-db-integracion.js
+
+      - name: Migraciones idempotentes y aislamiento RLS real
+        env:
+          ALLOW_RLS_TEST: "1"
+          MIGRATION_DATABASE_URL: postgresql://tiendaiq_migrator:migrator_test@127.0.0.1:5432/tiendaiq_staging?sslmode=disable
+          DATABASE_URL: postgresql://tiendaiq_web:web_test@127.0.0.1:5432/tiendaiq_staging?sslmode=disable
+          TEST_DATABASE_URL: postgresql://tiendaiq_web:web_test@127.0.0.1:5432/tiendaiq_staging?sslmode=disable
+          TEST_WORKER_DATABASE_URL: postgresql://tiendaiq_worker:worker_test@127.0.0.1:5432/tiendaiq_staging?sslmode=disable
+        run: npm run db:test:integration
+
+      - name: Pruebas de unidad y dominio
         run: npm run unidad
 
       - name: Prueba de humo

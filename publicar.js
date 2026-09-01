@@ -23,6 +23,7 @@ const fs = require("fs");
 const path = require("path");
 const { gql, sesionDeEnv } = require("./shopify");
 const { subirImagenTienda } = require("./imagenes");
+const { storefrontProjection } = require("./src/piloto/pdp01-contract");
 
 const RUTA_JSON = path.join(__dirname, "ultima-pagina.json");
 const DIR_PLANTILLA = path.join(__dirname, "plantilla-producto");
@@ -76,6 +77,20 @@ const M_SUFIJO = `mutation($product: ProductUpdateInput!) {
 // Publica una página en la tienda de `sesion`.
 // `log` deja que el CLI escriba a consola y el server no.
 async function publicarPagina(data, sesion, log = () => {}) {
+  if (data?.template === "piloto-pdp-01") {
+    const idProducto = data.source_fields?.product_gid;
+    if (!idProducto) throw new Error("La página Piloto 01 no tiene un producto de Shopify asociado.");
+    const dataTienda = storefrontProjection(data);
+    const r1 = await gql(M_METAFIELD, {
+      metafields: [{ ownerId: idProducto, namespace: "tiendaiq", key: "pagina", type: "json", value: JSON.stringify(dataTienda) }]
+    }, sesion);
+    if (r1.metafieldsSet.userErrors.length) throw new Error("Metafield: " + JSON.stringify(r1.metafieldsSet.userErrors));
+    const r2 = await gql(M_SUFIJO, { product: { id: idProducto, templateSuffix: "tiendaiq" } }, sesion);
+    if (r2.productUpdate.userErrors.length) throw new Error("templateSuffix: " + JSON.stringify(r2.productUpdate.userErrors));
+    const p = r2.productUpdate.product;
+    log("  plantilla  · Piloto 01 publicada con datos vivos de Shopify");
+    return { url: p.onlineStoreUrl || `https://${sesion.tienda}/products/${p.handle}` };
+  }
   const idProducto = data.fuente.shopify_product_id;
 
   // --- copia para la tienda: el avatar pasa a ser URL del CDN de Files ---
@@ -147,7 +162,7 @@ async function publicarPagina(data, sesion, log = () => {}) {
 // como dato (re-publicar lo reusa sin regenerar). Escritura de PRODUCTO, no de
 // tema → permitida sin exención, igual que publicar.
 async function despublicarPagina(data, sesion) {
-  const idProducto = data.fuente.shopify_product_id;
+  const idProducto = data?.template === "piloto-pdp-01" ? data.source_fields?.product_gid : data.fuente.shopify_product_id;
   const r = await gql(M_SUFIJO, { product: { id: idProducto, templateSuffix: null } }, sesion);
   if (r.productUpdate.userErrors.length) {
     throw new Error("templateSuffix: " + JSON.stringify(r.productUpdate.userErrors));

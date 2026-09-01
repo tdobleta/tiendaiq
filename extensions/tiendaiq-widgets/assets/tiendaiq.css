@@ -1230,8 +1230,9 @@ body.publicada #app .resena-destacada__editar { display: none; }
 #app .tiq-ppb__cta-panel-grid { padding: 16px; }
 #app .tiq-ppb__cta-panel-grid .tiq-ppb__media { min-height: 0; }
 #app .tiq-ppb__recommendations { background: #fff; }
+#app [data-tiq-live-recommendations][hidden] { display: none !important; }
 #app .tiq-ppb__rec-track { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
-#app .tiq-ppb__rec-card { min-width: 0; }
+#app .tiq-ppb__rec-card { min-width: 0; color: inherit; text-decoration: none; }
 #app .tiq-ppb__rec-image { aspect-ratio: 1 / 1; margin-bottom: 10px; overflow: hidden; border-radius: 8px; background: #f2f2f4; }
 #app .tiq-ppb__rec-image img { width: 100%; height: 100%; object-fit: cover; }
 #app .tiq-ppb__rec-card strong { display: block; font-size: 14px; }
@@ -1463,4 +1464,31 @@ body.publicada #app .resena-destacada__editar { display: none; }
 @media (max-width: 600px) {
   #app .tiq-ppb h2 { font-size: 28px; }
   #app .tiq-ppb__rec-track { grid-template-columns: repeat(5, minmax(calc((100% - 8px) / 2), 1fr)); }
+}
+/* Claims comerciales, sociales o estadisticos se ocultan hasta que el
+   documento declare una verificacion explicita. Esto evita publicar copy de
+   ejemplo como si fueran reseñas, garantias o resultados reales. */
+#app.tiq-claims-unverified .hero__urgencia,
+#app.tiq-claims-unverified .hero__timer,
+#app.tiq-claims-unverified .hero__resenas,
+#app.tiq-claims-unverified .hero__badges,
+#app.tiq-claims-unverified .resena-destacada,
+#app.tiq-claims-unverified .stats,
+#app.tiq-claims-unverified .resenas,
+#app.tiq-claims-unverified .tiq-mq,
+#app.tiq-claims-unverified .tiq-pp__rating,
+#app.tiq-claims-unverified .tiq-pp__trust,
+#app.tiq-claims-unverified .tiq-pp__quote,
+#app.tiq-claims-unverified .tiq-pp__reviews,
+#app.tiq-claims-unverified .tiq-pp__dark,
+#app.tiq-claims-unverified .tiq-ppb__badge,
+#app.tiq-claims-unverified .tiq-ppb__rating,
+#app.tiq-claims-unverified .tiq-ppb__trust,
+#app.tiq-claims-unverified .tiq-ppb__guarantee,
+#app.tiq-claims-unverified .tiq-ppb__quote,
+#app.tiq-claims-unverified .tiq-ppb__social,
+#app.tiq-claims-unverified .tiq-ppb__reviews,
+#app.tiq-claims-unverified .tiq-ppb__stats-section,
+#app.tiq-claims-unverified .tiq-ppb__recommendations {
+  display: none !important;
 }

@@ -194,14 +194,16 @@ describe("combinación de descuentos (defaults estilo Pumper)", () => {
 });
 
 describe("sincronizar sin dejar descuentos huérfanos", () => {
-  test("borra los viejos antes de crear los nuevos", async () => {
+  test("crea los reemplazos antes de borrar los viejos", async () => {
     const { modulo, shopify } = montar("bundles.js", {
       tiendas: { [TIENDA]: { token: "t" } },
-      respuestas: [borrado, borrado, creado(9), creado(10)]
+      respuestas: [creado(9), creado(10), borrado, borrado]
     });
 
     await modulo.sincronizarDescuentos(SESION, { lista: [bundle({ discount_ids: ["gid://viejo/1", "gid://viejo/2"] })] });
     assert.equal(borrados(shopify).length, 2);
+    const llamadas = shopify.llamadas.map((l) => l.query.includes("discountAutomaticDelete") ? "borrar" : "crear");
+    assert.deepEqual(llamadas, ["crear", "crear", "borrar", "borrar"]);
   });
 
   test("guarda los ids nuevos en el bundle", async () => {
@@ -218,26 +220,40 @@ describe("sincronizar sin dejar descuentos huérfanos", () => {
     ]);
   });
 
-  // Si el segundo peldaño falla, el primero ya se creó en Shopify y está
-  // activo. Perder su id significa un descuento vivo que la app no puede
-  // borrar nunca más — y que se duplica en cada intento siguiente.
-  test("si la creación falla a mitad, los ya creados quedan registrados", async () => {
-    const { modulo } = montar("bundles.js", {
+  test("si la creación falla a mitad, compensa lo nuevo y conserva lo anterior", async () => {
+    const { modulo, shopify } = montar("bundles.js", {
       tiendas: { [TIENDA]: { token: "t" } },
       respuestas: [
         creado(1),
-        { discountAutomaticBasicCreate: { automaticDiscountNode: null, userErrors: [{ message: "límite alcanzado" }] } }
+        { discountAutomaticBasicCreate: { automaticDiscountNode: null, userErrors: [{ message: "límite alcanzado" }] } },
+        borrado
       ]
     });
 
-    const config = { lista: [bundle()] };
+    const config = { lista: [bundle({ discount_ids: ["gid://viejo/1"] })] };
     await assert.rejects(() => modulo.sincronizarDescuentos(SESION, config), /límite alcanzado/);
 
     assert.deepEqual(
       config.lista[0].discount_ids,
-      ["gid://shopify/DiscountAutomaticNode/1"],
-      "el descuento creado antes del fallo quedó vivo en la tienda y sin rastro"
+      ["gid://viejo/1"],
+      "el descuento anterior debe seguir activo mientras se compensa el reemplazo"
     );
+    assert.equal(borrados(shopify)[0].variables.id, "gid://shopify/DiscountAutomaticNode/1");
+  });
+
+  test("una compensación fallida conserva el id nuevo para reintentar", async () => {
+    const { modulo } = montar("bundles.js", {
+      tiendas: { [TIENDA]: { token: "t" } },
+      respuestas: [
+        creado(1),
+        { discountAutomaticBasicCreate: { automaticDiscountNode: null, userErrors: [{ message: "límite alcanzado" }] } },
+        new Error("Shopify temporalmente no disponible")
+      ]
+    });
+
+    const config = { lista: [bundle({ discount_ids: ["gid://viejo/1"] })] };
+    await assert.rejects(() => modulo.sincronizarDescuentos(SESION, config), /límite alcanzado/);
+    assert.deepEqual(config.lista[0].discount_ids, ["gid://viejo/1", "gid://shopify/DiscountAutomaticNode/1"]);
   });
 
   test("un bundle desactivado borra sus descuentos y no crea ninguno", async () => {
@@ -297,77 +313,109 @@ describe("BXGY — comprá X, llevate Y", () => {
   });
 });
 
-describe("métricas — solo lo que generó la app", () => {
-  const pedido = (titulo, total, desc) => ({
-    id: "gid://shopify/Order/1",
-    currentTotalPriceSet: { shopMoney: { amount: String(total), currencyCode: "ARS" } },
-    totalDiscountsSet: { shopMoney: { amount: String(desc) } },
-    discountApplications: { nodes: titulo ? [{ title: titulo }] : [] }
-  });
+describe("métricas — uso de descuentos sin leer pedidos", () => {
+  const id = (n) => `gid://shopify/DiscountAutomaticNode/${n}`;
+  const nodo = (n, usos) => ({ id: id(n), automaticDiscount: { asyncUsageCount: usos } });
 
-  const pagina = (nodes, hasNextPage = false) => ({
-    orders: { pageInfo: { hasNextPage, endCursor: "c1" }, nodes }
-  });
-
-  test("cuenta solo los pedidos con un descuento nuestro", async () => {
-    const { modulo } = montar("bundles.js", {
-      tiendas: { [TIENDA]: { token: "t" } },
-      respuestas: [
-        pagina([
-          pedido("TiendaIQ Bundle · Volumen · 2+", 20000, 2000),
-          pedido("Promo de invierno del merchant", 50000, 5000),
-          pedido(null, 10000, 0)
-        ])
-      ]
-    });
-
-    const m = await modulo.metricasBundles(SESION, 30);
-    assert.equal(m.pedidos, 1, "se colaron pedidos que no generó la app");
-    assert.equal(m.ingresos, 20000);
-    assert.equal(m.descuento, 2000);
-  });
-
-  test("el ticket promedio no divide por cero", async () => {
-    const { modulo } = montar("bundles.js", {
-      tiendas: { [TIENDA]: { token: "t" } },
-      respuestas: [pagina([])]
-    });
-
-    const m = await modulo.metricasBundles(SESION, 30);
-    assert.equal(m.pedidos, 0);
-    assert.equal(m.ticket, 0);
-    assert.equal(m.parcial, false);
-  });
-
-  test("marca parcial cuando hay más pedidos de los que recorrió", async () => {
-    const { modulo } = montar("bundles.js", {
-      tiendas: { [TIENDA]: { token: "t" } },
-      respuestas: Array.from({ length: 6 }, () => pagina([pedido("TiendaIQ Bundle · x", 100, 10)], true))
-    });
-
-    const m = await modulo.metricasBundles(SESION, 30);
-    assert.equal(m.parcial, true, "sin esta marca el dashboard miente sobre un total incompleto");
-    assert.equal(m.pedidos, 5, "tope de 5 vueltas");
-  });
-
-  test("la ventana de días viaja en la consulta", async () => {
+  test("suma únicamente los IDs que la app guardó para cada bundle", async () => {
     const { modulo, shopify } = montar("bundles.js", {
       tiendas: { [TIENDA]: { token: "t" } },
-      respuestas: [pagina([])]
+      respuestas: [{ nodes: [nodo(1, 7), nodo(2, 4)] }]
+    });
+    const config = {
+      lista: [
+        bundle({ id: "b_a", discount_ids: [id(1)] }),
+        bundle({ id: "b_b", discount_ids: [id(2)] })
+      ]
+    };
+
+    const m = await modulo.metricasBundles(SESION, config);
+    assert.equal(m.usos, 11);
+    assert.equal(m.reglas, 2);
+    assert.deepEqual(m.porBundle, { b_a: { usos: 7 }, b_b: { usos: 4 } });
+    assert.deepEqual(shopify.llamadas[0].variables.ids, [id(1), id(2)]);
+    assert.doesNotMatch(shopify.llamadas[0].query, /\borders\b/);
+  });
+
+  test("deduplica referencias y marca reglas borradas fuera de la app", async () => {
+    const { modulo } = montar("bundles.js", {
+      tiendas: { [TIENDA]: { token: "t" } },
+      respuestas: [{ nodes: [nodo(1, 3), null] }]
+    });
+    const config = {
+      lista: [
+        bundle({ id: "b_a", discount_ids: [id(1), id(2)] }),
+        bundle({ id: "b_b", discount_ids: [id(1)] })
+      ]
+    };
+
+    const m = await modulo.metricasBundles(SESION, config);
+    assert.equal(m.usos, 3, "un ID compartido no puede duplicar el total global");
+    assert.equal(m.faltantes, 1);
+    assert.deepEqual(m.porBundle, { b_a: { usos: 3 }, b_b: { usos: 3 } });
+  });
+
+  test("una tienda sin reglas devuelve cero sin llamar a Shopify", async () => {
+    const { modulo, shopify } = montar("bundles.js", {
+      tiendas: { [TIENDA]: { token: "t" } }
     });
 
-    await modulo.metricasBundles(SESION, 7);
-    assert.match(shopify.llamadas[0].variables.q, /^created_at:>=\d{4}-\d{2}-\d{2}$/);
+    const m = await modulo.metricasBundles(SESION, { lista: [] });
+    assert.equal(m.usos, 0);
+    assert.equal(m.reglas, 0);
+    assert.equal(m.ofertasActivas, 0);
+    assert.equal(shopify.llamadas.length, 0);
   });
 });
 
 describe("config", () => {
+  test("rechaza capacidades visuales que no tienen operación monetaria", () => {
+    const { modulo } = montar("bundles.js", { tiendas: { [TIENDA]: { token: "t" } } });
+    const casos = [
+      bundle({ tipo: "combo" }),
+      bundle({ ofertas: [{ cantidad: 2, tipo_desc: "fijo", monto_fijo: 10 }] }),
+      bundle({ ofertas: [{ cantidad: 2, descuento: 10, addons: { regalo: { on: true } } }] }),
+      bundle({ ofertas: [{ cantidad: 2, descuento: 10, addons: { envio: { on: true } } }] }),
+      bundle({ ofertas: [{ cantidad: 2, descuento: 10, redondeo: true }] })
+    ];
+
+    for (const caso of casos) {
+      assert.throws(() => modulo.validarConfigBundles({ lista: [caso] }), /todavía no está/i);
+    }
+  });
+
+  test("una oferta marcada sin descuento no crea una regla por un valor viejo", async () => {
+    const { modulo, shopify } = montar("bundles.js", { tiendas: { [TIENDA]: { token: "t" } } });
+    await modulo.sincronizarDescuentos(SESION, {
+      lista: [bundle({ ofertas: [{ cantidad: 2, tipo_desc: "ninguno", descuento: 40 }] })]
+    });
+    assert.equal(creaciones(shopify).length, 0);
+  });
+
   test("una tienda sin bundles arranca vacía y apagada", async () => {
     const { modulo } = montar("bundles.js", { tiendas: { [TIENDA]: { token: "t" } } });
 
     const cfg = await modulo.leerConfigBundles(TIENDA);
     assert.equal(cfg.activo, false);
     assert.deepEqual(cfg.lista, []);
+  });
+
+  test("apaga promesas experimentales guardadas por builds anteriores", async () => {
+    const { modulo } = montar("bundles.js", {
+      tiendas: {
+        [TIENDA]: {
+          token: "t",
+          bundles: {
+            lista: [bundle({ ofertas: [{ cantidad: 2, descuento: 10, redondeo: true, addons: { regalo: { on: true }, envio: { on: true } } }] })]
+          }
+        }
+      }
+    });
+
+    const oferta = (await modulo.leerConfigBundles(TIENDA)).lista[0].ofertas[0];
+    assert.equal(oferta.redondeo, false);
+    assert.equal(oferta.addons.regalo.on, false);
+    assert.equal(oferta.addons.envio.on, false);
   });
 
   test("cada bundle guardado se completa contra su default", async () => {

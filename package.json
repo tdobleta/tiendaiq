@@ -1,6 +1,7 @@
 {
   "dependencies": {
     "@anthropic-ai/sdk": "^0.112.0",
+    "ajv": "^8.17.1",
     "cloudflared": "^0.7.1",
     "esbuild": "^0.28.1",
     "pg": "^8.22.0"
@@ -10,10 +11,18 @@
   },
   "scripts": {
     "start": "node server.js",
+    "worker": "node worker.js",
     "verificar": "node pruebas/sintaxis.js",
     "coherencia": "node pruebas/coherencia.js",
     "unidad": "node --test \"pruebas/*.test.js\"",
     "humo": "node pruebas/humo.js",
+    "db:migrate": "node scripts/migrar-db.js",
+    "db:migrate:check": "node scripts/migrar-db.js --dry-run",
+    "db:test:rls": "node scripts/probar-rls.js",
+    "db:test:integration": "npm run db:migrate && npm run db:migrate && npm run db:test:rls",
+    "carga:mock": "node scripts/servidor-carga-local.js",
+    "carga:http": "node scripts/carga-local.js",
+    "carga:cola": "node scripts/probar-capacidad-cola.js",
     "probar": "npm run verificar && npm run coherencia && npm run unidad && npm run humo"
   },
   "engines": {

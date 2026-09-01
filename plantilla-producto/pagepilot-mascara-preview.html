@@ -3,167 +3,316 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Mascara de Fibras de Seda 4D | Preview</title>
+  <title>Máscara de Fibras de Seda 4D | Preview</title>
   <style>
-    :root { --blue:#2927d7; --blue-2:#5e5be8; --ink:#25262d; --muted:#666873; --soft:#f2f3ff; --line:#dedee5; }
-    * { box-sizing:border-box; }
-    html { scroll-behavior:smooth; }
-    body { margin:0; color:var(--ink); background:#fff; font-family:Arial,Helvetica,sans-serif; }
-    button { font:inherit; }
-    img { max-width:100%; display:block; }
-    .wrap { width:min(1150px,calc(100% - 40px)); margin:auto; }
-    .hero { padding:34px 0 28px; }
-    .hero-grid { display:grid; grid-template-columns:minmax(0,1fr) minmax(390px,.94fr); gap:28px; align-items:start; }
-    .main-image { position:relative; aspect-ratio:1; overflow:hidden; border-radius:10px; background:#f4f4ff; }
-    .main-image img { width:100%; height:100%; object-fit:cover; }
-    .arrow { position:absolute; top:50%; transform:translateY(-50%); width:40px; height:40px; border:0; border-radius:8px; color:var(--blue); background:rgba(255,255,255,.9); font-size:28px; cursor:pointer; box-shadow:0 3px 12px #2927d722; }
-    .arrow.prev { left:12px; } .arrow.next { right:12px; }
-    .thumbs { display:grid; grid-template-columns:repeat(5,1fr); gap:9px; margin-top:12px; }
-    .thumb { aspect-ratio:1; padding:0; overflow:hidden; border:1px solid #d7d7df; border-radius:9px; background:#fff; cursor:pointer; }
-    .thumb.active, .thumb:hover { border:2px solid var(--blue); }
-    .thumb img { width:100%; height:100%; object-fit:cover; }
-    .badge { display:inline-flex; align-items:center; gap:8px; padding:7px 10px; border:1px solid #7976f2; border-radius:8px; color:#3431c7; background:#fbfbff; font-size:12px; font-weight:700; }
-    .badge b { display:grid; place-items:center; width:22px; height:22px; border-radius:5px; color:#fff; background:var(--blue); }
-    h1 { margin:14px 0 6px; font-size:clamp(32px,4vw,44px); line-height:1.04; letter-spacing:0; }
-    h2 { margin:0 0 12px; font-size:clamp(28px,3.2vw,40px); line-height:1.1; }
-    p { line-height:1.5; }
-    .rating { display:flex; align-items:center; flex-wrap:wrap; gap:7px; color:#4d4e57; font-size:13px; }
-    .stars { color:#3935df; letter-spacing:1px; }
-    .benefits { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:16px 0 12px; padding:0; list-style:none; }
-    .benefits li { display:flex; align-items:center; gap:9px; min-height:44px; padding:8px 10px; border-radius:9px; background:#f4f5ff; color:#4d4f58; font-size:13px; }
-    .benefits i { display:grid; place-items:center; width:28px; height:28px; flex:none; border-radius:50%; background:#fff; color:var(--blue); font-style:normal; font-size:16px; }
-    .price { display:flex; align-items:center; gap:9px; padding:11px 0; border-top:1px solid var(--line); }
-    .price del { color:#909099; } .price strong { font-size:20px; } .save { padding:4px 8px; border-radius:7px; color:#fff; background:#6865ef; font-size:11px; font-weight:800; }
-    .cta { display:flex; align-items:center; justify-content:center; gap:10px; width:100%; min-height:52px; border:0; border-radius:8px; color:#fff; background:var(--blue); font-weight:800; cursor:pointer; transition:.15s; }
-    .cta:hover { background:#201fb5; transform:translateY(-1px); }
-    .trust { display:flex; justify-content:center; flex-wrap:wrap; gap:16px; padding:10px 0 6px; color:#555762; font-size:11px; }
-    .payments { display:flex; justify-content:center; gap:8px; flex-wrap:wrap; padding:5px 0 12px; }
-    .payments img { width:auto; height:20px; padding:2px 5px; border:1px solid #dddde4; border-radius:3px; background:#fff; }
-    .accordions { display:grid; gap:6px; }
-    details { border-radius:7px; background:#f1f1f2; }
-    summary { display:flex; justify-content:space-between; gap:12px; padding:10px 12px; cursor:pointer; list-style:none; font-size:13px; }
-    summary::-webkit-details-marker { display:none; }
-    details p { margin:0; padding:0 12px 11px; color:#62646d; font-size:12px; }
-    .guarantee { display:flex; gap:8px; align-items:center; margin:8px 0; padding:9px 10px; border:1px solid #d8d8e0; border-radius:7px; color:#555762; font-size:11px; }
-    .review-highlight { display:grid; grid-template-columns:auto 42px minmax(0,1fr) auto; align-items:center; gap:10px; margin-top:9px; padding:13px 12px; border:1px solid #7b78f1; border-radius:9px; background:var(--soft); }
-    .review-highlight button { border:0; color:var(--blue); background:none; font-size:25px; cursor:pointer; }
-    .avatar { width:42px; height:42px; border-radius:50%; object-fit:cover; }
-    .review-highlight p { margin:3px 0; color:#454750; font-size:12px; line-height:1.35; }
-    .ticker { overflow:hidden; padding:10px 0; color:#fff; background:var(--blue); }
-    .ticker-track { display:flex; width:max-content; gap:30px; animation:slide 28s linear infinite; }
-    .ticker span { display:inline-flex; align-items:center; gap:8px; min-width:170px; font-size:13px; font-weight:700; }
-    .ticker i { display:grid; place-items:center; width:26px; height:26px; border-radius:50%; color:var(--blue); background:#fff; font-style:normal; }
-    @keyframes slide { from { transform:translateX(0); } to { transform:translateX(-50%); } }
-    .section { padding:70px 0; }
-    .pale { background:var(--soft); }
-    .center { text-align:center; }
-    .section-head { max-width:720px; margin:0 auto 32px; text-align:center; }
-    .section-head p { color:var(--muted); font-size:14px; }
-    .social-grid, .split { display:grid; grid-template-columns:minmax(0,.92fr) minmax(0,1.08fr); gap:44px; align-items:center; }
-    .copy p { color:#5d5f68; font-size:15px; }
-    .copy .cta { max-width:420px; margin-top:20px; }
-    .ugc-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
-    .ugc { aspect-ratio:3/5; overflow:hidden; border-radius:10px; background:#ececf2; }
-    .ugc img { width:100%; height:100%; object-fit:cover; }
-    .media { overflow:hidden; min-height:330px; border-radius:10px; background:#f1f2f8; }
-    .media img { width:100%; height:100%; min-height:330px; object-fit:cover; }
-    .feature { background:var(--soft); }
-    .feature-list { display:grid; gap:8px; margin:22px 0 0; padding:0; list-style:none; }
-    .feature-list li { display:flex; gap:12px; padding:12px 0; border-bottom:1px solid #d9dbee; color:#50525c; font-size:14px; }
-    .number { display:grid; place-items:center; width:28px; height:28px; flex:none; border:2px solid var(--blue); border-radius:50%; color:var(--blue); font-weight:800; }
-    .feature-list strong { display:block; margin-bottom:3px; color:#252630; }
-    .review-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
-    .review-card { overflow:hidden; padding:10px; border:1px solid #d8d8de; border-radius:8px; background:#fff; }
-    .review-card .photo { aspect-ratio:1; margin-bottom:10px; overflow:hidden; border-radius:6px; background:#f0f0f2; }
-    .review-card .photo img { width:100%; height:100%; object-fit:cover; }
-    .review-card strong { display:block; margin-bottom:4px; font-size:13px; }
-    .review-card p { min-height:86px; margin:8px 0 0; color:#555762; font-size:13px; }
-    .stats { display:grid; grid-template-columns:repeat(4,1fr); gap:13px; }
-    .stat { min-height:185px; padding:24px 15px 18px; border-radius:8px; color:#fff; background:linear-gradient(135deg,#6764e1,#2927d7); text-align:center; }
-    .stat b { display:grid; place-items:center; width:76px; height:76px; margin:0 auto 17px; border:4px solid #fff; border-radius:50%; font-size:20px; }
-    .stat p { margin:0; font-size:13px; line-height:1.35; }
-    .comparison { display:grid; grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr); gap:44px; align-items:center; }
-    .compare { overflow:hidden; border:1px solid #d9d9df; border-radius:9px; }
-    .compare-head, .compare-row { display:grid; grid-template-columns:minmax(0,1fr) 135px 90px; }
-    .compare-head { min-height:80px; border-bottom:1px solid #dddde2; }
-    .compare-head strong { display:grid; place-items:center; padding:10px; color:#fff; background:var(--blue); text-align:center; font-size:13px; }
-    .compare-head strong:last-child { color:var(--ink); background:#fff; }
-    .compare-row { min-height:56px; border-bottom:1px solid #e2e2e7; }
-    .compare-row:last-child { border-bottom:0; }
-    .compare-row span { display:grid; align-items:center; padding:10px 16px; color:#454751; font-size:13px; }
-    .compare-row b { display:grid; place-items:center; color:#fff; background:#7775ef; font-size:19px; }
-    .compare-row b:last-child { color:#ed3847; background:#fff; }
-    .blue-panel { color:#fff; background:var(--blue); }
-    .blue-panel h2 { color:#fff; } .blue-panel p { color:#eef0ff; }
-    .blue-panel .cta { color:var(--blue); background:#fff; }
-    .faq { max-width:760px; margin:auto; }
-    .faq details { border-bottom:1px solid #e1e1e7; border-radius:0; background:#fff; }
-    .faq summary { padding:16px 8px; color:#31323a; font-weight:700; }
-    .faq summary span { color:var(--blue); font-size:20px; }
-    .recommendations { padding:70px 0 110px; }
-    .rec-track { display:grid; grid-template-columns:repeat(5,1fr); gap:16px; }
-    .rec img { width:100%; aspect-ratio:1; object-fit:cover; border-radius:8px; background:#f3f3f4; }
-    .rec strong { display:block; margin-top:10px; font-size:13px; }
-    .rec small { display:block; margin-top:6px; color:#5b5c64; }
-    .discount { display:inline-block; margin-top:7px; padding:3px 6px; border-radius:5px; color:#fff; background:var(--blue); font-size:10px; font-weight:800; }
-    .sticky { position:fixed; right:0; bottom:0; left:0; z-index:10; color:#fff; background:var(--blue); box-shadow:0 -4px 18px #1e1f641f; }
-    .sticky-inner { display:flex; align-items:center; justify-content:space-between; gap:18px; width:min(1150px,calc(100% - 40px)); min-height:68px; margin:auto; }
-    .sticky-product { display:flex; align-items:center; gap:10px; min-width:0; }
-    .sticky-product img { width:48px; height:48px; object-fit:cover; border-radius:6px; }
-    .sticky-product strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:15px; }
-    .sticky .cta { width:220px; min-height:44px; color:var(--blue); background:#fff; }
-    .toast { position:fixed; right:22px; bottom:88px; z-index:20; padding:12px 16px; border-radius:8px; color:#fff; background:#24252b; box-shadow:0 8px 26px #0002; opacity:0; transform:translateY(10px); pointer-events:none; transition:.2s; font-size:13px; }
-    .toast.show { opacity:1; transform:translateY(0); }
-    @media (max-width:900px) { .hero-grid,.social-grid,.split,.comparison { grid-template-columns:1fr; gap:28px; } .review-grid,.stats { grid-template-columns:repeat(2,1fr); } .copy { text-align:center; } .copy .cta { margin-right:auto; margin-left:auto; } }
-    @media (max-width:600px) { .wrap,.sticky-inner { width:calc(100% - 28px); } .hero { padding-top:14px; } .benefits { grid-template-columns:1fr; } .section,.recommendations { padding:48px 0; } .review-grid { gap:8px; } .review-card { padding:8px; } .review-card p { min-height:0; font-size:12px; } .stats { gap:8px; } .stat { min-height:155px; padding:15px 8px; } .stat b { width:58px; height:58px; margin-bottom:10px; font-size:16px; } .compare-head,.compare-row { grid-template-columns:minmax(0,1fr) 88px 58px; } .compare-head strong,.compare-row span { font-size:11px; } .rec-track { grid-template-columns:repeat(2,1fr); } .sticky-inner { gap:8px; } .sticky-product strong { max-width:43vw; font-size:12px; } .sticky .cta { width:45vw; padding:10px 8px; font-size:12px; } }
+    :root {
+      --ink: #171923;
+      --ink-soft: #363b48;
+      --muted: #6d7482;
+      --line: #e3e5ea;
+      --paper: #f7f7f5;
+      --blue: #3535cc;
+      --blue-deep: #24248e;
+      --blue-soft: #f0f1ff;
+      --gold: #e3a400;
+      --green: #16815d;
+      --white: #ffffff;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; background: var(--white); }
+    body { min-width: 0; margin: 0; padding-bottom: calc(72px + env(safe-area-inset-bottom)); color: var(--ink); background: var(--white); font-family: Arial, Helvetica, sans-serif; font-size: 14px; line-height: 1.45; letter-spacing: 0; }
+    button { font: inherit; }
+    button, summary { -webkit-tap-highlight-color: transparent; }
+    button:focus-visible, summary:focus-visible { outline: 3px solid #9a9aff; outline-offset: 3px; }
+    img { display: block; max-width: 100%; }
+    .shell { width: min(1160px, calc(100% - 48px)); margin: 0 auto; }
+    .section { padding: 92px 0; }
+    .section--paper { background: var(--paper); }
+    .section--blue { color: var(--white); background: var(--blue); }
+    .section-title { max-width: 740px; margin: 0 auto 38px; text-align: center; }
+    .section-title h2 { margin: 0 0 10px; font-size: clamp(30px, 3vw, 40px); line-height: 1.1; font-weight: 700; }
+    .section-title p { max-width: 600px; margin: 0 auto; color: var(--muted); font-size: 15px; }
+    .section--blue .section-title p { color: #e0e1ff; }
+    .eyebrow { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 13px; color: var(--blue); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+    .eyebrow::before { width: 22px; height: 1px; content: ""; background: currentColor; }
+    .eyebrow { display: none; }
+    .hero { padding: 44px 0 42px; border-bottom: 1px solid var(--line); }
+    .hero-grid { display: grid; grid-template-columns: minmax(0, 1.04fr) minmax(0, .96fr); gap: 52px; align-items: start; }
+    .gallery-main { position: relative; overflow: hidden; aspect-ratio: 1 / 1.01; border: 1px solid #e7e4e3; border-radius: 12px; background: #f7dcd8; }
+    .gallery-main img { width: 100%; height: 100%; object-fit: cover; }
+    .gallery-arrow { position: absolute; top: 50%; display: grid; width: 42px; height: 42px; place-items: center; transform: translateY(-50%); border: 1px solid #e3e3e8; border-radius: 50%; color: var(--blue); background: rgba(255,255,255,.96); box-shadow: 0 5px 16px rgba(23,25,35,.12); cursor: pointer; font-size: 26px; line-height: 1; }
+    .gallery-arrow:hover { color: var(--white); background: var(--blue); }
+    .gallery-arrow--prev { left: 14px; }
+    .gallery-arrow--next { right: 14px; }
+    .thumbs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin-top: 13px; }
+    .thumb { overflow: hidden; aspect-ratio: 1; padding: 0; border: 1px solid #dfe2e8; border-radius: 9px; background: var(--white); cursor: pointer; }
+    .thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .thumb:hover { border-color: var(--blue); }
+    .thumb.is-active { border: 2px solid var(--blue); box-shadow: 0 0 0 2px var(--white), 0 0 0 3px var(--blue); }
+    .product-info { padding-top: 5px; }
+    .product-badge { display: inline-flex; align-items: center; gap: 8px; padding: 7px 10px; border: 1px solid #a9aaf3; border-radius: 6px; color: var(--blue); background: #fcfcff; font-size: 11px; font-weight: 700; }
+    .product-badge strong { display: grid; width: 22px; height: 22px; place-items: center; border-radius: 4px; color: var(--white); background: var(--blue); font-size: 11px; }
+    .product-info h1 { max-width: 620px; margin: 15px 0 8px; font-size: clamp(36px, 4vw, 50px); line-height: 1.02; font-weight: 700; }
+    .rating-line { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; }
+    .stars { color: var(--gold); font-size: 14px; letter-spacing: 1px; }
+    .benefit-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; margin: 19px 0 14px; padding: 17px 0 16px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+    .benefit { display: flex; align-items: center; gap: 10px; min-width: 0; color: #4b5362; font-size: 13px; }
+    .benefit-icon { display: grid; width: 30px; height: 30px; flex: 0 0 30px; place-items: center; border-radius: 50%; color: var(--blue); background: var(--blue-soft); font-size: 15px; }
+    .price-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; margin-bottom: 14px; }
+    .price-line del { color: #89909c; font-size: 14px; }
+    .price-line strong { font-size: 22px; font-weight: 700; }
+    .save { padding: 4px 7px; border-radius: 4px; color: var(--white); background: var(--blue); font-size: 10px; font-weight: 800; }
+    .primary-action { display: inline-flex; width: 100%; min-height: 54px; align-items: center; justify-content: center; gap: 10px; padding: 13px 18px; border: 1px solid var(--blue); border-radius: 6px; color: var(--white); background: var(--blue); box-shadow: 0 5px 13px rgba(53,53,204,.18); cursor: pointer; font-size: 14px; font-weight: 700; }
+    .primary-action:hover { border-color: var(--blue-deep); background: var(--blue-deep); }
+    .secondary-action { max-width: 310px; min-height: 48px; color: var(--blue); background: var(--white); box-shadow: none; }
+    .secondary-action:hover { color: var(--white); background: var(--blue); }
+    .social-layout .primary-action, .split .copy .primary-action, .comparison .primary-action { max-width: 310px; min-height: 48px; color: var(--blue); background: transparent; box-shadow: none; }
+    .social-layout .primary-action:hover, .split .copy .primary-action:hover, .comparison .primary-action:hover { color: var(--white); background: var(--blue); }
+    .cart-icon { width: 17px; height: 17px; flex: 0 0 17px; }
+    .trust-line { display: flex; flex-wrap: wrap; justify-content: center; gap: 17px; padding: 12px 0 7px; color: #697180; font-size: 11px; }
+    .payments { display: flex; flex-wrap: wrap; justify-content: center; gap: 7px; padding: 3px 0 14px; }
+    .payments img { width: auto; height: 22px; padding: 3px 6px; border: 1px solid #dfe2e8; border-radius: 4px; background: var(--white); }
+    .accordions { display: grid; gap: 6px; }
+    .accordions details { border: 1px solid var(--line); border-radius: 6px; background: var(--white); }
+    .accordions details[open] { border-color: #b9bbef; background: #fcfcff; }
+    summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 12px; cursor: pointer; list-style: none; color: var(--ink-soft); font-size: 13px; font-weight: 600; }
+    summary::-webkit-details-marker { display: none; }
+    summary span { color: var(--blue); font-size: 15px; font-weight: 400; }
+    details p { margin: 0; padding: 0 12px 12px; color: var(--muted); font-size: 12px; }
+    .guarantee-line { display: flex; align-items: center; gap: 8px; margin: 9px 0; padding: 9px 10px; border: 1px solid var(--line); border-radius: 6px; color: #5f6875; background: #fbfcfe; font-size: 11px; }
+    .review-highlight { display: grid; grid-template-columns: auto 44px minmax(0,1fr) auto; align-items: center; gap: 11px; padding: 13px 11px; border: 1px solid #bfc1f2; border-radius: 7px; background: var(--blue-soft); }
+    .review-highlight button { width: 22px; padding: 0; border: 0; color: var(--blue); background: transparent; cursor: pointer; font-size: 23px; }
+    .review-highlight .avatar { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; }
+    .review-highlight p { margin: 3px 0 4px; color: #4e5766; font-size: 12px; line-height: 1.4; }
+    .review-highlight strong { color: var(--ink-soft); font-size: 11px; }
+    .ticker { overflow: hidden; color: var(--white); background: var(--blue); }
+    .ticker-track { display: flex; width: max-content; align-items: center; gap: 28px; padding: 12px 0; animation: ticker 32s linear infinite; }
+    .ticker span { display: inline-flex; align-items: center; gap: 9px; font-size: 12px; font-weight: 680; white-space: nowrap; }
+    .ticker span::after { width: 4px; height: 4px; margin-left: 20px; border-radius: 50%; content: ""; background: #aaaaf6; }
+    .ticker i { display: grid; width: 22px; height: 22px; place-items: center; border-radius: 50%; color: var(--blue); background: var(--white); font-style: normal; font-size: 12px; }
+    @keyframes ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+    .social-layout { display: grid; grid-template-columns: minmax(0,.9fr) minmax(0,1.1fr); gap: 72px; align-items: center; }
+    .copy h2 { max-width: 560px; margin: 0 0 14px; font-size: clamp(31px, 3.4vw, 43px); line-height: 1.08; font-weight: 700; }
+    .copy h2 em { font-weight: 420; }
+    .copy p { max-width: 570px; margin: 0; color: var(--muted); font-size: 16px; line-height: 1.62; }
+    .copy .primary-action { max-width: 430px; margin-top: 24px; }
+    .social-rating { margin-top: 17px !important; font-size: 12px !important; }
+    .ugc-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 13px; }
+    .ugc { overflow: hidden; aspect-ratio: 3 / 5; border-radius: 10px; background: #e9eaf0; }
+    .ugc img { width: 100%; height: 100%; object-fit: cover; }
+    .split { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 74px; align-items: center; }
+    .split--reverse .media { order: 2; }
+    .split--reverse .copy { order: 1; }
+    .copy p + p { margin-top: 15px; }
+    .media { overflow: hidden; min-height: 390px; border-radius: 11px; background: #eceef3; }
+    .media img { width: 100%; height: 100%; min-height: 390px; object-fit: cover; }
+    .feature-list { display: grid; gap: 0; margin: 24px 0 0; padding: 0; list-style: none; }
+    .feature-list li { display: grid; grid-template-columns: 32px minmax(0,1fr); gap: 12px; padding: 14px 0; border-bottom: 1px solid #dadcf0; color: #586174; font-size: 14px; }
+    .feature-list li:first-child { border-top: 1px solid #dadcf0; }
+    .feature-list .number { display: grid; width: 30px; height: 30px; place-items: center; border: 1px solid var(--blue); border-radius: 50%; color: var(--blue); font-weight: 700; }
+    .feature-list strong { display: block; margin-bottom: 2px; color: var(--ink); }
+    .reviews { background: var(--white); }
+    .review-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 15px; }
+    .review-card { padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--white); }
+    .review-card .photo { overflow: hidden; aspect-ratio: 1; margin-bottom: 12px; border-radius: 6px; background: #eceef2; }
+    .review-card .photo img { width: 100%; height: 100%; object-fit: cover; }
+    .review-card strong { display: block; margin-bottom: 3px; font-size: 13px; }
+    .review-card p { min-height: 76px; margin: 9px 0 2px; color: #5f6876; font-size: 13px; line-height: 1.48; }
+    .stats { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 16px; }
+    .stat { padding: 25px 16px 22px; text-align: center; }
+    .stat b { display: grid; width: 82px; height: 82px; margin: 0 auto 17px; place-items: center; border: 3px solid rgba(255,255,255,.92); border-radius: 50%; font-size: 21px; }
+    .stat p { margin: 0; color: #f5f5ff; font-size: 13px; line-height: 1.45; }
+    .comparison { display: grid; grid-template-columns: minmax(0,.8fr) minmax(0,1.2fr); gap: 70px; align-items: center; }
+    .compare { overflow: hidden; border: 1px solid var(--line); border-radius: 8px; background: var(--white); }
+    .compare-head, .compare-row { display: grid; grid-template-columns: minmax(0,1fr) 132px 86px; }
+    .compare-head { min-height: 76px; border-bottom: 1px solid var(--line); }
+    .compare-head strong { display: grid; place-items: center; padding: 10px; color: var(--white); background: var(--blue); text-align: center; font-size: 13px; }
+    .compare-head strong:last-child { color: var(--ink-soft); background: var(--white); }
+    .compare-row { min-height: 58px; border-bottom: 1px solid var(--line); }
+    .compare-row:last-child { border-bottom: 0; }
+    .compare-row span { display: flex; align-items: center; padding: 11px 15px; color: #535d6d; font-size: 13px; }
+    .compare-row b { display: grid; place-items: center; color: var(--white); background: #7676e6; font-size: 19px; font-weight: 500; }
+    .compare-row b:last-child { color: #e83b4d; background: var(--white); }
+    .blue-callout { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 64px; align-items: center; }
+    .blue-callout .media { border: 0; background: transparent; }
+    .blue-callout .copy h2 { color: var(--white); }
+    .blue-callout .copy p { color: #e5e6ff; }
+    .blue-callout .primary-action { max-width: 430px; color: var(--blue); background: var(--white); box-shadow: none; }
+    .faq-layout { display: grid; grid-template-columns: .72fr 1.28fr; gap: 84px; align-items: start; }
+    .faq-layout .section-title { margin: 0; text-align: left; }
+    .faq-layout .section-title p { margin: 0; }
+    .faq { display: grid; gap: 0; border-top: 1px solid var(--line); }
+    .faq details { border-bottom: 1px solid var(--line); }
+    .faq summary { padding: 18px 4px; font-size: 14px; }
+    .faq details p { padding: 0 4px 16px; }
+    .recommendations { padding: 92px 0 126px; background: var(--paper); }
+    .rec-track { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 16px; }
+    .rec { min-width: 0; padding: 9px; border: 1px solid var(--line); border-radius: 8px; background: var(--white); }
+    .rec img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 5px; background: #f0f1f3; }
+    .rec strong { display: block; margin-top: 11px; font-size: 13px; }
+    .rec small { display: block; margin-top: 5px; color: #697281; font-size: 12px; }
+    .rec .discount { display: inline-block; margin-top: 7px; padding: 3px 6px; border-radius: 4px; color: var(--white); background: var(--blue); font-size: 10px; font-weight: 700; }
+    .sticky { position: fixed; right: 0; bottom: 0; left: 0; z-index: 20; padding-bottom: env(safe-area-inset-bottom); color: var(--white); background: var(--blue-deep); box-shadow: 0 -5px 22px rgba(23,25,35,.16); }
+    .sticky-inner { display: flex; min-height: 72px; align-items: center; justify-content: space-between; gap: 18px; }
+    .sticky-product { display: flex; min-width: 0; align-items: center; gap: 10px; }
+    .sticky-product img { width: 50px; height: 50px; border-radius: 7px; object-fit: cover; }
+    .sticky-product strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
+    .sticky .primary-action { width: 220px; min-height: 46px; color: var(--blue); background: var(--white); box-shadow: none; }
+    .toast { position: fixed; right: 22px; bottom: 94px; z-index: 30; display: flex; align-items: center; gap: 8px; padding: 11px 14px; border: 1px solid #d9e5e0; border-radius: 6px; color: var(--white); background: #172033; box-shadow: 0 10px 25px rgba(23,25,35,.18); opacity: 0; transform: translateY(10px); pointer-events: none; transition: opacity .2s ease, transform .2s ease; font-size: 12px; }
+    .toast.is-visible { opacity: 1; transform: translateY(0); }
+    .toast::before { display: grid; width: 18px; height: 18px; place-items: center; border-radius: 50%; content: "✓"; color: var(--white); background: var(--green); font-size: 11px; font-weight: 800; }
+    @media (max-width: 960px) {
+      .hero-grid, .social-layout, .split, .comparison, .blue-callout, .faq-layout { grid-template-columns: 1fr; gap: 38px; }
+      .product-info { padding-top: 0; }
+      .split--reverse .media, .split--reverse .copy { order: initial; }
+      .social-layout .copy { text-align: center; }
+      .social-layout .copy p, .social-layout .copy .primary-action { margin-right: auto; margin-left: auto; }
+      .review-grid, .stats { grid-template-columns: repeat(2, minmax(0,1fr)); }
+      .faq-layout .section-title { max-width: none; text-align: center; }
+      .faq-layout .section-title p { margin: 0 auto; }
+    }
+    @media (max-width: 600px) {
+      .shell { width: calc(100% - 28px); }
+      .section { padding: 58px 0; }
+      .hero { padding: 20px 0 28px; }
+      .hero-grid { gap: 29px; }
+      .product-info h1 { font-size: 36px; }
+      .benefit-grid { grid-template-columns: 1fr; }
+      .trust-line { justify-content: flex-start; gap: 10px 15px; }
+      .review-highlight { grid-template-columns: 18px 40px minmax(0,1fr) 18px; gap: 7px; }
+      .review-highlight .avatar { width: 40px; height: 40px; }
+      .section-title h2, .copy h2 { font-size: 30px; }
+      .copy { text-align: left; }
+      .copy .primary-action, .blue-callout .primary-action { margin-right: 0; margin-left: 0; }
+      .media, .media img { min-height: 290px; }
+      .review-grid, .stats { gap: 9px; }
+      .review-card { padding: 8px; }
+      .review-card p { min-height: 0; font-size: 12px; }
+      .stat { padding: 18px 8px; }
+      .stat b { width: 62px; height: 62px; margin-bottom: 11px; font-size: 16px; }
+      .compare-head, .compare-row { grid-template-columns: minmax(0,1fr) 86px 56px; }
+      .compare-head strong, .compare-row span { font-size: 11px; }
+      .rec-track { grid-template-columns: repeat(2, minmax(0,1fr)); gap: 9px; }
+      .sticky-inner { min-height: 64px; gap: 8px; }
+      .sticky-product img { width: 43px; height: 43px; }
+      .sticky-product strong { max-width: 40vw; font-size: 12px; }
+      .sticky .primary-action { width: 44vw; min-height: 44px; padding: 8px; font-size: 12px; }
+      .toast { right: 14px; bottom: 78px; }
+    }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .ticker-track { animation: none; } * { transition: none !important; } }
   </style>
 </head>
 <body>
   <main>
     <section class="hero">
-      <div class="wrap hero-grid">
-        <div>
-          <div class="main-image"><img id="mainImage" src="https://service.pagepilot.ai/storage/v1/object/public/builder/7f0e5ffb-fba5-4055-ae2f-818e455fa2f2/gallery-images/25627a22-38a7-4e90-88ac-bb785a68d0b7/1785944528407-sto6zivwkf.webp" alt="Mascara de Fibras de Seda 4D"><button class="arrow prev" type="button" aria-label="Imagen anterior">‹</button><button class="arrow next" type="button" aria-label="Imagen siguiente">›</button></div>
-          <div class="thumbs" id="thumbs"></div>
+      <div class="shell hero-grid">
+        <div class="gallery">
+          <div class="gallery-main">
+            <img id="mainImage" src="https://service.pagepilot.ai/storage/v1/object/public/builder/7f0e5ffb-fba5-4055-ae2f-818e455fa2f2/gallery-images/25627a22-38a7-4e90-88ac-bb785a68d0b7/1785944528407-sto6zivwkf.webp" alt="Máscara de Fibras de Seda 4D" loading="eager">
+            <button class="gallery-arrow gallery-arrow--prev" type="button" aria-label="Imagen anterior">‹</button>
+            <button class="gallery-arrow gallery-arrow--next" type="button" aria-label="Imagen siguiente">›</button>
+          </div>
+          <div class="thumbs" id="thumbs" aria-label="Imágenes del producto"></div>
         </div>
-        <div>
-          <span class="badge"><b>#1</b> EL MÁS VENDIDO DE 2026</span>
-          <h1>Mascara de Fibras de Seda 4D</h1>
-          <div class="rating"><span class="stars">★★★★★</span> Calificado con <strong>4.9/5</strong> por más de <strong>1422</strong> personas</div>
-          <ul class="benefits"><li><i>◉</i> Mirada más expresiva</li><li><i>◷</i> Rutina más rápida</li><li><i>♡</i> Sensación muy ligera</li><li><i>✓</i> Uso diario sencillo</li></ul>
-          <div class="price"><del>$24.99 USD</del><strong>$18.95 USD</strong><span class="save">AHORRA 24%</span></div>
-          <button class="cta add" type="button">🛒 &nbsp; AÑADIR AL CARRITO</button>
-          <div class="trust"><span>◉ Garantía de devolución de 30 días</span><span>□ Devoluciones en 30 días</span></div>
-          <div class="payments"><img src="https://app.pagepilot.ai/assets/images/payments/american-express.svg" alt="American Express"><img src="https://app.pagepilot.ai/assets/images/payments/apple-pay.svg" alt="Apple Pay"><img src="https://app.pagepilot.ai/assets/images/payments/visa.svg" alt="Visa"><img src="https://app.pagepilot.ai/assets/images/payments/mastercard.svg" alt="Mastercard"><img src="https://app.pagepilot.ai/assets/images/payments/paypal.svg" alt="PayPal"><img src="https://app.pagepilot.ai/assets/images/payments/google-pay.svg" alt="Google Pay"><img src="https://app.pagepilot.ai/assets/images/payments/shop-pay.svg" alt="Shop Pay"></div>
-          <div class="accordions"><details><summary>Descripción <span>⌄</span></summary><p>Fibras ligeras que ayudan a definir y alargar la mirada con un acabado natural y cómodo.</p></details><details><summary>Cómo usar <span>⌄</span></summary><p>Aplicá desde la raíz hacia las puntas con movimientos suaves y dejá secar unos segundos.</p></details><details><summary>Envíos y devoluciones <span>⌄</span></summary><p>Recibí seguimiento del envío y contás con 30 días para solicitar una devolución.</p></details></div>
-          <div class="guarantee">♡ <span>Menos del 1% de los clientes solicita nuestra Garantía de Devolución</span></div>
-          <div class="review-highlight"><button type="button">‹</button><img class="avatar" src="https://bcdn.pagepilot.ai/avatars/woman/549CBC36-5A97-4EF9-919A-1B8F2D0D7710.webp" alt="Sofía"><div><div class="stars">★★★★★</div><p>"Es mi nuevo básico, me ahorra un montón de tiempo cuando estoy apurada antes de salir de casa."</p><strong style="font-size:11px">✓ Sofía</strong></div><button type="button">›</button></div>
+
+        <div class="product-info">
+          <span class="product-badge"><strong>#1</strong> EL MÁS VENDIDO DE 2026</span>
+          <h1>Máscara de Fibras de Seda 4D</h1>
+          <div class="rating-line"><span class="stars" aria-label="5 de 5 estrellas">★★★★★</span> Calificada con <strong>4.9/5</strong> por más de <strong>1422</strong> personas</div>
+
+          <div class="benefit-grid" aria-label="Beneficios principales">
+            <div class="benefit"><span class="benefit-icon">◉</span><span>Mirada más expresiva</span></div>
+            <div class="benefit"><span class="benefit-icon">◷</span><span>Rutina más rápida</span></div>
+            <div class="benefit"><span class="benefit-icon">♡</span><span>Sensación muy ligera</span></div>
+            <div class="benefit"><span class="benefit-icon">✓</span><span>Uso diario sencillo</span></div>
+          </div>
+
+          <div class="price-line"><del>$24.99 USD</del><strong>$18.95 USD</strong><span class="save">AHORRÁ 24%</span></div>
+          <button class="primary-action" type="button" data-add>
+            <svg class="cart-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h2l2.1 10.1a2 2 0 0 0 2 1.6h7.8a2 2 0 0 0 1.9-1.4L21 8H7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="10" cy="20" r="1.2" fill="currentColor"/><circle cx="18" cy="20" r="1.2" fill="currentColor"/></svg>
+            AÑADIR AL CARRITO
+          </button>
+          <div class="trust-line"><span>✓ Garantía de devolución de 30 días</span><span>□ Devoluciones en 30 días</span></div>
+          <div class="payments" aria-label="Medios de pago">
+            <img src="https://app.pagepilot.ai/assets/images/payments/american-express.svg" alt="American Express"><img src="https://app.pagepilot.ai/assets/images/payments/apple-pay.svg" alt="Apple Pay"><img src="https://app.pagepilot.ai/assets/images/payments/visa.svg" alt="Visa"><img src="https://app.pagepilot.ai/assets/images/payments/mastercard.svg" alt="Mastercard"><img src="https://app.pagepilot.ai/assets/images/payments/paypal.svg" alt="PayPal"><img src="https://app.pagepilot.ai/assets/images/payments/google-pay.svg" alt="Google Pay"><img src="https://app.pagepilot.ai/assets/images/payments/shop-pay.svg" alt="Shop Pay">
+          </div>
+          <div class="accordions">
+            <details><summary>Descripción <span>⌄</span></summary><p>Fibras ligeras que ayudan a definir y alargar la mirada con un acabado natural y cómodo.</p></details>
+            <details><summary>Cómo usar <span>⌄</span></summary><p>Aplicá desde la raíz hacia las puntas con movimientos suaves y dejá secar unos segundos.</p></details>
+            <details><summary>Envíos y devoluciones <span>⌄</span></summary><p>Recibí seguimiento del envío y contás con 30 días para solicitar una devolución.</p></details>
+          </div>
+          <div class="guarantee-line">♡ <span>Menos del 1% de las clientas solicita nuestra Garantía de Devolución</span></div>
+          <div class="review-highlight">
+            <button type="button" aria-label="Reseña anterior">‹</button>
+            <img class="avatar" src="https://bcdn.pagepilot.ai/avatars/woman/549CBC36-5A97-4EF9-919A-1B8F2D0D7710.webp" alt="Sofía">
+            <div><div class="stars">★★★★★</div><p>“Es mi nuevo básico, me ahorra un montón de tiempo cuando estoy apurada antes de salir de casa.”</p><strong>✓ Sofía</strong></div>
+            <button type="button" aria-label="Siguiente reseña">›</button>
+          </div>
         </div>
       </div>
     </section>
 
-    <section class="ticker"><div class="ticker-track"><span><i>☼</i> Aplicación sencilla</span><span><i>✓</i> Calidad diaria</span><span><i>◷</i> Resultados rápidos</span><span><i>♧</i> Naturalidad total</span><span><i>✧</i> Mirada realzada</span><span><i>☼</i> Aplicación sencilla</span><span><i>✓</i> Calidad diaria</span><span><i>◷</i> Resultados rápidos</span><span><i>♧</i> Naturalidad total</span></div></section>
+    <section class="ticker" aria-label="Beneficios del producto"><div class="ticker-track"><span><i>✓</i> Calidad diaria</span><span><i>◷</i> Resultados rápidos</span><span><i>♧</i> Naturalidad total</span><span><i>✦</i> Mirada realzada</span><span><i>☼</i> Aplicación sencilla</span><span><i>✓</i> Calidad diaria</span><span><i>◷</i> Resultados rápidos</span><span><i>♧</i> Naturalidad total</span><span><i>✦</i> Mirada realzada</span><span><i>☼</i> Aplicación sencilla</span></div></section>
 
-    <section class="section pale"><div class="wrap social-grid"><div class="copy"><h2>Miles confían. <em>Mujeres reales</em> eligen calidad.</h2><p>Lográ miradas intensas con una fórmula diseñada para ser <strong>efectiva</strong> cada mañana.</p><button class="cta add" type="button">OBTÉN EL TUYO AHORA</button><p class="rating center"><span class="stars">★★★★★</span> Calificado con <strong>4.9/5</strong> por más de <strong>1422</strong> clientes felices</p></div><div class="ugc-grid"><div class="ugc"><img src="https://bcdn.pagepilot.ai/avatars/woman/DF30F1AE-31E3-4227-9CB3-8AD2F105F832.webp" alt="Cliente usando el producto"></div><div class="ugc"><img src="https://bcdn.pagepilot.ai/avatars/woman/BCFC94D6-870E-4C86-B19D-19CBA7611925.webp" alt="Cliente usando el producto"></div><div class="ugc"><img src="https://bcdn.pagepilot.ai/avatars/woman/5EC93CF9-AC9A-4A02-8A54-EE87C5E05B10.webp" alt="Cliente usando el producto"></div></div></div></section>
+    <section class="section section--paper">
+      <div class="shell social-layout">
+        <div class="copy">
+          <h2>Una mirada definida en pocos segundos.</h2>
+          <p>Lográ una mirada intensa con una fórmula diseñada para ser efectiva cada mañana, sin sumar pasos innecesarios a tu rutina.</p>
+          <button class="primary-action secondary-action" type="button" data-add>OBTÉN EL TUYO AHORA</button>
+          <p class="social-rating"><span class="stars">★★★★★</span> Calificada con <strong>4.9/5</strong> por más de <strong>1422</strong> clientas felices</p>
+        </div>
+        <div class="ugc-grid" aria-label="Clientas usando el producto">
+          <div class="ugc"><img src="https://bcdn.pagepilot.ai/avatars/woman/DF30F1AE-31E3-4227-9CB3-8AD2F105F832.webp" alt="Clienta usando la máscara" loading="lazy"></div>
+          <div class="ugc"><img src="https://bcdn.pagepilot.ai/avatars/woman/BCFC94D6-870E-4C86-B19D-19CBA7611925.webp" alt="Clienta usando la máscara" loading="lazy"></div>
+          <div class="ugc"><img src="https://bcdn.pagepilot.ai/avatars/woman/5EC93CF9-AC9A-4A02-8A54-EE87C5E05B10.webp" alt="Clienta usando la máscara" loading="lazy"></div>
+        </div>
+      </div>
+    </section>
 
-    <section class="section"><div class="wrap split"><div class="copy"><h2>¿Cómo funciona esta máscara?</h2><p>Las <strong>fibras de seda</strong> envuelven cada pestaña, dándoles una <strong>longitud natural</strong> inmediata al aplicar el producto.</p><p>Disfrutá de una mirada <strong>más abierta</strong> en tus mañanas, con pestañas que se sienten <strong>suaves</strong> y ligeras todo el día.</p><p>Tu mirada se mantiene <strong>impecable</strong> sin grumos, cuidando la <strong>textura natural</strong> en cada uso.</p><button class="cta add" type="button">CÓMPRALO AHORA</button></div><div class="media"><img src="https://service.pagepilot.ai/storage/v1/object/public/builder/7f0e5ffb-fba5-4055-ae2f-818e455fa2f2/gallery-images/25627a22-38a7-4e90-88ac-bb785a68d0b7/1785944528418-97huqwwzinj.webp" alt="Aplicación de la máscara"></div></div></section>
+    <section class="section">
+      <div class="shell split">
+        <div class="copy"><span class="eyebrow">La fórmula</span><h2>¿Cómo funciona esta máscara?</h2><p>Las <strong>fibras de seda</strong> envuelven cada pestaña y aportan una <strong>longitud natural</strong> desde la primera pasada.</p><p>Disfrutá de una mirada más abierta, con pestañas suaves y livianas durante todo el día.</p><p>El cepillo separa sin grumos para que el resultado se vea definido, no recargado.</p><button class="primary-action" type="button" data-add>CÓMPRALA AHORA</button></div>
+        <div class="media"><img src="https://service.pagepilot.ai/storage/v1/object/public/builder/7f0e5ffb-fba5-4055-ae2f-818e455fa2f2/gallery-images/25627a22-38a7-4e90-88ac-bb785a68d0b7/1785944528418-97huqwwzinj.webp" alt="Aplicación de la máscara" loading="lazy"></div>
+      </div>
+    </section>
 
-    <section class="section feature"><div class="wrap split"><div class="media"><img src="https://service.pagepilot.ai/storage/v1/object/public/builder/7f0e5ffb-fba5-4055-ae2f-818e455fa2f2/gallery-images/25627a22-38a7-4e90-88ac-bb785a68d0b7/1785944528359-2jmt14cqqyo.webp" alt="Mascara de fibras de seda"></div><div><h2>5 Beneficios diarios de la <strong>Máscara 4D</strong></h2><p><strong>Potenciá</strong> tu mirada para lucir radiante siempre.</p><ul class="feature-list"><li><span class="number">1</span><span><strong>Mirada impactante</strong>Conseguí pestañas con mayor volumen y un efecto definido.</span></li><li><span class="number">2</span><span><strong>Aplicación rápida</strong>Simplificá tu rutina con un acabado perfecto en segundos.</span></li><li><span class="number">3</span><span><strong>Calidad constante</strong>Una fórmula confiable que mantiene tus pestañas definidas.</span></li><li><span class="number">4</span><span><strong>Estilo versátil</strong>Adaptá tu look a cualquier ocasión.</span></li><li><span class="number">5</span><span><strong>Diseño funcional</strong>Un resultado impecable que te hace sentir preparada.</span></li></ul></div></div></section>
+    <section class="section section--paper">
+      <div class="shell split split--reverse">
+        <div class="media"><img src="https://service.pagepilot.ai/storage/v1/object/public/builder/7f0e5ffb-fba5-4055-ae2f-818e455fa2f2/gallery-images/25627a22-38a7-4e90-88ac-bb785a68d0b7/1785944528359-2jmt14cqqyo.webp" alt="Máscara de fibras de seda" loading="lazy"></div>
+        <div class="copy"><span class="eyebrow">Lo que cambia</span><h2>5 beneficios diarios de la <strong>Máscara 4D</strong></h2><p><strong>Potenciá</strong> tu mirada para lucir radiante siempre.</p><ol class="feature-list"><li><span class="number">1</span><span><strong>Mirada impactante</strong>Conseguí pestañas con mayor volumen y un efecto definido.</span></li><li><span class="number">2</span><span><strong>Aplicación rápida</strong>Simplificá tu rutina con un acabado perfecto en segundos.</span></li><li><span class="number">3</span><span><strong>Calidad constante</strong>Una fórmula confiable que mantiene tus pestañas definidas.</span></li><li><span class="number">4</span><span><strong>Estilo versátil</strong>Adaptá tu look a cualquier ocasión.</span></li><li><span class="number">5</span><span><strong>Diseño funcional</strong>Un resultado impecable que te hace sentir preparada.</span></li></ol></div>
+      </div>
+    </section>
 
-    <section class="section"><div class="wrap"><div class="section-head"><div class="badge">★★★★★ &nbsp; Basado en más de 1422 reseñas</div><h2>Lo que dicen nuestras clientas</h2><p>Unite a miles de personas que mejoran su mirada natural cada mañana con nosotros.</p></div><div class="review-grid"><article class="review-card"><div class="photo"><img src="https://bcdn.pagepilot.ai/avatars/woman/AFDFE124-B1FE-4B11-90C1-43E750BEEDA1.webp" alt="Camila"></div><strong>Camila</strong><div class="stars">★★★★★</div><p>Me fascina lo natural que queda. Es justo lo que buscaba para mi rutina diaria.</p></article><article class="review-card"><div class="photo"><img src="https://bcdn.pagepilot.ai/avatars/woman/B7A80545-A7C8-479C-9672-92E12632A5EE.webp" alt="Paula"></div><strong>Paula</strong><div class="stars">★★★★★</div><p>La textura es buenísima y mis pestañas se ven largas y cuidadas en segundos.</p></article><article class="review-card"><div class="photo"><img src="https://bcdn.pagepilot.ai/avatars/woman/393E3A1D-39D2-434D-9342-F4D4D0F1A092.webp" alt="Florencia"></div><strong>Florencia</strong><div class="stars">★★★★☆</div><p>Una grata sorpresa para mi rutina. Me siento más segura al salir.</p></article><article class="review-card"><div class="photo"><img src="https://bcdn.pagepilot.ai/avatars/woman/E5247905-D247-40FA-8B46-52CF998C39C7.webp" alt="Julieta"></div><strong>Julieta</strong><div class="stars">★★★★★</div><p>Es muy sencillo de usar y el efecto de las fibras es realmente bonito.</p></article></div></div></section>
+    <section class="section reviews">
+      <div class="shell"><div class="section-title"><span class="eyebrow">Experiencias reales</span><h2>Lo que dicen nuestras clientas</h2><p>Opiniones de personas que incorporaron la máscara a su rutina diaria.</p></div>
+        <div class="review-grid">
+          <article class="review-card"><div class="photo"><img src="https://bcdn.pagepilot.ai/avatars/woman/AFDFE124-B1FE-4B11-90C1-43E750BEEDA1.webp" alt="Camila" loading="lazy"></div><strong>Camila</strong><div class="stars">★★★★★</div><p>Me fascina lo natural que queda. Es justo lo que buscaba para mi rutina diaria.</p></article>
+          <article class="review-card"><div class="photo"><img src="https://bcdn.pagepilot.ai/avatars/woman/B7A80545-A7C8-479C-9672-92E12632A5EE.webp" alt="Paula" loading="lazy"></div><strong>Paula</strong><div class="stars">★★★★★</div><p>La textura es buenísima y mis pestañas se ven largas y cuidadas en segundos.</p></article>
+          <article class="review-card"><div class="photo"><img src="https://bcdn.pagepilot.ai/avatars/woman/393E3A1D-39D2-434D-9342-F4D4D0F1A092.webp" alt="Florencia" loading="lazy"></div><strong>Florencia</strong><div class="stars">★★★★☆</div><p>Una grata sorpresa para mi rutina. Me siento más segura al salir.</p></article>
+          <article class="review-card"><div class="photo"><img src="https://bcdn.pagepilot.ai/avatars/woman/E5247905-D247-40FA-8B46-52CF998C39C7.webp" alt="Julieta" loading="lazy"></div><strong>Julieta</strong><div class="stars">★★★★★</div><p>Es muy sencilla de usar y el efecto de las fibras es realmente bonito.</p></article>
+        </div>
+      </div>
+    </section>
 
-    <section class="section pale"><div class="wrap"><div class="section-head"><h2>Lo que nuestras clientas aman de sus pestañas</h2><p>Descubrí cómo nuestra máscara transforma tu mirada diaria con un acabado natural.</p></div><div class="stats"><article class="stat"><b>98%</b><p><strong>Recomendaron</strong> este look natural a sus amigas.</p></article><article class="stat"><b>100%</b><p><strong>Simplificaron</strong> su rutina de maquillaje.</p></article><article class="stat"><b>100%</b><p><strong>Disfrutaron</strong> de una mirada más abierta.</p></article><article class="stat"><b>96%</b><p><strong>Sintieron</strong> mayor confianza al lucir pestañas definidas.</p></article></div></div></section>
+    <section class="section section--blue">
+      <div class="shell"><div class="section-title"><span class="eyebrow" style="color:#d9daff">Lo que se repite</span><h2>Una mirada que se siente propia</h2><p>Resultados que nuestras clientas notaron después de sumar la máscara a su rutina.</p></div><div class="stats"><article class="stat"><b>98%</b><p><strong>Recomendaron</strong> este look natural a sus amigas.</p></article><article class="stat"><b>100%</b><p><strong>Simplificaron</strong> su rutina de maquillaje.</p></article><article class="stat"><b>100%</b><p><strong>Disfrutaron</strong> de una mirada más abierta.</p></article><article class="stat"><b>96%</b><p><strong>Sintieron</strong> mayor confianza al lucir pestañas definidas.</p></article></div></div>
+    </section>
 
-    <section class="section"><div class="wrap comparison"><div class="copy"><h2>Diferencia en tu mirada</h2><p>Olvidate de los grumos molestos. Nuestra fórmula resalta la forma natural de tus pestañas sin esfuerzo.</p><button class="cta add" type="button">OBTÉN EL TUYO AHORA</button></div><div class="compare"><div class="compare-head"><span></span><strong>Nuestro producto</strong><strong>Otros</strong></div><div class="compare-row"><span>Mayor definición</span><b>✓</b><b>×</b></div><div class="compare-row"><span>Aplicación fluida</span><b>✓</b><b>×</b></div><div class="compare-row"><span>Mirada natural</span><b>✓</b><b>×</b></div><div class="compare-row"><span>Sin grumos</span><b>✓</b><b>×</b></div><div class="compare-row"><span>Secado rápido</span><b>✓</b><b>×</b></div><div class="compare-row"><span>Resistencia diaria</span><b>✓</b><b>×</b></div></div></div></section>
+    <section class="section section--paper">
+      <div class="shell comparison"><div class="copy"><span class="eyebrow">La diferencia</span><h2>Comparala vos misma</h2><p>Olvidate de los grumos molestos. Nuestra fórmula resalta la forma natural de tus pestañas sin esfuerzo.</p><button class="primary-action" type="button" data-add>OBTÉN EL TUYO AHORA</button></div><div class="compare"><div class="compare-head"><span></span><strong>Nuestro producto</strong><strong>Otros</strong></div><div class="compare-row"><span>Mayor definición</span><b>✓</b><b>×</b></div><div class="compare-row"><span>Aplicación fluida</span><b>✓</b><b>×</b></div><div class="compare-row"><span>Mirada natural</span><b>✓</b><b>×</b></div><div class="compare-row"><span>Sin grumos</span><b>✓</b><b>×</b></div><div class="compare-row"><span>Secado rápido</span><b>✓</b><b>×</b></div><div class="compare-row"><span>Resistencia diaria</span><b>✓</b><b>×</b></div></div></div>
+    </section>
 
-    <section class="section blue-panel"><div class="wrap split"><div class="media"><img src="https://service.pagepilot.ai/storage/v1/object/public/builder/7f0e5ffb-fba5-4055-ae2f-818e455fa2f2/gallery-images/25627a22-38a7-4e90-88ac-bb785a68d0b7/1785944528300-tjyeincsami.webp" alt="Resultado de la máscara"></div><div class="copy"><div style="font-size:34px">♡</div><h2>Realzá tu mirada</h2><p>Despertá cada mañana sintiéndote lista y segura. Empezá hoy mismo con este cambio sencillo que ilumina tu rostro sin complicaciones adicionales.</p><button class="cta add" type="button">CÓMPRALO AHORA　→</button></div></div></section>
+    <section class="section section--blue"><div class="shell blue-callout"><div class="media"><img src="https://service.pagepilot.ai/storage/v1/object/public/builder/7f0e5ffb-fba5-4055-ae2f-818e455fa2f2/gallery-images/25627a22-38a7-4e90-88ac-bb785a68d0b7/1785944528300-tjyeincsami.webp" alt="Resultado de la máscara" loading="lazy"></div><div class="copy"><span class="eyebrow" style="color:#d9daff">Tu próxima rutina</span><h2>Realzá tu mirada</h2><p>Despertá cada mañana sintiéndote lista y segura. Empezá hoy mismo con un cambio sencillo que ilumina tu rostro.</p><button class="primary-action" type="button" data-add><svg class="cart-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h2l2.1 10.1a2 2 0 0 0 2 1.6h7.8a2 2 0 0 0 1.9-1.4L21 8H7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="10" cy="20" r="1.2" fill="currentColor"/><circle cx="18" cy="20" r="1.2" fill="currentColor"/></svg> CÓMPRALA AHORA</button></div></div></section>
 
-    <section class="section"><div class="wrap"><div class="section-head"><h2>Preguntas frecuentes</h2></div><div class="faq"><details><summary>¿Para qué sirve esta máscara? <span>+</span></summary><p>Ayuda a definir, alargar y realzar las pestañas con un acabado natural.</p></details><details><summary>¿Cómo se utiliza durante el día? <span>+</span></summary><p>Aplicá una o dos capas desde la raíz hasta las puntas con movimientos suaves.</p></details><details><summary>¿Cómo gestionan los envíos? <span>+</span></summary><p>El pedido se despacha con seguimiento y atención durante todo el proceso.</p></details><details><summary>¿Puede resistir el uso diario? <span>+</span></summary><p>La fórmula está pensada para acompañarte durante tu rutina cotidiana.</p></details></div></div></section>
+    <section class="section"><div class="shell faq-layout"><div class="section-title"><span class="eyebrow">Antes de elegir</span><h2>Preguntas frecuentes</h2><p>Todo lo que necesitás saber antes de incorporarla a tu rutina.</p></div><div class="faq"><details><summary>¿Para qué sirve esta máscara? <span>+</span></summary><p>Ayuda a definir, alargar y realzar las pestañas con un acabado natural.</p></details><details><summary>¿Cómo se utiliza durante el día? <span>+</span></summary><p>Aplicá una o dos capas desde la raíz hasta las puntas con movimientos suaves.</p></details><details><summary>¿Cómo gestionan los envíos? <span>+</span></summary><p>El pedido se despacha con seguimiento y atención durante todo el proceso.</p></details><details><summary>¿Puede resistir el uso diario? <span>+</span></summary><p>La fórmula está pensada para acompañarte durante tu rutina cotidiana.</p></details></div></div></section>
 
-    <section class="recommendations"><div class="wrap"><div class="section-head"><h2>Productos recomendados</h2></div><div class="rec-track"><article class="rec"><img src="https://service.pagepilot.ai/storage/v1/object/public/builder/7f0e5ffb-fba5-4055-ae2f-818e455fa2f2/gallery-images/25627a22-38a7-4e90-88ac-bb785a68d0b7/1785944528847-jlteb40fktf.webp" alt="Producto recomendado"><strong>Producto Title</strong><small>$19.99 USD　<del>$24.99 USD</del></small><span class="discount">20% DE DESCUENTO</span></article><article class="rec"><img src="https://service.pagepilot.ai/storage/v1/object/public/builder/7f0e5ffb-fba5-4055-ae2f-818e455fa2f2/gallery-images/25627a22-38a7-4e90-88ac-bb785a68d0b7/1785944528359-2jmt14cqqyo.webp" alt="Producto recomendado"><strong>Producto Title</strong><small>$19.99 USD　<del>$24.99 USD</del></small><span class="discount">20% DE DESCUENTO</span></article><article class="rec"><img src="https://service.pagepilot.ai/storage/v1/object/public/builder/7f0e5ffb-fba5-4055-ae2f-818e455fa2f2/gallery-images/25627a22-38a7-4e90-88ac-bb785a68d0b7/1785944528418-97huqwwzinj.webp" alt="Producto recomendado"><strong>Producto Title</strong><small>$19.99 USD　<del>$24.99 USD</del></small><span class="discount">20% DE DESCUENTO</span></article><article class="rec"><img src="https://service.pagepilot.ai/assets/images/logo/logo_black.svg" alt="Producto recomendado"><strong>Producto Title</strong><small>$19.99 USD　<del>$24.99 USD</del></small><span class="discount">20% DE DESCUENTO</span></article></div></div></section>
+    <section class="recommendations"><div class="shell"><div class="section-title"><span class="eyebrow">Para completar tu rutina</span><h2>También puede interesarte</h2></div><div class="rec-track"><article class="rec"><img src="https://service.pagepilot.ai/storage/v1/object/public/builder/7f0e5ffb-fba5-4055-ae2f-818e455fa2f2/gallery-images/25627a22-38a7-4e90-88ac-bb785a68d0b7/1785944528847-jlteb40fktf.webp" alt="Cepillo separador de pestañas" loading="lazy"><strong>Cepillo separador de pestañas</strong><small>$19.99 USD <del>$24.99 USD</del></small><span class="discount">20% DE DESCUENTO</span></article><article class="rec"><img src="https://service.pagepilot.ai/storage/v1/object/public/builder/7f0e5ffb-fba5-4055-ae2f-818e455fa2f2/gallery-images/25627a22-38a7-4e90-88ac-bb785a68d0b7/1785944528359-2jmt14cqqyo.webp" alt="Máscara de definición" loading="lazy"><strong>Máscara de definición suave</strong><small>$21.99 USD <del>$27.99 USD</del></small><span class="discount">20% DE DESCUENTO</span></article><article class="rec"><img src="https://service.pagepilot.ai/storage/v1/object/public/builder/7f0e5ffb-fba5-4055-ae2f-818e455fa2f2/gallery-images/25627a22-38a7-4e90-88ac-bb785a68d0b7/1785944528418-97huqwwzinj.webp" alt="Kit de mirada diaria" loading="lazy"><strong>Kit de mirada diaria</strong><small>$29.99 USD <del>$36.99 USD</del></small><span class="discount">20% DE DESCUENTO</span></article><article class="rec"><img src="https://service.pagepilot.ai/storage/v1/object/public/builder/7f0e5ffb-fba5-4055-ae2f-818e455fa2f2/gallery-images/25627a22-38a7-4e90-88ac-bb785a68d0b7/1785944528300-tjyeincsami.webp" alt="Serum para pestañas" loading="lazy"><strong>Serum para pestañas</strong><small>$24.99 USD <del>$31.99 USD</del></small><span class="discount">20% DE DESCUENTO</span></article></div></div></section>
   </main>
-  <div class="sticky"><div class="sticky-inner"><div class="sticky-product"><img src="https://service.pagepilot.ai/storage/v1/object/public/builder/7f0e5ffb-fba5-4055-ae2f-818e455fa2f2/gallery-images/25627a22-38a7-4e90-88ac-bb785a68d0b7/1785944528407-sto6zivwkf.webp" alt="Mascara de Fibras de Seda 4D"><strong>Mascara de Fibras de Seda 4D</strong></div><button class="cta add" type="button">🛒　 AÑADIR AL CARRITO</button></div></div>
-  <div class="toast" id="toast">Producto agregado al carrito de demostración</div>
+
+  <div class="sticky"><div class="shell sticky-inner"><div class="sticky-product"><img src="https://service.pagepilot.ai/storage/v1/object/public/builder/7f0e5ffb-fba5-4055-ae2f-818e455fa2f2/gallery-images/25627a22-38a7-4e90-88ac-bb785a68d0b7/1785944528407-sto6zivwkf.webp" alt="Máscara de Fibras de Seda 4D"><strong>Máscara de Fibras de Seda 4D</strong></div><button class="primary-action" type="button" data-add><svg class="cart-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h2l2.1 10.1a2 2 0 0 0 2 1.6h7.8a2 2 0 0 0 1.9-1.4L21 8H7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="10" cy="20" r="1.2" fill="currentColor"/><circle cx="18" cy="20" r="1.2" fill="currentColor"/></svg> AÑADIR AL CARRITO</button></div></div>
+  <div class="toast" id="toast" role="status" aria-live="polite">Producto agregado al carrito de demostración</div>
+
   <script>
     const gallery = [
       "https://service.pagepilot.ai/storage/v1/object/public/builder/7f0e5ffb-fba5-4055-ae2f-818e455fa2f2/gallery-images/25627a22-38a7-4e90-88ac-bb785a68d0b7/1785944528407-sto6zivwkf.webp",
@@ -172,15 +321,55 @@
       "https://service.pagepilot.ai/storage/v1/object/public/builder/7f0e5ffb-fba5-4055-ae2f-818e455fa2f2/gallery-images/25627a22-38a7-4e90-88ac-bb785a68d0b7/1785944528300-tjyeincsami.webp",
       "https://service.pagepilot.ai/storage/v1/object/public/builder/7f0e5ffb-fba5-4055-ae2f-818e455fa2f2/gallery-images/25627a22-38a7-4e90-88ac-bb785a68d0b7/1785944528847-jlteb40fktf.webp"
     ];
-    const main = document.getElementById('mainImage');
-    const thumbs = document.getElementById('thumbs');
-    let index = 0;
-    function selectImage(next) { index = (next + gallery.length) % gallery.length; main.src = gallery[index]; thumbs.querySelectorAll('.thumb').forEach((b, i) => b.classList.toggle('active', i === index)); }
-    gallery.forEach((src, i) => { const b = document.createElement('button'); b.className = 'thumb' + (i === 0 ? ' active' : ''); b.type = 'button'; b.setAttribute('aria-label', 'Imagen ' + (i + 1)); const img = document.createElement('img'); img.src = src; img.alt = ''; b.appendChild(img); b.onclick = () => selectImage(i); thumbs.appendChild(b); });
-    document.querySelector('.prev').onclick = () => selectImage(index - 1);
-    document.querySelector('.next').onclick = () => selectImage(index + 1);
-    const toast = document.getElementById('toast');
-    document.querySelectorAll('.add').forEach((button) => button.addEventListener('click', () => { toast.classList.add('show'); clearTimeout(window.toastTimer); window.toastTimer = setTimeout(() => toast.classList.remove('show'), 2200); }));
+    const mainImage = document.getElementById("mainImage");
+    const thumbs = document.getElementById("thumbs");
+    let currentImage = 0;
+    function showImage(index) {
+      currentImage = (index + gallery.length) % gallery.length;
+      mainImage.src = gallery[currentImage];
+      thumbs.querySelectorAll(".thumb").forEach((thumb, i) => {
+        const active = i === currentImage;
+        thumb.classList.toggle("is-active", active);
+        thumb.setAttribute("aria-pressed", String(active));
+      });
+    }
+    gallery.forEach((src, index) => {
+      const thumb = document.createElement("button");
+      thumb.className = "thumb" + (index === 0 ? " is-active" : "");
+      thumb.type = "button";
+      thumb.setAttribute("aria-label", "Ver imagen " + (index + 1));
+      thumb.setAttribute("aria-pressed", String(index === 0));
+      const image = document.createElement("img");
+      image.src = src;
+      image.alt = "";
+      thumb.appendChild(image);
+      thumb.addEventListener("click", () => showImage(index));
+      thumbs.appendChild(thumb);
+    });
+    document.querySelector(".gallery-arrow--prev").addEventListener("click", () => showImage(currentImage - 1));
+    document.querySelector(".gallery-arrow--next").addEventListener("click", () => showImage(currentImage + 1));
+    const featuredReviews = [
+      { avatar: "https://bcdn.pagepilot.ai/avatars/woman/549CBC36-5A97-4EF9-919A-1B8F2D0D7710.webp", name: "Sofía", text: "Es mi nuevo básico, me ahorra un montón de tiempo cuando estoy apurada antes de salir de casa." },
+      { avatar: "https://bcdn.pagepilot.ai/avatars/woman/AFDFE124-B1FE-4B11-90C1-43E750BEEDA1.webp", name: "Camila", text: "Me fascina lo natural que queda. Define la mirada sin sentirse pesada durante el día." },
+      { avatar: "https://bcdn.pagepilot.ai/avatars/woman/B7A80545-A7C8-479C-9672-92E12632A5EE.webp", name: "Paula", text: "La textura es buenísima y mis pestañas se ven largas y cuidadas en segundos." }
+    ];
+    const featured = document.querySelector(".review-highlight");
+    let featuredIndex = 0;
+    function showFeaturedReview(index) {
+      featuredIndex = (index + featuredReviews.length) % featuredReviews.length;
+      const review = featuredReviews[featuredIndex];
+      featured.querySelector(".avatar").src = review.avatar;
+      featured.querySelector("p").textContent = "“" + review.text + "”";
+      featured.querySelector("strong").textContent = "✓ " + review.name;
+    }
+    featured.querySelector("button:first-child").addEventListener("click", () => showFeaturedReview(featuredIndex - 1));
+    featured.querySelector("button:last-child").addEventListener("click", () => showFeaturedReview(featuredIndex + 1));
+    const toast = document.getElementById("toast");
+    document.querySelectorAll("[data-add]").forEach((button) => button.addEventListener("click", () => {
+      toast.classList.add("is-visible");
+      clearTimeout(window.toastTimer);
+      window.toastTimer = setTimeout(() => toast.classList.remove("is-visible"), 2200);
+    }));
   </script>
 </body>
 </html>

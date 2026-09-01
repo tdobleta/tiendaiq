@@ -22,6 +22,7 @@
        terceros dentro del admin. El admin de Shopify ya usa el stack del
        sistema; la app lo hereda vía app.css. -->
   <link rel="stylesheet" href="app.css">
+  <link rel="stylesheet" href="home-v2.css">
 </head>
 <body>
   <!-- Menú lateral del admin de Shopify (App Bridge lo dibuja bajo el nombre
@@ -60,6 +61,7 @@
   <!-- Los assets del preview del widget de Bundles (el MISMO css/js que ve el
        cliente) NO se cargan acá: se inyectan diferidos solo al entrar a esa
        pantalla (app.js → cargarWidget), para no bajarlos ni parsearlos en Inicio. -->
+  <script src="home-v2.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

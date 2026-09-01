@@ -44,7 +44,7 @@ async function suscripcionActiva(sesion) {
 }
 
 // Estado de plan para la UI y para el chequeo de cupo.
-async function estadoPlan(sesion) {
+async function estadoPlan(sesion, { confirmar = false } = {}) {
   const t = (await leerTienda(sesion.tienda)) || {};
   const usadas = t.uso?.[mesActual()] || 0;
 
@@ -69,9 +69,12 @@ async function estadoPlan(sesion) {
     if (Date.now() - ultima > HORAS_REVALIDAR * 3600 * 1000) {
       await marcar((await suscripcionActiva(sesion)) ? "pro" : "gratis");
     }
-  } else if (usadas >= PAGINAS_GRATIS) {
+  } else if (confirmar || usadas >= PAGINAS_GRATIS) {
     // Al límite: re-chequear por si suscribió recién.
-    if (await suscripcionActiva(sesion)) await marcar("pro");
+    if (await suscripcionActiva(sesion)) {
+      await marcar("pro");
+      if (confirmar) metrica("suscripcion_confirmada", { tienda: sesion.tienda });
+    }
   }
 
   return { plan, usadas, limite: plan === "pro" ? null : PAGINAS_GRATIS };
@@ -136,6 +139,10 @@ async function revertirCupo(sesion) {
 
 // Crea la suscripción y devuelve la URL de confirmación de Shopify.
 async function crearSuscripcion(sesion, urlApp) {
+  const handle = sesion.tienda.replace(".myshopify.com", "");
+  const returnUrl = env.SHOPIFY_CLIENT_ID
+    ? `https://admin.shopify.com/store/${handle}/apps/${env.SHOPIFY_CLIENT_ID}?plan=confirmado`
+    : `${urlApp}/?plan=confirmado`;
   const d = await gql(
     `mutation($name: String!, $returnUrl: URL!, $test: Boolean!, $precio: Decimal!) {
       appSubscriptionCreate(
@@ -147,7 +154,7 @@ async function crearSuscripcion(sesion, urlApp) {
     }`,
     {
       name: PLAN_NOMBRE,
-      returnUrl: `${urlApp}/?plan=confirmado`,
+      returnUrl,
       // Cargo REAL por defecto. El de prueba (no factura) es opt-in explícito
       // con PLAN_TEST=1 — así producción nunca deja de cobrar por olvido.
       test: env.PLAN_TEST === "1",
@@ -165,5 +172,5 @@ async function crearSuscripcion(sesion, urlApp) {
 
 module.exports = {
   estadoPlan, exigirCupo, consumirCupo, revertirCupo, crearSuscripcion, actualizarPlanDesdeWebhook,
-  PAGINAS_GRATIS, PLAN_PRECIO, PLAN_NOMBRE
+  PAGINAS_GRATIS, PLAN_PRECIO, PLAN_NOMBRE, mesActual
 };

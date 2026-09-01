@@ -95,6 +95,18 @@ describe("crearSuscripcion — el cargo tiene que ser real", () => {
     assert.equal(shopify.llamadas[0].variables.precio, 29.99);
     assert.equal(shopify.llamadas[0].variables.name, "TiendaIQ Pro");
   });
+
+  test("el retorno vuelve al contexto embebido de la tienda", async () => {
+    const { modulo, shopify } = montar("facturacion.js", {
+      env: { SHOPIFY_CLIENT_ID: "client-123" },
+      respuestas: [{ appSubscriptionCreate: { confirmationUrl: "https://x", userErrors: [] } }]
+    });
+    await modulo.crearSuscripcion(SESION, "https://tiendaiq.com");
+    assert.equal(
+      shopify.llamadas[0].variables.returnUrl,
+      "https://admin.shopify.com/store/prueba/apps/client-123?plan=confirmado"
+    );
+  });
 });
 
 describe("estadoPlan — quién tiene pro y quién no", () => {
@@ -198,6 +210,19 @@ describe("estadoPlan — quién tiene pro y quién no", () => {
     });
     assert.equal((await modulo.estadoPlan(SESION)).usadas, 1);
   });
+
+  test("el retorno de billing confirma Pro aunque todavia haya cupo gratis", async () => {
+    const { modulo, shopify, tiendas } = montar("facturacion.js", {
+      env: { PAGINAS_GRATIS: "3" },
+      tiendas: { [TIENDA]: { token: "t", uso: { [MES]: 0 } } },
+      respuestas: [CON_SUSCRIPCION]
+    });
+
+    const estado = await modulo.estadoPlan(SESION, { confirmar: true });
+    assert.equal(estado.plan, "pro");
+    assert.equal(shopify.llamadas.length, 1);
+    assert.equal(tiendas._almacen[TIENDA].plan, "pro");
+  });
 });
 
 describe("exigirCupo — el portero antes de generar", () => {
@@ -274,12 +299,12 @@ describe("consumirCupo — reserva ATÓMICA de cupo (sin regalar páginas)", () 
   test("no pisa el token ni el resto del registro", async () => {
     const { modulo, tiendas } = montar("facturacion.js", {
       env: { TIENDAS_PRO: TIENDA },
-      tiendas: { [TIENDA]: { token: "shpat_importante", plan: "pro", cod: { activo: true } } }
+      tiendas: { [TIENDA]: { token: "shpat_importante", plan: "pro", preferencias: { idioma: "es" } } }
     });
     await modulo.consumirCupo(SESION);
     const t = tiendas._almacen[TIENDA];
     assert.equal(t.token, "shpat_importante", "perder el token deja la tienda muerta");
-    assert.deepEqual(t.cod, { activo: true });
+    assert.deepEqual(t.preferencias, { idioma: "es" });
   });
 
   test("revertirCupo devuelve la página reservada (si la generación falla)", async () => {

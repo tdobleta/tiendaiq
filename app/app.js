@@ -63,11 +63,36 @@
     const cuerpo = await r.json().catch(() => ({}));
     if (!r.ok) {
       const e = new Error(cuerpo.error || `Error ${r.status}`);
+      e.status = r.status;
       e.reinstalar = cuerpo.reinstalar;
       e.actualizar = cuerpo.actualizar || r.status === 402;
+      if (e.reinstalar) {
+        const shop = new URLSearchParams(location.search).get("shop") || "";
+        if (/^[a-z0-9][a-z0-9-]*\.myshopify\.com$/i.test(shop)) {
+          const destino = `${location.origin}/auth?shop=${encodeURIComponent(shop.toLowerCase())}`;
+          (window.top || window).location.assign(destino);
+        }
+      }
       throw e;
     }
     return cuerpo;
+  }
+
+  async function esperarJob(id, { timeoutMs = 180000, onUpdate = () => {} } = {}) {
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+      const { job } = await api(`/jobs/${id}`);
+      onUpdate(job);
+      if (job.status === "succeeded") return job;
+      if (job.status === "failed" || job.status === "cancelled") {
+        const error = new Error(job.lastError || "La operación no pudo completarse.");
+        error.terminal = true;
+        error.job = job;
+        throw error;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+    throw new Error("La operación continúa en segundo plano. Podés volver a esta página en unos minutos.");
   }
 
   // Cupo agotado → llevar al merchant a confirmar la suscripción en Shopify.
@@ -177,12 +202,13 @@
   // métricas de venta que no medimos ni links a cosas que no existen.
 
   async function pantallaInicio() {
+    const confirmandoPlan = new URLSearchParams(location.search).get("plan") === "confirmado";
     vista.innerHTML = `<div class="generando"><div class="giro"></div><h2>Leyendo tu tienda…</h2></div>`;
     try {
       // Bundles es para los "primeros pasos": si falla, la home igual
       // se dibuja (por eso el catch por separado, no dentro del Promise.all).
       const [plan, paginas, bundles] = await Promise.all([
-        api("/plan"),
+        api(confirmandoPlan ? "/plan?confirmar=1" : "/plan"),
         api("/paginas"),
         api("/bundles").catch(() => null)
       ]);
@@ -194,6 +220,13 @@
       return;
     }
     if (estado.pantalla !== "inicio") return; // navegó mientras cargaba
+
+    if (confirmandoPlan) {
+      const limpia = new URL(location.href);
+      limpia.searchParams.delete("plan");
+      history.replaceState(history.state, "", limpia.pathname + limpia.search + limpia.hash);
+      toast(estado.plan?.plan === "pro" ? "Plan Pro activado" : "Shopify todavía está confirmando el plan");
+    }
 
     const plan = estado.plan;
     const creadas = estado.paginas.length;
@@ -264,6 +297,33 @@
 
     // ⚠ Reemplazar por la URL real de la comunidad (TikTok del usuario).
     const TIKTOK_URL = "https://www.tiktok.com/@tiendaiq";
+    if (window.TiendaIQHomeV2) {
+      window.TiendaIQHomeV2.mount({
+        root: vista,
+        data: {
+          created: creadas,
+          published: publicadas,
+          activeBundles: bundlesActivos,
+          planName: esPro ? "Pro" : "Inicial",
+          isPro: esPro,
+          used: plan.usadas,
+          limit: plan.limite,
+          usagePercent: usoPct,
+          outOfQuota: sinCupo,
+          pages: estado.paginas
+        },
+        actions: {
+          create: () => cargarLista(),
+          pages: () => ir("paginas"),
+          bundles: () => ir("bundles"),
+          inspiration: () => ir("inspiracion"),
+          plan: irASuscripcion,
+          support: () => window.open("mailto:soporte@tiendaiq.com", "_blank"),
+          legal: () => window.open("/terminos", "_blank")
+        }
+      });
+      return;
+    }
     const ICO_INFO = {
       chat: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-12.3 7.6L3 21l1.9-5.7A8.5 8.5 0 1 1 21 11.5z"/></svg>`,
       gente: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><path d="M16 5.2a3 3 0 0 1 0 5.6M18.5 19a5.2 5.2 0 0 0-3-4.7"/></svg>`,
@@ -517,7 +577,12 @@
     // Cada página son 5 celdas sueltas de un mismo s-grid (foto · producto ·
     // estado · tienda · acción) → todas las filas comparten columnas y quedan
     // alineadas como una tabla, sin s-table.
-    const TONO_ESTADO = { publicada: "success", borrador: "info" };
+    const TONO_ESTADO = {
+      publicada: "success",
+      borrador: "info",
+      publicando: "attention",
+      necesita_atencion: "critical"
+    };
     const fila = (p) => `
       <span class="pagina-fila__foto">${p.imagen ? `<img src="${esc(p.imagen)}" alt="" loading="lazy">` : ico("imagen", "ico--ph")}</span>
       <s-stack direction="block" gap="small-500">
@@ -647,9 +712,20 @@
     return `${SIMBOLO_MONEDA[moneda] || "$"} ${txt}`;
   }
 
-  const ESTADO_ETQ = { publicada: "Publicada", borrador: "Borrador" };
+  const ESTADO_ETQ = {
+    publicada: "Publicada",
+    borrador: "Borrador",
+    publicando: "Publicando",
+    necesita_atencion: "Necesita atención"
+  };
   // Tono del s-badge de estado (Polaris). pend = "Cambios sin publicar".
-  const TONO_ESTADO = { publicada: "success", borrador: "info", pend: "warning" };
+  const TONO_ESTADO = {
+    publicada: "success",
+    borrador: "info",
+    publicando: "attention",
+    necesita_atencion: "critical",
+    pend: "warning"
+  };
 
   // Variantes de color de la plantilla (solo pisan el acento; la lógica queda
   // igual). "auto" = usa el color del rubro. Los hex viven en styles.css
@@ -1152,39 +1228,15 @@
   }
 
   async function pantallaPlantillas() {
-    // Se mantiene el DISEÑO del selector; ofrece los modelos reales que arma
-    // el pipeline normal (no plantillas fijas). El render branchea por
-    // global.estilo con estos ids (ver adaptador.crearPagina y tiendaiq.js).
+    // Piloto 01 reemplaza a los prototipos anteriores. Las páginas ya creadas
+    // no se rompen: simplemente no se pueden volver a elegir para generar.
+    estado.modeloPagina = "piloto-pdp-01";
     const plantillas = [
       {
-        id: "clasico",
-        nombre: "Clásico",
-        subtitulo: "Estructura limpia para validar rápido.",
-        tags: ["Hero", "Beneficios", "FAQ"],
-        activa: true,
-        tipo: "clasico"
-      },
-      {
-        id: "premium",
-        nombre: "Premium",
-        subtitulo: "Más secciones para productos con más explicación.",
-        tags: ["Oferta", "Comparación", "Reviews"],
-        activa: true,
-        tipo: "premium"
-      },
-      {
-        id: "pagepilot",
-        nombre: "PagePilot",
-        subtitulo: "Galería editorial, prueba social, beneficios y preguntas frecuentes.",
-        tags: ["Editorial", "Galería", "Reviews"],
-        activa: true,
-        tipo: "premium"
-      },
-      {
-        id: "pagepilot-blue",
-        nombre: "PagePilot Blue",
-        subtitulo: "Producto editorial azul, prueba social, comparación y CTA fijo.",
-        tags: ["Editorial", "Comparación", "Azul"],
+        id: "piloto-pdp-01",
+        nombre: "Piloto 01",
+        subtitulo: "La primera plantilla oficial: oferta, packs vivos, historia y preguntas frecuentes.",
+        tags: ["Packs vivos", "Historia", "FAQ"],
         activa: true,
         tipo: "premium"
       }
@@ -1261,6 +1313,42 @@
 
   // ---------- generando ----------
 
+  const GENERACION_PENDIENTE = `tiq_generacion_pendiente:${(
+    new URLSearchParams(location.search).get("shop") || "local"
+  ).toLowerCase()}`;
+
+  function leerGeneracionPendiente() {
+    try { return JSON.parse(localStorage.getItem(GENERACION_PENDIENTE) || "null"); } catch { return null; }
+  }
+
+  function guardarGeneracionPendiente(value) {
+    localStorage.setItem(GENERACION_PENDIENTE, JSON.stringify(value));
+  }
+
+  function limpiarGeneracionPendiente() {
+    localStorage.removeItem(GENERACION_PENDIENTE);
+  }
+
+  async function completarGeneracionPendiente(pending) {
+    if (!pending.jobId) {
+      const { job } = await api("/paginas", { method: "POST", body: pending.body });
+      pending.jobId = job.id;
+      guardarGeneracionPendiente(pending);
+    }
+    const completed = await esperarJob(pending.jobId, { timeoutMs: 6 * 60 * 1000 });
+    const pageId = completed.result?.pageId || String(pending.body.producto_id).split("/").pop();
+    estado.pagina = await api(`/paginas/${pageId}`);
+    if (pending.tema && pending.tema !== "auto" && estado.pagina?.data && estado.pagina.data.template !== "piloto-pdp-01") {
+      (estado.pagina.data.global ||= {}).tema = pending.tema;
+      estado.pagina = await api(`/paginas/${estado.pagina.id}`, {
+        method: "PUT",
+        body: { data: estado.pagina.data }
+      });
+    }
+    limpiarGeneracionPendiente();
+    return estado.pagina;
+  }
+
   async function generar() {
     const angulo = ($("angulo")?.value || estado.anguloFinal || "").trim();
     const idioma = $("idioma")?.value || estado.idiomaPagina || "es";
@@ -1269,6 +1357,21 @@
     estado.error = null;
     ir("generando");
 
+    const body = {
+      producto_id: estado.producto.id,
+      idioma,
+      angulo,
+      estilo: estado.modeloPagina || "piloto-pdp-01"
+    };
+    const tema = estado.temaElegido || "auto";
+    const fingerprint = JSON.stringify({ ...body, tema });
+    let pending = leerGeneracionPendiente();
+    if (!pending || pending.fingerprint !== fingerprint) {
+      pending = { requestId: crypto.randomUUID(), fingerprint, body: { ...body }, tema };
+      pending.body.request_id = pending.requestId;
+      guardarGeneracionPendiente(pending);
+    }
+
     const t0 = Date.now();
     const reloj = setInterval(() => {
       const r = $("reloj");
@@ -1276,25 +1379,12 @@
     }, 100);
 
     try {
-      estado.pagina = await api("/paginas", {
-        method: "POST",
-        body: { producto_id: estado.producto.id, idioma, angulo, estilo: estado.modeloPagina || "clasico" }
-      });
-      // Color elegido antes de generar: se inyecta en la página y se persiste
-      // con el PUT que ya existe (sin tocar backend). Sin elección → color del rubro.
-      if (estado.temaElegido && estado.temaElegido !== "auto" && estado.pagina?.data) {
-        (estado.pagina.data.global ||= {}).tema = estado.temaElegido;
-        try {
-          estado.pagina = await api(`/paginas/${estado.pagina.id}`, {
-            method: "PUT",
-            body: { data: estado.pagina.data }
-          });
-        } catch {}
-      }
+      estado.pagina = await completarGeneracionPendiente(pending);
       clearInterval(reloj);
       ir("preview");
     } catch (e) {
       clearInterval(reloj);
+      if (e.terminal || e.actualizar || e.status === 404) limpiarGeneracionPendiente();
       estado.error = e.message;
       ir("plantillas");
       requestAnimationFrame(() => {
@@ -1355,6 +1445,28 @@
         li.classList.toggle("is-now", i === idx);
       });
     }, 200);
+  }
+
+  let recuperandoGeneracion = false;
+  async function recuperarGeneracionPendiente() {
+    const pending = leerGeneracionPendiente();
+    if (!pending || recuperandoGeneracion) return false;
+    recuperandoGeneracion = true;
+    ir("generando");
+    try {
+      await completarGeneracionPendiente(pending);
+      ir("preview");
+    } catch (error) {
+      if (error.terminal || error.actualizar || error.status === 404) limpiarGeneracionPendiente();
+      estado.error = error.message;
+      ir("inicio");
+      requestAnimationFrame(() =>
+        vista.insertAdjacentHTML("afterbegin", `<div class="error">${ico("x","ico--banner")} ${esc(error.message)}</div>`)
+      );
+    } finally {
+      recuperandoGeneracion = false;
+    }
+    return true;
   }
 
   // ---------- abrir una página ya generada (sin gastar generación) ----------
@@ -1772,7 +1884,6 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
           const comparisonRows = Array.isArray(comparison.filas) ? comparison.filas : (comparison.filas = Array.from({ length: 6 }, () => ""));
           const faqItems = Array.isArray(faq.items) ? faq.items : (faq.items = Array.from({ length: 5 }, () => ({ pregunta: "", respuesta: "" })));
           const reviewItems = Array.isArray(reviews.items) ? reviews.items : (reviews.items = Array.from({ length: 4 }, () => ({ autor: "", estrellas: 5, texto: "", imagen: null })));
-          const recItems = Array.isArray(pb.recomendados) ? pb.recomendados : (pb.recomendados = Array.from({ length: 5 }, () => ({ titulo: "", precio: "", comparativo: "", descuento: "", imagen: null })));
           const ticker = Array.isArray(pb.ticker) ? pb.ticker : (pb.ticker = Array.from({ length: 5 }, () => ({ texto: "", icono: "check" })));
           const socialImgs = Array.isArray(social.imagenes) ? social.imagenes : (social.imagenes = [null, null, null]);
           const pagos = Array.isArray(pb.pagos) ? pb.pagos : (pb.pagos = ["amex", "apple", "visa", "mastercard", "paypal", "gpay", "shop"]);
@@ -1790,7 +1901,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
             `<h3 class="pe-prop__subheader">Comparación</h3>` + input("facetas.pagepilot_blue.comparison.titular", "Titular", "Comparalo vos misma") + input("facetas.pagepilot_blue.comparison.parrafo", "Texto", "Mirá por qué esta propuesta se destaca frente a las alternativas.") + input("facetas.pagepilot_blue.comparison.cta", "Texto del botón", "Obtené el tuyo ahora") + input("facetas.pagepilot_blue.comparison.otros", "Columna alternativa", "Otros") + comparisonRows.slice(0, 6).map((_, i) => input(`facetas.pagepilot_blue.comparison.filas.${i}`, `Fila ${i + 1}`, ["Mayor definición", "Aplicación fluida", "Resultado natural", "Sin grumos", "Secado rápido", "Resistencia diaria"][i])).join("") +
             `<h3 class="pe-prop__subheader">Reseñas</h3>` + input("facetas.pagepilot_blue.reviews.badge", "Badge de reseñas", "Basado en más de 1422 reseñas") + input("facetas.pagepilot_blue.reviews.titular", "Titular", "Lo que dicen nuestras clientas") + input("facetas.pagepilot_blue.reviews.subtitulo", "Subtítulo", "Unite a miles de personas que mejoran su rutina cada mañana con nosotros.") + reviewItems.slice(0, 4).map((_, i) => input(`facetas.pagepilot_blue.reviews.items.${i}.autor`, `Nombre ${i + 1}`, "Cliente verificado") + input(`facetas.pagepilot_blue.reviews.items.${i}.texto`, `Texto ${i + 1}`, "Me resultó práctico y fácil de incorporar a mi rutina.") + input(`facetas.pagepilot_blue.reviews.items.${i}.imagen`, `Foto ${i + 1}`, "tiq-placeholder-review.svg")).join("") +
             `<h3 class="pe-prop__subheader">Preguntas frecuentes</h3>` + input("facetas.pagepilot_blue.faq.titular", "Titular", "Preguntas frecuentes") + input("facetas.pagepilot_blue.faq.subtitulo", "Subtítulo", "Todo lo que necesitás saber antes de comprarlo.") + faqItems.slice(0, 5).map((_, i) => input(`facetas.pagepilot_blue.faq.items.${i}.pregunta`, `Pregunta ${i + 1}`, ["¿De qué material está hecho?", "¿Cómo se usa?", "¿Cómo se limpia o mantiene?", "¿Qué colores tiene disponibles?", "¿Qué pasa si no estoy conforme?"][i]) + input(`facetas.pagepilot_blue.faq.items.${i}.respuesta`, `Respuesta ${i + 1}`, "Consultá la ficha del producto y la política de devolución.")).join("") +
-            `<h3 class="pe-prop__subheader">Recomendados</h3>` + recItems.slice(0, 5).map((_, i) => input(`facetas.pagepilot_blue.recomendados.${i}.titulo`, `Producto ${i + 1}`, "Producto recomendado") + input(`facetas.pagepilot_blue.recomendados.${i}.precio`, `Precio ${i + 1}`, "19.99") + input(`facetas.pagepilot_blue.recomendados.${i}.comparativo`, `Precio anterior ${i + 1}`, "24.99") + input(`facetas.pagepilot_blue.recomendados.${i}.descuento`, `Descuento ${i + 1}`, "20%") + input(`facetas.pagepilot_blue.recomendados.${i}.imagen`, `Imagen ${i + 1}`, "tiq-placeholder-detail.svg")).join("") +
+            `<h3 class="pe-prop__subheader">Recomendados</h3><div class="editor__ayuda">Se cargan automáticamente desde las recomendaciones reales del catálogo de Shopify. No se guardan precios ni descuentos de ejemplo.</div>` +
             `<h3 class="pe-prop__subheader">Panel azul y pagos</h3>` + input("facetas.pagepilot_blue.panel.titular", "Titular del panel", "Una mejora simple para cada día") + input("facetas.pagepilot_blue.panel.subtitulo", "Texto del panel", "Sumá una solución pensada para acompañarte con comodidad.") + input("facetas.pagepilot_blue.panel.imagen", "Imagen del panel", "tiq-placeholder-detail.svg") + `<div class="campo campo--editor"><label>Medios de pago activos</label><div class="fila-triple">${Object.entries(pagoNombres).map(([id, nombre]) => `<label><input type="checkbox" data-ppb-payment="${id}"${pagos.includes(id) ? " checked" : ""}> ${nombre}</label>`).join("")}</div></div>`;
         }
       }
@@ -3438,8 +3549,106 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     </nav>`;
   }
 
+  function pantallaPreviewPiloto01() {
+    const pg = estado.pagina;
+    const publicada = pg.estado === "publicada";
+    const est = publicada ? { c: "publicada", t: "Publicada" } : { c: "borrador", t: "Borrador" };
+    vista.innerHTML = `
+      <div class="preview-barra" id="barra-accion">
+        <button class="volver-flecha" id="volver" title="Volver" aria-label="Volver"></button>
+        <div class="preview-barra__info"><div class="preview-barra__titulo">Piloto 01</div><div class="preview-barra__sub">Plantilla oficial con datos vivos de Shopify</div></div>
+        <div class="preview-barra__estado" id="barra-estado"><s-badge tone="${TONO_ESTADO[est.c] || "neutral"}">${est.t}</s-badge>${publicada && pg.url_publica ? `<s-link href="${esc(pg.url_publica)}" target="_blank">Ver en la tienda</s-link>` : ""}</div>
+        <div class="preview-barra__acciones"><s-button variant="secondary" id="editar-copy">Editar copy</s-button><s-button variant="secondary" id="regenerar">Regenerar</s-button>${publicada ? `<s-button variant="tertiary" id="despublicar">Volver a la página nativa</s-button>` : ""}<s-button variant="${publicada ? "secondary" : "primary"}" id="publicar">${publicada ? "Volver a publicar" : "Publicar página"}</s-button></div>
+      </div>
+      ${pg.desactualizada ? `<s-banner tone="warning" heading="El producto cambió desde esta generación"><s-paragraph>La página conserva el diseño, pero el copy puede haber quedado desactualizado. Regenerala para volver a partir de los datos actuales del producto.</s-paragraph></s-banner>` : ""}
+      <div class="pe-editor"><div class="pe-editor__centro" style="grid-column:1/-1"><div class="marco marco--full"><iframe id="marco" src="/preview/piloto-pdp-01.html?t=${Date.now()}" title="Vista previa de Piloto 01"></iframe></div></div></div>`;
+    const marco = $("marco");
+    marco.onload = () => marco.contentWindow.postMessage({ tiendaiq: true, data: pg.data, urls: pg.urls || {}, producto: estado.producto || {} }, "*");
+    $("volver").onclick = () => estado.volverA === "paginas" ? ir("paginas") : cargarLista();
+    $("editar-copy").onclick = abrirEditorCopyPiloto01;
+    $("regenerar").onclick = () => ir("informacion");
+    $("publicar").onclick = publicar;
+    const bDespub = $("despublicar");
+    if (bDespub) bDespub.onclick = despublicar;
+  }
+
+  // Piloto 01 no es un constructor de HTML: la estructura fija, los datos del
+  // producto y los packs siguen bajo control del contrato. Este editor muestra
+  // únicamente los slots de copy que puede tocar una persona.
+  function abrirEditorCopyPiloto01() {
+    const content = estado.pagina?.data?.content;
+    if (!content) return;
+    document.getElementById("p01-copy-editor")?.remove();
+    const c = content;
+    const value = (v) => esc(v == null ? "" : v);
+    const bullets = Array.isArray(c.hero?.bullets) ? c.hero.bullets.join("\n") : "";
+    const points = Array.isArray(c.why?.points) ? c.why.points.join("\n") : "";
+    const modal = document.createElement("div");
+    modal.className = "editor-modal";
+    modal.id = "p01-copy-editor";
+    modal.innerHTML = `
+      <div class="editor-modal__caja" role="dialog" aria-modal="true" aria-labelledby="p01-copy-title">
+        <div class="editor-modal__cab"><span id="p01-copy-title">Editar el copy de Piloto 01</span><button class="editor-modal__x" type="button" aria-label="Cerrar">${ico("x")}</button></div>
+        <div class="editor-modal__cuerpo">
+          <p class="pe-prop__hint">La estructura, el precio, las variantes, el stock y las fotos se leen en vivo desde Shopify.</p>
+          <section class="pe-prop__grupo"><h3 class="pe-prop__subheader">Apertura</h3>
+            <label class="pe-prop__label">Promesa principal<textarea data-p01="hero.claim" rows="3">${value(c.hero?.claim)}</textarea></label>
+            <label class="pe-prop__label">Beneficios (uno por línea)<textarea data-p01-list="hero.bullets" rows="5">${value(bullets)}</textarea></label>
+          </section>
+          <section class="pe-prop__grupo"><h3 class="pe-prop__subheader">Oferta</h3>
+            <label class="pe-prop__label">Título de opciones<textarea data-p01="offer.heading" rows="2">${value(c.offer?.heading)}</textarea></label>
+          </section>
+          <section class="pe-prop__grupo"><h3 class="pe-prop__subheader">Historia</h3>
+            <label class="pe-prop__label">Antetítulo<input data-p01="why.eyebrow" value="${value(c.why?.eyebrow)}"></label>
+            <label class="pe-prop__label">Título<textarea data-p01="why.heading" rows="2">${value(c.why?.heading)}</textarea></label>
+            <label class="pe-prop__label">Texto<textarea data-p01="why.body" rows="4">${value(c.why?.body)}</textarea></label>
+            <label class="pe-prop__label">Puntos (uno por línea)<textarea data-p01-list="why.points" rows="4">${value(points)}</textarea></label>
+          </section>
+          <section class="pe-prop__grupo"><h3 class="pe-prop__subheader">Preguntas frecuentes</h3>
+            <label class="pe-prop__label">Título<input data-p01="faq.heading" value="${value(c.faq?.heading)}"></label>
+          </section>
+        </div>
+        <div class="editor-modal__pie"><button class="btn" id="p01-copy-cancel" type="button">Cancelar</button><button class="btn btn--acento" id="p01-copy-save" type="button">Guardar copy</button></div>
+      </div>`;
+    document.body.appendChild(modal);
+    const close = () => modal.remove();
+    modal.querySelector(".editor-modal__x").onclick = close;
+    modal.querySelector("#p01-copy-cancel").onclick = close;
+    modal.addEventListener("click", (event) => { if (event.target === modal) close(); });
+    const submit = modal.querySelector("#p01-copy-save");
+    submit.onclick = async () => {
+      const next = structuredClone(estado.pagina.data);
+      modal.querySelectorAll("[data-p01]").forEach((field) => {
+        const parts = field.dataset.p01.split(".");
+        let target = next.content;
+        for (let i = 0; i < parts.length - 1; i += 1) target = target[parts[i]];
+        target[parts.at(-1)] = field.value.trim();
+      });
+      modal.querySelectorAll("[data-p01-list]").forEach((field) => {
+        const parts = field.dataset.p01List.split(".");
+        let target = next.content;
+        for (let i = 0; i < parts.length - 1; i += 1) target = target[parts[i]];
+        target[parts.at(-1)] = field.value.split("\n").map((line) => line.trim()).filter(Boolean);
+      });
+      submit.disabled = true;
+      submit.textContent = "Guardando…";
+      try {
+        estado.pagina = await api(`/paginas/${estado.pagina.id}`, { method: "PUT", body: { data: next } });
+        close();
+        pantallaPreviewPiloto01();
+        toast("Copy guardado");
+      } catch (error) {
+        submit.disabled = false;
+        submit.textContent = "Guardar copy";
+        modal.querySelector(".editor-modal__cuerpo").insertAdjacentHTML("afterbegin", `<div class="error">${ico("x", "ico--banner")} ${esc(error.message)}</div>`);
+      }
+    };
+    modal.querySelector("textarea, input")?.focus();
+  }
+
   function pantallaPreview() {
     const pg = estado.pagina;
+    if (pg?.data?.template === "piloto-pdp-01") return pantallaPreviewPiloto01();
     cargarWidget("/editor-pagepilot.css", "css"); // estilos del editor 3 paneles
     sucio = false;
     if (!Array.isArray(pg.data.secciones)) pg.data.secciones = [];
@@ -3452,10 +3661,15 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       );
     }
     const publicada = pg.estado === "publicada";
+    cambiosSinPublicar = !!pg.cambios_sin_publicar;
     pintarPasos(); // tras publicar se entra acá sin ir(): refresca el stepper (lo oculta).
     // Estado que refleja el pill de la barra (una sola señal persistente).
-    const est = !publicada
-      ? { c: "borrador", t: "Borrador" }
+    const est = pg.estado === "publicando"
+      ? { c: "publicando", t: "Publicando" }
+      : pg.estado === "necesita_atencion"
+        ? { c: "necesita_atencion", t: "Necesita atención" }
+        : !publicada
+          ? { c: "borrador", t: "Borrador" }
       : cambiosSinPublicar
         ? { c: "pend", t: "Cambios sin publicar" }
         : { c: "publicada", t: "Publicada" };
@@ -3565,7 +3779,21 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     b.setAttribute("disabled", "");
     b.textContent = "Publicando…";
     try {
-      estado.pagina = await api(`/paginas/${estado.pagina.id}/publicar`, { method: "POST" });
+      const { job: queuedJob } = await api(`/paginas/${estado.pagina.id}/publicar`, { method: "POST" });
+      await esperarJob(queuedJob.id, {
+        onUpdate(job) {
+          if (!b) return;
+          b.textContent = job.status === "running"
+            ? `Publicando… intento ${job.attempts}`
+            : "Publicación en cola…";
+        }
+      });
+      estado.pagina = await api(`/paginas/${estado.pagina.id}`);
+      try {
+        const live = await api("/pagina-estado?fresh=1");
+        estado.pagina.paginaEstado = live.estado;
+        estado.pagina.setupPaginaUrl = live.setupUrl;
+      } catch {}
       cambiosSinPublicar = false; // recién publicada: lo que se ve es lo que hay
       pantallaPreview();
       // Éxito = señal efímera, no banner permanente. El estado vive en el pill.
@@ -3573,8 +3801,13 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         ? "Publicada. Falta activar/limpiar la plantilla en tu tema (ver abajo)."
         : "¡Publicada! Ya está en tu tienda.");
     } catch (e) {
-      b.removeAttribute("disabled");
-      b.textContent = "Publicar página";
+      try {
+        estado.pagina = await api(`/paginas/${estado.pagina.id}`);
+        pantallaPreview();
+      } catch {
+        b.removeAttribute("disabled");
+        b.textContent = "Publicar página";
+      }
       vista.insertAdjacentHTML("afterbegin", `<div class="error">${ico("x","ico--banner")} ${esc(e.message)}</div>`);
     }
   }
@@ -3991,33 +4224,27 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     </div>`;
   }
 
-  // Métricas reales: se calculan en el server sobre los pedidos que traen
-  // aplicado alguno de nuestros descuentos. Mientras cargan, se muestran "—"
-  // en vez de ceros (un cero acá es un dato, no un placeholder).
+  // Métricas de uso de las reglas nativas de Shopify. No consultan pedidos ni
+  // datos de compradores. El contador de Shopify se actualiza de forma asíncrona.
   function bloqueMetricas() {
     const m = estado.bundles.metricas;
-    const rango = estado.bundles.rango || 30;
-    const selector = `<s-stack direction="inline" gap="small-500">
-      ${[7, 30, 90].map((d) => `<s-button data-rango="${d}" ${rango === d ? `variant="primary"` : ""}>${d} días</s-button>`).join("")}
-    </s-stack>`;
     const tile = (t, v) => `<s-box padding="large-100" borderRadius="base" background="subdued">
       <s-stack direction="block" gap="small-500"><s-text color="subdued">${esc(t)}</s-text><s-heading>${v}</s-heading></s-stack>
     </s-box>`;
     const grilla = (cells) => `<s-grid gridTemplateColumns="repeat(auto-fit, minmax(180px, 1fr))" gap="base">${cells}</s-grid>`;
-    // Mientras cargan las métricas reales, "—" (un "0" fijo leería a dato falso).
+    if (estado.bundles.metricasError) {
+      return `<s-banner tone="warning"><s-paragraph>No pudimos leer el uso de los descuentos. La configuración y el checkout siguen funcionando.</s-paragraph></s-banner>`;
+    }
     if (!m) {
-      return selector + grilla(
-        tile("Pedidos con bundle", "—") + tile("Ingresos", "—") + tile("Ticket promedio", "—") + tile("Descuento aplicado", "—")
+      return grilla(
+        tile("Bundles activos", "—") + tile("Reglas en Shopify", "—") + tile("Usos registrados", "—")
       );
     }
-    const plata = (n) =>
-      "$ " + Number(n).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    return selector + grilla(
-      tile("Pedidos con bundle", String(m.pedidos)) +
-      tile("Ingresos", plata(m.ingresos)) +
-      tile("Ticket promedio", plata(m.ticket)) +
-      tile("Descuento aplicado", plata(m.descuento))
-    ) + `<s-text color="subdued">Últimos ${m.dias} días · moneda ${esc(m.moneda)}${m.parcial ? " · muestra parcial (500 pedidos más recientes)" : ""}</s-text>`;
+    return grilla(
+      tile("Bundles activos", String(m.ofertasActivas)) +
+      tile("Reglas en Shopify", String(m.reglas)) +
+      tile("Usos registrados", Number(m.usos).toLocaleString("es-AR"))
+    ) + `<s-text color="subdued">Shopify actualiza los usos de forma asíncrona.${m.faltantes ? ` ${m.faltantes} regla(s) guardada(s) ya no aparecen en Shopify.` : ""}</s-text>`;
   }
 
   // ---------- galería "Elegí el tema" (nueva, estilo Pumper) ----------
@@ -4113,8 +4340,8 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         <div class="bt-grid">
           ${card("Comprá más, ahorrá más", cardVolumen, "Personalizar ahora", "volumen", true)}
           ${card("Comprá y llevá gratis", cardBogo, "Personalizar ahora", "bxgy", true)}
-          ${card("Regalos gratis", cardGift, "Personalizar ahora", "gift", true)}
-          ${card("Bundle y Ahorrá", cardCombo, "Crear un paquete", "combo", true)}
+          ${card("Regalos gratis", cardGift, "Personalizar ahora", "gift", false)}
+          ${card("Bundle y Ahorrá", cardCombo, "Crear un paquete", "combo", false)}
         </div>
       </div>`;
 
@@ -4139,14 +4366,12 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       .map((b, i) => ({ b, i }))
       .filter(({ b }) => (filtro === "activas" ? b.activo !== false : filtro === "pausadas" ? b.activo === false : true));
 
-    // Ingresos por-bundle (atribuidos por el título del descuento). Skeleton
-    // mientras cargan; un bundle sin ventas todavía muestra $0 (dato real).
+    // Usos por bundle, sumados desde las reglas que realmente creó la app.
     const met = estado.bundles.metricas;
-    const fmtIngr = (nombre) => {
+    const fmtUsos = (id) => {
       if (!met) return `<span class="bdl-sk bdl-sk--s"></span>`;
-      const pb = met.porBundle && met.porBundle[nombre];
-      const v = pb ? pb.ingresos : 0;
-      return `<span class="bdl-fila2__ingr-v" title="Ingresos atribuidos en ${met.dias} días">$${Number(v).toLocaleString("es-AR", { maximumFractionDigits: 0 })}</span>`;
+      const usos = met.porBundle?.[id]?.usos || 0;
+      return `<span class="bdl-fila2__ingr-v" title="Contador asíncrono de Shopify">${Number(usos).toLocaleString("es-AR")}</span>`;
     };
     const filaHTML = ({ b, i }) => {
       const alcance =
@@ -4166,7 +4391,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
           <div class="bdl-fila2__sub">${b.tipo === "bxgy" ? "Comprá X y obtené Y" : "Descuento por volumen"} · ${esc(resumen)}</div>
         </div>
         <div class="bdl-fila2__alcance">${esc(alcance)}</div>
-        <div class="bdl-fila2__ingr">${fmtIngr(b.nombre)}</div>
+        <div class="bdl-fila2__ingr">${fmtUsos(b.id)}</div>
         <div class="bdl-fila2__estado">
           <button class="be-toggle ${on ? "is-on" : ""}" data-toggle-activo="${i}" role="switch" aria-checked="${on}" title="${on ? "Activo — clic para pausar" : "Pausado — clic para activar"}"><span></span></button>
         </div>
@@ -4182,7 +4407,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
 
     const cuerpoTabla = visibles.length
       ? `<div class="tarjeta bdl-tabla2">
-          <div class="bdl-tabla2__cab"><span class="bdl-check"><input type="checkbox" data-selall ${visibles.length && visibles.every(({ b }) => sel.includes(b.id)) ? "checked" : ""} aria-label="Seleccionar todo"></span><span></span><span>Bundle</span><span>Alcance</span><span>Ingresos${met ? ` (${met.dias}d)` : ""}</span><span>Estado</span><span></span></div>
+          <div class="bdl-tabla2__cab"><span class="bdl-check"><input type="checkbox" data-selall ${visibles.length && visibles.every(({ b }) => sel.includes(b.id)) ? "checked" : ""} aria-label="Seleccionar todo"></span><span></span><span>Bundle</span><span>Alcance</span><span>Usos</span><span>Estado</span><span></span></div>
           ${visibles.map(filaHTML).join("")}
         </div>`
       : `<div class="tarjeta bdl-vacio"><div class="bdl-vacio__s">No hay bundles ${filtro === "activas" ? "activos" : "pausados"}.</div></div>`;
@@ -4407,21 +4632,17 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       };
     });
 
-    // Selector de rango temporal: refetch con el nuevo rango.
-    vista.querySelectorAll("[data-rango]").forEach((el) => (el.onclick = () => {
-      estado.bundles.rango = Number(el.dataset.rango);
-      estado.bundles.metricas = null; // fuerza skeleton + refetch
-      pintarDashboardBundles();
-    }));
-
-    // Métricas reales: se piden (según el rango) y se repintan al llegar.
-    if (!estado.bundles.metricas) {
-      api("/bundles/metricas?dias=" + (estado.bundles.rango || 30))
+    // Métricas de uso: se piden una vez y se repintan al llegar.
+    if (!estado.bundles.metricas && !estado.bundles.metricasError) {
+      api("/bundles/metricas")
         .then((m) => {
           estado.bundles.metricas = m;
           if (estado.bundles.vista === "lista") pintarDashboardBundles();
         })
-        .catch(() => {});
+        .catch(() => {
+          estado.bundles.metricasError = true;
+          if (estado.bundles.vista === "lista") pintarDashboardBundles();
+        });
     }
   }
 
@@ -4619,7 +4840,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       </div>`;
     if (!open) return `<div class="be-lv${o.predeterminada ? " is-def" : ""}">${head}</div>`;
 
-    const TIPOS = [["porcentaje", "% Descuento"], ["fijo", "Fijo"], ["especifico", "Precio específico"], ["bogo", "BOGO"], ["ninguno", "Ninguno"]];
+    const TIPOS = [["porcentaje", "% Descuento"], ["ninguno", "Ninguno"]];
     const tabs = TIPOS.map(([k, t]) => `<button class="be-dt ${tipo === k ? "is-sel" : ""}" data-lv-tipo="${i}:${k}">${t}</button>`).join("");
 
     const campoOjo = (ruta, label, verKey) => {
@@ -4658,7 +4879,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
           <div class="campo campo--editor"><label>Descuento</label><input type="number" value="${esc(o.descuento ?? 0)}" disabled></div>${cant}</div>`;
     } else {
       campos = `<div class="be-grid2">
-          <div class="campo campo--editor"><label>Descuento en %</label><input type="number" data-b="ofertas.${i}.descuento" data-tipo="numero" min="0" max="100" value="${esc(o.descuento ?? 0)}"></div>${cant}</div>${redondeo}`;
+          <div class="campo campo--editor"><label>Descuento en %</label><input type="number" data-b="ofertas.${i}.descuento" data-tipo="numero" min="0" max="100" value="${esc(o.descuento ?? 0)}"></div>${cant}</div>`;
     }
 
     const body = `
@@ -4683,7 +4904,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
               ${ad.imagen.url
                 ? `<div class="be-gift-sel"><span class="be-gift-sel__img"><img src="${esc(ad.imagen.url)}" alt=""></span><span class="be-gift-sel__n">${ico("check")} Imagen cargada</span><label class="be-gift-sel__ch" style="cursor:pointer">Cambiar<input type="file" accept="image/*" hidden data-addon-img="${i}"></label></div>`
                 : `<label class="be-img-btn">${ico("subir")} Seleccionar imagen de tu computadora<input type="file" accept="image/*" hidden data-addon-img="${i}"></label>`}</div>` : "";
-          const g = ad.regalo || {};
+          const g = { on: false, items: [] };
           const gifts = g.items || [];
           const sel = Math.min(g.sel || 0, Math.max(0, gifts.length - 1));
           const editorRegalo = (it, gi) => `
@@ -4711,15 +4932,11 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
               ${gifts.length
                 ? `<div class="be-gift__tabs">${gifts.map((_, gi) => `<span class="be-gift__tab ${gi === sel ? "is-sel" : ""}" data-gift-tab="${i}:${gi}">Regalo ${gi + 1}<button data-gift-del="${i}:${gi}" title="Quitar">${ico("x")}</button></span>`).join("")}</div>${editorRegalo(gifts[sel], sel)}`
                 : `<button class="be-gift-btn" data-addon-gift="${i}">${ico("mas")} Seleccionar producto de regalo</button>`}</div>` : "";
-          const cfgEnvio = ad.envio?.on ? `<div class="be-addon-cfg">
-              <div class="be-addon-cfg__t">${ico("camion")} Envío gratis<button class="be-addon-cfg__x" data-addon-toggle="${i}:envio">Eliminar</button></div>
-              <div class="campo campo--editor"><label>Texto</label><input type="text" data-b="ofertas.${i}.addons.envio.texto" value="${esc(ad.envio.texto || "FREE SHIPPING")}"></div></div>` : "";
+          const cfgEnvio = "";
           return `<div class="be-addons">
             <div class="be-addons__t">${ico("mas")} Add-Ons</div>
             <div class="be-addons__row">
               ${btn("imagen", BE_IMG, "+ Imagen")}
-              ${btn("regalo", BE_GIFT2, "+ Regalo gratis")}
-              ${btn("envio", BE_TRUCK, "+ Envío Gratis")}
             </div>
             ${cfgImagen}${cfgRegalo}${cfgEnvio}
           </div>`;
@@ -6106,6 +6323,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     // pegado el editor de un bundle que se estaba viendo antes).
     if (pantalla === "bundles" && estado.bundles) { estado.bundles.vista = "lista"; estado.bundles.editIdx = null; }
     estado.pantalla = pantalla;
+    document.body.classList.toggle("tiq-v2-home-active", pantalla === "inicio");
     sincronizarURL(pantalla);
     setTituloBar(pantalla);
     pintarPasos();
@@ -6140,7 +6358,8 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   }
 
   // Ruteo por URL: el menú lateral del admin navega por estas rutas.
-  function rutear() {
+  async function rutear() {
+    if (await recuperarGeneracionPendiente()) return;
     const ruta = location.pathname.replace(/\/$/, "");
     if (ruta === "/paginas") ir("paginas");
     else if (ruta === "/bundles") ir("bundles");

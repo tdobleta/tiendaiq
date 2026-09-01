@@ -40,6 +40,7 @@ const ARCHIVOS_CON_DOMINIO = [
 // El dominio de referencia es el `application_url` del toml: es el que Shopify
 // tiene cargado en el Partner Dashboard.
 const toml = leer("shopify.app.toml");
+const render = leer("render.yaml");
 const principal = toml.match(/^application_url\s*=\s*"([^"]+)"/m)?.[1];
 
 if (!principal) {
@@ -107,6 +108,69 @@ if (apiCliente && apiExtension && apiCliente !== apiExtension) {
   mal("la versión de API es la misma en el cliente y en el extension", `shopify.js usa ${apiCliente} y el extension ${apiExtension}`);
 } else if (apiCliente) {
   ok(`versión de API ${apiCliente} en el cliente y en el extension`);
+}
+
+// ---------- webhooks obligatorios de privacidad ----------
+
+const complianceTopics = ["customers/data_request", "customers/redact", "shop/redact"];
+const complianceDeclarados = toml.match(/compliance_topics\s*=\s*\[([^\]]+)\]/)?.[1] || "";
+const faltanCompliance = complianceTopics.filter((topic) => !complianceDeclarados.includes(`"${topic}"`));
+if (faltanCompliance.length || !/\[\[webhooks\.subscriptions\]\]/.test(toml)) {
+  mal("Shopify recibe los tres webhooks obligatorios de privacidad", `faltan o usan sintaxis antigua: ${faltanCompliance.join(", ") || "subscriptions"}`);
+} else if (!/uri\s*=\s*"https:\/\/tiendaiq\.com\/webhooks"/.test(toml)) {
+  mal("los webhooks de privacidad apuntan al ingress durable", "la suscripcion no usa https://tiendaiq.com/webhooks");
+} else {
+  ok("Shopify recibe los tres webhooks obligatorios de privacidad");
+}
+
+// ---------- despliegue y migraciones ----------
+
+if (/preDeployCommand:\s*npm run db:migrate/.test(render)) {
+  ok("Render aplica migraciones antes de iniciar la nueva versión");
+} else {
+  mal("Render aplica migraciones antes de iniciar la nueva versión", "falta preDeployCommand: npm run db:migrate");
+}
+
+if (/healthCheckPath:\s*\/ready/.test(render)) {
+  ok("Render espera readiness de almacenamiento y aislamiento");
+} else {
+  mal("Render espera readiness de almacenamiento y aislamiento", "healthCheckPath debe apuntar a /ready");
+}
+
+if (/key:\s*PG_CA_CERT/.test(render)) {
+  ok("Render declara el certificado CA de PostgreSQL");
+} else {
+  mal("Render declara el certificado CA de PostgreSQL", "falta PG_CA_CERT entre los secretos");
+}
+
+const runtimeUrls = render.match(/- key:\s*DATABASE_URL\s+sync:\s*false/g) || [];
+const migrationUrls = render.match(/- key:\s*MIGRATION_DATABASE_URL\s+sync:\s*false/g) || [];
+if (runtimeUrls.length === 2 && migrationUrls.length === 2 &&
+    !/- key:\s*DATABASE_URL\s+fromDatabase:/.test(render)) {
+  ok("Render separa credenciales de runtime y migración");
+} else {
+  mal(
+    "Render separa credenciales de runtime y migración",
+    "web y worker deben usar DATABASE_URL secretas; la credencial dueña sólo va en MIGRATION_DATABASE_URL"
+  );
+}
+
+if (/type:\s*worker[\s\S]*name:\s*tiendaiq-worker[\s\S]*startCommand:\s*npm run worker/.test(render)) {
+  ok("Render ejecuta generación y publicaciones en un worker separado");
+} else {
+  mal("Render ejecuta las publicaciones en un worker separado", "falta el servicio tiendaiq-worker");
+}
+
+if (/type:\s*worker[\s\S]*preDeployCommand:\s*npm run db:migrate/.test(render)) {
+  ok("el worker arranca con el mismo esquema migrado que la web");
+} else {
+  mal("el worker arranca con el mismo esquema migrado que la web", "el worker no declara db:migrate");
+}
+
+if (/type:\s*worker[\s\S]*key:\s*ANTHROPIC_API_KEY/.test(render)) {
+  ok("el worker recibe la credencial de generación de IA");
+} else {
+  mal("el worker recibe la credencial de generación de IA", "falta ANTHROPIC_API_KEY en tiendaiq-worker");
 }
 
 console.log(fallos ? `\n  ${fallos} incoherencia(s)\n` : "");

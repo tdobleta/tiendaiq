@@ -21,18 +21,32 @@
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
-const { listarProductos, crearPagina, editarTexto, escribirPreview } = require("./adaptador");
-const { publicarPagina, despublicarPagina } = require("./publicar");
+const { listarProductos, editarTexto } = require("./adaptador");
+const { despublicarPagina } = require("./publicar");
 const { env, sesionDeEnv } = require("./shopify");
-const { sesionDe, borrarTienda, listarTiendas } = require("./tiendas");
-const { guardarPaginaDB, leerPaginaDB, listarPaginasDB } = require("./db");
+const { sesionDe, borrarTienda } = require("./tiendas");
+const { createConcurrencyGate } = require("./src/capacity/concurrency-gate");
+const {
+  guardarPaginaDB,
+  leerPaginaDB,
+  listarPaginasDB,
+  encolarJobDB,
+  encolarGeneracionDB,
+  recibirWebhookDB,
+  leerJobDB,
+  verificarAlmacenamientoDB
+} = require("./db");
 const { iniciarInstalacion, terminarInstalacion, tiendaDelPase } = require("./auth");
 const { nubeServible, urlVideo, urlPoster } = require("./inspiracion-nube");
-const { estadoPlan, consumirCupo, revertirCupo, crearSuscripcion } = require("./facturacion");
+const { estadoPlan, crearSuscripcion, mesActual } = require("./facturacion");
 const { reportarError, metrica } = require("./monitoreo");
+const { TenantContext } = require("./src/tenancy/tenant-context");
+const { verifyAndNormalizeWebhook } = require("./src/webhooks/verify-and-normalize");
 const {
   leerConfigBundles,
   guardarConfigBundles,
+  validarConfigBundles,
+  bundleEsPublicable,
   sincronizarDescuentos,
   borrarDescuentos
 } = require("./bundles");
@@ -55,7 +69,9 @@ const VERSION_ASSETS = (() => {
     const dirWidgets = path.join(__dirname, "extensions", "tiendaiq-widgets", "assets");
     const archivos = [
       path.join(DIR_APP, "app.js"), path.join(DIR_APP, "app.css"),
-      path.join(dirWidgets, "tiendaiq.js"), path.join(dirWidgets, "tiendaiq.css")
+      path.join(DIR_APP, "home-v2.js"), path.join(DIR_APP, "home-v2.css"),
+      path.join(dirWidgets, "tiendaiq.js"), path.join(dirWidgets, "tiendaiq.css"),
+      path.join(dirWidgets, "piloto-pdp-01.js"), path.join(dirWidgets, "piloto-pdp-01.css")
     ];
     return Math.floor(Math.max(...archivos.map((a) => fs.statSync(a).mtimeMs))).toString(36);
   } catch {
@@ -63,7 +79,7 @@ const VERSION_ASSETS = (() => {
   }
 })();
 // Único hogar del código que corre en el storefront (widget de bundles y
-// formulario COD). El theme app extension lo publica en el CDN de Shopify, y
+// widget de bundles). El theme app extension lo publica en el CDN de Shopify, y
 // el server sirve LOS MISMOS archivos para el preview del admin y para la
 // inyección directa. Una sola copia: no hay nada que sincronizar.
 const DIR_WIDGETS = path.join(__dirname, "extensions", "tiendaiq-widgets", "assets");
@@ -71,18 +87,52 @@ const DIR_WIDGETS = path.join(__dirname, "extensions", "tiendaiq-widgets", "asse
 // La URL pública por la que Shopify nos alcanza. En producción es la de Render;
 // en local, el túnel. Sin esto el OAuth no puede volver.
 const URL_APP = (env.APP_URL || `http://localhost:${PUERTO}`).replace(/\/$/, "");
+const textEditGate = createConcurrencyGate({
+  globalLimit: Math.max(1, Number(env.TEXT_EDIT_CONCURRENCY) || 4),
+  perKeyLimit: 1
+});
+const publicBundlesCache = new Map();
+const PUBLIC_BUNDLES_CACHE_MS = Math.max(5000, Number(env.PUBLIC_BUNDLES_CACHE_MS) || 60000);
+const GENERATION_QUEUE_MAX_PER_TENANT = Math.max(1, Number(env.GENERATION_QUEUE_MAX_PER_TENANT) || 2);
+const GENERATION_QUEUE_MAX_GLOBAL = Math.max(1, Number(env.GENERATION_QUEUE_MAX_GLOBAL) || 120);
+
+function cachePublicBundle(shop, value) {
+  if (publicBundlesCache.size >= 2000 && !publicBundlesCache.has(shop)) {
+    publicBundlesCache.delete(publicBundlesCache.keys().next().value);
+  }
+  publicBundlesCache.set(shop, { value, expiresAt: Date.now() + PUBLIC_BUNDLES_CACHE_MS });
+}
 
 // ---------- almacén de páginas, por tienda, vía db.js ----------
 
 const idDePagina = (gid) => gid.split("/").pop(); // gid://shopify/Product/123 → 123
 
-async function guardarPagina(tienda, registro) {
+async function guardarPagina(tenant, registro) {
   registro.actualizado = new Date().toISOString();
-  await guardarPaginaDB(tienda, registro.id, registro);
+  await guardarPaginaDB(tenant, registro.id, registro);
   return registro;
 }
-const leerPagina = (tienda, id) => leerPaginaDB(tienda, id);
-const listarPaginas = (tienda) => listarPaginasDB(tienda);
+const leerPagina = (tenant, id) => leerPaginaDB(tenant, id);
+const listarPaginas = (tenant) => listarPaginasDB(tenant);
+
+async function reconciliarPaginaJob(tenant, pagina) {
+  if (!pagina?.active_job_id) return pagina;
+  const job = await leerJobDB(tenant, pagina.active_job_id);
+  if (!job || ["failed", "cancelled"].includes(job.status)) {
+    pagina.estado = "necesita_atencion";
+    pagina.active_job_id = null;
+    pagina.last_job_error = "La publicación no pudo completarse. Podés reintentarla.";
+    return guardarPagina(tenant, pagina);
+  }
+  if (job.status === "succeeded") {
+    pagina.estado = "publicada";
+    pagina.url_publica = job.result?.url || pagina.url_publica;
+    pagina.active_job_id = null;
+    pagina.last_job_error = null;
+    return guardarPagina(tenant, pagina);
+  }
+  return pagina;
+}
 
 // ---------- activación en el tema (deep links; la app NO escribe el tema) ----------
 
@@ -93,7 +143,7 @@ const CLIENT_ID = env.SHOPIFY_CLIENT_ID || "";
 const linkEditorPagina = (tienda) =>
   `https://${tienda}/admin/themes/current/editor?template=product`;
 
-// Preactiva un app embed (COD/Bundles) en el editor: además de abrir el panel
+// Preactiva un app embed en el editor: además de abrir el panel
 // de "Incrustaciones de apps", deja el toggle del bloque listo para prender.
 const linkActivarEmbed = (tienda, handle) =>
   `https://${tienda}/admin/themes/current/editor?context=apps&activateAppId=${CLIENT_ID}/${handle}`;
@@ -147,81 +197,46 @@ const json = (res, codigo, cuerpo) => {
   res.end(JSON.stringify(cuerpo));
 };
 
+const jobPublico = (job) => job && ({
+  id: job.id,
+  type: job.type,
+  status: job.status,
+  attempts: job.attempts,
+  maxAttempts: job.maxAttempts,
+  lastError: job.status === "failed" ? "No se pudo completar la operación después de varios intentos." : null,
+  result: job.status === "succeeded" ? job.result : null,
+  createdAt: job.createdAt,
+  updatedAt: job.updatedAt,
+  completedAt: job.completedAt
+});
+
 // Cuerpo CRUDO (Buffer): los webhooks de Shopify se verifican con HMAC sobre
 // los bytes exactos — parsear antes de verificar rompe la firma.
-function leerCrudo(req) {
+function leerCrudo(req, limite = 1_000_000) {
   return new Promise((resolve, reject) => {
     const partes = [];
-    req.on("data", (c) => partes.push(c));
+    let bytes = 0;
+    req.on("data", (c) => {
+      bytes += c.length;
+      if (bytes > limite) {
+        reject(Object.assign(new Error("Webhook demasiado grande"), { status: 413 }));
+        req.destroy();
+        return;
+      }
+      partes.push(c);
+    });
     req.on("end", () => resolve(Buffer.concat(partes)));
     req.on("error", reject);
   });
 }
 
-// Dedup de webhooks: Shopify reintenta (hasta 8 veces) y puede entregar el
-// mismo evento más de una vez. Hoy los handlers son idempotentes, pero registrar
-// el `x-shopify-webhook-id` evita doble ejecución si se agrega uno con efectos.
-// Map acotado con TTL en memoria: alcanza para una instancia (el deploy actual
-// corre una sola); tras reinicio se pierde, sin consecuencia por ser idempotente.
-const WEBHOOKS_VISTOS = new Map(); // id -> vence (ms)
-const WEBHOOK_TTL = 10 * 60 * 1000;
-const WEBHOOKS_MAX = 2000;
-function webhookRepetido(id) {
-  if (!id) return false;
-  const ahora = Date.now();
-  // Limpieza perezosa de vencidos + tope duro (evita fuga de memoria).
-  if (WEBHOOKS_VISTOS.size > WEBHOOKS_MAX) {
-    for (const [k, v] of WEBHOOKS_VISTOS) if (v < ahora) WEBHOOKS_VISTOS.delete(k);
-    if (WEBHOOKS_VISTOS.size > WEBHOOKS_MAX) WEBHOOKS_VISTOS.clear();
-  }
-  const visto = WEBHOOKS_VISTOS.get(id);
-  if (visto && visto > ahora) return true;
-  WEBHOOKS_VISTOS.set(id, ahora + WEBHOOK_TTL);
-  return false;
-}
-
-// POST /webhooks — desinstalación y pedidos de privacidad (GDPR).
-// Shopify exige responder 200 a los de privacidad aunque no guardemos datos
-// de clientes (no guardamos ninguno: solo tokens de tienda y páginas).
+// POST /webhooks: verifica, minimiza y persiste. Los efectos ocurren en el
+// worker; responder 200 significa "el evento quedó durable", no "ya terminó".
 async function webhooks(req, res) {
   const crudo = await leerCrudo(req);
-  const firma = req.headers["x-shopify-hmac-sha256"] || "";
-  const esperada = require("crypto")
-    .createHmac("sha256", env.SHOPIFY_CLIENT_SECRET)
-    .update(crudo)
-    .digest("base64");
-  const a = Buffer.from(esperada), b = Buffer.from(firma);
-  if (a.length !== b.length || !require("crypto").timingSafeEqual(a, b)) {
-    return void res.writeHead(401).end();
-  }
-
-  // Repetido (reintento de Shopify): ya lo procesamos → 200 y cortar, así deja
-  // de reintentar. Va DESPUÉS del HMAC para no dejar registrar ids sin firmar.
-  if (webhookRepetido(req.headers["x-shopify-webhook-id"] || "")) {
-    return void res.writeHead(200).end();
-  }
-
-  const topico = req.headers["x-shopify-topic"] || "";
-  const tienda = req.headers["x-shopify-shop-domain"] || "";
-
-  if (topico === "app/uninstalled" && tienda) {
-    await borrarTienda(tienda);
-    console.log(`  ✖ desinstalada · ${tienda}`);
-  }
-
-  // Cambió el estado de la suscripción (cancelada, vencida, congelada,
-  // reactivada): se refleja en el plan al instante.
-  if (topico === "app_subscriptions/update" && tienda) {
-    try {
-      const { actualizarPlanDesdeWebhook } = require("./facturacion");
-      const plan = await actualizarPlanDesdeWebhook(tienda, JSON.parse(crudo.toString("utf8")));
-      if (plan) console.log(`  ⟳ plan ${plan} · ${tienda}`);
-    } catch (e) {
-      console.error("✖ webhook suscripción:", e.message);
-    }
-  }
-  // customers/data_request, customers/redact, shop/redact:
-  // no almacenamos datos de clientes finales — 200 alcanza.
+  const input = verifyAndNormalizeWebhook(crudo, req.headers, env.SHOPIFY_CLIENT_SECRET);
+  const { inserted } = await recibirWebhookDB(input);
+  if (inserted) metrica("webhook_recibido", { topic: input.topic });
   res.writeHead(200).end();
 }
 
@@ -229,8 +244,8 @@ function leerCuerpo(req, limite = 1_000_000) {
   return new Promise((resolve, reject) => {
     const trozos = [];
     let bytes = 0;
-    // Tope de 1 MB por defecto: /cod/pedido es público y sin esto cualquiera
-    // nos infla la memoria. La subida de imágenes pasa un límite mayor.
+    // Tope de 1 MB por defecto: sin esto una ruta pública podría inflar la
+    // memoria. La subida de imágenes pasa un límite mayor.
     // Se mide por BYTES reales (Buffer.length), no por largo de string: con
     // multibyte el corte en .length no coincide con los bytes recibidos, y
     // acumular en string materializa el base64 de 15 MB en memoria UTF-16.
@@ -276,6 +291,8 @@ function servirIndex(res) {
     .readFileSync(path.join(DIR_APP, "index.html"), "utf8")
     .replace("{{SHOPIFY_CLIENT_ID}}", env.SHOPIFY_CLIENT_ID || "")
     .replace('href="app.css"', `href="app.css?v=${VERSION_ASSETS}"`)
+    .replace('href="home-v2.css"', `href="home-v2.css?v=${VERSION_ASSETS}"`)
+    .replace('src="home-v2.js"', `src="home-v2.js?v=${VERSION_ASSETS}"`)
     .replace('src="app.js"', `src="app.js?v=${VERSION_ASSETS}"`);
   res.writeHead(200, {
     "Content-Type": "text/html; charset=utf-8",
@@ -484,7 +501,8 @@ async function resolverSesion(req) {
   // Solo para tu tienda de prueba. En producción DEV_MODE va apagado y todo
   // pasa por el pase firmado (multi-tienda).
   if (!pase && env.DEV_MODE === "1") {
-    return sesionDeEnv();
+    const sesion = sesionDeEnv();
+    return { ...sesion, tenant: TenantContext.fromShopDomain(sesion.tienda, { source: "development" }) };
   }
 
   if (!pase) {
@@ -492,12 +510,17 @@ async function resolverSesion(req) {
     e.status = 401;
     throw e;
   }
+  let tienda;
   try {
-    return await sesionDe(tiendaDelPase(pase)); // firma → dominio → token guardado
+    tienda = tiendaDelPase(pase);
   } catch (err) {
     err.status = 401;
     throw err;
   }
+  // La identidad inválida es 401; una caída de almacenamiento debe conservar
+  // su 5xx para no iniciar un loop de reinstalación engañoso.
+  const sesion = await sesionDe(tienda);
+  return { ...sesion, tenant: TenantContext.fromShopDomain(sesion.tienda, { source: "session-token" }) };
 }
 
 // ---------- api ----------
@@ -509,7 +532,7 @@ async function api(req, res, url) {
   // GET /api/productos
   if (req.method === "GET" && ruta === "/api/productos") {
     const productos = await listarProductos(sesion);
-    const paginas = Object.fromEntries((await listarPaginas(sesion.tienda)).map((p) => [p.id, p.estado]));
+    const paginas = Object.fromEntries((await listarPaginas(sesion.tenant)).map((p) => [p.id, p.estado]));
     return json(
       res,
       200,
@@ -536,19 +559,26 @@ async function api(req, res, url) {
     return json(res, 200, listarInspiracion());
   }
 
+  // GET /api/jobs/:id — estado tenant-scoped de una operación asíncrona.
+  const mJob = ruta.match(/^\/api\/jobs\/([0-9a-f-]{36})$/i);
+  if (req.method === "GET" && mJob) {
+    const job = await leerJobDB(sesion.tenant, mJob[1]);
+    return job ? json(res, 200, { job: jobPublico(job) }) : json(res, 404, { error: "No existe ese trabajo" });
+  }
+
   // GET /api/paginas — resumen para el inicio y la tabla de páginas
   // (no toca Shopify, solo DB)
   if (req.method === "GET" && ruta === "/api/paginas") {
     // listarPaginas ya devuelve el resumen proyectado (id/estado/título/imagen/…),
     // no el JSONB entero de cada página.
-    return json(res, 200, await listarPaginas(sesion.tienda));
+    return json(res, 200, await listarPaginas(sesion.tenant));
   }
 
   // GET /api/pagina-estado — ¿las páginas publicadas se ven en la tienda?
   // Verifica la última publicada fetcheando su HTML público (sin tocar el tema).
   // Alimenta el banner persistente que avisa si falta activar la plantilla.
   if (req.method === "GET" && ruta === "/api/pagina-estado") {
-    const ps = await listarPaginas(sesion.tienda);
+    const ps = await listarPaginas(sesion.tenant);
     const pub = ps
       .filter((p) => p.estado === "publicada" && p.url_publica)
       .sort((a, b) => (b.actualizado || "").localeCompare(a.actualizado || ""))[0];
@@ -563,7 +593,8 @@ async function api(req, res, url) {
   // GET /api/paginas/:id
   const mGet = ruta.match(/^\/api\/paginas\/([^/]+)$/);
   if (req.method === "GET" && mGet) {
-    const p = await leerPagina(sesion.tienda, mGet[1]);
+    const encontrada = await leerPagina(sesion.tenant, mGet[1]);
+    const p = encontrada ? await reconciliarPaginaJob(sesion.tenant, encontrada) : null;
     return p ? json(res, 200, p) : json(res, 404, { error: "No existe esa página" });
   }
 
@@ -571,8 +602,17 @@ async function api(req, res, url) {
   if (req.method === "POST" && ruta === "/api/texto/editar") {
     const { texto = "", instrucciones = "", modo = "rewrite", idioma = "es", contexto = "" } = await leerCuerpo(req);
     if (String(texto).length > 12000) return json(res, 400, { error: "El texto es demasiado largo para editarlo en una sola vez." });
-    const salida = await editarTexto({ texto, instrucciones, modo, idioma, contexto });
-    return json(res, 200, { texto: salida });
+    const release = textEditGate.tryAcquire(sesion.tienda);
+    if (!release) {
+      res.setHeader("Retry-After", "5");
+      return json(res, 429, { error: "El asistente esta ocupado. Reintenta en unos segundos." });
+    }
+    try {
+      const salida = await editarTexto({ texto, instrucciones, modo, idioma, contexto });
+      return json(res, 200, { texto: salida });
+    } finally {
+      release();
+    }
   }
 
   // POST /api/imagen — sube una imagen a Files de la tienda (genérico). Lo usa
@@ -592,11 +632,11 @@ async function api(req, res, url) {
   }
 
   // PUT /api/bundles — guardar la config. Re-sincroniza los descuentos
-  // automáticos (borra los viejos, crea los nuevos) y, si ya está inyectado,
-  // re-sube el snippet con la config nueva.
+  // automáticos con reemplazo seguro y compensación ante fallos.
   if (req.method === "PUT" && ruta === "/api/bundles") {
     const { config } = await leerCuerpo(req);
     if (!config) return json(res, 400, { error: "Falta config" });
+    validarConfigBundles(config);
 
     const actual = await leerConfigBundles(sesion.tienda);
     config.instalado = actual.instalado; // no se pisa desde el browser
@@ -607,30 +647,38 @@ async function api(req, res, url) {
       return { ...b, discount_ids: previo ? previo.discount_ids : [] };
     });
 
-    // Bundles que el merchant eliminó: hay que borrar SUS descuentos en Shopify
-    // (el sync solo recorre los que quedan, así que quedarían huérfanos).
+    // Bundles eliminados se convierten en limpiezas persistentes: si Shopify
+    // falla, el id queda registrado y se reintenta en el próximo guardado.
+    const limpiezaPendiente = new Set(actual.pending_cleanup_ids || []);
     const idsQueQuedan = new Set(config.lista.map((b) => b.id));
     for (const viejo of actual.lista) {
       if (!idsQueQuedan.has(viejo.id) && viejo.discount_ids?.length) {
-        await borrarDescuentos(sesion, viejo.discount_ids);
+        viejo.discount_ids.forEach((id) => limpiezaPendiente.add(id));
       }
     }
+    const limpieza = await borrarDescuentos(sesion, [...limpiezaPendiente]);
+    config.pending_cleanup_ids = limpieza.fallidos;
 
     config.activo = (config.lista || []).some((b) => b.activo !== false); // master derivado
-    await sincronizarDescuentos(sesion, config); // muta discount_ids
+    try {
+      await sincronizarDescuentos(sesion, config); // muta discount_ids
+    } catch (e) {
+      if (e.requierePersistencia) await guardarConfigBundles(sesion.tienda, config);
+      throw e;
+    }
     await guardarConfigBundles(sesion.tienda, config);
+    publicBundlesCache.delete(sesion.tienda);
     // Ya NO re-escribimos el snippet en el tema: la config viaja EN VIVO por
     // /publico/bundles (app embed). Compliance App Store: cero escritura al tema.
     return json(res, 200, config);
   }
 
-  // GET /api/bundles/metricas — números reales calculados sobre los pedidos
-  // que traen aplicado alguno de nuestros descuentos.
+  // GET /api/bundles/metricas — uso de los descuentos que respaldan los
+  // bundles. No consulta pedidos ni datos de compradores.
   if (req.method === "GET" && ruta === "/api/bundles/metricas") {
     const { metricasBundles } = require("./bundles");
-    let dias = 30;
-    try { const d = Number(new URL(req.url, "http://x").searchParams.get("dias")); if ([7, 30, 90].includes(d)) dias = d; } catch {}
-    return json(res, 200, await metricasBundles(sesion, dias));
+    const config = await leerConfigBundles(sesion.tienda);
+    return json(res, 200, await metricasBundles(sesion, config));
   }
 
   // POST /api/bundles/instalar — YA NO inyecta código en el tema (compliance: app
@@ -640,6 +688,7 @@ async function api(req, res, url) {
     const config = await leerConfigBundles(sesion.tienda);
     config.instalado = { fecha: new Date().toISOString() };
     await guardarConfigBundles(sesion.tienda, config);
+    publicBundlesCache.delete(sesion.tienda);
     config.activarUrl = linkActivarEmbed(sesion.tienda, "bundle");
     return json(res, 200, config);
   }
@@ -655,7 +704,7 @@ async function api(req, res, url) {
 
   // GET /api/plan — estado del plan para la UI
   if (req.method === "GET" && ruta === "/api/plan") {
-    return json(res, 200, await estadoPlan(sesion));
+    return json(res, 200, await estadoPlan(sesion, { confirmar: url.searchParams.get("confirmar") === "1" }));
   }
 
   // POST /api/plan/suscribir — devuelve la URL de confirmación de Shopify
@@ -666,44 +715,61 @@ async function api(req, res, url) {
 
   // POST /api/paginas — el botón "Crear página con IA"
   if (req.method === "POST" && ruta === "/api/paginas") {
-    const { producto_id, idioma = "es", angulo = "", estilo = "clasico" } = await leerCuerpo(req);
+    const { producto_id, idioma = "es", angulo = "", estilo = "piloto-pdp-01", request_id } = await leerCuerpo(req);
     if (!producto_id) return json(res, 400, { error: "Falta producto_id" });
-
-    // Reserva ATÓMICA del cupo ANTES de generar (402 si no queda). Si la
-    // generación falla después, se devuelve la página reservada.
-    await consumirCupo(sesion);
-
-    const t0 = Date.now();
-    let generado;
-    try {
-      generado = await crearPagina(producto_id, sesion, { idioma, angulo, estilo });
-    } catch (e) {
-      await revertirCupo(sesion); // la generación falló → no cobrar la página
-      throw e;
+    if (estilo !== "piloto-pdp-01") return json(res, 400, { error: "Esa plantilla ya no está disponible. Elegí Piloto 01." });
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(request_id || "")) {
+      return json(res, 400, { error: "Falta un request_id válido para generar de forma segura" });
     }
-    const { data, urls, avisos, uso } = generado;
 
-    const registro = await guardarPagina(sesion.tienda, {
-      id: idDePagina(producto_id),
-      shopify_product_id: producto_id,
-      estado: "borrador", // nace inactiva, como PagePilot
-      data,
-      urls,
-      avisos,
-      url_publica: null
+    const plan = await estadoPlan(sesion);
+    const { job } = await encolarGeneracionDB(sesion.tenant, {
+      payload: { productId: producto_id, idioma, angulo, estilo },
+      idempotencyKey: `generate:${request_id}`,
+      period: mesActual(),
+      limit: plan.limite,
+      maxAttempts: 3,
+      maxPending: GENERATION_QUEUE_MAX_PER_TENANT,
+      maxGlobalPending: GENERATION_QUEUE_MAX_GLOBAL
     });
-
-    return json(res, 200, { ...registro, segundos: (Date.now() - t0) / 1000, uso });
+    return json(res, 202, { job: jobPublico(job) });
   }
 
   // PUT /api/paginas/:id — el editor
   if (req.method === "PUT" && mGet) {
-    const existente = await leerPagina(sesion.tienda, mGet[1]);
+    const existente = await leerPagina(sesion.tenant, mGet[1]);
     if (!existente) return json(res, 404, { error: "No existe esa página" });
+    if (existente.active_job_id) {
+      const active = await leerJobDB(sesion.tenant, existente.active_job_id);
+      if (active && ["queued", "running"].includes(active.status)) {
+        return json(res, 409, { error: "La página se está publicando. Esperá a que termine antes de guardar nuevos cambios." });
+      }
+    }
     const { data } = await leerCuerpo(req);
     if (!data) return json(res, 400, { error: "Falta data" });
-    existente.data = data;
-    await guardarPagina(sesion.tienda, existente);
+    try {
+      // Piloto 01 usa el mismo contrato al generar y al editar. Así una edición
+      // manual no puede reintroducir datos de catálogo congelados ni claims sin fuente.
+      if (data?.template === "piloto-pdp-01") {
+        // La fuente llega exclusivamente de Shopify durante la generación.
+        // El editor puede cambiar slots de copy o adjuntar evidencia con fuente,
+        // pero nunca reescribir el producto que sirve para validar esos textos.
+        const canonico = {
+          ...data,
+          contract_version: existente.data?.contract_version,
+          template: existente.data?.template,
+          source_hash: existente.data?.source_hash,
+          source_fields: existente.data?.source_fields
+        };
+        existente.data = require("./src/piloto/pdp01-contract").validatePdp01(canonico, { origin: "merchant" });
+      } else {
+        existente.data = data;
+      }
+    } catch (error) {
+      return json(res, 400, { error: error.message || "Los cambios no cumplen el contrato de la plantilla." });
+    }
+    if (existente.estado === "publicada") existente.cambios_sin_publicar = true;
+    await guardarPagina(sesion.tenant, existente);
     return json(res, 200, existente);
   }
 
@@ -712,7 +778,7 @@ async function api(req, res, url) {
   // Liquid publicado la resuelve igual que a cualquier otra foto.
   const mImg = ruta.match(/^\/api\/paginas\/([^/]+)\/imagenes$/);
   if (req.method === "POST" && mImg) {
-    const registro = await leerPagina(sesion.tienda, mImg[1]);
+    const registro = await leerPagina(sesion.tenant, mImg[1]);
     if (!registro) return json(res, 404, { error: "No existe esa página" });
     const { nombre, mime, base64 } = await leerCuerpo(req, 15_000_000);
     if (!base64) return json(res, 400, { error: "Falta la imagen" });
@@ -725,7 +791,7 @@ async function api(req, res, url) {
     registro.data.pool_imagenes = registro.data.pool_imagenes || [];
     registro.data.pool_imagenes.push({ media_id, tipo: "producto_limpio" });
     registro.urls = { ...(registro.urls || {}), [media_id]: url };
-    await guardarPagina(sesion.tienda, registro);
+    await guardarPagina(sesion.tenant, registro);
     return json(res, 200, { media_id, url });
   }
 
@@ -756,32 +822,42 @@ async function api(req, res, url) {
   // POST /api/paginas/:id/publicar
   const mPub = ruta.match(/^\/api\/paginas\/([^/]+)\/publicar$/);
   if (req.method === "POST" && mPub) {
-    const registro = await leerPagina(sesion.tienda, mPub[1]);
+    const encontrada = await leerPagina(sesion.tenant, mPub[1]);
+    const registro = encontrada ? await reconciliarPaginaJob(sesion.tenant, encontrada) : null;
     if (!registro) return json(res, 404, { error: "No existe esa página" });
-    const { url } = await publicarPagina(registro.data, sesion);
-    const yaEstaba = registro.estado === "publicada";
-    registro.estado = "publicada";
-    registro.url_publica = url;
-    await guardarPagina(sesion.tienda, registro);
-    metrica("pagina_publicada", { tienda: sesion.tienda, republicacion: yaEstaba });
-    // Verificamos si la landing se ve DE VERDAD (o si cae al producto nativo
-    // porque falta la plantilla) + deep link al editor. No se persiste: es para
-    // la pantalla de éxito. La app NO escribe el tema, solo lo mira desde afuera.
-    registro.paginaEstado = await verificarUrlViva(url);
-    registro.setupPaginaUrl = linkEditorPagina(sesion.tienda);
-    return json(res, 200, registro);
+    if (registro.active_job_id) {
+      const active = await leerJobDB(sesion.tenant, registro.active_job_id);
+      if (active && ["queued", "running"].includes(active.status)) {
+        return json(res, 202, { job: jobPublico(active) });
+      }
+    }
+
+    const idempotencyKey = `publish:${registro.id}:${registro.actualizado || "initial"}`;
+    const job = await encolarJobDB(sesion.tenant, {
+      type: "publish-page",
+      payload: { pageId: registro.id },
+      idempotencyKey,
+      maxAttempts: 3
+    });
+    if (["queued", "running"].includes(job.status)) {
+      registro.estado = "publicando";
+      registro.active_job_id = job.id;
+      registro.last_job_error = null;
+      await guardarPagina(sesion.tenant, registro);
+    }
+    return json(res, 202, { job: jobPublico(job) });
   }
 
   // POST /api/paginas/:id/despublicar — vuelve el producto a su página nativa
   // (saca el templateSuffix). El metafield queda para re-publicar sin regenerar.
   const mDespub = ruta.match(/^\/api\/paginas\/([^/]+)\/despublicar$/);
   if (req.method === "POST" && mDespub) {
-    const registro = await leerPagina(sesion.tienda, mDespub[1]);
+    const registro = await leerPagina(sesion.tenant, mDespub[1]);
     if (!registro) return json(res, 404, { error: "No existe esa página" });
     await despublicarPagina(registro.data, sesion);
     registro.estado = "borrador";
     registro.url_publica = null;
-    await guardarPagina(sesion.tienda, registro);
+    await guardarPagina(sesion.tenant, registro);
     metrica("pagina_despublicada", { tienda: sesion.tienda });
     return json(res, 200, registro);
   }
@@ -812,15 +888,21 @@ async function bundlesPublico(req, res, url) {
   try {
     const tienda = String(url.searchParams.get("shop") || "").toLowerCase().replace(/[^a-z0-9.\-]/g, "");
     if (!/^[a-z0-9-]+\.myshopify\.com$/.test(tienda)) return responder(400, { activo: false, lista: [] });
+    const cached = publicBundlesCache.get(tienda);
+    if (cached && cached.expiresAt > Date.now()) return responder(200, cached.value);
+    if (cached) publicBundlesCache.delete(tienda);
     const cfg = await leerConfigBundles(tienda);
-    return responder(200, {
+    const publicables = (cfg.lista || []).filter(bundleEsPublicable);
+    const publico = {
       // El master activo se deriva de que haya al menos un bundle activo.
-      activo: (cfg.lista || []).some((b) => b.activo !== false),
-      lista: (cfg.lista || []).map((b) => {
+      activo: publicables.length > 0,
+      lista: publicables.map((b) => {
         const { discount_ids, ...resto } = b;
         return resto;
       })
-    });
+    };
+    cachePublicBundle(tienda, publico);
+    return responder(200, publico);
   } catch (e) {
     return responder(200, { activo: false, lista: [] });
   }
@@ -838,6 +920,15 @@ const servidor = http.createServer(async (req, res) => {
     // timeout) fallan y Shopify termina dando de baja las suscripciones.
     if (url.pathname === "/health") {
       return json(res, 200, { ok: true, ts: new Date().toISOString() });
+    }
+    if (url.pathname === "/ready") {
+      const almacenamiento = await verificarAlmacenamientoDB();
+      return json(res, 200, {
+        ok: true,
+        almacenamiento: almacenamiento.tipo,
+        aislamiento: almacenamiento.aislamiento || null,
+        ts: new Date().toISOString()
+      });
     }
 
     if (url.pathname === "/auth") return await iniciarInstalacion(res, url, URL_APP);
@@ -896,6 +987,9 @@ const servidor = http.createServer(async (req, res) => {
       if (t) await borrarTienda(t);
       return json(res, 401, { error: e.message, reinstalar: true });
     }
+    if (e.code === "TIENDA_NO_INSTALADA") {
+      return json(res, 401, { error: "La app necesita autorización para esta tienda.", reinstalar: true });
+    }
     // 401 = churn de auth esperado (token rotado/desinstalado): no es un bug.
     // El resto sí se reporta (console + Sentry si hay DSN), con e.detalle si lo
     // trae (respuesta cruda de Shopify/GraphQL, que NO va al cliente).
@@ -905,6 +999,8 @@ const servidor = http.createServer(async (req, res) => {
     // mensajes crudos de Shopify/GraphQL o bugs) se responde genérico — el
     // detalle real ya quedó logueado arriba.
     const codigo = e.status || 500;
+    if (e.retryAfter) res.setHeader("Retry-After", String(e.retryAfter));
+    if (codigo >= 500 && e.expose) return json(res, codigo, { error: e.message });
     json(res, codigo, { error: codigo >= 500 ? "Ocurrió un error interno. Probá de nuevo en un momento." : e.message });
   }
 });
@@ -930,11 +1026,8 @@ process.on("uncaughtException", (e) => {
 
 servidor.listen(PUERTO, async () => {
   const { USA_PG } = require("./db");
-  let tiendas = [];
-  try { tiendas = await listarTiendas(); } catch (e) { console.error("  ⚠ base:", e.message); }
   console.log(`\n  TiendaIQ  →  ${URL_APP}`);
   console.log(`  almacén: ${USA_PG ? "Postgres" : "archivos (local)"}`);
-  console.log(`  tiendas instaladas: ${tiendas.length}${tiendas.length ? " · " + tiendas.map((t) => t.dominio).join(", ") : ""}`);
   // Las legales son URLs públicas de la ficha del App Store: si les falta un
   // dato, el review lo devuelve. Se avisa en cada arranque hasta completarlas.
   const faltan = legalesIncompletos();
@@ -945,4 +1038,12 @@ servidor.listen(PUERTO, async () => {
 
   if (!env.APP_URL) console.log(`  ⚠ falta APP_URL en .env — el OAuth no va a poder volver\n`);
   else console.log(`  instalar: ${URL_APP}/auth?shop=TIENDA.myshopify.com\n`);
+
+  // En desarrollo por archivos no levantamos un segundo proceso: el mismo
+  // server ejecuta el worker. Producción usa el servicio worker de Render.
+  if (env.DEV_MODE === "1" && !USA_PG) {
+    servidor._tiendaiqWorker = require("./src/jobs/runtime").createRuntime({ workerId: `dev-web:${process.pid}` });
+    servidor._tiendaiqWorker.start();
+    console.log("  worker local: activo\n");
+  }
 });

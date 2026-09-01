@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Piloto 01</title>
+  <link rel="stylesheet" href="/widgets/piloto-pdp-01.css">
+  <style>body{margin:0;background:#fff}.p01-preview-note{position:sticky;top:0;z-index:5;padding:8px 12px;background:#fff7e6;color:#6b4e00;font:12px Helvetica,Arial,sans-serif;text-align:center}</style>
+</head>
+<body>
+  <div class="p01-preview-note">Vista previa de estructura. En la tienda, precio, variantes y stock se leen en vivo desde Shopify.</div>
+  <div id="piloto-pdp01"></div>
+  <script>
+    addEventListener("message", function (event) {
+      var message = event.data;
+      if (!message || !message.tiendaiq || !message.data || message.data.template !== "piloto-pdp-01") return;
+      var fields = message.data.source_fields || {}, urls = message.urls || {}, variants = fields.variants || [];
+      window.PILOTO_PDP01_DATA = message.data;
+      window.PILOTO_PDP01_PRODUCT = {
+        title: fields.title || message.producto?.titulo || "Producto de la tienda",
+        currency: "ARS", moneyFormat: "${{amount_with_comma_separator}}",
+        selectedVariant: { id: variants[0]?.id || "", adminId: variants[0]?.id || "", price: 0, available: true, inventoryQuantity: null },
+        variants: variants.map(function (variant) { return { id: variant.id, adminId: variant.id, price: 0, available: true, inventoryQuantity: null }; }),
+        media: urls
+      };
+      var script = document.createElement("script");
+      script.src = "/widgets/piloto-pdp-01.js?v=" + Date.now();
+      document.body.appendChild(script);
+    });
+  </script>
+</body>
+</html>

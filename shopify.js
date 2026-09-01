@@ -44,6 +44,7 @@ function leerEnv() {
 }
 
 const env = leerEnv();
+const SHOPIFY_TIMEOUT_MS = Math.max(1000, Number(env.SHOPIFY_TIMEOUT_MS) || 30000);
 
 // Sesión de la tienda del .env — solo para el CLI y las pruebas locales.
 // El server nunca usa esto: resuelve la sesión del merchant que pregunta.
@@ -60,14 +61,25 @@ async function gql(query, variables = {}, sesion) {
     throw new Error("gql() necesita una sesión { tienda, token }. Sin sesión no se llama a Shopify.");
   }
 
-  const r = await fetch(`https://${sesion.tienda}/admin/api/${API}/graphql.json`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Shopify-Access-Token": sesion.token
-    },
-    body: JSON.stringify({ query, variables })
-  });
+  let r;
+  try {
+    r = await fetch(`https://${sesion.tienda}/admin/api/${API}/graphql.json`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Shopify-Access-Token": sesion.token
+      },
+      body: JSON.stringify({ query, variables }),
+      signal: AbortSignal.timeout(SHOPIFY_TIMEOUT_MS)
+    });
+  } catch (error) {
+    if (error?.name === "AbortError" || error?.name === "TimeoutError") {
+      const timeout = new Error(`Shopify no respondió dentro de ${SHOPIFY_TIMEOUT_MS} ms`);
+      timeout.code = "SHOPIFY_TIMEOUT";
+      throw timeout;
+    }
+    throw error;
+  }
 
   // 401 = el merchant desinstaló la app o rotó el token. Se distingue del
   // resto para que el server pueda borrar la tienda y pedir reinstalación.
@@ -94,4 +106,4 @@ async function gql(query, variables = {}, sesion) {
   return json.data;
 }
 
-module.exports = { gql, env, API, sesionDeEnv };
+module.exports = { gql, env, API, SHOPIFY_TIMEOUT_MS, sesionDeEnv };

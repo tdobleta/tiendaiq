@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://piloto.app/schemas/piloto-pdp-01.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract_version", "template", "source_hash", "source_fields", "content", "evidence"],
+  "properties": {
+    "contract_version": { "const": 1 },
+    "template": { "const": "piloto-pdp-01" },
+    "source_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "source_fields": { "$ref": "#/$defs/sourceFields" },
+    "content": { "$ref": "#/$defs/content" },
+    "evidence": { "$ref": "#/$defs/evidence" }
+  },
+  "$defs": {
+    "text": { "type": "string", "minLength": 1, "maxLength": 600 },
+    "mediaId": { "type": "string", "pattern": "^gid://shopify/MediaImage/[0-9]+$" },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "reference"],
+      "properties": {
+        "kind": { "enum": ["shopify_policy", "shopify_review_import", "merchant_document", "declarado_por_merchant"] },
+        "reference": { "type": "string", "minLength": 1, "maxLength": 300 }
+      }
+    },
+    "sourceFields": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["product_gid", "title", "description", "vendor", "product_type", "options", "media_ids", "variants"],
+      "properties": {
+        "product_gid": { "type": "string", "pattern": "^gid://shopify/Product/[0-9]+$" },
+        "title": { "$ref": "#/$defs/text" },
+        "description": { "type": "string", "maxLength": 20000 },
+        "vendor": { "type": "string", "maxLength": 255 },
+        "product_type": { "type": "string", "maxLength": 255 },
+        "options": { "type": "array", "maxItems": 10, "items": { "type": "object", "additionalProperties": false, "required": ["name", "values"], "properties": { "name": { "$ref": "#/$defs/text" }, "values": { "type": "array", "maxItems": 100, "items": { "$ref": "#/$defs/text" } } } } },
+        "media_ids": { "type": "array", "maxItems": 50, "items": { "$ref": "#/$defs/mediaId" } },
+        "variants": { "type": "array", "minItems": 1, "maxItems": 100, "items": { "type": "object", "additionalProperties": false, "required": ["id", "title"], "properties": { "id": { "type": "string", "pattern": "^gid://shopify/ProductVariant/[0-9]+$" }, "title": { "$ref": "#/$defs/text" } } } }
+      }
+    },
+    "pack": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label", "subtitle", "quantity", "mechanism"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9-]{1,40}$" },
+        "label": { "$ref": "#/$defs/text" },
+        "subtitle": { "$ref": "#/$defs/text" },
+        "quantity": { "type": "integer", "minimum": 1, "maximum": 100 },
+        "mechanism": { "enum": ["single_variant", "multi_quantity", "bundle"] },
+        "variant_id": { "type": "string", "pattern": "^gid://shopify/ProductVariant/[0-9]+$" },
+        "bundle_id": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "badge": { "type": "string", "maxLength": 50 },
+        "claimed_discount_pct": { "type": "number", "exclusiveMinimum": 0, "maximum": 100 },
+        "discount_source": { "$ref": "#/$defs/source" }
+      },
+      "allOf": [
+        { "if": { "properties": { "mechanism": { "const": "bundle" } } }, "then": { "required": ["bundle_id"], "not": { "required": ["variant_id"] } }, "else": { "required": ["variant_id"], "not": { "required": ["bundle_id"] } } },
+        { "if": { "required": ["claimed_discount_pct"] }, "then": { "required": ["discount_source"] } }
+      ]
+    },
+    "content": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["hero", "offer", "why", "timeline", "faq", "media"],
+      "properties": {
+        "hero": { "type": "object", "additionalProperties": false, "required": ["claim", "bullets"], "properties": { "claim": { "$ref": "#/$defs/text" }, "bullets": { "type": "array", "minItems": 2, "maxItems": 4, "items": { "$ref": "#/$defs/text" } }, "quote": { "type": "object", "additionalProperties": false, "required": ["text", "attribution"], "properties": { "text": { "$ref": "#/$defs/text" }, "attribution": { "$ref": "#/$defs/text" } } } } },
+        "offer": { "type": "object", "additionalProperties": false, "required": ["heading", "packs"], "properties": { "heading": { "$ref": "#/$defs/text" }, "packs": { "type": "array", "minItems": 1, "maxItems": 5, "items": { "$ref": "#/$defs/pack" } }, "accordions": { "type": "array", "maxItems": 4, "items": { "type": "object", "additionalProperties": false, "required": ["question", "answer"], "properties": { "question": { "$ref": "#/$defs/text" }, "answer": { "$ref": "#/$defs/text" } } } } } },
+        "why": { "type": "object", "additionalProperties": false, "required": ["eyebrow", "heading", "body", "points"], "properties": { "eyebrow": { "$ref": "#/$defs/text" }, "heading": { "$ref": "#/$defs/text" }, "body": { "$ref": "#/$defs/text" }, "points": { "type": "array", "minItems": 2, "maxItems": 4, "items": { "$ref": "#/$defs/text" } } } },
+        "timeline": { "type": "object", "additionalProperties": false, "required": ["heading", "intro", "steps"], "properties": { "heading": { "$ref": "#/$defs/text" }, "intro": { "$ref": "#/$defs/text" }, "steps": { "type": "array", "minItems": 2, "maxItems": 4, "items": { "type": "object", "additionalProperties": false, "required": ["label", "heading", "body"], "properties": { "label": { "$ref": "#/$defs/text" }, "heading": { "$ref": "#/$defs/text" }, "body": { "$ref": "#/$defs/text" } } } } } },
+        "faq": { "type": "object", "additionalProperties": false, "required": ["heading", "items"], "properties": { "heading": { "$ref": "#/$defs/text" }, "items": { "type": "array", "minItems": 3, "maxItems": 8, "items": { "type": "object", "additionalProperties": false, "required": ["question", "answer"], "properties": { "question": { "$ref": "#/$defs/text" }, "answer": { "$ref": "#/$defs/text" } } } } } },
+        "media": { "type": "object", "additionalProperties": false, "required": ["hero_media_id"], "properties": { "hero_media_id": { "$ref": "#/$defs/mediaId" }, "comparison_media_id": { "$ref": "#/$defs/mediaId" }, "community_media_id": { "$ref": "#/$defs/mediaId" }, "gallery_media_ids": { "type": "array", "maxItems": 8, "items": { "$ref": "#/$defs/mediaId" } } } }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "rating": { "type": "object", "additionalProperties": false, "required": ["value", "count", "source"], "properties": { "value": { "type": "number", "minimum": 0, "maximum": 5 }, "count": { "type": "integer", "minimum": 1 }, "source": { "$ref": "#/$defs/source" } } },
+        "testimonial": { "type": "object", "additionalProperties": false, "required": ["text", "author", "source"], "properties": { "text": { "$ref": "#/$defs/text" }, "author": { "$ref": "#/$defs/text" }, "source": { "$ref": "#/$defs/source" } } },
+        "guarantee": { "type": "object", "additionalProperties": false, "required": ["heading", "body", "source"], "properties": { "heading": { "$ref": "#/$defs/text" }, "body": { "$ref": "#/$defs/text" }, "source": { "$ref": "#/$defs/source" } } }
+      }
+    }
+  }
+}

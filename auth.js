@@ -18,10 +18,11 @@ const { guardarTienda, normalizar, esDominioValido } = require("./tiendas");
 const { metrica } = require("./monitoreo");
 const { guardarEstadoDB, consumirEstadoDB } = require("./db");
 
-// write_orders: lo usa el formulario COD para crear pedidos contra reembolso.
 // OJO: al agregar un alcance, las tiendas ya instaladas tienen que volver a
 // pasar por /auth?shop=... para autorizarlo.
-// write_files: imágenes que el merchant sube al formulario COD (Files API).
+// read_discounts: métricas de uso de las reglas creadas por TiendaIQ, sin leer
+// pedidos ni datos protegidos de compradores.
+// write_files: imágenes que el merchant sube al editor (Files API).
 // write_discounts: los bundles crean descuentos automáticos (por volumen)
 // que Shopify hace cumplir en el checkout.
 // write_online_store_navigation: el menú principal (Inicio/Comprar/Nosotros/
@@ -30,7 +31,56 @@ const { guardarEstadoDB, consumirEstadoDB } = require("./db");
 // escribir archivos al tema no se exenta para este caso de uso). El video
 // slider y demás secciones viven en la landing (metafield + app block), no en
 // el tema. La verificación de "landing viva" se hace fetcheando el storefront.
-const ALCANCES = "read_products,write_products,write_orders,read_files,write_files,read_content,write_content,write_discounts,write_online_store_navigation";
+const ALCANCES = "read_products,write_products,read_files,write_files,read_content,write_content,read_discounts,write_discounts,write_online_store_navigation";
+
+// PRODUCTS_UPDATE permite detectar que el copy de Piloto 01 quedó viejo sin
+// volver a publicar ni modificar la tienda: solo se marca para revisión.
+const TOPICOS_OPERATIVOS = Object.freeze(["APP_UNINSTALLED", "APP_SUBSCRIPTIONS_UPDATE", "PRODUCTS_UPDATE"]);
+
+function alcancesFaltantes(scope) {
+  const concedidos = new Set(String(scope || "").split(",").map((value) => value.trim()).filter(Boolean));
+  return ALCANCES.split(",").filter((alcance) => !concedidos.has(alcance));
+}
+
+async function registrarWebhooksOperativos(sesion, urlApp, gqlClient) {
+  const callbackUrl = `${String(urlApp || "").replace(/\/$/, "")}/webhooks`;
+  if (!/^https:\/\//.test(callbackUrl)) throw new Error("APP_URL debe ser HTTPS para registrar webhooks");
+  const gql = gqlClient || require("./shopify").gql;
+  const consulta = `query($topics: [WebhookSubscriptionTopic!]) {
+    webhookSubscriptions(first: 50, topics: $topics) {
+      edges { node { topic uri } }
+    }
+  }`;
+  const existentes = await gql(consulta, { topics: TOPICOS_OPERATIVOS }, sesion);
+  const registrados = new Set(
+    (existentes?.webhookSubscriptions?.edges || [])
+      .map((edge) => edge?.node)
+      .filter((node) => node?.uri === callbackUrl)
+      .map((node) => node.topic)
+  );
+  const mutacion = `mutation($topic: WebhookSubscriptionTopic!, $sub: WebhookSubscriptionInput!) {
+    webhookSubscriptionCreate(topic: $topic, webhookSubscription: $sub) {
+      webhookSubscription { id topic uri }
+      userErrors { field message }
+    }
+  }`;
+
+  for (const topic of TOPICOS_OPERATIVOS) {
+    if (registrados.has(topic)) continue;
+    const result = await gql(
+      mutacion,
+      { topic, sub: { callbackUrl, format: "JSON" } },
+      sesion
+    );
+    const payload = result?.webhookSubscriptionCreate;
+    const errors = payload?.userErrors || [];
+    if (errors.length || !payload?.webhookSubscription?.id) {
+      const error = new Error(`No se pudo registrar el webhook ${topic}`);
+      error.detalle = JSON.stringify(errors).slice(0, 500);
+      throw error;
+    }
+  }
+}
 
 // Comparación en tiempo constante: comparar firmas con === filtra el secreto
 // de a un carácter por vez.
@@ -111,7 +161,8 @@ async function terminarInstalacion(res, url) {
       client_id: env.SHOPIFY_CLIENT_ID,
       client_secret: env.SHOPIFY_CLIENT_SECRET,
       code: params.code
-    })
+    }),
+    signal: AbortSignal.timeout(Math.max(3000, Number(env.SHOPIFY_OAUTH_TIMEOUT_MS) || 15000))
   });
 
   const datos = await r.json();
@@ -126,37 +177,26 @@ async function terminarInstalacion(res, url) {
   // instaló con un token viejo): la app funcionará pero puede fallar en runtime
   // (ACCESS_DENIED) en las features del alcance faltante. Se registra para que
   // el problema sea visible desde la instalación, no recién al usar la feature.
-  const pedidos = ALCANCES.split(",");
-  const concedidos = new Set(String(datos.scope || "").split(","));
-  const faltantes = pedidos.filter((a) => !concedidos.has(a));
+  const faltantes = alcancesFaltantes(datos.scope);
   if (faltantes.length) {
     console.log(`  ⚠ ${tienda}: alcances no concedidos → ${faltantes.join(", ")} (puede requerir re-autorización)`);
+  }
+
+  if (faltantes.length) {
+    return void res.writeHead(502, { "Content-Type": "text/plain; charset=utf-8" })
+      .end("Shopify no concedió todos los permisos necesarios. Volvé a iniciar la instalación.");
+  }
+  try {
+    await registrarWebhooksOperativos({ tienda, token: datos.access_token }, env.APP_URL);
+  } catch (error) {
+    console.error(`  instalacion ${tienda}: webhooks incompletos`, error.message, error.detalle || "");
+    return void res.writeHead(502, { "Content-Type": "text/plain; charset=utf-8" })
+      .end("No se pudo completar la configuración de la app. Volvé a iniciar la instalación.");
   }
 
   await guardarTienda(tienda, datos.access_token, { alcances: datos.scope, alcances_faltantes: faltantes });
   console.log(`  ✚ instalada · ${tienda}`);
   metrica("instalacion", { tienda });
-
-  // Webhooks que necesitamos de entrada:
-  //   APP_UNINSTALLED        → borrar el token al instante (no lazy en el 401).
-  //   APP_SUBSCRIPTIONS_UPDATE → si cancelan/vence el plan, bajar a gratis.
-  const M_WEBHOOK = `mutation($topic: WebhookSubscriptionTopic!, $sub: WebhookSubscriptionInput!) {
-    webhookSubscriptionCreate(topic: $topic, webhookSubscription: $sub) {
-      userErrors { message }
-    }
-  }`;
-  for (const topic of ["APP_UNINSTALLED", "APP_SUBSCRIPTIONS_UPDATE"]) {
-    try {
-      const { gql } = require("./shopify");
-      await gql(
-        M_WEBHOOK,
-        { topic, sub: { callbackUrl: `${env.APP_URL}/webhooks`, format: "JSON" } },
-        { tienda, token: datos.access_token }
-      );
-    } catch (e) {
-      console.log(`  ⚠ webhook ${topic} no registrado: ${e.message.slice(0, 80)}`);
-    }
-  }
 
   // Adentro del admin, no a la app suelta.
   const handle = tienda.replace(".myshopify.com", "");
@@ -180,6 +220,8 @@ function tiendaDelPase(pase) {
   if (partes.length !== 3) throw new Error("Pase de sesión mal formado");
 
   const [cabecera, cuerpo, firma] = partes;
+  const header = JSON.parse(b64url(cabecera));
+  if (header.alg !== "HS256") throw new Error("Pase de sesión con algoritmo no permitido");
   const esperada = crypto
     .createHmac("sha256", env.SHOPIFY_CLIENT_SECRET)
     .update(`${cabecera}.${cuerpo}`)
@@ -192,8 +234,12 @@ function tiendaDelPase(pase) {
 
   const c = JSON.parse(b64url(cuerpo));
   const ahora = Math.floor(Date.now() / 1000);
-  if (c.exp && ahora >= c.exp) throw new Error("Pase de sesión vencido");
-  if (c.nbf && ahora < c.nbf - 5) throw new Error("Pase de sesión todavía no válido");
+  for (const claim of ["exp", "nbf", "iat"]) {
+    if (!Number.isFinite(c[claim])) throw new Error(`Pase de sesión sin claim ${claim} válido`);
+  }
+  if (typeof c.sub !== "string" || !c.sub) throw new Error("Pase de sesión sin subject válido");
+  if (ahora >= c.exp) throw new Error("Pase de sesión vencido");
+  if (ahora < c.nbf - 5 || c.iat > ahora + 5) throw new Error("Pase de sesión todavía no válido");
   if (c.aud !== env.SHOPIFY_CLIENT_ID) throw new Error("Pase de sesión emitido para otra app");
 
   // La doc de Shopify (set-up-session-tokens) exige que `iss` (quién emitió el
@@ -210,4 +256,13 @@ function tiendaDelPase(pase) {
   return tienda;
 }
 
-module.exports = { iniciarInstalacion, terminarInstalacion, tiendaDelPase, hmacValido, ALCANCES };
+module.exports = {
+  iniciarInstalacion,
+  terminarInstalacion,
+  tiendaDelPase,
+  hmacValido,
+  alcancesFaltantes,
+  registrarWebhooksOperativos,
+  ALCANCES,
+  TOPICOS_OPERATIVOS
+};

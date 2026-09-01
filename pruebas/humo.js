@@ -45,6 +45,12 @@ const CASOS = [
     espera: 200
   },
   {
+    nombre: "/ready comprueba el almacenamiento",
+    ruta: "/ready",
+    espera: 200,
+    revisar: (cuerpo) => JSON.parse(cuerpo).almacenamiento ? null : "no informó el almacenamiento"
+  },
+  {
     nombre: "/api/* sin pase de sesión es 401 (no filtra datos de tiendas)",
     ruta: "/api/productos",
     espera: 401
