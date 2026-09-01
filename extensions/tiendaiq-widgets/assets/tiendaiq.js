@@ -1996,6 +1996,9 @@
     // Así cada merchant ve la suya y no un data.js global compartido.
     window.addEventListener("message", (e) => {
       if (!e.data || !e.data.tiendaiq) return;
+      // Piloto 01 has its own fixed renderer.  Do not let the historical
+      // universal renderer mount over the same in-app preview.
+      if (e.data.data?.piloto_pdp_01?.template === "piloto-pdp-01") return;
       Object.assign(MAPA_URLS, e.data.urls || {});
       montar(e.data.data).catch((error) => console.error("TiendaIQ renderer", error));
     });

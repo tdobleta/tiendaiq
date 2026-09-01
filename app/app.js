@@ -1271,12 +1271,12 @@
     // generación nueva: no deben volver a entrar al catálogo comercial.
     const plantillas = [
       {
-        id: "piloto-pinza",
-        nombre: "Piloto Pinza",
-        subtitulo: "Diseño fijo de alta conversión, adaptado a los datos reales de tu producto.",
-        tags: ["Galería", "Beneficios", "FAQ", "Carrito"],
+        id: "piloto-pdp-01",
+        nombre: "Piloto 01",
+        subtitulo: "La página de producto final: diseño fijo, catálogo real y copy generado para cada producto.",
+        tags: ["Galería", "Opciones", "Historia", "FAQ"],
         activa: true,
-        tipo: "piloto-pinza"
+        tipo: "piloto-pdp-01"
       }
     ];
 
@@ -1403,7 +1403,7 @@
       producto_id: estado.producto.id,
       idioma,
       angulo,
-      estilo: estado.modeloPagina || "piloto-pinza"
+      estilo: estado.modeloPagina || "piloto-pdp-01"
     };
     const tema = estado.temaElegido || "auto";
     const fingerprint = JSON.stringify({ ...body, tema });
@@ -3279,6 +3279,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       const def = defSeccion(s.id);
       return def ? `<div class="sp-sub">Contenido</div><div class="sp-content">${def.html()}</div>` : "";
     }
+    if (esPlantillaPdp01()) return panelPlantillaPdp01HTML(id);
     if (esPlantillaPinzaFija()) return panelPlantillaPinzaFijaHTML(id);
     const def = seccionesPagina()[id];
     if (!def) return "";
@@ -3292,6 +3293,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       const s = (estado.pagina.data.secciones || []).find((x) => x.id === id.slice(4));
       return catSeccion(s?.tipo)?.nombre || "Sección";
     }
+    if (esPlantillaPdp01()) return ({ hero: "Introducción", why: "Sección editorial", timeline: "Recorrido", faq: "Preguntas frecuentes" })[id] || "Plantilla fija";
     if (esPlantillaPinzaFija()) {
       return ({ bullets: "Beneficios verificables", faq: "Preguntas frecuentes" })[id] || "Plantilla fija";
     }
@@ -3303,6 +3305,21 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     return global.template?.id === "tiendaiq/pinza-pagepilot" ||
       global.template?.id === "piloto/pinza-pagepilot" ||
       global.estilo === "pinza-pagepilot" || global.estilo === "piloto-pinza";
+  }
+
+  function esPlantillaPdp01() {
+    const global = estado.pagina?.data?.global || {};
+    return global.template?.id === "piloto/pdp-01" || global.estilo === "piloto-pdp-01";
+  }
+
+  function panelPlantillaPdp01HTML(id) {
+    const content = estado.pagina.data?.piloto_pdp_01?.content || {};
+    const prefix = "piloto_pdp_01.content";
+    if (id === "hero") return `<div class="sp-sub">Introducción</div><div class="sp-content">${campo(`${prefix}.hero.claim`, "Idea principal", 2)}${(content.hero?.bullets || []).map((_, i) => campo(`${prefix}.hero.bullets.${i}`, `Beneficio ${i + 1}`, 2)).join("")}</div>`;
+    if (id === "why") return `<div class="sp-sub">Sección editorial</div><div class="sp-content">${campo(`${prefix}.why.eyebrow`, "Antetítulo")}${campo(`${prefix}.why.heading`, "Título", 2)}${campo(`${prefix}.why.body`, "Texto", 3)}${(content.why?.points || []).map((_, i) => campo(`${prefix}.why.points.${i}`, `Punto ${i + 1}`)).join("")}</div>`;
+    if (id === "timeline") return `<div class="sp-sub">Recorrido</div><div class="sp-content">${campo(`${prefix}.timeline.heading`, "Título", 2)}${campo(`${prefix}.timeline.intro`, "Introducción", 2)}${(content.timeline?.steps || []).map((_, i) => `<section class="sp-item-card"><div class="sp-item-card__head"><strong>Paso ${i + 1}</strong><span>slot</span></div>${campo(`${prefix}.timeline.steps.${i}.heading`, "Título")}${campo(`${prefix}.timeline.steps.${i}.body`, "Texto", 3)}</section>`).join("")}</div>`;
+    if (id === "faq") return `<div class="sp-sub">Preguntas frecuentes</div><div class="sp-content">${campo(`${prefix}.faq.heading`, "Título")}${(content.faq?.items || []).map((_, i) => `<section class="sp-item-card"><div class="sp-item-card__head"><strong>Pregunta ${i + 1}</strong><span>slot</span></div>${campo(`${prefix}.faq.items.${i}.question`, "Pregunta")}${campo(`${prefix}.faq.items.${i}.answer`, "Respuesta", 3)}</section>`).join("")}</div>`;
+    return `<div class="editor__ayuda">Este bloque se alimenta con datos reales de Shopify o requiere una fuente verificable.</div>`;
   }
 
   // El inspector de una plantilla fija nunca llama al formulario genérico: ese
@@ -3632,16 +3649,18 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       `<div class="pe-tree__row pe-tree__row--locked" aria-disabled="true"><span class="pe-tree__lead"></span><span class="pe-tree__ico">${ico}</span><span class="pe-tree__label">${esc(label)}</span><span class="pe-tree__lock-hint">${esc(hint)}</span></div>`;
     const grupo = (nombre, filas, meta) =>
       `<section class="pe-tree__group"><div class="pe-tree__row pe-tree__row--group" tabindex="0"><span class="pe-tree__lead pe-tree__chevron">${I.chev}</span><span class="pe-tree__ico pe-tree__ico--group">${I.grupo}</span><span class="pe-tree__label">${esc(nombre)}</span>${meta ? `<span class="pe-tree__group-meta">${esc(meta)}</span>` : ""}</div><div class="pe-tree__children">${filas}</div></section>`;
-    const fixedTemplate = esPlantillaPinzaFija();
+    const fixedTemplate = esPlantillaPinzaFija() || esPlantillaPdp01();
     if (fixedTemplate) {
       const source = locked("Producto", I.encabezado) + locked("Galería de producto", I.galeria) +
         locked("Precio y variantes", I.lista) + locked("Agregar al carrito", I.beneficios);
-      const approved = row("bullets", "Beneficios verificables", I.beneficios) + row("faq", "Preguntas frecuentes", I.lista);
+      const approved = esPlantillaPdp01()
+        ? row("hero", "Introducción", I.beneficios) + row("why", "Sección editorial", I.lista) + row("timeline", "Recorrido", I.lista) + row("faq", "Preguntas frecuentes", I.lista)
+        : row("bullets", "Beneficios verificables", I.beneficios) + row("faq", "Preguntas frecuentes", I.lista);
       const evidence = locked("Prueba social", I.estrella, "Requiere fuente") +
         locked("Comparación", I.lista, "Requiere fuente") + locked("Garantías", I.beneficios, "Política Shopify");
       return `<nav class="pe-tree" aria-label="Bloques de la plantilla fija">
-        <div class="pe-tree__head"><span class="pe-tree__head-title">Plantilla fija</span><span class="pe-tree__head-sub">Pinza PagePilot · v1</span></div>
-        <div class="pe-tree__body">${grupo("Datos de Shopify", source, "solo lectura")}${grupo("Contenido autorizado", approved, "2 grupos")}${grupo("Evidencia", evidence, "validada")}</div>
+        <div class="pe-tree__head"><span class="pe-tree__head-title">Plantilla fija</span><span class="pe-tree__head-sub">${esPlantillaPdp01() ? "Piloto 01" : "Pinza PagePilot"} · v1</span></div>
+        <div class="pe-tree__body">${grupo("Datos de Shopify", source, "solo lectura")}${grupo("Contenido autorizado", approved, esPlantillaPdp01() ? "4 grupos" : "2 grupos")}${grupo("Evidencia", evidence, "validada")}</div>
       </nav>`;
     }
     const info = row("encabezado", "Encabezado", I.encabezado) + row("galeria", "Galería de producto", I.galeria) +
@@ -3692,8 +3711,8 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       <div class="preview-barra" id="barra-accion">
         <button class="volver-flecha" id="volver" title="${volverTxt}" aria-label="${volverTxt}"></button>
         <div class="preview-barra__info">
-          <div class="preview-barra__titulo">${esc(pg.data.facetas.hero.titulo)}</div>
-          <div class="preview-barra__sub">${esc(pg.data.facetas.hero.subtitulo)}</div>
+          <div class="preview-barra__titulo">${esc(pg.data.piloto_pdp_01?.source_fields?.title || pg.data.facetas?.hero?.titulo || "Producto")}</div>
+          <div class="preview-barra__sub">${esc(pg.data.piloto_pdp_01?.content?.hero?.claim || pg.data.facetas?.hero?.subtitulo || "")}</div>
         </div>
         <div class="preview-barra__estado" id="barra-estado">
           <s-badge tone="${TONO_ESTADO[est.c] || "neutral"}">${est.t}</s-badge>

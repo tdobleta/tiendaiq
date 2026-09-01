@@ -1115,7 +1115,7 @@ async function api(req, res, url) {
 
   // POST /api/paginas — el botón "Crear página con IA"
   if (req.method === "POST" && ruta === "/api/paginas") {
-    const { producto_id, idioma = "es", angulo = "", estilo = "piloto-pinza", request_id } = await leerCuerpo(req);
+    const { producto_id, idioma = "es", angulo = "", estilo = "piloto-pdp-01", request_id } = await leerCuerpo(req);
     if (!producto_id) return json(res, 400, { error: "Falta producto_id" });
     if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(request_id || "")) {
       return json(res, 400, { error: "Falta un request_id válido para generar de forma segura" });

@@ -17,6 +17,7 @@ const path = require("path");
 const Anthropic = require("@anthropic-ai/sdk");
 const { gql, env, sesionDeEnv } = require("./shopify");
 const { resolveTemplateForCreation, templateMetadata } = require("./src/domain/template-registry");
+const { generatePdp01 } = require("./src/piloto/generate-pdp01");
 
 // El modelo y el esfuerzo salen de env para poder compararlos sobre los mismos
 // productos sin tocar código ni deployar.
@@ -179,7 +180,7 @@ async function extraer(idProducto, sesion, { signal } = {}) {
     variantes: product.options.map((o) => ({ nombre: o.name, valores: o.values }))
   };
 
-  return { fuente, medios };
+  return { fuente, medios, product };
 }
 
 // ============================================================
@@ -815,15 +816,31 @@ async function listarProductos(sesion) {
 async function crearPagina(idProducto, sesion, {
   idioma = "es",
   angulo = "",
-  estilo = "clasico",
+  estilo = "piloto-pdp-01",
   signal,
   beforeProviderCall
 } = {}) {
   // Resolver antes de extraer/generar: un estilo inválido nunca debe consumir
   // Shopify ni Anthropic para terminar convertido silenciosamente en Clásico.
   const template = resolveTemplateForCreation(estilo);
-  const { fuente, medios } = await extraer(idProducto, sesion, { signal });
+  const { fuente, medios, product } = await extraer(idProducto, sesion, { signal });
   if (typeof beforeProviderCall === "function") await beforeProviderCall();
+  if (template.rendererKey === "piloto-pdp-01") {
+    const generated = await generatePdp01(product, medios, { idioma, angulo });
+    const metadata = templateMetadata(template);
+    const data = {
+      global: { estilo: metadata.legacyStyle, template: metadata.template, idioma, angulo, cta: "Agregar al carrito" },
+      fuente: { shopify_product_id: fuente.shopify_product_id },
+      compliance: { claims_verified: false },
+      piloto_pdp_01: generated.data
+    };
+    return {
+      data,
+      urls: Object.fromEntries(medios.map((m) => [m.media_id, m.url])),
+      avisos: [],
+      uso: generated.uso
+    };
+  }
   const { salida, uso } = await generar(fuente, medios, { idioma, angulo, signal });
   const data = ensamblar(fuente, salida, { idioma, angulo });
   // `estilo` se conserva como alias de compatibilidad hasta que editor y

@@ -2,7 +2,8 @@
 
 const { isDeepStrictEqual } = require("node:util");
 const { resolveStoredTemplate } = require("./template-registry");
-const { PINZA_PAGEPILOT_V1, PILOTO_PINZA_PAGEPILOT_V1 } = require("./fixed-template-manifest");
+const { PINZA_PAGEPILOT_V1, PILOTO_PINZA_PAGEPILOT_V1, PILOTO_PDP_01_V1 } = require("./fixed-template-manifest");
+const { validatePdp01, Pdp01ValidationError } = require("../piloto/pdp01-contract");
 
 class FixedTemplateEditError extends Error {
   constructor(message) {
@@ -71,6 +72,83 @@ function isPinzaTemplate(persistedData) {
   );
 }
 
+function isPdp01Template(persistedData) {
+  const template = resolveStoredTemplate(persistedData?.global || {});
+  return template?.id === PILOTO_PDP_01_V1.id && template.version === PILOTO_PDP_01_V1.version;
+}
+
+function applyPdp01Edit({ persistedData, submittedData }) {
+  const persisted = clone(persistedData);
+  const submitted = clone(submittedData);
+  // Source and structural slots are immutable. Start with a byte-for-byte
+  // comparison after replacing the sanctioned generated content subtree.
+  const submittedDocument = submitted?.piloto_pdp_01;
+  const persistedDocument = persisted?.piloto_pdp_01;
+  if (!isPlainObject(submittedDocument) || !isPlainObject(persistedDocument)) throw new FixedTemplateEditError("La plantilla Piloto 01 requiere su contrato de contenido");
+  // First prove the caller did not alter anything outside the fixed document.
+  submitted.piloto_pdp_01 = persistedDocument;
+  if (!isDeepStrictEqual(submitted, persisted)) throw new FixedTemplateEditError("Piloto 01 sólo permite editar el copy autorizado; producto, medios, packs y evidencia se protegen automáticamente");
+  const proposed = clone(submittedDocument);
+  const comparisonDocument = clone(proposed);
+  const persistedContent = persistedDocument.content;
+  const comparisonContent = comparisonDocument.content || {};
+  if ((comparisonContent.hero?.bullets || []).length !== (persistedContent.hero?.bullets || []).length ||
+      (comparisonContent.timeline?.steps || []).length !== (persistedContent.timeline?.steps || []).length ||
+      (comparisonContent.faq?.items || []).length !== (persistedContent.faq?.items || []).length) {
+    throw new FixedTemplateEditError("Piloto 01 no permite cambiar la estructura de sus secciones");
+  }
+  // Mask exactly the authorized leaves and compare every other byte. This is
+  // deliberately independent from the later schema validation: a valid pack
+  // is still not an editable pack.
+  comparisonContent.hero.claim = persistedContent.hero.claim;
+  comparisonContent.hero.bullets = clone(persistedContent.hero.bullets);
+  comparisonContent.why.eyebrow = persistedContent.why.eyebrow;
+  comparisonContent.why.heading = persistedContent.why.heading;
+  comparisonContent.why.body = persistedContent.why.body;
+  comparisonContent.why.points = clone(persistedContent.why.points);
+  comparisonContent.timeline.heading = persistedContent.timeline.heading;
+  comparisonContent.timeline.intro = persistedContent.timeline.intro;
+  comparisonContent.timeline.steps.forEach((step, index) => {
+    step.heading = persistedContent.timeline.steps[index].heading;
+    step.body = persistedContent.timeline.steps[index].body;
+  });
+  comparisonContent.faq.heading = persistedContent.faq.heading;
+  comparisonContent.faq.items.forEach((item, index) => {
+    item.question = persistedContent.faq.items[index].question;
+    item.answer = persistedContent.faq.items[index].answer;
+  });
+  if (!isDeepStrictEqual(comparisonDocument, persistedDocument)) {
+    throw new FixedTemplateEditError("Piloto 01 sólo permite editar el copy autorizado; producto, medios, packs y evidencia se protegen automáticamente");
+  }
+  // Then prove that only explicit text leaves changed.  Starting from the
+  // persisted content prevents a browser payload from changing packs, media,
+  // evidence, source snapshots or the immutable label of a timeline step.
+  const nextContent = clone(persistedDocument.content);
+  nextContent.hero.claim = proposed.content?.hero?.claim;
+  nextContent.hero.bullets = proposed.content?.hero?.bullets;
+  nextContent.why.eyebrow = proposed.content?.why?.eyebrow;
+  nextContent.why.heading = proposed.content?.why?.heading;
+  nextContent.why.body = proposed.content?.why?.body;
+  nextContent.why.points = proposed.content?.why?.points;
+  nextContent.timeline.heading = proposed.content?.timeline?.heading;
+  nextContent.timeline.intro = proposed.content?.timeline?.intro;
+  (nextContent.timeline.steps || []).forEach((step, index) => {
+    step.heading = proposed.content?.timeline?.steps?.[index]?.heading;
+    step.body = proposed.content?.timeline?.steps?.[index]?.body;
+  });
+  nextContent.faq.heading = proposed.content?.faq?.heading;
+  nextContent.faq.items = proposed.content?.faq?.items;
+  const next = clone(persisted);
+  next.piloto_pdp_01 = { ...persistedDocument, content: nextContent, evidence: clone(persistedDocument.evidence) };
+  try {
+    next.piloto_pdp_01 = validatePdp01(next.piloto_pdp_01, { origin: "merchant" });
+  } catch (error) {
+    if (error instanceof Pdp01ValidationError) throw new FixedTemplateEditError(error.message);
+    throw error;
+  }
+  return next;
+}
+
 // A fixed template is not a generic document editor. Start from persisted
 // data, permit a narrowly declared set of text leaves, and compare the rest
 // byte-for-byte as structured data. The persisted descriptor selects policy;
@@ -79,6 +157,7 @@ function applyTemplateBoundEdit({ persistedData, submittedData }) {
   if (!isPlainObject(submittedData)) {
     throw new FixedTemplateEditError("La página editada debe ser un objeto estructurado");
   }
+  if (isPdp01Template(persistedData)) return applyPdp01Edit({ persistedData, submittedData });
   if (!isPinzaTemplate(persistedData)) return submittedData;
 
   const persisted = clone(persistedData);
@@ -104,5 +183,6 @@ function applyTemplateBoundEdit({ persistedData, submittedData }) {
 module.exports = Object.freeze({
   FixedTemplateEditError,
   pinzaEditablePaths,
+  isPdp01Template,
   applyTemplateBoundEdit
 });

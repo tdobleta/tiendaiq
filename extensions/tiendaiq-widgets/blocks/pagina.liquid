@@ -26,6 +26,27 @@
     un hint: si la URL no resuelve, el navegador lo ignora (no rompe nada).
   {%- endcomment -%}
   {%- assign tq_pagina = product.metafields.tiendaiq.pagina.value -%}
+  {%- if tq_pagina.piloto_pdp_01.template == 'piloto-pdp-01' and tq_pagina.piloto_pdp_01.contract_version == 1 -%}
+    {{ 'piloto-pdp-01.css' | asset_url | stylesheet_tag }}
+    <script>
+      window.TIENDAIQ_DATA = {{ product.metafields.tiendaiq.pagina.value | json }};
+      window.TIENDAIQ_PRODUCT_TITLE = {{ product.title | json }};
+      window.TIENDAIQ_VARIANTS = [
+        {%- for variant in product.variants -%}
+          { id: {{ variant.id | json }}, adminId: "gid://shopify/ProductVariant/{{ variant.id }}", available: {{ variant.available | json }}, money: {{ variant.price | money | json }} }{% unless forloop.last %},{% endunless %}
+        {%- endfor -%}
+      ];
+      window.TIENDAIQ_URLS = {
+        {%- for media in product.media -%}
+          {%- if media.media_type == 'image' -%}
+            "gid://shopify/MediaImage/{{ media.id }}": {{ media.preview_image | image_url: width: 1400 | json }},
+          {%- endif -%}
+        {%- endfor -%}
+      };
+    </script>
+    <div id="piloto-pdp-01" class="p01__loading" aria-live="polite">Preparando la página…</div>
+    <script src="{{ 'piloto-pdp-01.js' | asset_url }}" defer></script>
+  {%- else -%}
   {%- assign tq_hero_gid = tq_pagina.facetas.hero.galeria.first -%}
   {%- assign tq_hero_img = product.featured_image -%}
   {%- for m in product.media -%}
@@ -190,6 +211,7 @@
     </div>
 
   <script src="{{ 'tiendaiq.js' | asset_url }}" defer></script>
+  {%- endif -%}
 {%- endif -%}
 
 {% schema %}
