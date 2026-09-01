@@ -74,15 +74,17 @@ test("el esquema estructurado deja sólo copy abierto a la IA", () => {
   assert.equal(PDP01_COPY_OUTPUT_SCHEMA.properties.offer.properties.packs, undefined);
   assert.deepEqual(commerceFromSource(page().source_fields).packs.map((pack) => pack.label), ["1 unidad", "3 unidades", "5 unidades"]);
 });
-test("el esquema enviado a Anthropic usa sólo mínimos de listas compatibles", () => {
-  const invalidMinimum = [];
+test("el esquema enviado a Anthropic no usa cardinalidad de listas no soportada", () => {
+  const forbiddenArrayKeywords = [];
   function inspect(value, path = "schema") {
     if (!value || typeof value !== "object") return;
-    if (value.type === "array" && value.minItems > 1) invalidMinimum.push(path);
+    if (value.type === "array") {
+      for (const key of ["minItems", "maxItems"]) if (Object.hasOwn(value, key)) forbiddenArrayKeywords.push(`${path}.${key}`);
+    }
     for (const [key, child] of Object.entries(value)) inspect(child, `${path}.${key}`);
   }
   inspect(PDP01_COPY_OUTPUT_SCHEMA);
-  assert.deepEqual(invalidMinimum, []);
+  assert.deepEqual(forbiddenArrayKeywords, []);
 
   // The stricter product requirement remains enforced after generation.
   const copy = { hero: { ...page().content.hero, bullets: ["Un único punto"] }, offer: { heading: "Opciones" }, why: page().content.why, timeline: page().content.timeline, faq: page().content.faq };
