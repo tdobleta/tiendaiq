@@ -42,7 +42,14 @@ test("la proyección de storefront nunca expone fuente ni hash", () => {
   assert.equal(projection.content.offer.packs[0].quantity, 1);
 });
 test("Piloto 01 arma packs y medios vivos desde Shopify, no desde la IA", () => {
-  const source = page().source_fields;
+  const source = {
+    ...page().source_fields,
+    media_ids: [
+      "gid://shopify/MediaImage/10",
+      "gid://shopify/MediaImage/20",
+      "gid://shopify/MediaImage/30"
+    ]
+  };
   const copy = {
     hero: page().content.hero,
     offer: { heading: page().content.offer.heading },
@@ -54,7 +61,10 @@ test("Piloto 01 arma packs y medios vivos desde Shopify, no desde la IA", () => 
   assert.deepEqual(content.offer.packs.map((pack) => pack.quantity), [1, 3, 5]);
   assert.deepEqual(content.offer.packs.map((pack) => pack.variant_id), [source.variants[0].id, source.variants[0].id, source.variants[0].id]);
   assert.equal(content.media.hero_media_id, source.media_ids[0]);
-  assert.doesNotThrow(() => validatePdp01({ ...page(), content }));
+  assert.equal(content.media.comparison_media_id, source.media_ids[1]);
+  assert.equal(content.media.community_media_id, source.media_ids[2]);
+  assert.deepEqual(content.media.gallery_media_ids, source.media_ids);
+  assert.doesNotThrow(() => validatePdp01({ ...page(), source_fields: source, source_hash: hashSource(source), content }));
 });
 test("Piloto 01 rechaza un sobre, campos extra y medios generados por la IA", () => {
   const copy = {

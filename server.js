@@ -101,10 +101,15 @@ const DIR_INSPIRACION = env.INSPIRACION_DIR || path.join(__dirname, "inspiracion
 const VERSION_ASSETS = (() => {
   try {
     const dirWidgets = path.join(__dirname, "extensions", "tiendaiq-widgets", "assets");
+    // Todo asset que el front pueda pedir con ?v= tiene que estar acá: si un
+    // archivo queda afuera, cambiarlo NO mueve el token y el navegador sigue
+    // sirviendo la copia vieja. Le pasó a Piloto 01 y los arreglos del
+    // renderer no llegaban al merchant después del deploy.
     const archivos = [
       path.join(DIR_APP, "app.js"), path.join(DIR_APP, "app.css"),
       path.join(DIR_APP, "home-v2.js"), path.join(DIR_APP, "home-v2.css"),
-      path.join(dirWidgets, "tiendaiq.js"), path.join(dirWidgets, "tiendaiq.css")
+      path.join(dirWidgets, "tiendaiq.js"), path.join(dirWidgets, "tiendaiq.css"),
+      path.join(dirWidgets, "piloto-pdp-01.js"), path.join(dirWidgets, "piloto-pdp-01.css")
     ];
     return Math.floor(Math.max(...archivos.map((a) => fs.statSync(a).mtimeMs))).toString(36);
   } catch {
@@ -1337,12 +1342,16 @@ const servidor = http.createServer(async (req, res) => {
 
     if (url.pathname.startsWith("/preview")) {
       const rel = url.pathname.replace(/^\/preview\/?/, "") || "index.html";
-      // El index del preview referencia tiendaiq.css/js con ?v=…: le
+      // El index del preview referencia los assets del renderer con ?v=…: le
       // inyectamos la versión viva para que tras un deploy baje lo nuevo.
+      // Piloto 01 tiene que estar en esta lista: cuando faltaba, sus dos
+      // assets quedaban clavados en la versión escrita a mano en el HTML y el
+      // navegador seguía sirviendo el archivo viejo después de cada deploy,
+      // así que los arreglos del renderer no llegaban nunca al merchant.
       if (rel === "index.html") {
         const html = fs
           .readFileSync(path.join(DIR_PLANTILLA, "index.html"), "utf8")
-          .replace(/(tiendaiq\.css|tiendaiq\.js)\?v=[\w.]+/g, `$1?v=${VERSION_ASSETS}`);
+          .replace(/(tiendaiq\.css|tiendaiq\.js|piloto-pdp-01\.css|piloto-pdp-01\.js)\?v=[\w.]+/g, `$1?v=${VERSION_ASSETS}`);
         res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" });
         return res.end(html);
       }

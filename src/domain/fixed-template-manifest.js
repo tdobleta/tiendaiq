@@ -41,10 +41,18 @@ const PILOTO_PINZA_PAGEPILOT_V1 = Object.freeze({
   merchantEditablePaths: PINZA_PAGEPILOT_V1.merchantEditablePaths
 });
 
+// Piloto 01 dejó de ser un renderer escrito a mano: su sistema visual es la
+// página que el merchant diseñó y aprobó, congelada como fuente canónica en
+// template-sources/piloto-pdp-01/index.html. El runtime la monta tal cual y
+// sólo inyecta datos en los slots, igual que la plantilla pinza. Los dos SHA
+// permiten verificar por separado la fuente y su derivado saneado (mismo
+// layout y CSS, sin scripts de origen ni assets de otra tienda).
 const PILOTO_PDP_01_V1 = Object.freeze({
   id: "piloto/pdp-01",
   version: 1,
   rendererKey: "piloto-pdp-01",
+  sourceInputSha256: "bc5aae11c388a4d39f7d194487024148e05f2de7f272290ad529c4bcc2a0c5da",
+  sourceSha256: "e3b6a915d75bac8b2abe3ef502ea79afc634070f03822ce3bc938b55815e75c5",
   sourceFile: "piloto-pdp-01.js",
   // The merchant-approved visual system is intentionally immutable at runtime.
   // Only these textual leaves can ever be edited after generation.
