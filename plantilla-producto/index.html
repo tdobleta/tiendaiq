@@ -11,6 +11,10 @@
 </head>
 <body>
   <div id="app"></div>
+  <!-- Piloto 01 usa un renderer propio. El preview del admin debe ofrecer el
+       mismo punto de montaje que el app block de Shopify; sin este nodo el
+       borrador se genera pero el canvas queda vacío. -->
+  <div id="piloto-pdp-01" class="p01__loading" aria-live="polite"></div>
   <script src="data.js?v=7"></script>
   <script src="/widgets/tiendaiq.js?v=7"></script>
   <script src="/widgets/piloto-pdp-01.js?v=7"></script>
