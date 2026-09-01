@@ -231,8 +231,11 @@
     // El stepper es SOLO del flujo de CREACIÓN. En el resto (inicio, tabla,
     // bundles) no va. Y una vez PUBLICADA, el asistente terminó: la
     // pantalla pasa a modo editor, sin stepper (patrón page-builder).
-    const previewPublicada = estado.pantalla === "preview" && estado.pagina?.estado === "publicada";
-    if (previewPublicada || estado.pantalla === "lista" || estado.pantalla === "plantillas" || !["informacion", "generando", "preview"].includes(estado.pantalla)) {
+    // Al llegar al editor, el asistente ya terminó aunque la página siga como
+    // borrador. Mantener los pasos arriba desperdicia el espacio que necesita
+    // el canvas y hace que el producto parezca una miniatura.
+    const enEditor = estado.pantalla === "preview";
+    if (enEditor || estado.pantalla === "lista" || estado.pantalla === "plantillas" || !["informacion", "generando", "preview"].includes(estado.pantalla)) {
       cont.innerHTML = "";
       return;
     }
@@ -2745,7 +2748,10 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       }
       const anchoTienda = 1200;
       const altoTienda = Math.max(760, marco.getBoundingClientRect().height || 760);
-      const disponible = Math.max(320, centro.clientWidth - 48);
+      // La superficie de trabajo usa padding mínimo: el ancho es para la
+      // página, no para márgenes decorativos. El iframe sigue siendo de
+      // 1200px internamente, por lo que conserva el mismo layout que Shopify.
+      const disponible = Math.max(320, centro.clientWidth - 28);
       const escala = Math.min(1, disponible / anchoTienda);
       viewport.classList.toggle("is-scaled", escala < 1);
       viewport.style.width = `${Math.round(anchoTienda * escala)}px`;
@@ -3881,8 +3887,8 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         </div>
         <div class="preview-barra__acciones">
           <div class="pe-viewport" role="group" aria-label="Vista del canvas">
-            <button type="button" data-viewport="desktop" aria-pressed="${estado.previewViewport === "desktop"}">Escritorio</button>
-            <button type="button" data-viewport="mobile" aria-pressed="${estado.previewViewport === "mobile"}">Móvil</button>
+            <button type="button" data-viewport="desktop" aria-pressed="${estado.previewViewport === "desktop"}" aria-label="Vista de escritorio" title="Vista de escritorio">Escritorio</button>
+            <button type="button" data-viewport="mobile" aria-pressed="${estado.previewViewport === "mobile"}" aria-label="Vista de móvil" title="Vista de móvil">Móvil</button>
           </div>
           <s-button variant="secondary" id="guardar" disabled>Guardar cambios</s-button>
           <s-button variant="secondary" id="regenerar">Regenerar</s-button>
@@ -6635,6 +6641,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     if (pantalla === "bundles" && estado.bundles) { estado.bundles.vista = "lista"; estado.bundles.editIdx = null; }
     estado.pantalla = pantalla;
     document.body.classList.toggle("tiq-v2-home-active", pantalla === "inicio");
+    document.body.classList.toggle("tiq-pe-editor-active", pantalla === "preview");
     sincronizarURL(pantalla);
     setTituloBar(pantalla);
     pintarPasos();
