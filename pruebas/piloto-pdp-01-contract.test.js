@@ -3,6 +3,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const { hashSource, validatePdp01, storefrontProjection } = require("../src/piloto/pdp01-contract");
+const { contentFromModelJson } = require("../src/piloto/generate-pdp01");
 
 function page() {
   const source_fields = {
@@ -39,4 +40,9 @@ test("la proyección de storefront nunca expone fuente ni hash", () => {
   assert.equal(projection.source_fields, undefined);
   assert.equal(projection.source_hash, undefined);
   assert.equal(projection.content.offer.packs[0].quantity, 1);
+});
+test("Piloto 01 normaliza únicamente el sobre content de una respuesta de IA", () => {
+  const expected = page().content;
+  assert.deepEqual(contentFromModelJson(JSON.stringify({ content: expected })), expected);
+  assert.throws(() => validatePdp01({ ...page(), content: contentFromModelJson(JSON.stringify({ content: expected, extra: true })) }), /content\.content no pertenece al contrato/);
 });
