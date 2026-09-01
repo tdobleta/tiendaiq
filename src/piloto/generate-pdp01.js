@@ -14,6 +14,20 @@ function parseJson(text) {
   const raw = String(text || "").trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "");
   return JSON.parse(raw.slice(raw.indexOf("{"), raw.lastIndexOf("}") + 1));
 }
+function contentFromModelJson(text) {
+  const parsed = parseJson(text);
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return parsed;
+
+  // Older prompt wording asked for `content.hero`, which some models
+  // faithfully interpreted as a top-level `{ content: { ... } }` envelope.
+  // Accept that one unambiguous envelope, then validate the actual content
+  // against the same narrow contract used for every other response.
+  const keys = Object.keys(parsed);
+  if (keys.length === 1 && keys[0] === "content" && parsed.content && typeof parsed.content === "object" && !Array.isArray(parsed.content)) {
+    return parsed.content;
+  }
+  return parsed;
+}
 
 async function generatePdp01(product, media, { idioma = "es", angulo = "" } = {}) {
   const source_fields = sourceFieldsFromProduct(product);
@@ -33,7 +47,7 @@ async function generatePdp01(product, media, { idioma = "es", angulo = "" } = {}
     "No incluyas HTML, Markdown, links, datos de prueba ni campos fuera del JSON solicitado.",
     "Los packs son cantidades reales de la misma variante: elegí cantidades entre 1 y 5, sin prometer ahorro, y usá un variant_id existente con mechanism multi_quantity.",
     "Asigná fotos sólo por media_id existente. No agregues una asignación si ninguna foto es pertinente.",
-    "Respondé JSON estricto con content.hero {claim, bullets}, content.offer {heading, packs}, content.why {eyebrow, heading, body, points}, content.timeline {heading, intro, steps}, content.faq {heading, items}, content.media {hero_media_id, gallery_media_ids}. Cada FAQ tiene question y answer; cada paso tiene label, heading y body.",
+    "Respondé un único objeto JSON raíz con estas claves: hero {claim, bullets}, offer {heading, packs}, why {eyebrow, heading, body, points}, timeline {heading, intro, steps}, faq {heading, items}, media {hero_media_id, gallery_media_ids}. No lo envuelvas dentro de una clave content. Cada FAQ tiene question y answer; cada paso tiene label, heading y body.",
     "Mínimos: 2 bullets, 2 why.points, 2 timeline.steps, 3 FAQ. Máximos: 4 bullets y points, 4 timeline.steps, 8 FAQ."
   ].join("\n\n");
   const client = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
@@ -45,9 +59,9 @@ async function generatePdp01(product, media, { idioma = "es", angulo = "" } = {}
   if (!text) throw new Error("La IA no devolvió el contenido de Piloto 01.");
   const document = {
     contract_version: 1, template: "piloto-pdp-01", source_fields,
-    source_hash: hashSource(source_fields), content: parseJson(text), evidence: {}
+    source_hash: hashSource(source_fields), content: contentFromModelJson(text), evidence: {}
   };
   return { data: validatePdp01(document, { origin: "ai" }), uso: response.usage };
 }
 
-module.exports = Object.freeze({ generatePdp01 });
+module.exports = Object.freeze({ generatePdp01, contentFromModelJson });
