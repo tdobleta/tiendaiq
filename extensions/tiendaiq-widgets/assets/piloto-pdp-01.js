@@ -5,10 +5,23 @@
   // the exact storefront renderer is what the merchant sees in the app too.
   const previewMode = /[?&]app=1/.test(location.search);
   const previewKey = "piloto-pdp-01-preview";
-  if (!window.TIENDAIQ_DATA && previewMode) {
+  // Firma del contenido que ya está pintado en este iframe.
+  //
+  // El editor reenvía el documento en CADA `onload` del iframe
+  // (app/app.js -> marco.onload -> repintarPreview). Sin esta comparación el
+  // listener de abajo se dispara a sí mismo: carga -> el padre postea ->
+  // location.reload() -> carga -> el padre postea -> ... El merchant sólo
+  // alcanzaba a ver la primera imagen del hero antes de cada reinicio.
+  //
+  // Recargamos únicamente cuando el contenido cambió de verdad.
+  const sign = (payload) => JSON.stringify([payload?.data?.piloto_pdp_01 ?? null, payload?.urls ?? {}]);
+  let rendered = null;
+
+  if (previewMode && !window.TIENDAIQ_DATA) {
     try {
       const cached = JSON.parse(sessionStorage.getItem(previewKey) || "null");
       if (cached?.data) {
+        rendered = sign(cached);
         window.TIENDAIQ_DATA = cached.data;
         window.TIENDAIQ_URLS = cached.urls || {};
         const source = cached.data?.piloto_pdp_01?.source_fields;
@@ -17,23 +30,18 @@
       }
     } catch {}
   }
-  if (!window.TIENDAIQ_DATA && previewMode) {
+
+  if (previewMode) {
     window.addEventListener("message", (event) => {
       if (!event.data?.tiendaiq || !event.data?.data?.piloto_pdp_01) return;
-      sessionStorage.setItem(previewKey, JSON.stringify({ data: event.data.data, urls: event.data.urls || {} }));
-      location.reload();
-    }, { once: true });
-  }
-  const data = window.TIENDAIQ_DATA;
-  if (previewMode && data?.piloto_pdp_01) {
-    // Subsequent edits in the app refresh the exact same renderer instead of
-    // maintaining a separate approximation of the storefront.
-    window.addEventListener("message", (event) => {
-      if (!event.data?.tiendaiq || !event.data?.data?.piloto_pdp_01) return;
+      const incoming = sign(event.data);
+      if (incoming === rendered) return;
+      rendered = incoming;
       sessionStorage.setItem(previewKey, JSON.stringify({ data: event.data.data, urls: event.data.urls || {} }));
       location.reload();
     });
   }
+  const data = window.TIENDAIQ_DATA;
   const documentData = data?.piloto_pdp_01;
   const root = document.getElementById("piloto-pdp-01");
   if (!root || !documentData?.content) return;
