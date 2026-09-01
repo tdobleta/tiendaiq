@@ -33,7 +33,9 @@
       window.TIENDAIQ_PRODUCT_TITLE = {{ product.title | json }};
       window.TIENDAIQ_VARIANTS = [
         {%- for variant in product.variants -%}
-          { id: {{ variant.id | json }}, adminId: "gid://shopify/ProductVariant/{{ variant.id }}", available: {{ variant.available | json }}, inventoryTracked: {{ variant.inventory_management != blank | json }}, inventoryQuantity: {{ variant.inventory_quantity | default: 0 | json }}, price: {{ variant.price | json }}, currency: {{ cart.currency.iso_code | default: shop.currency | json }}, money: {{ variant.price | money | json }} }{% unless forloop.last %},{% endunless %}
+          {%- assign tq_inventory_tracked = false -%}
+          {%- if variant.inventory_management != blank -%}{%- assign tq_inventory_tracked = true -%}{%- endif -%}
+          { id: {{ variant.id | json }}, adminId: "gid://shopify/ProductVariant/{{ variant.id }}", available: {{ variant.available | json }}, inventoryTracked: {{ tq_inventory_tracked | json }}, inventoryQuantity: {{ variant.inventory_quantity | default: 0 | json }}, price: {{ variant.price | json }}, currency: {{ cart.currency.iso_code | default: shop.currency | json }}, money: {{ variant.price | money | json }} }{% unless forloop.last %},{% endunless %}
         {%- endfor -%}
       ];
       window.TIENDAIQ_URLS = {
