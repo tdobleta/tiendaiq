@@ -14,11 +14,18 @@ function sha256(value) {
   return crypto.createHash("sha256").update(value).digest("hex");
 }
 
+// Git conserva la fuente aprobada con LF, mientras que un checkout de Windows
+// puede materializarla con CRLF. El fingerprint visual debe identificar el
+// mismo HTML y no el sistema operativo que ejecutó el build.
+function canonicalSource(value) {
+  return String(value).replace(/\r\n?/g, "\n");
+}
+
 function buildPilotoPdp01Template({ root = path.resolve(__dirname, "..") } = {}) {
   const sourcePath = path.join(root, "template-sources", "piloto-pdp-01", "index.html");
   const runtimePath = path.join(root, "extensions", "tiendaiq-widgets", "assets", PILOTO_PDP_01_V1.sourceFile);
 
-  const source = fs.readFileSync(sourcePath, "utf8");
+  const source = canonicalSource(fs.readFileSync(sourcePath, "utf8"));
   const sourceHash = sha256(source);
   if (sourceHash !== PILOTO_PDP_01_V1.sourceInputSha256) {
     throw new Error("La fuente canónica de Piloto 01 no coincide con la revisión aprobada");
@@ -47,4 +54,4 @@ function buildPilotoPdp01Template({ root = path.resolve(__dirname, "..") } = {})
 
 if (require.main === module) process.stdout.write(`${JSON.stringify(buildPilotoPdp01Template())}\n`);
 
-module.exports = Object.freeze({ buildPilotoPdp01Template, sha256 });
+module.exports = Object.freeze({ buildPilotoPdp01Template, sha256, canonicalSource });

@@ -59,17 +59,32 @@ const PILOTO_PDP_01_V1 = Object.freeze({
   merchantEditablePaths: Object.freeze([
     "piloto_pdp_01.content.hero.claim",
     "piloto_pdp_01.content.hero.bullets[]",
+    "piloto_pdp_01.content.offer.heading",
+    "piloto_pdp_01.content.quick.items[].question",
+    "piloto_pdp_01.content.quick.items[].answer",
     "piloto_pdp_01.content.why.eyebrow",
     "piloto_pdp_01.content.why.heading",
     "piloto_pdp_01.content.why.body",
     "piloto_pdp_01.content.why.points[]",
+    "piloto_pdp_01.content.stories.heading",
+    "piloto_pdp_01.content.stories.intro",
+    "piloto_pdp_01.content.stories.cards[].title",
+    "piloto_pdp_01.content.stories.cards[].body",
+    "piloto_pdp_01.content.stories.cards[].product_note",
     "piloto_pdp_01.content.timeline.heading",
     "piloto_pdp_01.content.timeline.intro",
     "piloto_pdp_01.content.timeline.steps[].heading",
     "piloto_pdp_01.content.timeline.steps[].body",
     "piloto_pdp_01.content.faq.heading",
+    "piloto_pdp_01.content.faq.intro",
     "piloto_pdp_01.content.faq.items[].question",
-    "piloto_pdp_01.content.faq.items[].answer"
+    "piloto_pdp_01.content.faq.items[].answer",
+    "piloto_pdp_01.content.closing.eyebrow",
+    "piloto_pdp_01.content.closing.heading",
+    "piloto_pdp_01.content.closing.body",
+    "piloto_pdp_01.content.closing.secondary_body",
+    "piloto_pdp_01.content.newsletter.heading",
+    "piloto_pdp_01.content.newsletter.body"
   ])
 });
 

@@ -20,6 +20,7 @@ const RAIZ = path.join(__dirname, "..");
 const RUNTIME = path.join(RAIZ, "extensions", "tiendaiq-widgets", "assets", "piloto-pdp-01.js");
 const codigo = fs.readFileSync(RUNTIME, "utf8");
 const { PILOTO_PDP_01_V1 } = require("../src/domain/fixed-template-manifest");
+const { canonicalSource } = require("../scripts/build-piloto-pdp-01-template");
 
 function artefacto() {
   const m = codigo.match(/const FIXED_TEMPLATE_SOURCE_BASE64 = "([^"]*)";/);
@@ -135,7 +136,20 @@ test("BINDER · las secciones posteriores usan media Shopify y no alteran el her
 test("BINDER · el CTA de compra no conserva el texto saneado de la fuente", () => {
   assert.match(codigo, /const setAtcLabel = \(label\) =>/);
   assert.match(codigo, /setAtcLabel\(ok \? "Añadir al carrito" : "Sin stock"\)/);
-  assert.match(codigo, /\.phv4-subscribe, \.phv4-payment-icons, \.phv4-details/);
+  assert.match(codigo, /\.phv4-subscribe, \.phv4-payment-icons/);
+});
+
+test("BINDER · conserva la composición completa con slots editoriales reales", () => {
+  assert.match(codigo, /const quickFacts = c\.quick\?\.items/);
+  assert.match(codigo, /const storyMedia = c\.media\?\.story_media_ids/);
+  assert.match(codigo, /const storyImageMedia = storyMedia\.length \? storyCards\.map/);
+  assert.match(codigo, /const stories = c\.stories/);
+  assert.match(codigo, /const closing = c\.closing/);
+  assert.match(codigo, /c\.newsletter\?\.heading/);
+  assert.ok(!/\.scp-community"\)\.forEach\(hide\)/.test(codigo), "el cierre editorial no puede apagarse si el documento lo completa");
+  assert.match(codigo, /\.scp-stories-rating, \.scp-stars, \.scp-story-verified/);
+  assert.match(codigo, /\.scp-story-next"\)\?\.addEventListener\("click"/);
+  assert.match(codigo, /button\.addEventListener\("click", \(\) => \{/);
 });
 
 // ---------------------------------------------------------------------- caché
@@ -153,4 +167,10 @@ test("CACHÉ · todo asset versionado del preview participa de VERSION_ASSETS", 
     assert.ok(calculo.includes(`"${asset}"`), `${asset} se pide con ?v= pero no entra al cálculo de VERSION_ASSETS`);
     assert.ok(reescritura[1].includes(asset.replace(/\./g, "\\.")), `${asset} no se reescribe en /preview`);
   }
+});
+
+test("BUILD · la revisión visual es estable entre Windows y el checkout canónico", () => {
+  const canonical = "<section>\n  <p>Producto</p>\n</section>\n";
+  assert.equal(canonicalSource(canonical.replace(/\n/g, "\r\n")), canonical);
+  assert.equal(canonicalSource(canonical), canonical);
 });

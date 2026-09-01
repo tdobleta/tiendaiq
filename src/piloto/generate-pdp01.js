@@ -49,7 +49,8 @@ function commerceFromSource(sourceFields) {
       hero_media_id: gallery[0],
       gallery_media_ids: gallery,
       comparison_media_id: gallery[1] || gallery[0],
-      community_media_id: gallery[2] || gallery[1] || gallery[0]
+      community_media_id: gallery[2] || gallery[1] || gallery[0],
+      story_media_ids: gallery
     }
   };
 }
@@ -59,9 +60,13 @@ function composePdp01Content(copy, sourceFields) {
   return {
     hero: safeCopy.hero,
     offer: { heading: safeCopy.offer.heading, packs: commerce.packs },
+    quick: safeCopy.quick,
     why: safeCopy.why,
+    stories: safeCopy.stories,
     timeline: safeCopy.timeline,
     faq: safeCopy.faq,
+    closing: safeCopy.closing,
+    newsletter: safeCopy.newsletter,
     media: commerce.media
   };
 }
@@ -82,8 +87,9 @@ async function generatePdp01(product, media, { idioma = "es", angulo = "" } = {}
     "Usá únicamente hechos presentes en product o visibles en las imágenes. No inventes ingredientes, resultados, certificaciones, descuentos, envíos, garantías, testimonios, reseñas, escasez ni cifras.",
     "No escribas título de producto, precios, porcentajes, símbolos de moneda, stock, disponibilidad, variantes, packs ni nombres de medios. Shopify los muestra vivos.",
     "No incluyas HTML, Markdown, links, datos de prueba ni campos fuera del JSON solicitado.",
-    "Respondé exactamente el JSON estructurado solicitado. Es sólo copy: hero {claim, bullets}, offer {heading}, why {eyebrow, heading, body, points}, timeline {heading, intro, steps}, faq {heading, items}. Cada FAQ tiene question y answer; cada paso tiene label, heading y body.",
-    "Mínimos: 2 bullets, 2 why.points, 2 timeline.steps, 3 FAQ. Máximos: 4 bullets y points, 4 timeline.steps, 8 FAQ."
+    "Respondé exactamente el JSON estructurado solicitado. Es sólo copy: hero {claim, bullets}, offer {heading}, quick {items}, why {eyebrow, heading, body, points}, stories {heading, intro, cards}, timeline {heading, intro, steps}, faq {heading, intro, items}, closing {eyebrow, heading, body, secondary_body}, newsletter {heading, body}.",
+    "quick.items y faq.items tienen question y answer. timeline.steps tiene label, heading y body. stories.cards tiene title, body y product_note. Las cards son editoriales sobre el producto, nunca reseñas ni experiencias de clientes: no nombres personas, no uses estrellas, no digas 'compra verificada' ni afirmes resultados.",
+    "Mínimos: 2 bullets, 2 quick.items, 2 why.points, 3 stories.cards, 2 timeline.steps, 3 FAQ. Máximos: 4 bullets, quick.items, why.points y timeline.steps; 5 stories.cards; 8 FAQ."
   ].join("\n\n");
   const client = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
   const response = await client.messages.create({
