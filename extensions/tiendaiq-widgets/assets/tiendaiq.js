@@ -1984,7 +1984,11 @@
     }
   }
 
-  if (DATOS) {
+  if (DATOS?.piloto_pdp_01?.template === "piloto-pdp-01") {
+    // Piloto 01 se pinta exclusivamente con piloto-pdp-01.js. El preview
+    // conserva los datos en sessionStorage entre recargas, por lo que este
+    // guard también es necesario después del primer mensaje del editor.
+  } else if (DATOS) {
     // Tienda (TIENDAIQ_DATA) o preview local por archivo (data.js).
     montar(DATOS).catch((error) => {
       const app = document.getElementById("app");

@@ -9,6 +9,16 @@ const root = path.join(__dirname, "..");
 const widget = fs.readFileSync(path.join(root, "extensions", "tiendaiq-widgets", "assets", "tiendaiq.js"), "utf8");
 const liquid = fs.readFileSync(path.join(root, "extensions", "tiendaiq-widgets", "blocks", "pagina.liquid"), "utf8");
 const css = fs.readFileSync(path.join(root, "extensions", "tiendaiq-widgets", "assets", "tiendaiq.css"), "utf8");
+const piloto = fs.readFileSync(path.join(root, "extensions", "tiendaiq-widgets", "assets", "piloto-pdp-01.js"), "utf8");
+const preview = fs.readFileSync(path.join(root, "plantilla-producto", "index.html"), "utf8");
+
+test("el preview del editor entrega el punto de montaje de Piloto 01", () => {
+  assert.match(preview, /id="piloto-pdp-01"/);
+  assert.match(preview, /piloto-pdp-01\.css/);
+  assert.match(preview, /piloto-pdp-01\.js/);
+  assert.match(piloto, /document\.getElementById\("piloto-pdp-01"\)/);
+  assert.match(widget, /DATOS\?\.piloto_pdp_01\?\.template === "piloto-pdp-01"/);
+});
 
 test("el widget selecciona renderer por descriptor y conserva sólo fallback legacy", () => {
   assert.match(widget, /const DESCRIPTOR_RENDERER_KEYS = Object\.freeze/);
