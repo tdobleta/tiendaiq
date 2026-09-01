@@ -14,6 +14,10 @@ const GID = {
 // This is the only shape the model is allowed to produce. Commerce belongs to
 // Shopify, therefore packs, variants, availability and media are deliberately
 // absent here and are assembled from source_fields by generate-pdp01.js.
+//
+// Anthropic's structured-output API only accepts minItems of 0 or 1. The
+// domain validator below remains the authority for the stronger 2/3-item
+// requirements, after the provider has returned its JSON.
 const COPY_TEXT = { type: "string", minLength: 1, maxLength: 600 };
 const COPY_LONG_TEXT = { type: "string", minLength: 1, maxLength: 2000 };
 const PDP01_COPY_OUTPUT_SCHEMA = {
@@ -23,7 +27,7 @@ const PDP01_COPY_OUTPUT_SCHEMA = {
   properties: {
     hero: {
       type: "object", additionalProperties: false, required: ["claim", "bullets"],
-      properties: { claim: COPY_TEXT, bullets: { type: "array", minItems: 2, maxItems: 4, items: COPY_TEXT } }
+      properties: { claim: COPY_TEXT, bullets: { type: "array", minItems: 1, maxItems: 4, items: COPY_TEXT } }
     },
     offer: {
       type: "object", additionalProperties: false, required: ["heading"],
@@ -33,7 +37,7 @@ const PDP01_COPY_OUTPUT_SCHEMA = {
       type: "object", additionalProperties: false, required: ["eyebrow", "heading", "body", "points"],
       properties: {
         eyebrow: COPY_TEXT, heading: COPY_TEXT, body: COPY_TEXT,
-        points: { type: "array", minItems: 2, maxItems: 4, items: COPY_TEXT }
+        points: { type: "array", minItems: 1, maxItems: 4, items: COPY_TEXT }
       }
     },
     timeline: {
@@ -41,7 +45,7 @@ const PDP01_COPY_OUTPUT_SCHEMA = {
       properties: {
         heading: COPY_TEXT, intro: COPY_TEXT,
         steps: {
-          type: "array", minItems: 2, maxItems: 4,
+          type: "array", minItems: 1, maxItems: 4,
           items: {
             type: "object", additionalProperties: false, required: ["label", "heading", "body"],
             properties: { label: COPY_TEXT, heading: COPY_TEXT, body: COPY_TEXT }
@@ -54,7 +58,7 @@ const PDP01_COPY_OUTPUT_SCHEMA = {
       properties: {
         heading: COPY_TEXT,
         items: {
-          type: "array", minItems: 3, maxItems: 8,
+          type: "array", minItems: 1, maxItems: 8,
           items: {
             type: "object", additionalProperties: false, required: ["question", "answer"],
             properties: { question: COPY_TEXT, answer: COPY_LONG_TEXT }
