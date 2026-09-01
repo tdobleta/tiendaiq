@@ -213,7 +213,10 @@ const jobPublico = (job) => job && ({
   status: job.status,
   attempts: job.attempts,
   maxAttempts: job.maxAttempts,
-  lastError: job.status === "failed" ? "No se pudo completar la operación después de varios intentos." : null,
+  // A terminal validation error deliberately consumes one attempt. Do not tell
+  // the merchant it retried several times when it did not, and never expose the
+  // persisted worker error (it may contain provider or internal detail).
+  lastError: job.status === "failed" ? "No se pudo completar la operación. Revisá los datos e intentá nuevamente." : null,
   result: job.status === "succeeded" ? job.result : null,
   diagnostic: job.status === "failed" ? subscriptionRecoveryDiagnosticFromJob(job) : null,
   createdAt: job.createdAt,
