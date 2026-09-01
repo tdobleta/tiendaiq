@@ -1,179 +1,132 @@
 "use strict";
 
-// El canvas del editor NO estaba vacío: se destruía y volvía a crearse en
-// bucle, y el merchant sólo alcanzaba a ver la primera imagen del hero.
+// Piloto 01 monta una plantilla FIJA: la página que el merchant diseñó, saneada
+// e incrustada en el runtime. Estas pruebas cubren las tres cosas que ya nos
+// fallaron una vez cada una:
 //
-// Por eso acá no alcanza con comprobar que el punto de montaje existe (eso ya
-// lo hace template-rendering-contract.test.js y pasaba con el bug puesto).
-// Estas pruebas verifican dos cosas distintas:
-//   1. ESTABILIDAD — que un reenvío idéntico del documento no recargue el
-//      iframe. Es lo que rompía el bucle infinito.
-//   2. CONTENIDO   — que lo que se pinta tenga la página real adentro.
+//   1. ESTABILIDAD — el canvas del editor se destruía y recargaba en bucle.
+//      No estaba vacío: se reiniciaba. Una prueba de contenido no lo detecta.
+//   2. ARTEFACTO   — que el diseño aprobado viaje entero y sin assets ajenos.
+//   3. CACHÉ       — que los assets versionados entren al cache-busting.
 
 const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
+const crypto = require("node:crypto");
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
-const ASSET = path.join(__dirname, "..", "extensions", "tiendaiq-widgets", "assets", "piloto-pdp-01.js");
-const codigo = fs.readFileSync(ASSET, "utf8");
+const RAIZ = path.join(__dirname, "..");
+const RUNTIME = path.join(RAIZ, "extensions", "tiendaiq-widgets", "assets", "piloto-pdp-01.js");
+const codigo = fs.readFileSync(RUNTIME, "utf8");
+const { PILOTO_PDP_01_V1 } = require("../src/domain/fixed-template-manifest");
 
-function documento() {
-  return {
-    contract_version: 1,
-    template: "piloto-pdp-01",
-    source_fields: {
-      product_gid: "gid://shopify/Product/1",
-      title: "Pinza recogedora",
-      variants: [{ id: "gid://shopify/ProductVariant/11", title: "Única" }]
-    },
-    content: {
-      hero: { claim: "Recogé sin agacharte", bullets: ["Sin contacto", "Se lava con agua"] },
-      offer: {
-        heading: "Elegí tu pack",
-        packs: [
-          { id: "cantidad-1", label: "1 unidad", subtitle: "Inicio", quantity: 1, mechanism: "multi_quantity", variant_id: "gid://shopify/ProductVariant/11" },
-          { id: "cantidad-3", label: "3 unidades", subtitle: "Ahorro", quantity: 3, mechanism: "multi_quantity", variant_id: "gid://shopify/ProductVariant/11" }
-        ]
-      },
-      why: { eyebrow: "Por qué", heading: "Un movimiento y listo", body: "Pesa 180 gramos.", points: ["Cero contacto", "Una sola mano"] },
-      timeline: { heading: "Tu paseo", intro: "Semana a semana", steps: [{ label: "Semana 1", heading: "Arranca", body: "Se nota enseguida." }] },
-      faq: { heading: "Preguntas", items: [
-        { question: "¿Sirve en pasto?", answer: "Sí." },
-        { question: "¿Cómo se limpia?", answer: "Con agua." },
-        { question: "¿Cuánto tarda el envío?", answer: "Se calcula en el checkout." }
-      ] },
-      media: { hero_media_id: "gid://shopify/MediaImage/91", gallery_media_ids: ["gid://shopify/MediaImage/91", "gid://shopify/MediaImage/92"] }
-    },
-    evidence: {}
-  };
+function artefacto() {
+  const m = codigo.match(/const FIXED_TEMPLATE_SOURCE_BASE64 = "([^"]*)";/);
+  assert.ok(m, "el runtime no trae el artefacto incrustado");
+  return Buffer.from(m[1], "base64").toString("utf8");
 }
 
-const URLS = {
-  "gid://shopify/MediaImage/91": "https://cdn.shopify.com/uno.jpg",
-  "gid://shopify/MediaImage/92": "https://cdn.shopify.com/dos.jpg"
-};
-
-// DOM mínimo: sólo lo que el renderer toca. Sin dependencias nuevas.
-function nodo() {
-  return {
-    dataset: {}, disabled: false, textContent: "", src: "",
-    classList: { toggle() {} },
-    addEventListener() {}
-  };
-}
-
-function montar({ cache = null } = {}) {
-  const estado = { reloads: 0, guardado: cache, html: "", listeners: [] };
-  const root = nodo();
-
+// ---------------------------------------------------------------- estabilidad
+// Se ejercita el arranque en frío: sin documento cacheado el runtime registra
+// el listener y sale antes de montar, así que no hace falta un DOM completo.
+function montarEnFrio() {
+  const estado = { reloads: 0, guardado: null, listeners: [] };
   const sandbox = {
-    window: {
-      addEventListener(tipo, fn) { if (tipo === "message") estado.listeners.push(fn); },
-      TIENDAIQ_DATA: undefined, TIENDAIQ_URLS: undefined,
-      TIENDAIQ_PRODUCT_TITLE: undefined, TIENDAIQ_VARIANTS: undefined
-    },
-    document: {
-      documentElement: { lang: "es" },
-      getElementById: (id) => (id === "piloto-pdp-01" ? root : null)
-    },
+    window: { addEventListener: (t, fn) => { if (t === "message") estado.listeners.push(fn); }, TIENDAIQ_DATA: undefined },
+    document: { documentElement: { lang: "es" }, getElementById: () => null },
     location: { search: "?app=1", reload() { estado.reloads += 1; }, assign() {} },
-    sessionStorage: {
-      getItem: () => estado.guardado,
-      setItem: (_k, v) => { estado.guardado = v; }
-    },
-    fetch: async () => ({ ok: true })
+    sessionStorage: { getItem: () => estado.guardado, setItem: (_k, v) => { estado.guardado = v; } },
+    fetch: async () => ({ ok: true }),
+    atob: (b) => Buffer.from(b, "base64").toString("binary"),
+    DOMParser: function () { this.parseFromString = () => ({ body: { childNodes: [] } }); },
+    TextDecoder: function () { this.decode = () => ""; }
   };
   sandbox.window.location = sandbox.location;
   sandbox.globalThis = sandbox;
-
-  Object.defineProperty(root, "innerHTML", {
-    get: () => estado.html,
-    set: (v) => { estado.html = v; }
-  });
-  root.querySelector = (sel) => (estado.html.includes(sel.replace(/[[\]]/g, "")) || true ? nodo() : null);
-  root.querySelectorAll = () => [];
-
   vm.runInNewContext(codigo, sandbox);
-
-  estado.postear = (payload) => estado.listeners.forEach((fn) => fn({ data: payload }));
+  estado.postear = (p) => estado.listeners.forEach((fn) => fn({ data: p }));
   return estado;
 }
 
-const payload = (doc) => ({ tiendaiq: true, data: { piloto_pdp_01: doc }, urls: URLS });
+const payload = (claim) => ({
+  tiendaiq: true,
+  urls: { "gid://shopify/MediaImage/1": "https://cdn.shopify.com/x.jpg" },
+  data: { piloto_pdp_01: { template: "piloto-pdp-01", contract_version: 1, content: { hero: { claim } } } }
+});
 
-test("ESTABILIDAD · el reenvío del mismo documento no recarga el iframe", () => {
+test("ESTABILIDAD · el reenvío del mismo documento no vuelve a recargar", () => {
   // El editor postea en cada onload del iframe (app/app.js -> marco.onload).
-  // Con el bug, cada uno de esos reenvíos disparaba location.reload() y el
-  // canvas quedaba reiniciándose para siempre.
-  const cache = JSON.stringify({ data: { piloto_pdp_01: documento() }, urls: URLS });
-  const app = montar({ cache });
+  // Con el bug, cada reenvío disparaba location.reload() y el canvas quedaba
+  // reiniciándose para siempre: sólo se alcanzaba a ver la primera imagen.
+  const app = montarEnFrio();
+  app.postear(payload("uno"));
+  assert.equal(app.reloads, 1, "el primer documento sí debe montar el preview");
 
-  assert.equal(app.reloads, 0, "no debe recargar al montar con el documento cacheado");
-
-  app.postear(payload(documento()));
-  app.postear(payload(documento()));
-  app.postear(payload(documento()));
-
-  assert.equal(app.reloads, 0, "un documento idéntico no puede provocar ninguna recarga");
+  app.postear(payload("uno"));
+  app.postear(payload("uno"));
+  app.postear(payload("uno"));
+  assert.equal(app.reloads, 1, "un documento idéntico no puede provocar más recargas");
 });
 
-test("ESTABILIDAD · una edición real sí recarga, exactamente una vez", () => {
-  const cache = JSON.stringify({ data: { piloto_pdp_01: documento() }, urls: URLS });
-  const app = montar({ cache });
-
-  const editado = documento();
-  editado.content.hero.claim = "Otro titular";
-  app.postear(payload(editado));
-
-  assert.equal(app.reloads, 1, "un cambio de contenido debe refrescar el renderer una sola vez");
-
-  app.postear(payload(editado));
-  assert.equal(app.reloads, 1, "y no debe volver a recargar con ese mismo contenido");
+test("ESTABILIDAD · una edición real recarga una sola vez", () => {
+  const app = montarEnFrio();
+  app.postear(payload("uno"));
+  app.postear(payload("dos"));
+  assert.equal(app.reloads, 2, "cada cambio de contenido refresca el renderer");
+  app.postear(payload("dos"));
+  assert.equal(app.reloads, 2, "y no vuelve a recargar con el mismo contenido");
 });
 
-test("CONTENIDO · el canvas pinta la página real, no un contenedor vacío", () => {
-  const cache = JSON.stringify({ data: { piloto_pdp_01: documento() }, urls: URLS });
-  const { html } = montar({ cache });
+// ------------------------------------------------------------------ artefacto
+test("ARTEFACTO · el runtime lleva la plantilla aprobada entera", () => {
+  const html = artefacto();
 
-  assert.ok(html.length > 500, "el canvas no puede quedar prácticamente vacío");
-  assert.match(html, /<main class="p01">/, "falta el contenedor de la plantilla");
+  assert.equal(
+    crypto.createHash("sha256").update(html).digest("hex"),
+    PILOTO_PDP_01_V1.sourceSha256,
+    "el artefacto incrustado no es el que declara el manifiesto"
+  );
 
-  // Título del producto, que viene de Shopify y no de la IA.
-  assert.match(html, /<h1>Pinza recogedora<\/h1>/);
+  // Las 8 secciones del diseño y sus hojas de estilo.
+  assert.equal((html.match(/<section/g) || []).length, 8, "faltan secciones de la plantilla");
+  assert.equal((html.match(/<style>/g) || []).length, 18, "faltan bloques de estilo de la plantilla");
+  assert.ok(html.includes("phv4"), "falta el hero del diseño");
+  assert.ok(html.includes("scp-postcart"), "faltan las secciones posteriores");
 
-  // Copy generado.
-  assert.ok(html.includes("Recogé sin agacharte"), "falta el claim del hero");
-  assert.ok(html.includes("Elegí tu pack"), "falta el encabezado de la oferta");
-  assert.ok(html.includes("Un movimiento y listo"), "falta la sección why");
-
-  // Galería con imágenes reales, no placeholders vacíos.
-  const imgs = html.match(/<img[^>]+src="https:\/\/cdn\.shopify\.com\/[^"]+"/g) || [];
-  assert.ok(imgs.length >= 2, `la galería debe traer imágenes reales, encontré ${imgs.length}`);
-  assert.ok(!/src=""/.test(html), "ninguna imagen puede quedar con src vacío");
-
-  // Cardinalidades del fixture, para que un render parcial no pase.
-  assert.equal((html.match(/class="p01__pack"/g) || []).length, 2, "deben renderizarse los 2 packs");
-  assert.equal((html.match(/<details>/g) || []).length, 3, "deben renderizarse las 3 preguntas");
-  assert.equal((html.match(/<li>/g) || []).length, 4, "2 bullets del hero + 2 points del why");
+  // Los ganchos que el binder necesita para inyectar datos.
+  for (const gancho of ["phv4-main-image", "phv4-thumb", "phv4-claim", "phv4-check", "phv4-pack-title", "phv4-atc", "scp-why-copy", "scp-journey-head", "scp-timeline"]) {
+    assert.ok(html.includes(gancho), `el artefacto perdió el gancho ${gancho}`);
+  }
 });
 
-test("CONTENIDO · sin evidencia verificable no se inventa prueba social", () => {
-  const { html } = montar({ cache: JSON.stringify({ data: { piloto_pdp_01: documento() }, urls: URLS }) });
-  assert.ok(!html.includes("p01__rating"), "no debe aparecer puntaje sin evidencia");
-  assert.ok(!html.includes("p01__proof"), "no debe aparecer testimonio sin evidencia");
+test("ARTEFACTO · no distribuye scripts ni assets de otra tienda", () => {
+  const html = artefacto();
+  assert.equal((html.match(/<script/gi) || []).length, 0, "el artefacto no puede traer scripts de origen");
+  assert.ok(!/https?:\/\/cdn\.shopify\.com/i.test(html), "el artefacto no puede hotlinkear la CDN de otra tienda");
+  assert.ok(!/url\((['"]?)https?:/i.test(html), "ningún fondo CSS puede apuntar afuera");
+  // La regla que reescribía la tipografía de toda la tienda del merchant.
+  assert.ok(!/html,body,body :is\(/.test(html), "el artefacto no puede reestilar el tema del merchant");
 });
 
-// Un asset que el preview pide con ?v= pero que no entra al cálculo del token
-// queda cacheado para siempre: se deploya el arreglo y el merchant sigue
-// viendo el archivo viejo. Es lo que ocultó el bucle de recarga durante un
-// intento entero de arreglo, así que lo fijamos para el próximo asset.
-test("CACHÉ · todo asset versionado del preview participa del cálculo de VERSION_ASSETS", () => {
-  const raiz = path.join(__dirname, "..");
-  const indice = fs.readFileSync(path.join(raiz, "plantilla-producto", "index.html"), "utf8");
-  const servidor = fs.readFileSync(path.join(raiz, "server.js"), "utf8");
+test("ARTEFACTO · el copy de origen no viaja: queda como slot vacío", () => {
+  const html = artefacto();
+  assert.ok((html.match(/Contenido del producto/g) || []).length > 50, "el saneador debe haber vaciado el copy de origen");
+  assert.ok(!/remolacha/i.test(html), "no puede viajar el producto de la página de referencia");
+});
 
+test("BINDER · apaga con estilo inline, no con el atributo hidden", () => {
+  // El artefacto no declara [hidden]{display:none} y su CSS trae display de
+  // autor en varias secciones: ocultar con el atributo no alcanzaría y la
+  // evidencia sin fuente seguiría visible.
+  assert.match(codigo, /style\.setProperty\("display", "none", "important"\)/);
+  assert.ok(!/\.hidden = true/.test(codigo), "no debe ocultarse con el atributo hidden");
+});
+
+// ---------------------------------------------------------------------- caché
+test("CACHÉ · todo asset versionado del preview participa de VERSION_ASSETS", () => {
+  const indice = fs.readFileSync(path.join(RAIZ, "plantilla-producto", "index.html"), "utf8");
+  const servidor = fs.readFileSync(path.join(RAIZ, "server.js"), "utf8");
   const assets = [...indice.matchAll(/\/widgets\/([\w.-]+)\?v=/g)].map((m) => m[1]);
   assert.ok(assets.length >= 4, `esperaba varios assets versionados, encontré ${assets.length}`);
 
@@ -182,13 +135,7 @@ test("CACHÉ · todo asset versionado del preview participa del cálculo de VERS
   assert.ok(reescritura, "no encontré la reescritura de ?v= en la ruta /preview");
 
   for (const asset of new Set(assets)) {
-    assert.ok(
-      calculo.includes(`"${asset}"`),
-      `${asset} se pide con ?v= pero no entra al cálculo de VERSION_ASSETS: cambiarlo no movería el token`
-    );
-    assert.ok(
-      reescritura[1].includes(asset.replace(/\./g, "\\.")),
-      `${asset} no se reescribe en /preview: quedaría clavado en la versión escrita a mano`
-    );
+    assert.ok(calculo.includes(`"${asset}"`), `${asset} se pide con ?v= pero no entra al cálculo de VERSION_ASSETS`);
+    assert.ok(reescritura[1].includes(asset.replace(/\./g, "\\.")), `${asset} no se reescribe en /preview`);
   }
 });
