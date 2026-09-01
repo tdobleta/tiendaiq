@@ -147,7 +147,10 @@ test("BINDER · conserva la composición completa con slots editoriales reales",
   assert.match(codigo, /const closing = c\.closing/);
   assert.match(codigo, /c\.newsletter\?\.heading/);
   assert.ok(!/\.scp-community"\)\.forEach\(hide\)/.test(codigo), "el cierre editorial no puede apagarse si el documento lo completa");
-  assert.match(codigo, /\.scp-stories-rating, \.scp-stars, \.scp-story-verified/);
+  assert.match(codigo, /Cada bloque de la plantilla siempre se conserva/);
+  assert.match(codigo, /Conocé el producto/);
+  assert.match(codigo, /Sobre este producto/);
+  assert.match(codigo, /ensureOfferTimer/);
   assert.match(codigo, /\.scp-story-next"\)\?\.addEventListener\("click"/);
   assert.match(codigo, /button\.addEventListener\("click", \(\) => \{/);
 });

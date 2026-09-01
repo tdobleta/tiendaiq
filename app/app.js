@@ -3335,7 +3335,11 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       const s = (estado.pagina.data.secciones || []).find((x) => x.id === id.slice(4));
       return catSeccion(s?.tipo)?.nombre || "Sección";
     }
-    if (esPlantillaPdp01()) return ({ hero: "Introducción", why: "Sección editorial", timeline: "Recorrido", faq: "Preguntas frecuentes" })[id] || "Plantilla fija";
+    if (esPlantillaPdp01()) return ({
+      hero: "Introducción", offer: "Opciones de compra", quick: "Datos rápidos", why: "Sección editorial",
+      stories: "Tarjetas editoriales", timeline: "Recorrido", faq: "Preguntas frecuentes",
+      closing: "Cierre", newsletter: "Newsletter", evidence: "Espacios del merchant"
+    })[id] || "Plantilla fija";
     if (esPlantillaPinzaFija()) {
       return ({ bullets: "Beneficios verificables", faq: "Preguntas frecuentes" })[id] || "Plantilla fija";
     }
@@ -3358,9 +3362,15 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     const content = estado.pagina.data?.piloto_pdp_01?.content || {};
     const prefix = "piloto_pdp_01.content";
     if (id === "hero") return `<div class="sp-sub">Introducción</div><div class="sp-content">${campo(`${prefix}.hero.claim`, "Idea principal", 2)}${(content.hero?.bullets || []).map((_, i) => campo(`${prefix}.hero.bullets.${i}`, `Beneficio ${i + 1}`, 2)).join("")}</div>`;
+    if (id === "offer") return `<div class="sp-sub">Opciones de compra</div><div class="sp-content">${campo(`${prefix}.offer.heading`, "Título de las opciones", 2)}<p class="editor__ayuda">Los packs, precios y disponibilidad se leen en vivo desde Shopify y el sistema de bundles de Piloto.</p></div>`;
+    if (id === "quick") return `<div class="sp-sub">Datos rápidos</div><div class="sp-content">${(content.quick?.items || []).map((_, i) => `<section class="sp-item-card"><div class="sp-item-card__head"><strong>Dato ${i + 1}</strong><span>slot</span></div>${campo(`${prefix}.quick.items.${i}.question`, "Título")}${campo(`${prefix}.quick.items.${i}.answer`, "Texto", 3)}</section>`).join("")}</div>`;
     if (id === "why") return `<div class="sp-sub">Sección editorial</div><div class="sp-content">${campo(`${prefix}.why.eyebrow`, "Antetítulo")}${campo(`${prefix}.why.heading`, "Título", 2)}${campo(`${prefix}.why.body`, "Texto", 3)}${(content.why?.points || []).map((_, i) => campo(`${prefix}.why.points.${i}`, `Punto ${i + 1}`)).join("")}</div>`;
+    if (id === "stories") return `<div class="sp-sub">Tarjetas editoriales</div><div class="sp-content">${campo(`${prefix}.stories.heading`, "Título", 2)}${campo(`${prefix}.stories.intro`, "Introducción", 2)}${(content.stories?.cards || []).map((_, i) => `<section class="sp-item-card"><div class="sp-item-card__head"><strong>Tarjeta ${i + 1}</strong><span>slot</span></div>${campo(`${prefix}.stories.cards.${i}.title`, "Título")}${campo(`${prefix}.stories.cards.${i}.body`, "Texto", 3)}${campo(`${prefix}.stories.cards.${i}.product_note`, "Etiqueta")}</section>`).join("")}</div>`;
     if (id === "timeline") return `<div class="sp-sub">Recorrido</div><div class="sp-content">${campo(`${prefix}.timeline.heading`, "Título", 2)}${campo(`${prefix}.timeline.intro`, "Introducción", 2)}${(content.timeline?.steps || []).map((_, i) => `<section class="sp-item-card"><div class="sp-item-card__head"><strong>Paso ${i + 1}</strong><span>slot</span></div>${campo(`${prefix}.timeline.steps.${i}.heading`, "Título")}${campo(`${prefix}.timeline.steps.${i}.body`, "Texto", 3)}</section>`).join("")}</div>`;
     if (id === "faq") return `<div class="sp-sub">Preguntas frecuentes</div><div class="sp-content">${campo(`${prefix}.faq.heading`, "Título")}${(content.faq?.items || []).map((_, i) => `<section class="sp-item-card"><div class="sp-item-card__head"><strong>Pregunta ${i + 1}</strong><span>slot</span></div>${campo(`${prefix}.faq.items.${i}.question`, "Pregunta")}${campo(`${prefix}.faq.items.${i}.answer`, "Respuesta", 3)}</section>`).join("")}</div>`;
+    if (id === "closing") return `<div class="sp-sub">Cierre</div><div class="sp-content">${campo(`${prefix}.closing.eyebrow`, "Antetítulo")}${campo(`${prefix}.closing.heading`, "Título", 2)}${campo(`${prefix}.closing.body`, "Texto", 3)}${campo(`${prefix}.closing.secondary_body`, "Texto secundario", 3)}</div>`;
+    if (id === "newsletter") return `<div class="sp-sub">Newsletter</div><div class="sp-content">${campo(`${prefix}.newsletter.heading`, "Título", 2)}${campo(`${prefix}.newsletter.body`, "Texto", 2)}</div>`;
+    if (id === "evidence") return `<div class="sp-sub">Espacios del merchant</div><div class="sp-content"><p class="editor__ayuda">La plantilla mantiene visibles sus tarjetas de rating, reseñas, fotos, comparación, garantía y contador. Cuando cargues una fuente real, cada espacio recibe esa información sin cambiar el diseño. Hasta entonces muestra contenido editorial del producto, nunca una reseña o una oferta inventada.</p></div>`;
     return `<div class="editor__ayuda">Este bloque se alimenta con datos reales de Shopify o requiere una fuente verificable.</div>`;
   }
 
@@ -3696,13 +3706,14 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       const source = locked("Producto", I.encabezado) + locked("Galería de producto", I.galeria) +
         locked("Precio y variantes", I.lista) + locked("Agregar al carrito", I.beneficios);
       const approved = esPlantillaPdp01()
-        ? row("hero", "Introducción", I.beneficios) + row("why", "Sección editorial", I.lista) + row("timeline", "Recorrido", I.lista) + row("faq", "Preguntas frecuentes", I.lista)
+        ? row("hero", "Introducción", I.beneficios) + row("offer", "Opciones de compra", I.lista) + row("quick", "Datos rápidos", I.lista) + row("why", "Sección editorial", I.lista) + row("stories", "Tarjetas editoriales", I.estrella) + row("timeline", "Recorrido", I.lista) + row("faq", "Preguntas frecuentes", I.lista) + row("closing", "Cierre", I.beneficios) + row("newsletter", "Newsletter", I.lista)
         : row("bullets", "Beneficios verificables", I.beneficios) + row("faq", "Preguntas frecuentes", I.lista);
-      const evidence = locked("Prueba social", I.estrella, "Requiere fuente") +
-        locked("Comparación", I.lista, "Requiere fuente") + locked("Garantías", I.beneficios, "Política Shopify");
+      const evidence = row("evidence", "Espacios del merchant", I.estrella) +
+        locked("Rating y reseñas", I.estrella, "Fuente real") + locked("Fotos de reseñas", I.galeria, "Merchant") +
+        locked("Comparación", I.lista, "Fuente real") + locked("Garantías", I.beneficios, "Política Shopify") + locked("Contador de oferta", I.lista, "Fecha real");
       return `<nav class="pe-tree" aria-label="Bloques de la plantilla fija">
         <div class="pe-tree__head"><span class="pe-tree__head-title">Plantilla fija</span><span class="pe-tree__head-sub">${esPlantillaPdp01() ? "Piloto 01" : "Pinza PagePilot"} · v1</span></div>
-        <div class="pe-tree__body">${grupo("Datos de Shopify", source, "solo lectura")}${grupo("Contenido autorizado", approved, esPlantillaPdp01() ? "4 grupos" : "2 grupos")}${grupo("Evidencia", evidence, "validada")}</div>
+        <div class="pe-tree__body">${grupo("Datos de Shopify", source, "solo lectura")}${grupo("Contenido autorizado", approved, esPlantillaPdp01() ? "9 grupos" : "2 grupos")}${grupo("Evidencia", evidence, "se conserva")}</div>
       </nav>`;
     }
     const info = row("encabezado", "Encabezado", I.encabezado) + row("galeria", "Galería de producto", I.galeria) +

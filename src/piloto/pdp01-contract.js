@@ -199,11 +199,57 @@ function validatePdp01Copy(copy, { requireComplete = true } = {}) {
   if (errors.length) throw new Pdp01ValidationError(errors);
   return clone(copy);
 }
-function validateEvidence(evidence, origin, errors) {
-  assertKeys(evidence, ["rating", "testimonial", "guarantee"], "evidence", errors);
+// La evidencia no es copy que pueda inventar la IA. Es un conjunto de slots
+// visuales que el merchant puede completar después con una fuente rastreable.
+// Mientras tanto el renderer conserva la tarjeta y la convierte en una pieza
+// editorial neutra; nunca la hace pasar por una reseña o una garantía real.
+function validEvidenceSource(source) {
+  return plainObject(source) &&
+    ["shopify_policy", "review_provider", "merchant_file", "declarado_por_merchant"].includes(source.kind) &&
+    typeof source.reference === "string" && source.reference.trim().length > 0 && source.reference.length <= 500;
+}
+function evidenceText(value, where, errors, max = 2000) {
+  if (typeof value !== "string" || !value.trim() || value.length > max) errors.push(`${where} debe ser texto de hasta ${max} caracteres`);
+  if (typeof value === "string" && MONEY_OR_PERCENT.test(value)) errors.push(`${where} contiene un importe o porcentaje congelado`);
+}
+function validateEvidence(evidence, origin, errors, knownMedia = new Set()) {
+  assertKeys(evidence, ["rating", "testimonial", "guarantee", "offer", "comparison"], "evidence", errors);
   for (const [name, item] of Object.entries(evidence || {})) {
-    if (!plainObject(item) || !plainObject(item.source) || !item.source.kind || !item.source.reference) errors.push(`evidence.${name} necesita una fuente verificable`);
-    if (origin === "ai" && item?.source?.kind === "declarado_por_merchant") errors.push(`evidence.${name} no puede ser declarada por la IA`);
+    const allowed = {
+      rating: ["source", "value", "count"],
+      testimonial: ["source", "text", "author", "media_id"],
+      guarantee: ["source", "title", "body"],
+      offer: ["source", "ends_at", "label"],
+      comparison: ["source", "left_label", "right_label"]
+    }[name] || [];
+    assertKeys(item, allowed, `evidence.${name}`, errors);
+    assertKeys(item?.source, ["kind", "reference"], `evidence.${name}.source`, errors);
+    if (!plainObject(item) || !validEvidenceSource(item.source)) {
+      errors.push(`evidence.${name} necesita una fuente verificable`);
+      continue;
+    }
+    if (origin === "ai" && item.source.kind === "declarado_por_merchant") errors.push(`evidence.${name} no puede ser declarada por la IA`);
+    if (name === "rating") {
+      if (!Number.isFinite(Number(item.value)) || Number(item.value) < 0 || Number(item.value) > 5) errors.push("evidence.rating.value debe estar entre 0 y 5");
+      if (!Number.isInteger(item.count) || item.count < 1 || item.count > 100000000) errors.push("evidence.rating.count debe ser un entero positivo");
+    }
+    if (name === "testimonial") {
+      if (Object.hasOwn(item, "text")) evidenceText(item.text, "evidence.testimonial.text", errors);
+      if (Object.hasOwn(item, "author")) evidenceText(item.author, "evidence.testimonial.author", errors, 160);
+      if (Object.hasOwn(item, "media_id") && !knownMedia.has(item.media_id)) errors.push("evidence.testimonial.media_id no pertenece al producto");
+    }
+    if (name === "guarantee") {
+      if (Object.hasOwn(item, "title")) evidenceText(item.title, "evidence.guarantee.title", errors, 300);
+      if (Object.hasOwn(item, "body")) evidenceText(item.body, "evidence.guarantee.body", errors);
+    }
+    if (name === "offer") {
+      if (typeof item.ends_at !== "string" || Number.isNaN(Date.parse(item.ends_at))) errors.push("evidence.offer.ends_at debe ser una fecha válida");
+      if (Object.hasOwn(item, "label")) evidenceText(item.label, "evidence.offer.label", errors, 160);
+    }
+    if (name === "comparison") {
+      if (Object.hasOwn(item, "left_label")) evidenceText(item.left_label, "evidence.comparison.left_label", errors, 120);
+      if (Object.hasOwn(item, "right_label")) evidenceText(item.right_label, "evidence.comparison.right_label", errors, 120);
+    }
   }
 }
 function sanitizeEvidence(document, origin) {
@@ -257,7 +303,7 @@ function validatePdp01(document, { origin = "ai" } = {}) {
   if (!Array.isArray(content?.media?.gallery_media_ids) || !content.media.gallery_media_ids.length || !content.media.gallery_media_ids.every((mediaId) => knownMedia.has(mediaId))) errors.push("la galería referencia medios ajenos al producto");
   if (Object.hasOwn(content?.media || {}, "story_media_ids") && (!Array.isArray(content.media.story_media_ids) || !content.media.story_media_ids.every((mediaId) => knownMedia.has(mediaId)))) errors.push("las tarjetas editoriales referencian medios ajenos al producto");
   for (const slot of ["comparison_media_id", "community_media_id"]) if (Object.hasOwn(content?.media || {}, slot) && !knownMedia.has(content.media[slot])) errors.push(`content.media.${slot} no pertenece al producto`);
-  sanitizeEvidence(value, origin); validateEvidence(value.evidence, origin, errors);
+  sanitizeEvidence(value, origin); validateEvidence(value.evidence, origin, errors, knownMedia);
   if (errors.length) throw new Pdp01ValidationError(errors);
   return value;
 }
