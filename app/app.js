@@ -38,6 +38,7 @@
     previewViewport: "desktop", // viewport del canvas del editor: desktop | mobile
     error: null
   };
+  let previewResizeObserver = null;
   // Chips de la columna sobreviven recargas del editor.
   try { estado.seccionesElegidas = JSON.parse(localStorage.getItem("tiq_sec_chips") || "[]"); } catch {}
 
@@ -2719,6 +2720,47 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       );
   }
 
+  // El iframe necesita un viewport de desktop real para que la plantilla fija
+  // use exactamente los mismos breakpoints que en la tienda. Se escala el
+  // resultado, no el viewport: así 1200px sigue siendo 1200px para el CSS de
+  // la página aunque el editor tenga árbol e inspector a los costados.
+  function montarEscalaPreview() {
+    previewResizeObserver?.disconnect();
+    const centro = document.querySelector(".pe-editor__centro");
+    const viewport = $("marco-viewport");
+    const shell = $("marco-shell");
+    const marco = $("marco");
+    if (!centro || !viewport || !shell || !marco) return;
+
+    const ajustar = () => {
+      if (estado.previewViewport === "mobile") {
+        viewport.classList.remove("is-scaled");
+        viewport.style.width = "";
+        viewport.style.height = "";
+        viewport.style.minHeight = "";
+        shell.style.width = "";
+        shell.style.height = "";
+        shell.style.transform = "";
+        return;
+      }
+      const anchoTienda = 1200;
+      const altoTienda = Math.max(760, marco.getBoundingClientRect().height || 760);
+      const disponible = Math.max(320, centro.clientWidth - 48);
+      const escala = Math.min(1, disponible / anchoTienda);
+      viewport.classList.toggle("is-scaled", escala < 1);
+      viewport.style.width = `${Math.round(anchoTienda * escala)}px`;
+      viewport.style.height = `${Math.round(altoTienda * escala)}px`;
+      viewport.style.minHeight = "0";
+      shell.style.width = `${anchoTienda}px`;
+      shell.style.height = `${altoTienda}px`;
+      shell.style.transform = `scale(${escala})`;
+    };
+    previewResizeObserver = new ResizeObserver(ajustar);
+    previewResizeObserver.observe(centro);
+    requestAnimationFrame(ajustar);
+    return ajustar;
+  }
+
   function marcarSucio() {
     sucio = true;
     const b = $("guardar");
@@ -3753,10 +3795,12 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       <div class="pe-editor">
         ${arbolPaginaHTML()}
         <div class="pe-editor__centro">
-          <div class="pe-canvas-shell ${estado.previewViewport === "mobile" ? "is-mobile" : ""}" id="marco-shell">
-          <div class="marco marco--full">
-            <iframe id="marco" src="/preview/index.html?app=1&t=${Date.now()}"></iframe>
-          </div>
+          <div class="pe-canvas-viewport" id="marco-viewport">
+            <div class="pe-canvas-shell ${estado.previewViewport === "mobile" ? "is-mobile" : ""}" id="marco-shell">
+            <div class="marco marco--full">
+              <iframe id="marco" src="/preview/index.html?app=1&t=${Date.now()}"></iframe>
+            </div>
+            </div>
           </div>
         </div>
         <aside class="pe-prop pe-inspector" id="pe-inspector" aria-label="Inspector de propiedades">
@@ -3768,9 +3812,11 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     // por mensaje. Dos merchants generando a la vez no se pisan. El botón
     // "✎ Editar" flotante y los lápices se montan una vez por carga.
     const marco = $("marco");
+    const ajustarEscalaPreview = montarEscalaPreview();
     marco.onload = () => {
       repintarPreview();
       montarEdicionEnIframe(marco);
+      ajustarEscalaPreview?.();
     };
 
     // Árbol de bloques (Etapa A): click en una fila abre el editor de esa sección;
@@ -3790,6 +3836,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         estado.previewViewport = button.dataset.viewport;
         const shell = $("marco-shell");
         shell?.classList.toggle("is-mobile", estado.previewViewport === "mobile");
+        montarEscalaPreview();
         vista.querySelectorAll("[data-viewport]").forEach((item) => item.setAttribute("aria-pressed", String(item === button)));
       };
     });
