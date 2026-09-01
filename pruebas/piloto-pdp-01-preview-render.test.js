@@ -123,6 +123,15 @@ test("BINDER · apaga con estilo inline, no con el atributo hidden", () => {
   assert.ok(!/\.hidden = true/.test(codigo), "no debe ocultarse con el atributo hidden");
 });
 
+test("BINDER · las secciones posteriores usan media Shopify y no alteran el hero", () => {
+  assert.match(codigo, /setEditorialImage\("\.scp-compare-photo img", c\.media\?\.comparison_media_id/);
+  assert.match(codigo, /setEditorialImage\("\.scp-faq-v3-media img", c\.media\?\.gallery_media_ids/);
+  assert.match(codigo, /const detalles = all\(root, "\.scp-faq-v3-list details"\)/);
+  assert.ok(!/const detalles = all\(root, "details"\)/.test(codigo), "el FAQ posterior no puede pisar los acordeones del hero");
+  assert.match(codigo, /\.scp-point > p/);
+  assert.match(codigo, /newsletter\.setAttribute\("action", "\/contact#contact_form"\)/);
+});
+
 // ---------------------------------------------------------------------- caché
 test("CACHÉ · todo asset versionado del preview participa de VERSION_ASSETS", () => {
   const indice = fs.readFileSync(path.join(RAIZ, "plantilla-producto", "index.html"), "utf8");

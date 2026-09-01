@@ -101,6 +101,22 @@
     setImg(one(button, "img"), image(id), productTitle);
   });
 
+  // Las secciones posteriores conservan exactamente la composición aprobada,
+  // pero sus fotos nunca viajan desde la plantilla de referencia. Se llenan
+  // únicamente con media IDs del producto que Shopify entregó para esta página.
+  const setEditorialImage = (selector, mediaId) => {
+    const node = one(root, selector);
+    if (!node) return;
+    const url = image(mediaId);
+    if (url) setImg(node, url, productTitle);
+    else hide(node.closest("figure, .scp-media") || node);
+  };
+  setEditorialImage(".scp-compare-photo img", c.media?.comparison_media_id || gallery[1] || gallery[0]);
+  setEditorialImage(".scp-faq-v3-media img", c.media?.gallery_media_ids?.[2] || gallery[2] || gallery[0]);
+  // La etiqueta "Others / Ours" de la referencia es un comparativo sin fuente:
+  // preservamos la foto y la composición, pero no una afirmación no verificable.
+  all(root, ".scp-compare-tags").forEach(hide);
+
   // --- encabezado del buy box ----------------------------------------------
   text(one(root, ".phv4-panel h1") || one(root, "h1"), productTitle);
   text(one(root, ".phv4-claim"), c.hero?.claim);
@@ -184,10 +200,11 @@
   // --- secciones de contenido ----------------------------------------------
   const why = one(root, ".scp-why-copy");
   if (why) {
+    text(one(why, ".scp-kicker"), c.why?.eyebrow);
     text(one(why, "h2"), c.why?.heading);
-    text(one(why, "p"), c.why?.body);
+    text(one(why, ":scope > p:not(.scp-kicker)"), c.why?.body);
   }
-  fill(all(root, ".scp-point span, .scp-point div"), c.why?.points || [], (node, value) => { node.textContent = value; });
+  fill(all(root, ".scp-point > p"), c.why?.points || [], (node, value) => { node.textContent = value; });
 
   const journey = one(root, ".scp-journey-head");
   if (journey) {
@@ -196,18 +213,38 @@
   }
   const steps = all(root, ".scp-timeline > *");
   fill(steps, c.timeline?.steps || [], (node, step) => {
+    text(one(node, ".scp-week"), step.label);
     text(one(node, "h3") || one(node, "strong"), step.heading);
     text(one(node, "p"), step.body);
   });
 
   const faqItems = c.faq?.items || [];
-  const detalles = all(root, "details");
+  const detalles = all(root, ".scp-faq-v3-list details");
   fill(detalles, faqItems, (node, item) => {
     text(one(node, "summary"), item.question);
     const cuerpo = one(node, "p") || one(node, "div:not(:first-child)");
     text(cuerpo, item.answer);
   });
   all(root, ".scp-faq h2, .scp-faq-v3 h2").forEach((h) => text(h, c.faq?.heading));
+
+  // El cierre de newsletter no depende de copy generado ni de una promesa
+  // comercial. Se envía al endpoint estándar de Shopify con el contrato que
+  // entiende el storefront, en vez de hacer POST a la URL del producto actual.
+  const newsletter = one(root, ".scp-email-form");
+  if (newsletter) {
+    newsletter.setAttribute("action", "/contact#contact_form");
+    newsletter.setAttribute("method", "post");
+    const addHidden = (name, value) => {
+      if (one(newsletter, `input[name="${name}"]`)) return;
+      const input = document.createElement("input");
+      input.type = "hidden"; input.name = name; input.value = value;
+      newsletter.prepend(input);
+    };
+    addHidden("form_type", "customer");
+    addHidden("utf8", "✓");
+    text(one(root, ".scp-email-wrap h2"), "Recibí novedades por email");
+    text(one(root, ".scp-email-wrap > p"), "Novedades y recursos de la tienda.");
+  }
 
   // --- evidencia: apagada salvo fuente verificable --------------------------
   const conFuente = (bloque) => Boolean(bloque?.source?.kind && bloque?.source?.reference);

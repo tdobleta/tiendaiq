@@ -31,6 +31,7 @@ function variantSubtitle(variant) {
 }
 function commerceFromSource(sourceFields) {
   const variant = sourceFields.variants[0];
+  const gallery = sourceFields.media_ids.slice(0, 4);
   return {
     packs: [1, 3, 5].map((quantity) => ({
       id: `cantidad-${quantity}`,
@@ -41,8 +42,14 @@ function commerceFromSource(sourceFields) {
       variant_id: variant.id
     })),
     media: {
-      hero_media_id: sourceFields.media_ids[0],
-      gallery_media_ids: sourceFields.media_ids.slice(0, 4)
+      // Los slots visuales siempre se resuelven contra IDs de media vivos del
+      // catálogo. Nunca contra posición de una URL externa ni contra una foto
+      // elegida por la IA. Si el merchant elimina una foto, el validador la
+      // detecta al regenerar y el renderer apaga solamente ese slot.
+      hero_media_id: gallery[0],
+      gallery_media_ids: gallery,
+      comparison_media_id: gallery[1] || gallery[0],
+      community_media_id: gallery[2] || gallery[1] || gallery[0]
     }
   };
 }
