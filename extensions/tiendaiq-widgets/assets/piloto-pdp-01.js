@@ -165,15 +165,25 @@
   const precio = one(root, ".phv4-price span") || one(root, ".phv4-price");
   const atc = one(root, ".phv4-atc");
   const atcPrice = one(root, "[data-phv4-price]");
+  const setAtcLabel = (label) => {
+    if (!atc) return;
+    // La fuente se sanea antes de distribuirse, por lo que el texto original
+    // del botón no puede sobrevivir. Conservamos el span dinámico del precio
+    // y reemplazamos sólo su nodo de texto directo.
+    const directText = Array.from(atc.childNodes).find((node) => node.nodeType === 3);
+    if (directText) directText.textContent = `${label} — `;
+    else atc.insertBefore(document.createTextNode(`${label} — `), atc.firstChild);
+    atc.setAttribute("aria-label", label);
+  };
 
   function refresh() {
     packNodes.forEach((node) => node.classList.toggle("is-selected", node.getAttribute("data-tiq-pack") === active?.id));
     if (precio && active) precio.textContent = money(active.variant, 1) || active.variant?.money || "";
-    if (atcPrice && active) atcPrice.textContent = money(active.variant, active.quantity);
     if (atc) {
       const ok = canBuy(active);
       atc.disabled = !ok;
-      if (!ok && !atcPrice) atc.textContent = "SIN STOCK";
+      setAtcLabel(ok ? "Añadir al carrito" : "Sin stock");
+      if (atcPrice) atcPrice.textContent = ok && active ? money(active.variant, active.quantity) : "";
     }
   }
 
@@ -245,6 +255,11 @@
     text(one(root, ".scp-email-wrap h2"), "Recibí novedades por email");
     text(one(root, ".scp-email-wrap > p"), "Novedades y recursos de la tienda.");
   }
+
+  // Estas superficies requieren configuración Shopify que Piloto 01 todavía
+  // no recibe (suscripciones, medios de pago y políticas por tienda). No se
+  // dejan placeholders de la fuente aprobada que puedan parecer datos reales.
+  all(root, ".phv4-subscribe, .phv4-payment-icons, .phv4-details").forEach(hide);
 
   // --- evidencia: apagada salvo fuente verificable --------------------------
   const conFuente = (bloque) => Boolean(bloque?.source?.kind && bloque?.source?.reference);
