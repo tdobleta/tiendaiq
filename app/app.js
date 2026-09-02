@@ -4473,11 +4473,14 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     // El editor siempre entra desde el principio para que la barra, el árbol y
     // el canvas no aparezcan desplazados después de recargar.
     const resetEditorScroll = () => { window.scrollTo(0, 0); document.documentElement.scrollTop = 0; if (document.body) document.body.scrollTop = 0; const canvas = document.querySelector('.marco'); if (canvas) canvas.scrollTo(0, 0); };
+    if (ES_EDITOR_MODAL_ROUTE && history.scrollRestoration) history.scrollRestoration = "manual";
     resetEditorScroll();
     if (ES_EDITOR_MODAL_ROUTE) {
       requestAnimationFrame(resetEditorScroll);
       setTimeout(resetEditorScroll, 0);
       setTimeout(resetEditorScroll, 180);
+      setTimeout(resetEditorScroll, 700);
+      setTimeout(resetEditorScroll, 1400);
     }
     if (esPiloto && !ES_EDITOR_MODAL_ROUTE) {
       // Set src after insertion so App Bridge uses the complex-route modal
