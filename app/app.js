@@ -3926,8 +3926,8 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       `<div class="pe-tree__row${fixed ? " pe-tree__row--fixed" : ""}" tabindex="0" data-tree="${esc(id)}"><span class="pe-tree__lead${fixed ? "" : " pe-tree__drag"}">${fixed ? "" : I.drag}</span><span class="pe-tree__ico">${ico}</span><span class="pe-tree__label">${esc(label)}</span></div>`;
     const locked = (label, ico, hint = "Shopify") =>
       `<div class="pe-tree__row pe-tree__row--locked" aria-disabled="true"><span class="pe-tree__lead"></span><span class="pe-tree__ico">${ico}</span><span class="pe-tree__label">${esc(label)}</span><span class="pe-tree__lock-hint">${esc(hint)}</span></div>`;
-    const grupo = (nombre, filas, meta) =>
-      `<section class="pe-tree__group"><div class="pe-tree__row pe-tree__row--group" tabindex="0"><span class="pe-tree__lead pe-tree__chevron">${I.chev}</span><span class="pe-tree__ico pe-tree__ico--group">${I.grupo}</span><span class="pe-tree__label">${esc(nombre)}</span>${meta ? `<span class="pe-tree__group-meta">${esc(meta)}</span>` : ""}</div><div class="pe-tree__children">${filas}</div></section>`;
+    const grupo = (nombre, filas, meta, collapsed = false) =>
+      `<section class="pe-tree__group${collapsed ? " is-collapsed" : ""}"><div class="pe-tree__row pe-tree__row--group" tabindex="0" role="button" aria-expanded="${collapsed ? "false" : "true"}"><span class="pe-tree__lead pe-tree__chevron">${I.chev}</span><span class="pe-tree__ico pe-tree__ico--group">${I.grupo}</span><span class="pe-tree__label">${esc(nombre)}</span>${meta ? `<span class="pe-tree__group-meta">${esc(meta)}</span>` : ""}</div><div class="pe-tree__children">${filas}</div></section>`;
     const fixedTemplate = esPlantillaPinzaFija() || esPlantillaPdp01();
     if (fixedTemplate) {
       if (esPlantillaPdp01()) {
@@ -3946,7 +3946,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
           `<div class="pe-tree__nest">${Array.from({ length: 5 }, (_item, index) => row(`evidence:${index}`, `Reseña ${index + 1}`, I.estrella, { fixed: true })).join("")}</div>`;
         return `<nav class="pe-tree pe-tree--workbench p01-structure" aria-label="Estructura de la página de producto">
           <div class="pe-tree__head p01-structure__head"><span class="pe-tree__head-title">Página de producto</span></div>
-          <div class="pe-tree__body">${grupo("Producto", producto, "")}${grupo("Contenido", contenido, "")}${grupo("Prueba social", reseñas, "")}</div>
+          <div class="pe-tree__body">${grupo("Producto", producto, "", true)}${grupo("Contenido", contenido, "", true)}${grupo("Prueba social", reseñas, "", true)}</div>
         </nav>`;
       }
       const source = locked("Producto", I.encabezado) + locked("Galería de producto", I.galeria) +
@@ -4008,6 +4008,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
 
   function pantallaPreview() {
     const pg = estado.pagina;
+    sincronizarRutaEditor(true);
     // El shell se carga de forma explícita. Si el asset falla, mostramos el
     // problema en vez de continuar con un editor a medio montar.
     cargarEstiloEditor().catch(() => toast("No se pudo cargar el diseño del editor.", { error: true }));
@@ -4152,7 +4153,12 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       };
     });
     vista.querySelectorAll(".pe-tree__row--group .pe-tree__chevron").forEach((ch) => {
-      ch.onclick = (e) => { e.stopPropagation(); ch.closest(".pe-tree__group").classList.toggle("is-collapsed"); };
+      ch.onclick = (e) => {
+        e.stopPropagation();
+        const group = ch.closest(".pe-tree__group");
+        const collapsed = group.classList.toggle("is-collapsed");
+        group.querySelector(".pe-tree__row--group")?.setAttribute("aria-expanded", String(!collapsed));
+      };
     });
     vista.querySelectorAll("[data-viewport]").forEach((button) => {
       button.onclick = () => {
@@ -4225,6 +4231,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
 
     $("volver").onclick = () => {
       if (sucio && !confirm("Hay cambios sin guardar. ¿Salir igual?")) return;
+      sincronizarRutaEditor(false);
       if (estado.volverA === "paginas") ir("paginas");
       else cargarLista();
     };
@@ -6907,6 +6914,24 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     if (_tituloBar) _tituloBar.setAttribute("title", TITULO_PANTALLA[pantalla] || "TiendaIQ");
   }
 
+  // El editor vive en un modal nativo, pero su pantalla de entrada sigue
+  // siendo el iframe de la app. Marcamos la página abierta en la URL para que
+  // una recarga del Admin pueda reconstruir el mismo editor en vez de volver
+  // al selector de productos.
+  function sincronizarRutaEditor(abierto) {
+    const url = new URL(window.location.href);
+    if (abierto && estado.pagina?.id) {
+      url.searchParams.set("editor", "1");
+      url.searchParams.set("page", String(estado.pagina.id));
+      url.searchParams.set("from", estado.volverA === "paginas" ? "paginas" : "lista");
+    } else {
+      url.searchParams.delete("editor");
+      url.searchParams.delete("page");
+      url.searchParams.delete("from");
+    }
+    history.replaceState({ ...(history.state || {}), pantalla: abierto ? "preview" : estado.pantalla }, "", url.pathname + url.search + url.hash);
+  }
+
   // La URL del iframe refleja la pantalla. Sin esto, el menú del admin no
   // puede navegar: si la app queda siempre en "/", tocar "TiendaIQ" desde
   // el flujo es "navegar a donde ya estás" y Shopify no hace nada.
@@ -6954,6 +6979,27 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     vista.innerHTML = `<div class="generando"><div class="giro"></div><h2>Leyendo tu tienda…</h2></div>`;
     try {
       estado.productos = await api("/productos");
+      const params = new URLSearchParams(location.search);
+      const editorPageId = params.get("editor") === "1" ? params.get("page") : "";
+      if (editorPageId) {
+        try {
+          estado.pagina = await api(`/paginas/${encodeURIComponent(editorPageId)}`);
+          const resumen = estado.paginas.find((p) => String(p.id) === String(editorPageId));
+          estado.producto = {
+            id: estado.pagina.shopify_product_id,
+            titulo: resumen?.titulo || estado.pagina.data?.fuente?.titulo_crudo || estado.pagina.data?.piloto_pdp_01?.source_fields?.title || "",
+            imagen: resumen?.imagen || null,
+            estado: estado.pagina.estado
+          };
+          estado.volverA = params.get("from") === "paginas" ? "paginas" : "lista";
+          ir("preview");
+          return;
+        } catch {
+          // El identificador pudo haber sido eliminado: limpiamos la marca y
+          // dejamos disponible el selector normal.
+          sincronizarRutaEditor(false);
+        }
+      }
       ir("lista");
     } catch (e) {
       vista.innerHTML = `<div class="error">${ico("x","ico--banner")} No se pudo leer la tienda: ${esc(e.message)}</div>`;
