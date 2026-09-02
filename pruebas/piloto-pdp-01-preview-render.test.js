@@ -29,14 +29,15 @@ function artefacto() {
 }
 
 // ---------------------------------------------------------------- estabilidad
-// Se ejercita el arranque en frío: sin documento cacheado el runtime registra
-// el listener y sale antes de montar, así que no hace falta un DOM completo.
+// Se ejercita el arranque en frío. El renderer necesita un DOM completo para
+// pintar, pero el puente tiene que aceptar el documento y nunca recargar la
+// ventana: el montaje real se cubre desde el navegador.
 function montarEnFrio() {
   const estado = { reloads: 0, guardado: null, listeners: [] };
   const sandbox = {
     window: { addEventListener: (t, fn) => { if (t === "message") estado.listeners.push(fn); }, TIENDAIQ_DATA: undefined },
     document: { documentElement: { lang: "es" }, getElementById: () => null },
-    location: { search: "?app=1", reload() { estado.reloads += 1; }, assign() {} },
+    location: { search: "?app=1", origin: "https://tiendaiq.com", reload() { estado.reloads += 1; }, assign() {} },
     sessionStorage: { getItem: () => estado.guardado, setItem: (_k, v) => { estado.guardado = v; } },
     fetch: async () => ({ ok: true }),
     atob: (b) => Buffer.from(b, "base64").toString("binary"),
@@ -46,7 +47,7 @@ function montarEnFrio() {
   sandbox.window.location = sandbox.location;
   sandbox.globalThis = sandbox;
   vm.runInNewContext(codigo, sandbox);
-  estado.postear = (p) => estado.listeners.forEach((fn) => fn({ data: p }));
+  estado.postear = (p, origin = "https://tiendaiq.com") => estado.listeners.forEach((fn) => fn({ data: p, origin }));
   return estado;
 }
 
@@ -56,27 +57,37 @@ const payload = (claim) => ({
   data: { piloto_pdp_01: { template: "piloto-pdp-01", contract_version: 1, content: { hero: { claim } } } }
 });
 
-test("ESTABILIDAD · el reenvío del mismo documento no vuelve a recargar", () => {
-  // El editor postea en cada onload del iframe (app/app.js -> marco.onload).
-  // Con el bug, cada reenvío disparaba location.reload() y el canvas quedaba
-  // reiniciándose para siempre: sólo se alcanzaba a ver la primera imagen.
+test("ESTABILIDAD · el reenvío del mismo documento no recarga el iframe", () => {
+  // El editor postea al cargar y después de una edición. El runtime actualiza
+  // su DOM internamente: `location.reload` jamás forma parte del camino.
   const app = montarEnFrio();
   app.postear(payload("uno"));
-  assert.equal(app.reloads, 1, "el primer documento sí debe montar el preview");
+  assert.equal(app.reloads, 0, "el primer documento no puede recargar el preview");
+  const primerGuardado = app.guardado;
+  assert.ok(primerGuardado?.includes("uno"), "el documento queda disponible para el primer montaje");
 
   app.postear(payload("uno"));
   app.postear(payload("uno"));
   app.postear(payload("uno"));
-  assert.equal(app.reloads, 1, "un documento idéntico no puede provocar más recargas");
+  assert.equal(app.reloads, 0, "un documento idéntico no puede provocar recargas");
+  assert.equal(app.guardado, primerGuardado, "un documento idéntico tampoco vuelve a montarse");
 });
 
-test("ESTABILIDAD · una edición real recarga una sola vez", () => {
+test("ESTABILIDAD · una edición real conserva la ventana y reemplaza el documento", () => {
   const app = montarEnFrio();
   app.postear(payload("uno"));
   app.postear(payload("dos"));
-  assert.equal(app.reloads, 2, "cada cambio de contenido refresca el renderer");
+  assert.equal(app.reloads, 0, "cada cambio de contenido refresca sin recargar");
+  assert.ok(app.guardado?.includes("dos"), "la edición nueva reemplaza el documento almacenado");
   app.postear(payload("dos"));
-  assert.equal(app.reloads, 2, "y no vuelve a recargar con el mismo contenido");
+  assert.equal(app.reloads, 0, "y no vuelve a recargar con el mismo contenido");
+});
+
+test("PUENTE · descarta mensajes de otro origen", () => {
+  const app = montarEnFrio();
+  app.postear(payload("ajeno"), "https://un-origen-ajeno.example");
+  assert.equal(app.guardado, null, "un origen externo no puede modificar el preview");
+  assert.equal(app.reloads, 0);
 });
 
 // ------------------------------------------------------------------ artefacto

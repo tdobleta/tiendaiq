@@ -31,6 +31,26 @@ test("Piloto 01 une árbol, canvas e inspector mediante un id de bloque real", (
   assert.match(app, /if \(esPiloto\) return seleccionarBloquePiloto\(el\.dataset\.tree\)/);
 });
 
+test("Piloto 01 no consulta el contrato histórico al abrir su inspector", () => {
+  const inicio = app.indexOf("function abrirPanelEditor(editorId)");
+  const fin = app.indexOf("function cerrarPanelSeccion", inicio);
+  assert.ok(inicio >= 0 && fin > inicio, "no se encontró el controlador del inspector");
+  const controlador = app.slice(inicio, fin);
+  const ramaPiloto = controlador.indexOf("const esPilotoFijo = esPlantillaPdp01()");
+  const legacy = controlador.indexOf("seccionesPagina()[editorId]");
+  assert.ok(ramaPiloto >= 0 && legacy > ramaPiloto, "Piloto debe resolver su contrato antes de leer facetas legacy");
+  assert.match(controlador, /BLOQUES_PILOTO_01\.has\(editorId\)/, "el inspector sólo acepta bloques declarados por la plantilla");
+});
+
+test("el puente del preview sólo conversa con el origen propio", () => {
+  assert.ok(!/postMessage\([^\n]*,\s*"\*"\)/.test(app), "el editor no debe publicar mensajes a cualquier origen");
+  assert.match(app, /event\.origin !== window\.location\.origin/);
+  assert.match(css, /--piloto-space-1:4px/);
+  assert.match(css, /--piloto-focus:#005bd3/);
+  const sistemaFinal = css.slice(css.indexOf("PILOTO · Workspace system"));
+  assert.ok(!sistemaFinal.includes("linear-gradient"), "el sistema final no conserva el gradiente decorativo anterior");
+});
+
 test("Piloto 01 tiene una superficie de trabajo propia, con preview y controles reales", () => {
   assert.match(app, /pe-appbar__wordmark/);
   assert.match(app, /editor-deshacer/);

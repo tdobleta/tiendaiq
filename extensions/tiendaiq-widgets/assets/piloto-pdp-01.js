@@ -11,12 +11,14 @@
   // --- preview del editor ---------------------------------------------------
   const previewMode = /[?&]app=1/.test(location.search);
   const previewKey = "piloto-pdp-01-preview";
-  // El editor reenvía el documento en cada onload del iframe
-  // (app/app.js -> marco.onload -> repintarPreview). Sin comparar el payload,
-  // el listener se dispara a sí mismo y el canvas queda recargándose para
-  // siempre: el merchant sólo alcanzaba a ver la primera imagen.
+  // El editor reenvía el documento al abrir el iframe y después de cada edición.
+  // La vista previa debe actualizarse en el lugar: una recarga borra el scroll,
+  // interrumpe la selección y hace que el canvas parezca inestable.
   const sign = (payload) => JSON.stringify([payload?.data?.piloto_pdp_01 ?? null, payload?.urls ?? {}]);
   let rendered = null;
+  let bridgeAbort = null;
+  let timerFrame = null;
+  const root = document.getElementById("piloto-pdp-01");
 
   if (previewMode && !window.TIENDAIQ_DATA) {
     try {
@@ -31,25 +33,20 @@
       }
     } catch {}
   }
-  if (previewMode) {
-    window.addEventListener("message", (event) => {
-      if (!event.data?.tiendaiq || !event.data?.data?.piloto_pdp_01) return;
-      const incoming = sign(event.data);
-      if (incoming === rendered) return;
-      rendered = incoming;
-      sessionStorage.setItem(previewKey, JSON.stringify({ data: event.data.data, urls: event.data.urls || {} }));
-      location.reload();
-    });
-  }
-
-  const data = window.TIENDAIQ_DATA;
+  function renderDocument(payload) {
+  const data = payload?.data || window.TIENDAIQ_DATA;
   const doc = data?.piloto_pdp_01;
-  const root = document.getElementById("piloto-pdp-01");
   if (!root || !doc?.content) return;
+  // Todos los manejadores pertenecen a este montaje. Al reemplazar el DOM se
+  // cancela el anterior para que una edición no acumule listeners ni timers.
+  bridgeAbort?.abort();
+  bridgeAbort = new AbortController();
+  const bridgeSignal = bridgeAbort.signal;
+  if (timerFrame) cancelAnimationFrame(timerFrame);
 
   const c = doc.content;
   const ev = doc.evidence || {};
-  const urls = window.TIENDAIQ_URLS || {};
+  const urls = payload?.urls || window.TIENDAIQ_URLS || {};
   const variants = Array.isArray(window.TIENDAIQ_VARIANTS) ? window.TIENDAIQ_VARIANTS : [];
   const image = (id) => urls[id] || "";
 
@@ -94,7 +91,7 @@
 
   // --- galería --------------------------------------------------------------
   const gallery = [...new Set([c.media?.hero_media_id, ...(c.media?.gallery_media_ids || [])].filter((id) => image(id)))];
-  const productTitle = window.TIENDAIQ_PRODUCT_TITLE || "";
+  const productTitle = window.TIENDAIQ_PRODUCT_TITLE || doc.source_fields?.title || "";
   const mainImage = one(root, ".phv4-main-image");
   setImg(mainImage, image(gallery[0]), productTitle);
   const thumbs = all(root, ".phv4-thumb");
@@ -439,7 +436,7 @@
         if (value) value.textContent = `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
         if (caption) { caption.textContent = ev.offer.label || "FINALIZA EN"; caption.setAttribute("data-tiq-text", ev.offer.label || "FINALIZA EN"); }
         if (progress) progress.style.strokeDashoffset = String(276.46 * (1 - Math.min(1, remaining / 86400000)));
-        if (remaining) requestAnimationFrame(paint);
+        if (remaining) timerFrame = requestAnimationFrame(paint);
       };
       paint();
     } else {
@@ -482,13 +479,14 @@
     root.addEventListener("click", (event) => {
       const block = event.target.closest("[data-tiq-editor-block]");
       if (!block) return;
-      window.parent?.postMessage({ tiendaiqEditor: "select-block", blockId: block.dataset.tiqEditorBlock }, "*");
-    });
+      window.parent?.postMessage({ tiendaiqEditor: "select-block", blockId: block.dataset.tiqEditorBlock }, window.location.origin);
+    }, { signal: bridgeSignal });
     window.addEventListener("message", (event) => {
+      if (event.origin !== window.location.origin) return;
       if (event.data?.tiendaiqEditor !== "highlight-block") return;
       const id = event.data.blockId;
       all(root, "[data-tiq-editor-block]").forEach((node) => node.classList.toggle("tiq-editor-active", node.dataset.tiqEditorBlock === id));
-    });
+    }, { signal: bridgeSignal });
   }
 
   // --- red de seguridad -----------------------------------------------------
@@ -502,4 +500,23 @@
   all(root, "img[data-tiq-remote-asset], img:not([src]), img[src='']").forEach((img) => hide(img.closest("picture, figure, button, div") || img));
 
   refresh();
+  }
+
+  const initialPayload = { data: window.TIENDAIQ_DATA, urls: window.TIENDAIQ_URLS || {} };
+  if (initialPayload.data?.piloto_pdp_01) {
+    rendered = sign(initialPayload);
+    renderDocument(initialPayload);
+  }
+
+  if (previewMode) {
+    window.addEventListener("message", (event) => {
+      if (event.origin !== window.location.origin) return;
+      if (!event.data?.tiendaiq || !event.data?.data?.piloto_pdp_01) return;
+      const incoming = sign(event.data);
+      if (incoming === rendered) return;
+      rendered = incoming;
+      sessionStorage.setItem(previewKey, JSON.stringify({ data: event.data.data, urls: event.data.urls || {} }));
+      renderDocument(event.data);
+    });
+  }
 })();
