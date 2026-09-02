@@ -3152,6 +3152,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   ];
   const p01Catalog = (type) => P01_EDITOR_CATALOG.find((item) => item.type === type);
   let p01GalleryModal = null;
+  let p01GalleryEditorWasHidden = false;
   const p01DefaultEditor = () => ({
     version: 1,
     selected: null,
@@ -3335,7 +3336,14 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       document.body.appendChild(galleryModal);
       p01GalleryModal = galleryModal;
       customElements.whenDefined?.("ui-modal").then(async () => {
-        try { await window.shopify?.modal?.show?.(galleryModal.id); } catch {}
+        try {
+          // App Bridge keeps a single visible modal surface. Temporarily
+          // yielding the editor modal lets the gallery occupy that same
+          // native surface instead of creating a zero-sized nested frame.
+          await window.shopify?.modal?.hide?.("tiq-piloto-editor-modal");
+          p01GalleryEditorWasHidden = true;
+          await window.shopify?.modal?.show?.(galleryModal.id);
+        } catch {}
       });
       const grid = () => overlay.querySelector("#p01-gallery-grid");
       const close = () => cerrarGaleriaSecciones();
@@ -3410,6 +3418,8 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
 
   function galeriaEsc(e) { if (e.key === "Escape") cerrarGaleriaSecciones(); }
   function cerrarGaleriaSecciones() {
+    const restoreEditor = p01GalleryEditorWasHidden;
+    p01GalleryEditorWasHidden = false;
     if (p01GalleryModal) {
       try { window.shopify?.modal?.hide?.(p01GalleryModal.id); } catch {}
       p01GalleryModal.remove();
@@ -3417,6 +3427,11 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     }
     document.getElementById("galsec")?.remove();
     document.removeEventListener("keydown", galeriaEsc);
+    if (restoreEditor) {
+      customElements.whenDefined?.("ui-modal").then(async () => {
+        try { await window.shopify?.modal?.show?.("tiq-piloto-editor-modal"); } catch {}
+      });
+    }
   }
 
   // ============================================================
