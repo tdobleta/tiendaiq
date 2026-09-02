@@ -18,8 +18,11 @@ test("el preview abre como una superficie de trabajo y no conserva el stepper", 
 
 test("el workspace reserva paneles consistentes y el canvas no crea scroll horizontal", () => {
   assert.match(app, /const anchoTienda = isMobile \? 390 : 1200/);
-  assert.match(app, /centro\.clientWidth - 48/);
+  assert.match(app, /centro\.clientWidth - 40/);
+  assert.match(app, /disponibleAltura = Math\.max\(420, centro\.clientHeight - 36\)/);
+  assert.match(app, /tiq-piloto-editor-modal/);
   assert.match(css, /grid-template-columns: 288px minmax\(0, 1fr\) 360px/);
+  assert.match(css, /#vista\s*\{[\s\S]*?max-width: none;[\s\S]*?padding: 0/);
   assert.match(css, /\.pe-editor__centro\s*\{[\s\S]*?min-width: 0;[\s\S]*?overflow: hidden/);
   assert.match(css, /\.pe-canvas-shell\s*\{[^}]*transform-origin: top center/);
   assert.match(css, /\.pe-canvas-shell \.marco\s*\{[\s\S]*?height: calc\(100dvh - 112px\)/);

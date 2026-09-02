@@ -21,19 +21,32 @@ body.tiq-piloto-editor-v2 {
 body.tiq-piloto-editor-v2 #vista {
   display: flex;
   flex-direction: column;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
   height: 100%;
   min-height: 0;
   overflow: hidden;
 }
 body.tiq-piloto-editor-v2 #vista > * { animation: none; }
 body.tiq-piloto-editor-v2 ui-nav-menu { display: none !important; }
+body.tiq-piloto-editor-v2 .tiq-piloto-editor-modal-content {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
 
 /* Header: flat Shopify-admin chrome, compact and predictable. */
 body.tiq-piloto-editor-v2 .preview-barra.pe-appbar {
   position: relative;
   z-index: 10;
   display: grid;
-  grid-template-columns: minmax(320px, 1fr) auto minmax(360px, 1fr);
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
   gap: 18px;
   flex: 0 0 64px;
@@ -46,12 +59,13 @@ body.tiq-piloto-editor-v2 .preview-barra.pe-appbar {
   background: #eaf4ff;
   box-shadow: none;
 }
-body.tiq-piloto-editor-v2 .pe-appbar__brand {
+body.tiq-piloto-editor-v2 .pe-appbar__left {
   display: flex;
   position: relative;
   min-width: 0;
   align-items: center;
   gap: 9px;
+  overflow: hidden;
 }
 body.tiq-piloto-editor-v2 .pe-appbar .volver-flecha {
   display: grid;
@@ -111,6 +125,19 @@ body.tiq-piloto-editor-v2 .pe-appbar__template {
   font-size: 11px;
   font-weight: 600;
   white-space: nowrap;
+}
+body.tiq-piloto-editor-v2 .pe-appbar__center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+}
+body.tiq-piloto-editor-v2 .pe-appbar__right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 0;
+  overflow: hidden;
 }
 body.tiq-piloto-editor-v2 .pe-mode-toggle,
 body.tiq-piloto-editor-v2 .pe-branding-trigger {
@@ -200,6 +227,10 @@ body.tiq-piloto-editor-v2 .pe-appbar .preview-barra__acciones {
   justify-self: end;
   gap: 7px;
   min-width: 0;
+}
+body.tiq-piloto-editor-v2 .pe-appbar .pe-appbar__right > s-badge {
+  flex: 0 0 auto;
+  margin-right: 2px;
 }
 body.tiq-piloto-editor-v2 .pe-appbar s-badge { font-size: 11px; font-weight: 600; }
 body.tiq-piloto-editor-v2 .pe-appbar s-button::part(button) {
@@ -349,7 +380,7 @@ body.tiq-piloto-editor-v2 .pe-editor__centro {
   overflow: hidden;
   align-items: flex-start;
   justify-content: center;
-  padding: 24px 28px 48px;
+  padding: 16px 20px 20px;
   background: var(--p01-canvas);
 }
 body.tiq-piloto-editor-v2 .pe-canvas-viewport {

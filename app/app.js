@@ -2839,9 +2839,17 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     const ajustar = () => {
       const isMobile = estado.previewViewport === "mobile";
       const anchoTienda = isMobile ? 390 : 1200;
-      const altoTienda = isMobile ? 820 : Math.max(760, marco.clientHeight || 760);
-      const disponible = Math.max(300, centro.clientWidth - 48);
+      // PagePilot keeps a real storefront viewport and scales that viewport
+      // only when the workbench is narrower than the shop.  The old code used
+      // the iframe's previous height here, which left a short scaled frame and
+      // a large, empty stage below it.  Derive the source height from the
+      // available stage instead so the canvas fills the visible work area.
+      const disponible = Math.max(300, centro.clientWidth - 40);
       const escala = Math.min(1, disponible / anchoTienda);
+      const disponibleAltura = Math.max(420, centro.clientHeight - 36);
+      const altoTienda = isMobile
+        ? 820
+        : Math.max(760, Math.ceil(disponibleAltura / escala));
       viewport.classList.toggle("is-scaled", escala < 1);
       viewport.style.width = `${Math.round(anchoTienda * escala)}px`;
       viewport.style.height = `${Math.round(altoTienda * escala)}px`;
@@ -4035,11 +4043,11 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     const productTitle = pg.data.piloto_pdp_01?.source_fields?.title || pg.data.facetas?.hero?.titulo || "Producto";
     if (esPiloto && _tituloBar) _tituloBar.setAttribute("title", `Editar página de producto ${productTitle}`);
 
-    vista.innerHTML = `
+    const editorMarkup = `
       <div class="preview-barra ${esPiloto ? "pe-appbar" : ""}" id="barra-accion">
-        <div class="${esPiloto ? "pe-appbar__brand" : ""}">
+        <div class="${esPiloto ? "pe-appbar__left" : ""}">
           <button class="volver-flecha" id="volver" title="${volverTxt}" aria-label="${volverTxt}"></button>
-          ${esPiloto ? `<div class="pe-appbar__logo" aria-hidden="true"><img src="/marca/iq.svg" alt="" width="24" height="24"></div><div class="pe-appbar__wordmark"><strong>Piloto</strong><small>Editor de producto</small></div><span class="pe-appbar__product" title="${esc(productTitle)}">${esc(productTitle)}</span><span class="pe-appbar__template">Piloto 01</span>
+          ${esPiloto ? `<div class="pe-appbar__logo" aria-hidden="true"><img src="/marca/iq.svg" alt="" width="24" height="24"></div><div class="pe-appbar__wordmark"><strong>Piloto</strong><small>Editor de producto</small></div><span class="pe-appbar__template">Piloto 01</span>
             <button type="button" class="pe-mode-toggle" id="editor-modo-avanzado" aria-pressed="${estado.editorAdvanced ? "true" : "false"}"><span class="pe-switch" aria-hidden="true"></span><span>Modo avanzado</span></button>
             <button type="button" class="pe-branding-trigger" id="editor-branding" aria-expanded="${estado.editorBrandingOpen ? "true" : "false"}"><span class="pe-branding-dots" aria-hidden="true"><i></i><i></i><i></i></span><span>Branding</span></button>
             <div class="pe-branding-popover" id="editor-branding-panel" ${estado.editorBrandingOpen ? "" : "hidden"} role="dialog" aria-label="Branding de la plantilla"><strong>Branding</strong><span class="pe-branding-popover__hint">La plantilla usa los tokens de tu marca.</span><div class="pe-branding-swatches"><button type="button" class="is-active" aria-label="Paleta actual"><i></i><i></i><i></i></button><button type="button" aria-label="Paleta neutra"><i></i><i></i><i></i></button></div></div>` : ""}
@@ -4048,20 +4056,16 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
           <div class="preview-barra__titulo">${esc(pg.data.piloto_pdp_01?.source_fields?.title || pg.data.facetas?.hero?.titulo || "Producto")}</div>
           <div class="preview-barra__sub">${esc(pg.data.piloto_pdp_01?.content?.hero?.claim || pg.data.facetas?.hero?.subtitulo || "")}</div>
         </div>
-        <div class="preview-barra__estado" id="barra-estado">
-          <s-badge tone="${TONO_ESTADO[est.c] || "neutral"}">${est.t}</s-badge>
+        <div class="${esPiloto ? "pe-appbar__center" : "preview-barra__estado"}" id="barra-estado">
           ${esPiloto ? `<div class="pe-viewport" role="group" aria-label="Vista del canvas">
             <button type="button" class="pe-viewport__tool" data-viewport-tool="select" aria-pressed="true" aria-label="Seleccionar bloque" title="Seleccionar bloque">${ico("cursor")}</button>
             <button type="button" data-viewport="desktop" aria-pressed="${estado.previewViewport === "desktop"}" aria-label="Vista de escritorio" title="Vista de escritorio">${ico("monitor")}<span>Escritorio</span></button>
             <button type="button" data-viewport="mobile" aria-pressed="${estado.previewViewport === "mobile"}" aria-label="Vista de móvil" title="Vista de móvil">${ico("movil")}<span>Móvil</span></button>
             <button type="button" class="pe-viewport__tool" data-viewport-tool="fullscreen" aria-pressed="${estado.editorFullscreen ? "true" : "false"}" aria-label="Vista expandida" title="Vista expandida">${ico("expandir")}</button>
-          </div>` : ""}
-          ${publicada && pg.url_publica
-            ? `<s-link href="${esc(pg.url_publica)}" target="_blank">Ver en la tienda</s-link>`
-            : ""}
+          </div>` : `<s-badge tone="${TONO_ESTADO[est.c] || "neutral"}">${est.t}</s-badge>${publicada && pg.url_publica ? `<s-link href="${esc(pg.url_publica)}" target="_blank">Ver en la tienda</s-link>` : ""}`}
         </div>
-        <div class="preview-barra__acciones">
-          ${esPiloto ? `<div class="pe-history" role="group" aria-label="Historial de edición"><button type="button" id="editor-deshacer" title="Deshacer" aria-label="Deshacer">${ico("deshacer")}</button><button type="button" id="editor-rehacer" title="Rehacer" aria-label="Rehacer">${ico("rehacer")}</button></div>` : ""}
+        <div class="preview-barra__acciones ${esPiloto ? "pe-appbar__right" : ""}">
+          ${esPiloto ? `<s-badge tone="${TONO_ESTADO[est.c] || "neutral"}">${est.t}</s-badge><div class="pe-history" role="group" aria-label="Historial de edición"><button type="button" id="editor-deshacer" title="Deshacer" aria-label="Deshacer">${ico("deshacer")}</button><button type="button" id="editor-rehacer" title="Rehacer" aria-label="Rehacer">${ico("rehacer")}</button></div>` : ""}
           <s-button variant="secondary" id="guardar" disabled>Guardar cambios</s-button>
           <s-button variant="${publicada ? "secondary" : "primary"}" id="publicar">${publicada ? "Volver a publicar" : "Publicar en la tienda"}</s-button>
           ${esPiloto ? `<s-button variant="secondary" id="editar-variantes">Editar variantes</s-button><div class="pe-actions"><button type="button" class="pe-actions__trigger" id="editor-acciones" aria-expanded="false" aria-haspopup="menu">${ico("engranaje")}<span>Acciones</span></button><div class="pe-actions__menu" id="editor-acciones-menu" hidden><button type="button" id="regenerar">${ico("chispa")}<span>Regenerar con IA</span></button>${publicada ? `<button type="button" id="despublicar">${ico("flechaArriba")}<span>Volver a la página nativa</span></button>` : ""}</div></div><button type="button" class="pe-appbar__close" id="editor-cerrar" aria-label="Cerrar editor" title="Cerrar editor">${ico("x")}</button>` : `<s-button variant="secondary" id="regenerar">Regenerar</s-button>${publicada ? `<s-button variant="tertiary" id="despublicar">Volver a la página nativa</s-button>` : ""}`}
@@ -4101,6 +4105,18 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
           <div class="pe-inspector__empty"><span class="pe-inspector__empty-icon">${ico("cursor")}</span><strong>Seleccioná un bloque</strong><p>Elegí una sección del árbol o hacé clic sobre el canvas para editar sus campos.</p></div>
         </aside>
       </div>`;
+
+    // PagePilot presents the editor as a native Shopify modal.  Use the same
+    // surface when App Bridge is available, while keeping a direct fallback
+    // for local development and preview links outside the admin.
+    vista.innerHTML = esPiloto
+      ? `<s-modal id="tiq-piloto-editor-modal" heading="${esc("Editar página de producto " + productTitle)}" size="large-100" padding="none"><div class="tiq-piloto-editor-modal-content">${editorMarkup}</div></s-modal>`
+      : editorMarkup;
+    if (esPiloto) {
+      customElements.whenDefined?.("s-modal").then(() => {
+        try { window.shopify?.modal?.show?.("tiq-piloto-editor-modal"); } catch {}
+      });
+    }
 
     // El iframe no lee ningún archivo global: recibe LOS DATOS DE ESTA página
     // por mensaje. Dos merchants generando a la vez no se pisan. El botón
