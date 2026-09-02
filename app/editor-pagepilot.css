@@ -64,7 +64,7 @@
   position: relative;
   min-width: 0;
   align-items: center;
-  gap: 9px;
+  gap: 8px;
   overflow: hidden;
 }
 :is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-appbar .volver-flecha {
@@ -126,6 +126,10 @@
   font-weight: 600;
   white-space: nowrap;
 }
+:is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-appbar__left > .volver-flecha,
+:is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-appbar__logo,
+:is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-appbar__wordmark,
+:is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-appbar__template { display: none; }
 :is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-appbar__center {
   display: flex;
   align-items: center;
@@ -144,33 +148,34 @@
   display: inline-flex;
   align-items: center;
   flex: 0 0 auto;
-  gap: 6px;
+  gap: 4px;
   min-height: 30px;
-  padding: 0 9px;
+  padding: 6px 12px;
   border: 1px solid var(--p01-border);
-  border-radius: 5px;
+  border-radius: 8px;
   color: var(--p01-text);
   background: #fff;
-  font: 600 11px/1 var(--p01-font);
+  font: 550 12px/16px var(--p01-font);
   white-space: nowrap;
 }
 :is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-mode-toggle:hover,
 :is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-branding-trigger:hover { background: #f6f6f7; }
+:is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-branding-trigger { min-height: 28px; gap: 2px; padding: 4px 8px; }
 :is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-switch {
   position: relative;
   display: inline-block;
-  width: 25px;
-  height: 15px;
+  width: 32px;
+  height: 18px;
   border-radius: 999px;
   background: #c9cccf;
   transition: background .14s ease;
 }
 :is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-switch::after {
   position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 11px;
-  height: 11px;
+  top: 1px;
+  left: 1px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
   background: #fff;
   box-shadow: 0 1px 2px rgba(32, 34, 35, .22);
@@ -178,10 +183,12 @@
   transition: transform .14s ease;
 }
 :is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-mode-toggle[aria-pressed="true"] .pe-switch { background: #202223; }
-:is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-mode-toggle[aria-pressed="true"] .pe-switch::after { transform: translateX(10px); }
-:is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-branding-dots { display: inline-flex; align-items: center; gap: 3px; }
+:is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-mode-toggle[aria-pressed="true"] .pe-switch::after { transform: translateX(14px); }
+:is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-mode-label { display: inline-flex; align-items: center; gap: 4px; }
+:is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-mode-label .ico { width: 14px; height: 14px; }
+:is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-branding-dots { display: inline-flex; align-items: center; gap: 6px; }
 :is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-branding-dots i,
-:is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-branding-swatches i { display: block; width: 13px; height: 13px; border: 1px solid rgba(32, 34, 35, .15); border-radius: 50%; }
+:is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-branding-swatches i { display: block; width: 16px; height: 16px; border: 1px solid rgba(32, 34, 35, .15); border-radius: 50%; }
 :is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-branding-dots i:nth-child(1),
 :is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-branding-swatches button:first-child i:nth-child(1) { background: #1f4526; }
 :is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-branding-dots i:nth-child(2),
@@ -234,26 +241,27 @@
 }
 :is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-appbar s-badge { font-size: 11px; font-weight: 600; }
 :is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-appbar s-button::part(button) {
-  min-height: 32px;
-  border-radius: 4px;
+  min-height: 28px;
+  border-radius: 8px;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 550;
 }
 :is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-appbar #publicar::part(button) { border-color: #008060; color: #fff; background: #008060; }
 :is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-appbar #publicar:hover::part(button) { border-color: #006e52; background: #006e52; }
 :is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-appbar .pe-viewport { order: 1; }
 :is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-viewport button .ico { width: 14px; height: 14px; }
-:is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-viewport .pe-viewport__tool { width: 29px; padding: 0; }
+:is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-viewport .pe-viewport__tool { width: 40px; padding: 0; }
+:is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-viewport > button > span { display: none; }
 :is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-viewport .pe-viewport__tool[aria-pressed="true"] { color: var(--p01-text); background: #f1f2f3; }
 :is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-actions { position: relative; flex: 0 0 auto; }
-:is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-actions__trigger { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 10px; border: 1px solid var(--p01-border); border-radius: 4px; color: var(--p01-text); background: #fff; font: 600 12px/1 var(--p01-font); }
+:is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-actions__trigger { display: inline-flex; align-items: center; gap: 6px; min-height: 28px; padding: 0 10px; border: 1px solid var(--p01-border); border-radius: 8px; color: var(--p01-text); background: #fff; font: 550 12px/16px var(--p01-font); }
 :is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-actions__trigger:hover { background: #f6f6f7; }
 :is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-actions__trigger .ico { width: 14px; height: 14px; }
 :is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-actions__menu { position: absolute; top: calc(100% + 6px); right: 0; z-index: 25; display: grid; gap: 2px; min-width: 210px; padding: 5px; border: 1px solid var(--p01-border-strong); border-radius: 6px; background: #fff; box-shadow: 0 6px 18px rgba(32, 34, 35, .14); }
 :is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-actions__menu button { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 32px; padding: 0 8px; border: 0; border-radius: 3px; color: var(--p01-text); background: #fff; font: 500 12px/1 var(--p01-font); text-align: left; }
 :is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-actions__menu button:hover { background: #f6f6f7; }
 :is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-actions__menu .ico { width: 15px; height: 15px; color: var(--p01-muted); }
-:is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-appbar__close { display: grid; place-items: center; flex: 0 0 30px; width: 30px; height: 30px; margin-left: 2px; padding: 0; border: 0; border-radius: 4px; color: var(--p01-muted); background: transparent; }
+:is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-appbar__close { display: grid; place-items: center; flex: 0 0 28px; width: 28px; height: 28px; margin-left: 2px; padding: 0; border: 0; border-radius: 8px; color: var(--p01-muted); background: transparent; }
 :is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-appbar__close:hover { color: var(--p01-text); background: #f1f2f3; }
 :is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-appbar__close .ico { width: 16px; height: 16px; }
 @media (max-width: 1450px) {
@@ -305,8 +313,9 @@
    nested review cards, and no implementation labels. */
 :is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-tree__head {
   display: grid;
-  gap: 4px;
-  padding: 17px 16px 15px;
+  gap: 0;
+  min-height: 46px;
+  padding: 13px;
   border-bottom: 1px solid var(--p01-border);
 }
 :is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-tree__head-kicker {
@@ -319,9 +328,9 @@
 :is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-tree__head-title {
   overflow: hidden;
   color: var(--p01-text);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 650;
-  line-height: 1.25;
+  line-height: 20px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -338,7 +347,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  min-height: 33px;
+  min-height: 32px;
   padding: 0 8px;
   border-radius: 4px;
   color: var(--p01-text);
@@ -356,14 +365,14 @@
 :is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-tree__ico { display: grid; place-items: center; flex: 0 0 16px; width: 16px; height: 16px; color: #5c5f62; }
 :is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-tree__ico svg { display: block; width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
 :is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-tree__row.is-sel .pe-tree__ico { color: var(--p01-focus); }
-:is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-tree__label { min-width: 0; overflow: hidden; color: #3f4143; font-size: 12.5px; line-height: 1; text-overflow: ellipsis; white-space: nowrap; }
+:is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-tree__label { min-width: 0; overflow: hidden; color: #303030; font-size: 13px; font-weight: 450; line-height: 20px; text-overflow: ellipsis; white-space: nowrap; }
 :is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-tree__row--group { margin-top: 4px; cursor: default; }
 :is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-tree__row--group:hover { background: transparent; }
 :is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-tree__row--group .pe-tree__ico { color: var(--p01-text); }
-:is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-tree__row--group .pe-tree__label { font-size: 12px; font-weight: 650; }
+:is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-tree__row--group .pe-tree__label { font-size: 13px; font-weight: 600; line-height: 20px; }
 :is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-tree__group-meta { margin-left: auto; color: var(--p01-subtle); font-size: 10px; }
 :is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-tree__nest { margin-left: 24px; border-left: 1px solid var(--p01-border); }
-:is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-tree__nest .pe-tree__row { min-height: 29px; padding-left: 9px; }
+:is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-tree__nest .pe-tree__row { min-height: 32px; padding-left: 9px; }
 :is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-tree__nest .pe-tree__ico,
 :is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-tree__nest .pe-tree__ico svg { width: 14px; height: 14px; }
 
@@ -455,13 +464,13 @@
 
 /* Toolbar controls use real icons instead of text glyphs. */
 :is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-viewport,
-:is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-history { display: inline-flex; align-items: center; gap: 2px; padding: 3px; border: 1px solid var(--p01-border); border-radius: 5px; background: #fff; }
+:is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-history { display: inline-flex; align-items: center; min-height: 42px; gap: 6px; padding: 6px 5px; border: 1px solid var(--p01-border); border-radius: 8px; background: #fff; }
 :is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-viewport button,
-:is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-history button { display: grid; place-items: center; min-width: 29px; height: 28px; padding: 0 9px; border: 0; border-radius: 3px; color: var(--p01-muted); background: transparent; font: 600 12px/1 var(--p01-font); }
+:is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-history button { display: grid; place-items: center; min-width: 40px; width: 40px; height: 28px; padding: 0; border: 0; border-radius: 6px; color: var(--p01-muted); background: transparent; font: 550 13px/20px var(--p01-font); }
 :is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-viewport button:hover,
 :is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-history button:hover:not(:disabled) { color: var(--p01-text); background: #f1f2f3; }
 :is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-viewport button[aria-pressed="true"] { color: var(--p01-text); background: #f1f2f3; }
-:is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-history button { width: 29px; padding: 0; }
+:is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-history button { width: 40px; padding: 0; }
 :is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-history .ico { width: 15px; height: 15px; }
 :is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-history button:disabled { opacity: .38; cursor: not-allowed; }
 

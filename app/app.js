@@ -222,6 +222,7 @@
     kebab: `<circle cx="12" cy="5" r="1.4" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="12" cy="19" r="1.4" fill="currentColor" stroke="none"/>`,
     deshacer: `<path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 010 10h-4"/>`,
     rehacer: `<path d="M15 14l5-5-5-5"/><path d="M20 9H9a5 5 0 000 10h4"/>`,
+    capas: `<path d="m12 3 9 4.5-9 4.5L3 7.5z"/><path d="m3 12 9 4.5 9-4.5"/><path d="m3 16.5 9 4.5 9-4.5"/>`,
     monitor: `<rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/>`,
     movil: `<rect x="7" y="2.5" width="10" height="19" rx="2"/><path d="M11 18.5h2"/>`,
     expandir: `<path d="M8 3H3v5M16 3h5v5M8 21H3v-5M21 16v5h-5"/>`,
@@ -3943,9 +3944,8 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
           row("newsletter", "Newsletter", I.lista, { fixed: true });
         const reseñas = row("evidence", "Carrusel de reseñas", I.estrella, { fixed: true }) +
           `<div class="pe-tree__nest">${Array.from({ length: 5 }, (_item, index) => row(`evidence:${index}`, `Reseña ${index + 1}`, I.estrella, { fixed: true })).join("")}</div>`;
-        const title = estado.pagina.data?.piloto_pdp_01?.source_fields?.title || estado.pagina.data?.facetas?.hero?.titulo || "Producto";
         return `<nav class="pe-tree pe-tree--workbench p01-structure" aria-label="Estructura de la página de producto">
-          <div class="pe-tree__head p01-structure__head"><span class="pe-tree__head-kicker">PÁGINA DE PRODUCTO</span><span class="pe-tree__head-title">${esc(title)}</span><span class="pe-tree__head-sub">Piloto 01 · estructura fija</span></div>
+          <div class="pe-tree__head p01-structure__head"><span class="pe-tree__head-title">Página de producto</span></div>
           <div class="pe-tree__body">${grupo("Producto", producto, "")}${grupo("Contenido", contenido, "")}${grupo("Prueba social", reseñas, "")}</div>
         </nav>`;
       }
@@ -4048,7 +4048,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         <div class="${esPiloto ? "pe-appbar__left" : ""}">
           <button class="volver-flecha" id="volver" title="${volverTxt}" aria-label="${volverTxt}"></button>
           ${esPiloto ? `<div class="pe-appbar__logo" aria-hidden="true"><img src="/marca/iq.svg" alt="" width="24" height="24"></div><div class="pe-appbar__wordmark"><strong>Piloto</strong><small>Editor de producto</small></div><span class="pe-appbar__template">Piloto 01</span>
-            <button type="button" class="pe-mode-toggle" id="editor-modo-avanzado" aria-pressed="${estado.editorAdvanced ? "true" : "false"}"><span class="pe-switch" aria-hidden="true"></span><span>Modo avanzado</span></button>
+            <button type="button" class="pe-mode-toggle" id="editor-modo-avanzado" aria-pressed="${estado.editorAdvanced ? "true" : "false"}"><span class="pe-switch" aria-hidden="true"></span><span class="pe-mode-label">${ico("capas")}<span>Modo avanzado</span></span></button>
             <button type="button" class="pe-branding-trigger" id="editor-branding" aria-expanded="${estado.editorBrandingOpen ? "true" : "false"}"><span class="pe-branding-dots" aria-hidden="true"><i></i><i></i><i></i></span><span>Branding</span></button>
             <div class="pe-branding-popover" id="editor-branding-panel" ${estado.editorBrandingOpen ? "" : "hidden"} role="dialog" aria-label="Branding de la plantilla"><strong>Branding</strong><span class="pe-branding-popover__hint">La plantilla usa los tokens de tu marca.</span><div class="pe-branding-swatches"><button type="button" class="is-active" aria-label="Paleta actual"><i></i><i></i><i></i></button><button type="button" aria-label="Paleta neutra"><i></i><i></i><i></i></button></div></div>` : ""}
         </div>
