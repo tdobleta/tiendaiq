@@ -4009,7 +4009,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       panelSecId = null; panelEditorId = null; return;
     }
     const s = esPilotoFijo || esPilotoManaged ? null : secActual();
-    const def = esPilotoFijo || editorId.startsWith("sec:") ? null : seccionesPagina()[editorId];
+    const def = esPilotoFijo || esPilotoManaged || editorId.startsWith("sec:") ? null : seccionesPagina()[editorId];
     if (!esPilotoFijo && !esPilotoManaged && !s && !def) { panelSecId = null; panelEditorId = null; return; }
     const p = targetDocument.getElementById("pe-inspector");
     if (!p) return;
