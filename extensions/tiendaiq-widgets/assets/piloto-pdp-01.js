@@ -58,6 +58,7 @@
   const c = doc.content;
   const ev = doc.evidence || {};
   const urls = payload?.urls || window.TIENDAIQ_URLS || {};
+  const palette = payload?.branding === "neutral" ? "neutral" : "brand";
   const variants = Array.isArray(window.TIENDAIQ_VARIANTS) ? window.TIENDAIQ_VARIANTS : [];
   const image = (id) => urls[id] || "";
 
@@ -99,6 +100,17 @@
   const parsed = new DOMParser().parseFromString(source, "text/html");
   root.className = "";
   root.replaceChildren(...Array.from(parsed.body.childNodes));
+  root.dataset.tiqBranding = palette;
+  const phv4Palette = palette === "neutral"
+    ? { wine: "#202223", ink: "#202223", line: "#d2d5d8", border: "#d2d5d8", gold: "#202223" }
+    : { wine: "#1f4526", ink: "#1f4526", line: "#d5ded4", border: "#d5ded4", gold: "#1f4526" };
+  all(root, ".phv4").forEach((node) => {
+    node.style.setProperty("--phv4-wine", phv4Palette.wine);
+    node.style.setProperty("--phv4-ink", phv4Palette.ink);
+    node.style.setProperty("--phv4-line", phv4Palette.line);
+    node.style.setProperty("--phv4-border", phv4Palette.border);
+    node.style.setProperty("--phv4-gold", phv4Palette.gold);
+  });
 
   // --- galería --------------------------------------------------------------
   const gallery = [...new Set([c.media?.hero_media_id, ...(c.media?.gallery_media_ids || [])].filter((id) => image(id)))];
@@ -482,8 +494,17 @@
       const appearance = settings.appearance || settings;
       const desktop = settings.desktop || {};
       const mobile = settings.mobile || {};
+      const width = settings.width ?? desktop.width;
+      const mobileAlignment = settings.mobile_alignment ?? mobile.mobile_alignment;
       const bg = safeColor(appearance.background_color); if (bg) node.style.backgroundColor = bg;
-      const radius = Number(appearance.rounded_corners); if (Number.isFinite(radius)) node.style.borderRadius = Math.max(0, Math.min(32, radius)) + "px";
+      const borderStyle = String(appearance.border_style || "");
+      if (["solid", "dashed"].includes(borderStyle)) { node.style.borderStyle = borderStyle; node.style.borderWidth = "1px"; }
+      else if (borderStyle === "none") node.style.borderStyle = "none";
+      const shadow = String(appearance.box_shadow || "");
+      if (shadow === "soft") node.style.boxShadow = "0 2px 12px rgba(32, 34, 35, .12)";
+      else if (shadow === "strong") node.style.boxShadow = "0 8px 28px rgba(32, 34, 35, .18)";
+      else if (shadow === "none") node.style.boxShadow = "none";
+      const radius = Number(appearance.rounded_corners); if (Number.isFinite(radius)) node.style.borderRadius = Math.max(0, Math.min(100, radius)) + "%";
       const size = Number(settings.font_size); if (Number.isFinite(size)) node.style.setProperty("--tiq-p01-font-size", Math.max(10, Math.min(72, size)) + "px");
       const mobileSize = Number(settings.mobile_font_size); if (Number.isFinite(mobileSize)) node.style.setProperty("--tiq-p01-mobile-font-size", Math.max(10, Math.min(48, mobileSize)) + "px");
       const weight = String(settings.font_weight || ""); if (/^(400|500|600|700)$/.test(weight)) node.style.setProperty("--tiq-p01-font-weight", weight);
@@ -496,8 +517,8 @@
       if (Number.isFinite(pr)) node.style.paddingRight = Math.max(0, Math.min(80, pr)) + "px";
       node.dataset.tiqEditorBlock = section.id;
       node.dataset.tiqEditorLabel = section.type;
-      if (desktop.width === "full") node.classList.add("is-full");
-      if (mobile.mobile_alignment) node.style.setProperty("--tiq-p01-mobile-align", mobile.mobile_alignment);
+      if (width === "full") node.classList.add("is-full");
+      if (mobileAlignment) node.style.setProperty("--tiq-p01-mobile-align", mobileAlignment);
     };
     const makeBase = (section, title) => {
       const node = document.createElement("section"); node.className = "tiq-p01-added-section tiq-p01-added-" + section.type; node.setAttribute("aria-label", title); applySettings(node, section);
@@ -545,6 +566,45 @@
   };
   renderAddedSections();
 
+  // El mismo descriptor gobierna la tienda publicada. El canvas de edición
+  // añade marcado y feedback visual, pero nunca debe ser la única ruta que
+  // consume los ajustes persistidos de un bloque fijo.
+  if (!previewMode && Array.isArray(doc.editor?.sections)) {
+    const fixedSelectors = {
+      "product-information": ".phv4-panel", "product-gallery": ".phv4-gallery", "product-details": ".phv4-details",
+      "reviews-number": ".phv4-rating", "product-title": ".phv4-panel h1", text: ".phv4-claim", price: ".phv4-price",
+      "value-proposition": ".phv4-checks", "ingredients-list": ".phv4-checks", "variant-picker": ".phv4-packs",
+      "buy-buttons": ".phv4-atc", "payment-icons": ".phv4-payment-icons", "featured-reviews": ".phv4-opinion-carousel, .phv4-review",
+      history: ".scp-why", benefits: ".scp-stories-v2", timeline: ".scp-journey-head, .scp-timeline",
+      faq: ".scp-faq-v3, .scp-faq", closing: ".scp-community", newsletter: ".scp-email-wrap, .scp-email-form"
+    };
+    const safeColor = (value) => /^#[0-9a-f]{3,8}$/i.test(String(value || "")) ? String(value) : "";
+    const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+    const css = document.createElement("style");
+    css.textContent = `#piloto-pdp-01 [data-tiq-editor-setting-id]{font-size:var(--tiq-p01-editor-font-size,inherit)!important;font-weight:var(--tiq-p01-editor-font-weight,inherit)!important;letter-spacing:var(--tiq-p01-editor-letter-spacing,inherit)!important;text-transform:var(--tiq-p01-editor-case,inherit)!important}@media(max-width:719px){#piloto-pdp-01 [data-tiq-editor-setting-id]{font-size:var(--tiq-p01-editor-mobile-font-size,var(--tiq-p01-editor-font-size,inherit))!important;gap:var(--tiq-p01-editor-mobile-gap,var(--tiq-p01-editor-gap,initial))!important;text-align:var(--tiq-p01-editor-mobile-align,inherit)!important}}`;
+    root.prepend(css);
+    doc.editor.sections.filter((section) => section?.fixed && fixedSelectors[section.type]).forEach((section) => {
+      const settings = section.settings || {};
+      const appearance = settings.appearance || settings;
+      all(root, fixedSelectors[section.type]).forEach((node) => {
+        node.dataset.tiqEditorSettingId = section.id;
+        if (section.enabled === false) node.style.setProperty("display", "none", "important");
+        const bg = safeColor(appearance.background_color); if (bg) node.style.backgroundColor = bg;
+        if (["solid", "dashed"].includes(appearance.border_style)) { node.style.borderStyle = appearance.border_style; node.style.borderWidth = "1px"; }
+        const radius = Number(appearance.rounded_corners); if (Number.isFinite(radius)) node.style.borderRadius = clamp(radius, 0, 100) + "%";
+        const size = Number(settings.font_size); if (Number.isFinite(size)) node.style.setProperty("--tiq-p01-editor-font-size", clamp(size, 10, 72) + "px");
+        const mobileSize = Number(settings.mobile_font_size); if (Number.isFinite(mobileSize)) node.style.setProperty("--tiq-p01-editor-mobile-font-size", clamp(mobileSize, 10, 48) + "px");
+        if (/^(400|500|600|700)$/.test(String(settings.font_weight || ""))) node.style.setProperty("--tiq-p01-editor-font-weight", settings.font_weight);
+        const letter = { tight: "-.04em", normal: "normal", loose: ".04em" }[settings.letter_spacing]; if (letter) node.style.setProperty("--tiq-p01-editor-letter-spacing", letter);
+        const casing = { uppercase: "uppercase", lowercase: "lowercase", default: "none" }[settings.case]; if (casing) node.style.setProperty("--tiq-p01-editor-case", casing);
+        const gap = Number(settings.gap); if (Number.isFinite(gap)) node.style.gap = clamp(gap, 0, 64) + "px";
+        const mobileGap = Number(settings.mobile_gap); if (Number.isFinite(mobileGap)) node.style.setProperty("--tiq-p01-editor-mobile-gap", clamp(mobileGap, 0, 48) + "px");
+        if (settings.mobile_alignment) node.style.setProperty("--tiq-p01-editor-mobile-align", settings.mobile_alignment);
+        ["top", "bottom", "left", "right"].forEach((side) => { const value = Number(settings["padding_" + side]); if (Number.isFinite(value)) node.style["padding" + side[0].toUpperCase() + side.slice(1)] = clamp(value, 0, 120) + "px"; });
+      });
+    });
+  }
+
   // --- puente de edición (sólo preview interno) ----------------------------
   // La tienda nunca recibe estas marcas. En el editor, cada superficie del
   // canvas comunica el mismo identificador que usa el árbol y el inspector.
@@ -574,6 +634,77 @@
     const aliases = { "p01:product-information": "hero", "p01:product-gallery": "hero", "p01:product-details": "quick", "p01:reviews-number": "evidence", "p01:product-title": "hero", "p01:text": "hero", "p01:price": "offer", "p01:value-proposition": "hero", "p01:ingredients-list": "quick", "p01:variant-picker": "offer", "p01:buy-buttons": "offer", "p01:payment-icons": "offer", "p01:featured-reviews": "evidence", "p01:history": "why", "p01:benefits": "stories", "p01:timeline": "timeline", "p01:faq": "faq", "p01:closing": "closing", "p01:newsletter": "newsletter" };
     Object.entries(aliases).forEach(([alias, base]) => all(root, editorBlocks[base]?.selector || "").forEach((node) => { if (!node.dataset.tiqEditorBlock) { node.setAttribute("data-tiq-editor-block", alias); node.setAttribute("data-tiq-editor-label", alias.replace(/^p01:/, "")); } }));
 
+    // Los bloques fijos también son editables. Antes sólo se aplicaban
+    // settings a las secciones agregadas desde la galería, así que los
+    // controles visibles en el inspector podían guardar un valor que nunca
+    // alcanzaba el canvas. Estos selectores apuntan a la superficie real de
+    // cada bloque canónico y mantienen el contrato para preview y storefront.
+    const fixedTargets = {
+      "product-information": ".phv4-panel", "product-gallery": ".phv4-gallery", "product-details": ".phv4-details",
+      "reviews-number": ".phv4-rating", "product-title": ".phv4-panel h1", text: ".phv4-claim", price: ".phv4-price",
+      "value-proposition": ".phv4-checks", "ingredients-list": ".phv4-checks", "variant-picker": ".phv4-packs",
+      "buy-buttons": ".phv4-atc", "payment-icons": ".phv4-payment-icons", "featured-reviews": ".phv4-opinion-carousel, .phv4-review",
+      history: ".scp-why", benefits: ".scp-stories-v2", timeline: ".scp-journey-head, .scp-timeline",
+      faq: ".scp-faq-v3, .scp-faq", closing: ".scp-community", newsletter: ".scp-email-wrap, .scp-email-form"
+    };
+    const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+    const fixedSettingStyle = document.createElement("style");
+    fixedSettingStyle.textContent = `
+      #piloto-pdp-01 [data-tiq-editor-setting-id]{font-size:var(--tiq-p01-editor-font-size,inherit)!important;font-weight:var(--tiq-p01-editor-font-weight,inherit)!important;letter-spacing:var(--tiq-p01-editor-letter-spacing,inherit)!important;text-transform:var(--tiq-p01-editor-case,inherit)!important}
+      @media(max-width:719px){#piloto-pdp-01 [data-tiq-editor-setting-id]{font-size:var(--tiq-p01-editor-mobile-font-size,var(--tiq-p01-editor-font-size,inherit))!important;gap:var(--tiq-p01-editor-mobile-gap,var(--tiq-p01-editor-gap,initial))!important;text-align:var(--tiq-p01-editor-mobile-align,inherit)!important}}
+    `;
+    root.prepend(fixedSettingStyle);
+    const applyFixedSettings = (section) => {
+      const selectors = fixedTargets[section.type];
+      if (!selectors) return;
+      const settings = section.settings || {};
+      const appearance = settings.appearance || settings;
+      const desktop = settings.desktop || {};
+      const mobile = settings.mobile || {};
+      const width = settings.width ?? desktop.width;
+      const mobileAlignment = settings.mobile_alignment ?? mobile.mobile_alignment;
+      all(root, selectors).forEach((node) => {
+        node.dataset.tiqEditorSettingId = section.id;
+        if (section.enabled === false) {
+          node.style.setProperty("display", "none", "important");
+          node.dataset.tiqEditorHidden = "1";
+        } else if (node.dataset.tiqEditorHidden === "1") {
+          node.style.removeProperty("display");
+          delete node.dataset.tiqEditorHidden;
+        }
+        const bg = safeColor(appearance.background_color); if (bg) node.style.backgroundColor = bg;
+        const borderStyle = String(appearance.border_style || "");
+        if (["solid", "dashed"].includes(borderStyle)) { node.style.borderStyle = borderStyle; node.style.borderWidth = "1px"; }
+        else if (borderStyle === "none") node.style.borderStyle = "none";
+        const shadow = String(appearance.box_shadow || "");
+        if (shadow === "soft") node.style.boxShadow = "0 2px 12px rgba(32,34,35,.12)";
+        else if (shadow === "strong") node.style.boxShadow = "0 8px 28px rgba(32,34,35,.18)";
+        else if (shadow === "none") node.style.boxShadow = "none";
+        const radius = Number(appearance.rounded_corners); if (Number.isFinite(radius)) node.style.borderRadius = clamp(radius, 0, 100) + "%";
+        const size = Number(settings.font_size); if (Number.isFinite(size)) node.style.setProperty("--tiq-p01-editor-font-size", clamp(size, 10, 72) + "px");
+        const mobileSize = Number(settings.mobile_font_size); if (Number.isFinite(mobileSize)) node.style.setProperty("--tiq-p01-editor-mobile-font-size", clamp(mobileSize, 10, 48) + "px");
+        const weight = String(settings.font_weight || ""); if (/^(400|500|600|700)$/.test(weight)) node.style.setProperty("--tiq-p01-editor-font-weight", weight);
+        const letter = { tight: "-.04em", normal: "normal", loose: ".04em" }[settings.letter_spacing]; if (letter) node.style.setProperty("--tiq-p01-editor-letter-spacing", letter);
+        const casing = { uppercase: "uppercase", lowercase: "lowercase", default: "none" }[settings.case]; if (casing) node.style.setProperty("--tiq-p01-editor-case", casing);
+        const gap = Number(settings.gap); if (Number.isFinite(gap)) { node.style.setProperty("--tiq-p01-editor-gap", clamp(gap, 0, 64) + "px"); node.style.gap = clamp(gap, 0, 64) + "px"; }
+        const mobileGap = Number(settings.mobile_gap); if (Number.isFinite(mobileGap)) node.style.setProperty("--tiq-p01-editor-mobile-gap", clamp(mobileGap, 0, 48) + "px");
+        if (mobileAlignment) node.style.setProperty("--tiq-p01-editor-mobile-align", mobileAlignment);
+        const pt = Number(settings.padding_top), pb = Number(settings.padding_bottom), pl = Number(settings.padding_left), pr = Number(settings.padding_right);
+        if (Number.isFinite(pt)) node.style.paddingTop = clamp(pt, 0, 120) + "px";
+        if (Number.isFinite(pb)) node.style.paddingBottom = clamp(pb, 0, 120) + "px";
+        if (Number.isFinite(pl)) node.style.paddingLeft = clamp(pl, 0, 80) + "px";
+        if (Number.isFinite(pr)) node.style.paddingRight = clamp(pr, 0, 80) + "px";
+        if (width === "full") { node.style.width = "100%"; node.style.maxWidth = "100%"; }
+        else if (width === "page") { node.style.width = ""; node.style.maxWidth = ""; }
+        const custom = String(settings.custom_class || "").split(/\s+/).filter((name) => /^[A-Za-z_][A-Za-z0-9_-]*$/.test(name));
+        const previous = String(node.dataset.tiqEditorCustomClass || "").split(/\s+/).filter(Boolean);
+        previous.forEach((name) => node.classList.remove(name)); custom.forEach((name) => node.classList.add(name));
+        node.dataset.tiqEditorCustomClass = custom.join(" ");
+      });
+    };
+    const editorSections = Array.isArray(doc.editor?.sections) ? doc.editor.sections : [];
+    editorSections.filter((section) => section?.fixed).forEach(applyFixedSettings);
+
     const editorStyle = document.createElement("style");
     editorStyle.textContent = `
       #piloto-pdp-01{--tiq-editor-focus:#005bd3;--tiq-editor-focus-hover:rgba(0,91,211,.45)}
@@ -591,6 +722,10 @@
     }, { signal: bridgeSignal });
     window.addEventListener("message", (event) => {
       if (event.origin !== window.location.origin) return;
+      if (event.data?.tiendaiqEditor === "set-branding") {
+        renderDocument({ data: window.TIENDAIQ_DATA, urls: window.TIENDAIQ_URLS || {}, branding: event.data.palette });
+        return;
+      }
       if (event.data?.tiendaiqEditor !== "highlight-block") return;
       const id = event.data.blockId;
       // Una misma sección puede tener nodos anidados (por ejemplo, el bloque

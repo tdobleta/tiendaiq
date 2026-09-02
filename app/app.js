@@ -39,9 +39,11 @@
     seccionesElegidas: [], // tipos mandados desde la galería a la columna "Secciones"
     galeriaCat: "popular", // pestaña activa de la galería de secciones
     galeriaQ: "", // búsqueda de la galería
+    galeriaTab: "gallery", // galería de secciones | elementos básicos
     previewViewport: "desktop", // viewport del canvas del editor: desktop | mobile
     editorAdvanced: true, // muestra los controles de composición del workbench
     editorBrandingOpen: false, // paleta global del editor, no datos de Shopify
+    editorBrandingPalette: "brand", // tokens activos del canvas: brand | neutral
     editorFullscreen: false, // canvas a pantalla completa sin perder la selección
     error: null
   };
@@ -2798,7 +2800,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     const marco = $("marco");
     if (marco?.contentWindow)
       marco.contentWindow.postMessage(
-        { tiendaiq: true, data: estado.pagina.data, urls: estado.pagina.urls },
+        { tiendaiq: true, data: estado.pagina.data, urls: estado.pagina.urls, branding: estado.editorBrandingPalette },
         window.location.origin
       );
   }
@@ -3317,18 +3319,21 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       const render = () => {
         const q = String(estado.galeriaQ || "").trim().toLowerCase();
         const cat = estado.galeriaCat === "popular" ? "all" : (estado.galeriaCat || "all");
+        const basicTab = estado.galeriaTab === "basic";
         const currentTypes = new Set(p01Sections().map((section) => section.type));
-        const items = P01_EDITOR_CATALOG.filter((item) => (cat === "all" || categoryFor(item) === cat) && (!q || item.name.toLowerCase().includes(q) || item.desc.toLowerCase().includes(q)));
+        const items = P01_EDITOR_CATALOG.filter((item) => (basicTab ? !!item.fixed : !item.fixed) && (cat === "all" || categoryFor(item) === cat) && (!q || item.name.toLowerCase().includes(q) || item.desc.toLowerCase().includes(q)));
         return items.length ? items.map((item) => {
           const already = currentTypes.has(item.type);
-          return '<article class="p01-gallery-card"><div class="p01-gallery-card__visual"><span class="p01-gallery-card__icon">' + ico(item.icon || "lista") + '</span><span class="p01-gallery-card__wire"></span></div><div class="p01-gallery-card__body"><div><strong>' + esc(item.name) + '</strong><small>' + esc(item.desc) + '</small></div><button type="button" class="p01-gallery-card__add" data-p01-gallery-add="' + esc(item.type) + '"' + (already ? " disabled" : "") + '>' + (already ? "Incluida" : "Agregar") + '</button></div></article>';
+          const action = basicTab ? '<button type="button" class="p01-gallery-card__add" data-p01-gallery-select="' + esc(item.type) + '">' + (already ? "Seleccionar" : "Ver bloque") + '</button>' : '<button type="button" class="p01-gallery-card__add" data-p01-gallery-add="' + esc(item.type) + '"' + (already ? " disabled" : "") + '>' + (already ? "Incluida" : "Agregar") + '</button>';
+          return '<article class="p01-gallery-card"><div class="p01-gallery-card__visual"><span class="p01-gallery-card__icon">' + ico(item.icon || "lista") + '</span><span class="p01-gallery-card__wire"></span></div><div class="p01-gallery-card__body"><div><strong>' + esc(item.name) + '</strong><small>' + esc(item.desc) + '</small></div>' + action + '</div></article>';
         }).join("") : '<div class="p01-gallery-empty">No hay elementos que coincidan con tu búsqueda.</div>';
       };
       const overlay = document.createElement("div");
       overlay.className = "p01-gallery"; overlay.id = "galsec";
       const activeCategory = estado.galeriaCat === "popular" ? "all" : (estado.galeriaCat || "all");
       const catMarkup = categories.map(([id, label]) => '<button type="button" class="' + (id === activeCategory ? "is-active" : "") + '" data-p01-gallery-cat="' + id + '">' + esc(label) + '<span>' + P01_EDITOR_CATALOG.filter((item) => id === "all" || categoryFor(item) === id).length + '</span></button>').join("");
-      overlay.innerHTML = '<div class="p01-gallery__dialog" role="dialog" aria-modal="true" aria-labelledby="p01-gallery-title"><header class="p01-gallery__header"><div><span class="p01-gallery__eyebrow">Galería</span><strong id="p01-gallery-title">Elementos de la página</strong></div><label class="p01-gallery__search">' + IC_BUSCAR + '<input id="p01-gallery-q" type="search" placeholder="Buscar..." value="' + esc(estado.galeriaQ || "") + '"></label><button type="button" class="p01-gallery__close" aria-label="Cerrar">' + ico("x") + '</button></header><div class="p01-gallery__main"><aside class="p01-gallery__cats">' + catMarkup + '</aside><section class="p01-gallery__results"><div class="p01-gallery__tabs"><button type="button" class="is-active">Galería</button><button type="button">Elementos básicos</button></div><div id="p01-gallery-grid" class="p01-gallery__grid">' + render() + '</div></section></div></div>';
+      const galleryTab = estado.galeriaTab === "basic" ? "basic" : "gallery";
+      overlay.innerHTML = '<div class="p01-gallery__dialog" role="dialog" aria-modal="true" aria-labelledby="p01-gallery-title"><header class="p01-gallery__header"><div><span class="p01-gallery__eyebrow">Galería</span><strong id="p01-gallery-title">Elementos de la página</strong></div><label class="p01-gallery__search">' + IC_BUSCAR + '<input id="p01-gallery-q" type="search" placeholder="Buscar..." value="' + esc(estado.galeriaQ || "") + '"></label><button type="button" class="p01-gallery__close" aria-label="Cerrar">' + ico("x") + '</button></header><div class="p01-gallery__main"><aside class="p01-gallery__cats">' + catMarkup + '</aside><section class="p01-gallery__results"><div class="p01-gallery__tabs" role="tablist" aria-label="Tipo de bloque"><button type="button" role="tab" aria-selected="' + (galleryTab === "gallery") + '" class="' + (galleryTab === "gallery" ? "is-active" : "") + '" data-p01-gallery-tab="gallery">Galería</button><button type="button" role="tab" aria-selected="' + (galleryTab === "basic") + '" class="' + (galleryTab === "basic" ? "is-active" : "") + '" data-p01-gallery-tab="basic">Elementos básicos</button></div><div id="p01-gallery-grid" class="p01-gallery__grid">' + render() + '</div></section></div></div>';
       // A src modal owns its JavaScript, so the gallery can stay in the same
       // document.  The parent app still uses a second native modal surface,
       // because App Bridge transports inline children without their handlers.
@@ -3359,6 +3364,22 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
           estado.galeriaCat = catButton.dataset.p01GalleryCat;
           overlay.querySelectorAll("[data-p01-gallery-cat]").forEach((button) => button.classList.toggle("is-active", button === catButton));
           grid().innerHTML = render(); return;
+        }
+        const tabButton = event.target.closest("[data-p01-gallery-tab]");
+        if (tabButton) {
+          estado.galeriaTab = tabButton.dataset.p01GalleryTab === "basic" ? "basic" : "gallery";
+          overlay.querySelectorAll("[data-p01-gallery-tab]").forEach((button) => {
+            const active = button.dataset.p01GalleryTab === estado.galeriaTab;
+            button.classList.toggle("is-active", active);
+            button.setAttribute("aria-selected", String(active));
+          });
+          grid().innerHTML = render(); return;
+        }
+        const select = event.target.closest("[data-p01-gallery-select]");
+        if (select) {
+          close();
+          setTimeout(() => seleccionarBloquePiloto("p01:" + select.dataset.p01GallerySelect), ES_EDITOR_MODAL_ROUTE ? 0 : 280);
+          return;
         }
         const add = event.target.closest("[data-p01-gallery-add]");
         if (add) {
@@ -4312,6 +4333,15 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         group.querySelector(".pe-tree__row--group")?.setAttribute("aria-expanded", String(!collapsed));
       };
     });
+    next.querySelectorAll(".pe-tree__row--group").forEach((row) => {
+      const toggle = () => {
+        const group = row.closest(".pe-tree__group");
+        const collapsed = group?.classList.toggle("is-collapsed");
+        row.setAttribute("aria-expanded", String(!collapsed));
+      };
+      row.addEventListener("click", (event) => { if (!event.target.closest(".pe-tree__chevron")) toggle(); });
+      row.addEventListener("keydown", (event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); toggle(); } });
+    });
     next.querySelector("[data-p01-add-section]")?.addEventListener("click", () => abrirGaleriaSecciones($("marco")));
   }
 
@@ -4368,7 +4398,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
           ${esPiloto ? `<div class="pe-appbar__logo" aria-hidden="true"><img src="/marca/iq.svg" alt="" width="24" height="24"></div><div class="pe-appbar__wordmark"><strong>Piloto</strong><small>Editor de producto</small></div><span class="pe-appbar__template">Piloto 01</span>
             <button type="button" class="pe-mode-toggle" id="editor-modo-avanzado" aria-pressed="${estado.editorAdvanced ? "true" : "false"}"><span class="pe-switch" aria-hidden="true"></span><span class="pe-mode-label">${ico("capas")}<span>Modo avanzado</span></span></button>
             <button type="button" class="pe-branding-trigger" id="editor-branding" aria-expanded="${estado.editorBrandingOpen ? "true" : "false"}"><span class="pe-branding-dots" aria-hidden="true"><i></i><i></i><i></i></span><span>Branding</span></button>
-            <div class="pe-branding-popover" id="editor-branding-panel" ${estado.editorBrandingOpen ? "" : "hidden"} role="dialog" aria-label="Branding de la plantilla"><strong>Branding</strong><span class="pe-branding-popover__hint">La plantilla usa los tokens de tu marca.</span><div class="pe-branding-swatches"><button type="button" class="is-active" aria-label="Paleta actual"><i></i><i></i><i></i></button><button type="button" aria-label="Paleta neutra"><i></i><i></i><i></i></button></div></div>` : ""}
+            <div class="pe-branding-popover" id="editor-branding-panel" ${estado.editorBrandingOpen ? "" : "hidden"} role="dialog" aria-label="Branding de la plantilla"><strong>Branding</strong><span class="pe-branding-popover__hint">La plantilla usa los tokens de tu marca.</span><div class="pe-branding-swatches"><button type="button" class="${estado.editorBrandingPalette === "brand" ? "is-active" : ""}" aria-label="Paleta actual" aria-pressed="${estado.editorBrandingPalette === "brand"}"><i></i><i></i><i></i></button><button type="button" class="${estado.editorBrandingPalette === "neutral" ? "is-active" : ""}" aria-label="Paleta neutra" aria-pressed="${estado.editorBrandingPalette === "neutral"}"><i></i><i></i><i></i></button></div></div>` : ""}
         </div>
         <div class="preview-barra__info">
           <div class="preview-barra__titulo">${esc(pg.data.piloto_pdp_01?.source_fields?.title || pg.data.facetas?.hero?.titulo || "Producto")}</div>
@@ -4439,6 +4469,16 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
           <ui-title-bar title="${esc("Editar página de producto " + productTitle)}"></ui-title-bar>
         </ui-modal>`
       : `<link rel="stylesheet" href="/editor-pagepilot.css">${editorMarkup}`;
+    // App Bridge puede conservar el scroll del documento que abrió el modal.
+    // El editor siempre entra desde el principio para que la barra, el árbol y
+    // el canvas no aparezcan desplazados después de recargar.
+    const resetEditorScroll = () => { window.scrollTo(0, 0); document.documentElement.scrollTop = 0; if (document.body) document.body.scrollTop = 0; };
+    resetEditorScroll();
+    if (ES_EDITOR_MODAL_ROUTE) {
+      requestAnimationFrame(resetEditorScroll);
+      setTimeout(resetEditorScroll, 0);
+      setTimeout(resetEditorScroll, 180);
+    }
     if (esPiloto && !ES_EDITOR_MODAL_ROUTE) {
       // Set src after insertion so App Bridge uses the complex-route modal
       // contract while the native title bar remains declarative.
@@ -4493,6 +4533,15 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         group.querySelector(".pe-tree__row--group")?.setAttribute("aria-expanded", String(!collapsed));
       };
     });
+    vista.querySelectorAll(".pe-tree__row--group").forEach((row) => {
+      const toggle = () => {
+        const group = row.closest(".pe-tree__group");
+        const collapsed = group?.classList.toggle("is-collapsed");
+        row.setAttribute("aria-expanded", String(!collapsed));
+      };
+      row.addEventListener("click", (event) => { if (!event.target.closest(".pe-tree__chevron")) toggle(); });
+      row.addEventListener("keydown", (event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); toggle(); } });
+    });
     if (esPiloto) vista.querySelector("[data-p01-add-section]")?.addEventListener("click", () => abrirGaleriaSecciones($("marco")));
     const cambiarViewportPiloto = (button) => {
       if (!button?.dataset?.viewport) return;
@@ -4533,7 +4582,10 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       });
       brandingPanel?.querySelectorAll(".pe-branding-swatches button").forEach((swatch) => {
         swatch.addEventListener("click", () => {
+          estado.editorBrandingPalette = swatch.getAttribute("aria-label") === "Paleta neutra" ? "neutral" : "brand";
           brandingPanel.querySelectorAll(".pe-branding-swatches button").forEach((item) => item.classList.toggle("is-active", item === swatch));
+          brandingPanel.querySelectorAll(".pe-branding-swatches button").forEach((item) => item.setAttribute("aria-pressed", String(item === swatch)));
+          repintarPreview();
           toast("Paleta de marca seleccionada");
         });
       });

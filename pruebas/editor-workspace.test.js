@@ -56,6 +56,39 @@ test("Piloto 01 une árbol, canvas e inspector con ids reales de bloque", () => 
   assert.match(runtime, /\.tiq-editor-active::before/);
 });
 
+test("cada sección fija del inspector tiene una superficie real y consume settings", () => {
+  assert.match(runtime, /const fixedTargets = \{/);
+  assert.match(runtime, /"product-information": "\.phv4-panel"/);
+  assert.match(runtime, /"product-gallery": "\.phv4-gallery"/);
+  assert.match(runtime, /"featured-reviews": "\.phv4-opinion-carousel, \.phv4-review"/);
+  assert.match(runtime, /const applyFixedSettings = \(section\) =>/);
+  assert.match(runtime, /data-tiq-editor-setting-id/);
+  assert.match(runtime, /settings\.width \?\? desktop\.width/);
+  assert.match(runtime, /settings\.mobile_alignment \?\? mobile\.mobile_alignment/);
+  assert.match(runtime, /section\.enabled === false/);
+});
+
+test("la galería separa elementos agregables de bloques básicos seleccionables", () => {
+  assert.match(app, /galeriaTab: "gallery"/);
+  assert.match(app, /data-p01-gallery-tab="gallery"/);
+  assert.match(app, /data-p01-gallery-tab="basic"/);
+  assert.match(app, /data-p01-gallery-select/);
+  assert.match(app, /estado\.galeriaTab = tabButton\.dataset\.p01GalleryTab/);
+});
+
+test("el árbol permite alternar grupos con etiqueta, flecha y teclado", () => {
+  assert.match(app, /next\.querySelectorAll\("\.pe-tree__row--group"\)/);
+  assert.match(app, /row\.addEventListener\("keydown"/);
+  assert.match(app, /event\.key === "Enter" \|\| event\.key === " "/);
+  assert.match(app, /vista\.querySelectorAll\("\.pe-tree__row--group"\)/);
+});
+
+test("la ruta modal del editor restablece el scroll después de montar y recargar", () => {
+  assert.match(app, /const resetEditorScroll = \(\) => \{ window\.scrollTo\(0, 0\)/);
+  assert.match(app, /requestAnimationFrame\(resetEditorScroll\)/);
+  assert.match(app, /setTimeout\(resetEditorScroll, 180\)/);
+});
+
 test("la selección no dibuja etiquetas repetidas sobre los nodos hijos", () => {
   assert.match(runtime, /const sameParent = node\.parentElement\?\.closest/);
   assert.match(runtime, /node\.dataset\.tiqEditorBlock === id && !sameParent/);
