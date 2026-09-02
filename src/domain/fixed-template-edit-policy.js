@@ -3,7 +3,7 @@
 const { isDeepStrictEqual } = require("node:util");
 const { resolveStoredTemplate } = require("./template-registry");
 const { PINZA_PAGEPILOT_V1, PILOTO_PINZA_PAGEPILOT_V1, PILOTO_PDP_01_V1 } = require("./fixed-template-manifest");
-const { hashSource, validatePdp01, Pdp01ValidationError } = require("../piloto/pdp01-contract");
+const { hashSource, validatePdp01, validatePdp01Editor, defaultPdp01Editor, Pdp01ValidationError } = require("../piloto/pdp01-contract");
 
 class FixedTemplateEditError extends Error {
   constructor(message) {
@@ -85,6 +85,11 @@ function applyPdp01Edit({ persistedData, submittedData }) {
   const submittedDocument = submitted?.piloto_pdp_01;
   const persistedDocument = persisted?.piloto_pdp_01;
   if (!isPlainObject(submittedDocument) || !isPlainObject(persistedDocument)) throw new FixedTemplateEditError("La plantilla Piloto 01 requiere su contrato de contenido");
+  // Migrate documents created before the section editor existed.  The
+  // migration is deterministic and only adds the explicitly whitelisted
+  // editor descriptor; it never unlocks source fields or commerce data.
+  persistedDocument.editor = defaultPdp01Editor(persistedDocument.editor);
+  submittedDocument.editor = defaultPdp01Editor(submittedDocument.editor);
   // First prove the caller did not alter anything outside the fixed document.
   submitted.piloto_pdp_01 = persistedDocument;
   if (!isDeepStrictEqual(submitted, persisted)) throw new FixedTemplateEditError("Piloto 01 sólo permite editar el copy autorizado; producto, medios, packs y evidencia se protegen automáticamente");
@@ -92,6 +97,15 @@ function applyPdp01Edit({ persistedData, submittedData }) {
   const comparisonDocument = clone(proposed);
   const persistedContent = persistedDocument.content;
   const comparisonContent = comparisonDocument.content || {};
+  // The editor descriptor is mutable through its own schema.  Validate it
+  // before masking the content tree so arbitrary HTML/CSS cannot piggyback on
+  // a normal copy update.
+  try { comparisonDocument.editor = validatePdp01Editor(proposed.editor); }
+  catch (error) {
+    if (error instanceof Pdp01ValidationError) throw new FixedTemplateEditError(error.message);
+    throw error;
+  }
+  const comparisonEditor = clone(comparisonDocument.editor);
   if ((comparisonContent.hero?.bullets || []).length !== (persistedContent.hero?.bullets || []).length ||
       (comparisonContent.timeline?.steps || []).length !== (persistedContent.timeline?.steps || []).length ||
       (comparisonContent.faq?.items || []).length !== (persistedContent.faq?.items || []).length) {
@@ -134,6 +148,7 @@ function applyPdp01Edit({ persistedData, submittedData }) {
   });
   if (persistedContent.closing) comparisonContent.closing = clone(persistedContent.closing);
   if (persistedContent.newsletter) comparisonContent.newsletter = clone(persistedContent.newsletter);
+  comparisonDocument.editor = persistedDocument.editor;
   if (!isDeepStrictEqual(comparisonDocument, persistedDocument)) {
     throw new FixedTemplateEditError("Piloto 01 sólo permite editar el copy autorizado; producto, medios, packs y evidencia se protegen automáticamente");
   }
@@ -166,7 +181,7 @@ function applyPdp01Edit({ persistedData, submittedData }) {
   if (nextContent.closing) nextContent.closing = proposed.content?.closing;
   if (nextContent.newsletter) nextContent.newsletter = proposed.content?.newsletter;
   const next = clone(persisted);
-  next.piloto_pdp_01 = { ...persistedDocument, content: nextContent, evidence: clone(persistedDocument.evidence) };
+  next.piloto_pdp_01 = { ...persistedDocument, content: nextContent, evidence: clone(persistedDocument.evidence), editor: comparisonEditor };
   try {
     next.piloto_pdp_01 = validatePdp01(next.piloto_pdp_01, { origin: "merchant" });
   } catch (error) {

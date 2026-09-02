@@ -3118,6 +3118,72 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       <span class="tiq-thumb__card"></span>
     </span>`;
 
+  // Catálogo unificado del editor Piloto 01.  La misma definición alimenta el
+  // árbol, la galería y el inspector; así una sección que aparece disponible
+  // es siempre una sección que el renderer puede identificar y persistir.
+  const P01_EDITOR_CATALOG = [
+    { type: "product-information", name: "Product Information", group: "Producto", fixed: true, icon: "grupo", desc: "Composición principal de producto y compra" },
+    { type: "product-gallery", name: "Product Gallery", group: "Producto", fixed: true, icon: "galeria", desc: "Galería real de medios del producto" },
+    { type: "product-details", name: "Product Details", group: "Producto", fixed: true, icon: "lista", desc: "Detalles, acordeones y datos del producto" },
+    { type: "reviews-number", name: "Reviews Number", group: "Producto", fixed: true, icon: "estrella", desc: "Puntaje conectado a una fuente verificable" },
+    { type: "product-title", name: "Product Title", group: "Producto", fixed: true, icon: "encabezado", desc: "Título vivo del producto Shopify" },
+    { type: "text", name: "Text", group: "Producto", fixed: true, icon: "lista", desc: "Texto editorial de la propuesta" },
+    { type: "price", name: "Price", group: "Producto", fixed: true, icon: "lista", desc: "Precio vivo y precio comparativo" },
+    { type: "value-proposition", name: "Value Proposition", group: "Producto", fixed: true, icon: "beneficios", desc: "Beneficios verificables del producto" },
+    { type: "ingredients-list", name: "Ingredients List", group: "Producto", fixed: true, icon: "lista", desc: "Lista basada en información del catálogo" },
+    { type: "variant-picker", name: "Variant Picker", group: "Producto", fixed: true, icon: "lista", desc: "Selector de variantes nativo Shopify" },
+    { type: "buy-buttons", name: "Add to Cart / Buy Buttons", group: "Producto", fixed: true, icon: "beneficios", desc: "Botones nativos de compra" },
+    { type: "payment-icons", name: "Payment Icons", group: "Producto", fixed: true, icon: "lista", desc: "Métodos de pago de Shopify" },
+    { type: "featured-reviews", name: "Featured Reviews Carousel", group: "Prueba social", fixed: true, icon: "estrella", desc: "Carrusel editorial con evidencia del merchant" },
+    { type: "history", name: "Product Story", group: "Contenido", fixed: true, icon: "lista", desc: "Historia editorial del producto" },
+    { type: "benefits", name: "Benefits & Features", group: "Contenido", fixed: true, icon: "beneficios", desc: "Beneficios destacados del producto" },
+    { type: "timeline", name: "Image with Timeline", group: "Contenido", fixed: true, icon: "lista", desc: "Cómo se usa, paso a paso" },
+    { type: "closing", name: "Community Closing", group: "Contenido", fixed: true, icon: "beneficios", desc: "Cierre editorial de la página" },
+    { type: "image-benefits", name: "Image with Benefits", group: "Contenido", icon: "beneficios", desc: "Imagen de producto con beneficios" },
+    { type: "image-timeline", name: "Image with Timeline", group: "Contenido", icon: "lista", desc: "Línea de tiempo visual y editable" },
+    { type: "faq", name: "FAQ", group: "Contenido", fixed: true, icon: "lista", desc: "Preguntas frecuentes con details nativo" },
+    { type: "timer", name: "Timer", group: "Urgency & Scarcity", icon: "lista", desc: "Cuenta regresiva solo con fecha real" },
+    { type: "community", name: "Community", group: "Contenido", icon: "beneficios", desc: "Cierre editorial y comunidad" },
+    { type: "newsletter", name: "Newsletter", group: "Contenido", fixed: true, icon: "lista", desc: "Formulario customer de Shopify" },
+    { type: "recommended-products", name: "Recommended Products", group: "Upsells", icon: "galeria", desc: "Recomendaciones reales del catálogo" },
+    { type: "as-seen-on", name: "As Seen On", group: "Prueba social", icon: "grupo", desc: "Logos o medios seleccionados" },
+    { type: "trusted-proof", name: "Trusted by thousands customers", group: "Prueba social", icon: "estrella", desc: "Prueba social con imagen y texto" },
+    { type: "review-card", name: "Review Card", group: "Prueba social", icon: "estrella", desc: "Tarjeta de reseña individual" }
+  ];
+  const p01Catalog = (type) => P01_EDITOR_CATALOG.find((item) => item.type === type);
+  const p01DefaultEditor = () => ({
+    version: 1,
+    selected: null,
+    sections: P01_EDITOR_CATALOG.filter((item) => item.fixed).map((item, order) => ({
+      id: item.type, type: item.type, enabled: true, fixed: true, order, settings: {}
+    }))
+  });
+  function p01EditorState() {
+    const doc = estado.pagina.data.piloto_pdp_01 || (estado.pagina.data.piloto_pdp_01 = {});
+    const current = doc.editor && Array.isArray(doc.editor.sections) ? doc.editor : p01DefaultEditor();
+    current.sections = current.sections.map((section, order) => ({
+      ...section,
+      order: Number.isInteger(section.order) ? section.order : order,
+      settings: section.settings && typeof section.settings === "object" ? section.settings : {}
+    }));
+    doc.editor = current;
+    return current;
+  }
+  const p01Sections = () => p01EditorState().sections.slice().sort((a, b) => a.order - b.order);
+  const p01SectionById = (id) => p01Sections().find((section) => section.id === id);
+  const p01EnsureSection = (type) => {
+    const catalog = p01Catalog(type);
+    if (!catalog) return null;
+    const editor = p01EditorState();
+    const existing = editor.sections.find((section) => section.type === type && !section.fixed);
+    if (existing) return existing;
+    const id = `${type}-${Date.now().toString(36)}`;
+    const section = { id, type, enabled: true, fixed: false, order: editor.sections.length, settings: { desktop: {}, mobile: {}, appearance: {}, content: {} } };
+    editor.sections.push(section);
+    editor.selected = id;
+    return section;
+  };
+
   // Catálogo de secciones disponibles (lo que muestra la galería estilo Section
   // Store). Cada una: tipo, nombre, categorías, thumbnail y (si es v2) esquema.
   const CATALOGO_SECCIONES = [
@@ -3238,6 +3304,49 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   }
 
   function abrirGaleriaSecciones(marco) {
+    if (esPlantillaPdp01()) {
+      cerrarGaleriaSecciones();
+      const categories = [["all", "Todos"], ["social", "Social Proof & Trust"], ["benefits", "Benefits & Features"], ["media", "Image & Content"], ["conversion", "Conversion / CTA"], ["faq", "FAQ"], ["guarantee", "Guarantee"], ["layout", "Layout"], ["integrations", "App Integrations"]];
+      const categoryFor = (item) => item.group === "Prueba social" ? "social" : item.group === "Contenido" ? (["image-benefits", "image-timeline"].includes(item.type) ? "media" : "benefits") : item.group === "Urgency & Scarcity" ? "conversion" : item.group === "Upsells" ? "integrations" : item.type === "faq" ? "faq" : "all";
+      const render = () => {
+        const q = String(estado.galeriaQ || "").trim().toLowerCase();
+        const cat = estado.galeriaCat === "popular" ? "all" : (estado.galeriaCat || "all");
+        const currentTypes = new Set(p01Sections().map((section) => section.type));
+        const items = P01_EDITOR_CATALOG.filter((item) => (cat === "all" || categoryFor(item) === cat) && (!q || item.name.toLowerCase().includes(q) || item.desc.toLowerCase().includes(q)));
+        return items.length ? items.map((item) => {
+          const already = currentTypes.has(item.type);
+          return '<article class="p01-gallery-card"><div class="p01-gallery-card__visual"><span class="p01-gallery-card__icon">' + ico(item.icon || "lista") + '</span><span class="p01-gallery-card__wire"></span></div><div class="p01-gallery-card__body"><div><strong>' + esc(item.name) + '</strong><small>' + esc(item.desc) + '</small></div><button type="button" class="p01-gallery-card__add" data-p01-gallery-add="' + esc(item.type) + '"' + (already ? " disabled" : "") + '>' + (already ? "Incluida" : "Agregar") + '</button></div></article>';
+        }).join("") : '<div class="p01-gallery-empty">No hay elementos que coincidan con tu búsqueda.</div>';
+      };
+      const overlay = document.createElement("div");
+      overlay.className = "p01-gallery"; overlay.id = "galsec";
+      const activeCategory = estado.galeriaCat === "popular" ? "all" : (estado.galeriaCat || "all");
+      const catMarkup = categories.map(([id, label]) => '<button type="button" class="' + (id === activeCategory ? "is-active" : "") + '" data-p01-gallery-cat="' + id + '">' + esc(label) + '<span>' + P01_EDITOR_CATALOG.filter((item) => id === "all" || categoryFor(item) === id).length + '</span></button>').join("");
+      overlay.innerHTML = '<div class="p01-gallery__dialog" role="dialog" aria-modal="true" aria-labelledby="p01-gallery-title"><header class="p01-gallery__header"><div><span class="p01-gallery__eyebrow">Galería</span><strong id="p01-gallery-title">Elementos de la página</strong></div><label class="p01-gallery__search">' + IC_BUSCAR + '<input id="p01-gallery-q" type="search" placeholder="Buscar..." value="' + esc(estado.galeriaQ || "") + '"></label><button type="button" class="p01-gallery__close" aria-label="Cerrar">' + ico("x") + '</button></header><div class="p01-gallery__main"><aside class="p01-gallery__cats">' + catMarkup + '</aside><section class="p01-gallery__results"><div class="p01-gallery__tabs"><button type="button" class="is-active">Galería</button><button type="button">Elementos básicos</button></div><div id="p01-gallery-grid" class="p01-gallery__grid">' + render() + '</div></section></div></div>';
+      document.body.appendChild(overlay);
+      const grid = () => overlay.querySelector("#p01-gallery-grid");
+      const close = () => cerrarGaleriaSecciones();
+      overlay.addEventListener("click", (event) => {
+        if (event.target === overlay || event.target.closest(".p01-gallery__close")) return close();
+        const catButton = event.target.closest("[data-p01-gallery-cat]");
+        if (catButton) {
+          estado.galeriaCat = catButton.dataset.p01GalleryCat;
+          overlay.querySelectorAll("[data-p01-gallery-cat]").forEach((button) => button.classList.toggle("is-active", button === catButton));
+          grid().innerHTML = render(); return;
+        }
+        const add = event.target.closest("[data-p01-gallery-add]");
+        if (add) {
+          const section = p01EnsureSection(add.dataset.p01GalleryAdd);
+          if (!section) return;
+          marcarSucio(); repintarPreview(); refrescarArbolP01(); close();
+          seleccionarBloquePiloto("p01sec:" + section.id); toast("Sección agregada");
+        }
+      });
+      overlay.querySelector("#p01-gallery-q")?.addEventListener("input", (event) => { estado.galeriaQ = event.target.value; grid().innerHTML = render(); });
+      overlay.querySelector("#p01-gallery-q")?.focus();
+      document.addEventListener("keydown", galeriaEsc);
+      return;
+    }
     cerrarGaleriaSecciones();
     const m = document.createElement("div");
     m.className = "galsec";
@@ -3425,6 +3534,8 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   }
 
   function panelEditorHTML(id) {
+    if (esPlantillaPdp01() && BLOQUES_PILOTO_01.has(id)) return p01EditorPanelHTML(p01AliasForBlock(id));
+    if (esPlantillaPdp01() && (id.startsWith("p01:") || id.startsWith("p01sec:"))) return p01EditorPanelHTML(id);
     if (id.startsWith("sec:")) {
       const s = (estado.pagina.data.secciones || []).find((x) => x.id === id.slice(4));
       if (!s) return "";
@@ -3442,6 +3553,12 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   }
 
   function panelTitulo(id) {
+    if (esPlantillaPdp01() && id.startsWith("p01sec:")) {
+      return p01Catalog(p01SectionById(id.slice(7))?.type)?.name || "Sección";
+    }
+    if (esPlantillaPdp01() && id.startsWith("p01:")) {
+      return p01Catalog(id.slice(4))?.name || "Sección de producto";
+    }
     if (id.startsWith("sec:")) {
       const s = (estado.pagina.data.secciones || []).find((x) => x.id === id.slice(4));
       return catSeccion(s?.tipo)?.nombre || "Sección";
@@ -3483,6 +3600,83 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     if (id === "newsletter") return `<div class="sp-sub">Newsletter</div><div class="sp-content">${campo(`${prefix}.newsletter.heading`, "Título", 2)}${campo(`${prefix}.newsletter.body`, "Texto", 2)}</div>`;
     if (id === "evidence") return panelEvidenciaPdp01HTML();
     return `<div class="editor__ayuda">Este bloque se alimenta con datos reales de Shopify o requiere una fuente verificable.</div>`;
+  }
+
+  // Inspector shared by fixed and optional Piloto sections.  It follows the
+  // PagePilot vocabulary (Contenido, Tipografía, Layout, Visibilidad,
+  // Apariencia, Padding) while keeping Shopify-owned fields explicitly read
+  // only.  Settings are stored by section id, never in the legacy facetas tree.
+  const P01_ID_ALIASES = Object.freeze({
+    "p01:product-information": "hero", "p01:product-gallery": "hero", "p01:product-details": "quick",
+    "p01:reviews-number": "evidence", "p01:product-title": "hero", "p01:text": "hero",
+    "p01:price": "offer", "p01:value-proposition": "hero", "p01:ingredients-list": "quick",
+    "p01:variant-picker": "offer", "p01:buy-buttons": "offer", "p01:payment-icons": "offer",
+    "p01:featured-reviews": "evidence", "p01:newsletter": "newsletter"
+    ,"p01:history": "why", "p01:benefits": "stories", "p01:timeline": "timeline", "p01:faq": "faq", "p01:closing": "closing"
+  });
+  const p01AliasBlock = (id) => P01_ID_ALIASES[id] || id;
+  const p01AliasForBlock = (id) => Object.keys(P01_ID_ALIASES).find((key) => P01_ID_ALIASES[key] === id) || `p01:${id}`;
+  const p01Setting = (section, key, fallback = "") => section?.settings?.[key] ?? fallback;
+  const p01SettingsPatch = (section, key, value) => {
+    section.settings = section.settings && typeof section.settings === "object" ? section.settings : {};
+    section.settings[key] = value;
+    marcarSucio();
+    clearTimeout(timerPreview);
+    timerPreview = setTimeout(repintarPreview, 120);
+  };
+  const p01Range = (section, key, label, min, max, step, unit, fallback) => {
+    const value = Number(p01Setting(section, key, fallback));
+    return `<div class="sp-row sp-row--slider"><label class="sp-lab" for="p01-${section.id}-${key}">${esc(label)}</label><div class="sp-slider"><input type="range" id="p01-${section.id}-${key}" min="${min}" max="${max}" step="${step}" value="${Number.isFinite(value) ? value : fallback}" data-p01-setting="${esc(section.id)}" data-p01-key="${esc(key)}" data-p01-number="1"><span class="sp-num"><output>${Number.isFinite(value) ? value : fallback}</output><i>${esc(unit || "")}</i></span></div></div>`;
+  };
+  const p01Switch = (section, key, label, fallback = false) => {
+    const on = Boolean(p01Setting(section, key, fallback));
+    return `<div class="sp-row sp-row--tog"><label class="sp-lab">${esc(label)}</label><button type="button" class="sp-tog ${on ? "is-on" : ""}" data-p01-setting="${esc(section.id)}" data-p01-key="${esc(key)}" data-p01-boolean="1" role="switch" aria-checked="${on}"><span class="sp-tog__k"></span></button></div>`;
+  };
+  const p01Select = (section, key, label, options, fallback) => {
+    const value = String(p01Setting(section, key, fallback));
+    return `<div class="sp-row sp-row--sel"><label class="sp-lab" for="p01-${section.id}-${key}">${esc(label)}</label><select id="p01-${section.id}-${key}" class="sp-select" data-p01-setting="${esc(section.id)}" data-p01-key="${esc(key)}">${options.map(([v, text]) => `<option value="${esc(v)}"${String(v) === value ? " selected" : ""}>${esc(text)}</option>`).join("")}</select></div>`;
+  };
+  const p01Color = (section, key, label, fallback = "") => {
+    const value = String(p01Setting(section, key, fallback));
+    return `<div class="sp-row sp-row--color"><label class="sp-lab">${esc(label)}</label><div class="sp-color"><label class="sp-color__sw" style="background:${esc(value || "transparent")}"><input type="color" value="${/^#[0-9a-f]{6}$/i.test(value) ? value : "#ffffff"}" data-p01-setting="${esc(section.id)}" data-p01-key="${esc(key)}"></label><input type="text" class="sp-color__hex" value="${esc(value)}" data-p01-setting="${esc(section.id)}" data-p01-key="${esc(key)}" spellcheck="false" maxlength="9"></div></div>`;
+  };
+  function p01EditorPanelHTML(id) {
+    const dynamicId = id.startsWith("p01sec:") ? id.slice(7) : null;
+    const aliasType = id.startsWith("p01:") ? id.slice(4) : id;
+    const section = dynamicId ? p01SectionById(dynamicId) : p01Sections().find((item) => item.id === aliasType || item.type === aliasType || item.id === P01_ID_ALIASES[id]);
+    const catalog = p01Catalog(section?.type || id.replace(/^p01:/, ""));
+    const title = catalog?.name || panelTitulo(id);
+    if (!section) return `<div class="editor__ayuda">${esc(title)} está conectado a Shopify y no necesita configuración adicional.</div>`;
+    if (section && panelOpen[`p01-responsive-${section.id}`] === undefined) panelOpen[`p01-responsive-${section.id}`] = true;
+    const fixed = section.fixed || catalog?.fixed;
+    const content = section.settings?.content || {};
+    const editor = p01EditorState();
+    const selected = editor.selected === section.id;
+    const coreId = p01AliasBlock(id);
+    const copyEditor = fixed && ["hero", "offer", "quick", "why", "stories", "timeline", "faq", "closing", "newsletter", "evidence"].includes(coreId)
+      ? panelPlantillaPdp01HTML(coreId)
+      : "";
+    const coreHint = fixed ? `<div class="sp-native-note"><strong>Fuente Shopify</strong><span>Este bloque usa datos vivos del producto. Los precios, variantes, stock, pagos y medios no se congelan en el editor.</span></div>` : "";
+    const textFields = !fixed && ["trusted-proof", "review-card", "text", "community", "newsletter", "faq"].includes(section.type)
+      ? `<label class="campo">Título<input data-p01-setting="${esc(section.id)}" data-p01-key="heading" value="${esc(content.heading || p01Setting(section, "heading", ""))}" placeholder="Título de la sección"></label><label class="campo">Texto<textarea rows="4" data-p01-setting="${esc(section.id)}" data-p01-key="body" placeholder="Escribí el contenido">${esc(content.body || p01Setting(section, "body", ""))}</textarea></label>`
+      : "";
+    const imageField = ["trusted-proof", "review-card", "image-benefits", "image-timeline", "community", "as-seen-on"].includes(section.type)
+      ? `<div class="sp-row sp-row--img"><label class="sp-lab">Imagen</label><p class="editor__ayuda">Usá una imagen del producto o subila desde Shopify Files. El preview conservará el media_id.</p>${selectorImagenUno(`piloto_pdp_01.editor.sections.${editor.sections.findIndex((item) => item.id === section.id)}.settings.image_media_id`, "", true)}</div>` : "";
+    const visibility = p01Switch(section, "enabled", "Mostrar sección", section.enabled !== false);
+    const layout = `${p01Select(section, "width", "Ancho", [["full", "Completo"], ["page", "Página"], ["custom", "Personalizado"]], "page")}${p01Range(section, "gap", "Separación", 0, 64, 1, "px", 24)}${p01Select(section, "mobile_alignment", "Alineación móvil", [["left", "Izquierda"], ["center", "Centro"], ["right", "Derecha"]], "left")}`;
+    const typography = `${p01Range(section, "font_size", "Tamaño", 10, 72, 1, "px", 16)}${p01Select(section, "font_weight", "Grosor", [["400", "Regular"], ["500", "Medium"], ["600", "Semibold"], ["700", "Bold"]], "400")}${p01Select(section, "letter_spacing", "Espaciado", [["tight", "Ajustado"], ["normal", "Normal"], ["loose", "Suelto"]], "normal")}${p01Select(section, "case", "Mayúsculas", [["default", "Predeterminado"], ["uppercase", "Mayúsculas"], ["lowercase", "Minúsculas"]], "default")}`;
+    const responsive = `<div class="p01-responsive-head"><span>Escritorio</span><span>Móvil</span></div>${p01Range(section, "mobile_font_size", "Mobile Size", 10, 48, 1, "px", 14)}${p01Range(section, "mobile_gap", "Mobile Gap", 0, 48, 1, "px", 16)}${p01Select(section, "mobile_alignment", "Mobile Alignment", [["left", "Izquierda"], ["center", "Centro"], ["right", "Derecha"]], "left")}`;
+    const appearance = `${p01Color(section, "background_color", "Color de fondo", "")}${p01Select(section, "border_style", "Borde", [["none", "Ninguno"], ["solid", "Sólido"], ["dashed", "Discontinuo"]], "none")}${p01Range(section, "rounded_corners", "Esquinas redondeadas", 0, 32, 1, "%", 0)}${p01Select(section, "box_shadow", "Sombra", [["none", "Ninguna"], ["soft", "Suave"], ["strong", "Marcada"]], "none")}`;
+    const padding = `${p01Range(section, "padding_top", "Arriba", 0, 120, 1, "px", 0)}${p01Range(section, "padding_bottom", "Abajo", 0, 120, 1, "px", 0)}${p01Range(section, "padding_left", "Izquierda", 0, 80, 1, "px", 0)}${p01Range(section, "padding_right", "Derecha", 0, 80, 1, "px", 0)}`;
+    return `<div class="p01-inspector-meta"><span class="p01-inspector-type">${esc(catalog?.group || "Sección")}</span>${selected ? `<span class="p01-inspector-live">En el canvas</span>` : ""}</div>
+      ${coreHint}${copyEditor}<div class="sp-sub">Contenido</div><div class="sp-content">${textFields}${imageField}${fixed ? `<div class="editor__ayuda">La plantilla mantiene la jerarquía editorial aprobada y reemplaza automáticamente los medios por el producto activo.</div>` : ""}</div>
+      <div class="sp-sub">Responsive</div>${secAcordeon(`p01-responsive-${section.id}`, "Vista de escritorio y móvil", responsive)}
+      <div class="sp-sub">Tipografía</div>${secAcordeon(`p01-type-${section.id}`, "Typography", typography)}
+      <div class="sp-sub">Layout</div>${secAcordeon(`p01-layout-${section.id}`, "Layout", layout)}
+      <div class="sp-sub">Visibilidad</div>${secAcordeon(`p01-visibility-${section.id}`, "Visibility", visibility)}
+      <div class="sp-sub">Apariencia</div>${secAcordeon(`p01-appearance-${section.id}`, "Appearance", appearance)}
+      <div class="sp-sub">Padding</div>${secAcordeon(`p01-padding-${section.id}`, "Padding", padding)}
+      <div class="sp-sub">Custom</div><div class="sp-content"><label class="campo">Clase CSS<input data-p01-setting="${esc(section.id)}" data-p01-key="custom_class" value="${esc(p01Setting(section, "custom_class", ""))}" placeholder="opcional"></label></div>`;
   }
 
   function panelEvidenciaPdp01HTML() {
@@ -3763,13 +3957,14 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     // Piloto 01 tiene un contrato propio: no comparte `facetas` con el editor
     // histórico. Resolver primero por contrato evita que seleccionar un bloque
     // intente leer `facetas.resenas` y deje el inspector vacío.
-    const esPilotoFijo = esPlantillaPdp01() && !editorId.startsWith("sec:");
+    const esPilotoFijo = esPlantillaPdp01() && !editorId.startsWith("sec:") && !editorId.startsWith("p01:") && !editorId.startsWith("p01sec:");
+    const esPilotoManaged = esPlantillaPdp01() && (editorId.startsWith("p01:") || editorId.startsWith("p01sec:"));
     if (esPilotoFijo && !BLOQUES_PILOTO_01.has(editorId)) {
       panelSecId = null; panelEditorId = null; return;
     }
-    const s = esPilotoFijo ? null : secActual();
+    const s = esPilotoFijo || esPilotoManaged ? null : secActual();
     const def = esPilotoFijo || editorId.startsWith("sec:") ? null : seccionesPagina()[editorId];
-    if (!esPilotoFijo && !s && !def) { panelSecId = null; panelEditorId = null; return; }
+    if (!esPilotoFijo && !esPilotoManaged && !s && !def) { panelSecId = null; panelEditorId = null; return; }
     const p = document.getElementById("pe-inspector");
     if (!p) return;
     p.classList.add("is-editing");
@@ -3780,9 +3975,20 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         <button class="sec-panel__x" type="button" aria-label="Cerrar">${ico("x")}</button>
       </div>
       <div class="sec-panel__body" id="sp-body">${panelEditorHTML(panelEditorId)}</div>
-      ${editorId.startsWith("sec:") && s ? `<div class="sec-panel__footer"><s-button variant="tertiary" tone="critical" class="sp-del" data-panel-del="${esc(s.id)}">${ico("basura")} Eliminar sección</s-button></div>` : ""}`;
+      ${editorId.startsWith("sec:") && s ? `<div class="sec-panel__footer"><s-button variant="tertiary" tone="critical" class="sp-del" data-panel-del="${esc(s.id)}">${ico("basura")} Eliminar sección</s-button></div>` : ""}
+      ${editorId.startsWith("p01sec:") ? `<div class="sec-panel__footer"><button type="button" class="sp-del" data-p01-delete="${esc(editorId.slice(7))}">${ico("basura")} Eliminar sección</button></div>` : ""}`;
     p.oninput = (e) => {
       const t = e.target;
+      if (t.dataset.p01Setting !== undefined) {
+        const section = p01SectionById(t.dataset.p01Setting);
+        if (!section) return;
+        let value = t.value;
+        if (t.dataset.p01Number === "1") value = Number(value) || 0;
+        p01SettingsPatch(section, t.dataset.p01Key, value);
+        const output = t.closest(".sp-slider")?.querySelector("output");
+        if (output) output.textContent = t.value;
+        return;
+      }
       if (t.dataset.p01Review !== undefined) {
         const [index, field] = t.dataset.p01Review.split(".");
         const reviewIndex = Number(index);
@@ -3819,6 +4025,27 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
 
     p.onclick = (e) => {
       const t = e.target;
+      const p01SettingControl = t.closest?.("[data-p01-setting]");
+      if (p01SettingControl && p01SettingControl.dataset.p01Boolean === "1") {
+        const section = p01SectionById(p01SettingControl.dataset.p01Setting);
+        if (!section) return;
+        const next = !Boolean(p01Setting(section, p01SettingControl.dataset.p01Key, section.enabled !== false));
+        p01SettingsPatch(section, p01SettingControl.dataset.p01Key, next);
+        p01SettingControl.classList.toggle("is-on", next);
+        p01SettingControl.setAttribute("aria-checked", String(next));
+        if (p01SettingControl.dataset.p01Key === "enabled") {
+          section.enabled = next;
+          refrescarArbolP01?.();
+        }
+        return;
+      }
+      const p01Delete = t.closest?.("[data-p01-delete]");
+      if (p01Delete) {
+        const editor = p01EditorState();
+        const index = editor.sections.findIndex((item) => item.id === p01Delete.dataset.p01Delete);
+        if (index > -1) editor.sections.splice(index, 1);
+        cerrarPanelSeccion(); marcarSucio(); repintarPreview(); refrescarArbolP01?.(); return;
+      }
       const ppbPago = t.closest("[data-ppb-payment]");
       if (ppbPago) {
         const ruta = "facetas.pagepilot_blue.pagos";
@@ -3884,6 +4111,15 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
 
     p.onchange = (e) => {
       const t = e.target;
+      if (t.dataset.p01Setting !== undefined) {
+        const section = p01SectionById(t.dataset.p01Setting);
+        if (section) {
+          let value = t.value;
+          if (t.dataset.p01Number === "1") value = Number(value) || 0;
+          p01SettingsPatch(section, t.dataset.p01Key, value);
+        }
+        return;
+      }
       if (t.dataset.p01EvidenceUpload !== undefined && t.files?.length) { subirImagenEvidenciaPdp01(t.files[0], t); return; }
       if (t.dataset.p01Review !== undefined) {
         const [index, field] = t.dataset.p01Review.split(".");
@@ -3932,22 +4168,27 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     const fixedTemplate = esPlantillaPinzaFija() || esPlantillaPdp01();
     if (fixedTemplate) {
       if (esPlantillaPdp01()) {
-        // El árbol describe la composición que se ve en el canvas. No expone
-        // estados internos ni trata la plantilla como una colección de campos.
-        const producto = row("hero", "Información del producto", I.encabezado, { fixed: true }) +
-          row("offer", "Oferta y packs", I.lista, { fixed: true }) +
-          row("quick", "Detalles del producto", I.lista, { fixed: true });
-        const contenido = row("why", "Historia del producto", I.lista, { fixed: true }) +
-          row("stories", "Beneficios destacados", I.estrella, { fixed: true }) +
-          row("timeline", "Cómo se usa", I.lista, { fixed: true }) +
-          row("faq", "Preguntas frecuentes", I.lista, { fixed: true }) +
-          row("closing", "Cierre", I.beneficios, { fixed: true }) +
-          row("newsletter", "Newsletter", I.lista, { fixed: true });
-        const reseñas = row("evidence", "Carrusel de reseñas", I.estrella, { fixed: true }) +
-          `<div class="pe-tree__nest">${Array.from({ length: 5 }, (_item, index) => row(`evidence:${index}`, `Reseña ${index + 1}`, I.estrella, { fixed: true })).join("")}</div>`;
+        const editor = p01EditorState();
+        const sections = p01Sections();
+        const p01Rows = (groupName) => sections.filter((section) => p01Catalog(section.type)?.group === groupName).map((section) => {
+          const catalog = p01Catalog(section.type) || { name: "Sección", icon: "lista" };
+          const id = section.fixed ? `p01:${section.type}` : `p01sec:${section.id}`;
+          const base = row(id, catalog.name, I[catalog.icon] || I.lista, { fixed: !!section.fixed });
+          if (section.type !== "featured-reviews") return base;
+          const reseñas = Array.from({ length: 5 }, (_item, index) => row(`evidence:${index}`, `Featured Review ${index + 1}`, I.estrella, { fixed: true })).join("");
+          return base + `<div class="p01-tree__subchildren">${reseñas}</div>`;
+        }).join("");
+        const producto = p01Rows("Producto");
+        const contenido = p01Rows("Contenido");
+        const social = p01Rows("Prueba social");
+        const reseñas = social;
+        const urgencia = p01Rows("Urgency & Scarcity");
+        const upsells = p01Rows("Upsells");
+        const addButton = `<button type="button" class="p01-add-section" data-p01-add-section>${ico("mas")}<span>Añadir sección</span></button>`;
         return `<nav class="pe-tree pe-tree--workbench p01-structure" aria-label="Estructura de la página de producto">
-          <div class="pe-tree__head p01-structure__head"><span class="pe-tree__head-title">Página de producto</span></div>
-          <div class="pe-tree__body">${grupo("Producto", producto, "", true)}${grupo("Contenido", contenido, "", true)}${grupo("Prueba social", reseñas, "", true)}</div>
+          <div class="pe-tree__head p01-structure__head"><span class="pe-tree__head-title">Página de producto</span><span class="pe-tree__head-sub">${esc(editor.sections.length)} secciones</span></div>
+          <div class="pe-tree__body">${grupo("Producto", producto, "", true)}${grupo("Contenido", contenido, "", true)}${grupo("Prueba social", reseñas, "", true)}${urgencia ? grupo("Urgency & Scarcity", urgencia, "", true) : ""}${upsells ? grupo("Upsells", upsells, "", true) : ""}</div>
+          <div class="p01-tree__footer">${addButton}</div>
         </nav>`;
       }
       const source = locked("Producto", I.encabezado) + locked("Galería de producto", I.galeria) +
@@ -3985,8 +4226,10 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
 
   function seleccionarBloquePiloto(id, { desdeCanvas = false } = {}) {
     const reseña = /^evidence:(\d)$/.exec(id);
-    const blockId = reseña ? "evidence" : id;
-    if (!BLOQUES_PILOTO_01.has(blockId)) return;
+    const dynamicSection = !reseña && p01SectionById(id);
+    const blockId = reseña ? "evidence" : (id.startsWith("p01:") ? p01AliasBlock(id) : (dynamicSection ? "p01sec:" + id : id));
+    const isP01Managed = id.startsWith("p01:") || id.startsWith("p01sec:") || Boolean(dynamicSection);
+    if (!BLOQUES_PILOTO_01.has(blockId) && !isP01Managed) return;
     if (reseña) estado.p01ReviewIndex = Number(reseña[1]);
     vista.querySelectorAll(".pe-tree__row.is-sel").forEach((row) => row.classList.remove("is-sel"));
     const fila = vista.querySelector(`.pe-tree__row[data-tree="${CSS.escape(id)}"]`);
@@ -3994,9 +4237,32 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       fila.classList.add("is-sel");
       if (desdeCanvas) fila.scrollIntoView({ block: "nearest", behavior: "smooth" });
     }
-    abrirPanelEditor(blockId);
+    abrirPanelEditor(isP01Managed ? (dynamicSection ? "p01sec:" + id : id) : blockId);
     const marco = $("marco");
-    marco?.contentWindow?.postMessage({ tiendaiqEditor: "highlight-block", blockId }, window.location.origin);
+    marco?.contentWindow?.postMessage({ tiendaiqEditor: "highlight-block", blockId: isP01Managed ? (id.startsWith("p01sec:") ? id : blockId) : blockId }, window.location.origin);
+  }
+
+  function refrescarArbolP01() {
+    if (!esPlantillaPdp01()) return;
+    const current = vista.querySelector(".p01-structure");
+    if (!current) return;
+    const holder = document.createElement("div");
+    holder.innerHTML = arbolPaginaHTML();
+    const next = holder.firstElementChild;
+    if (!next) return;
+    current.replaceWith(next);
+    next.querySelectorAll(".pe-tree__row[data-tree]").forEach((el) => {
+      el.onclick = () => seleccionarBloquePiloto(el.dataset.tree);
+    });
+    next.querySelectorAll(".pe-tree__row--group .pe-tree__chevron").forEach((ch) => {
+      ch.onclick = (event) => {
+        event.stopPropagation();
+        const group = ch.closest(".pe-tree__group");
+        const collapsed = group.classList.toggle("is-collapsed");
+        group.querySelector(".pe-tree__row--group")?.setAttribute("aria-expanded", String(!collapsed));
+      };
+    });
+    next.querySelector("[data-p01-add-section]")?.addEventListener("click", () => abrirGaleriaSecciones($("marco")));
   }
 
   function urlVariantesProducto() {
@@ -4161,6 +4427,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         group.querySelector(".pe-tree__row--group")?.setAttribute("aria-expanded", String(!collapsed));
       };
     });
+    if (esPiloto) vista.querySelector("[data-p01-add-section]")?.addEventListener("click", () => abrirGaleriaSecciones($("marco")));
     const cambiarViewportPiloto = (button) => {
       if (!button?.dataset?.viewport) return;
       const doc = button.ownerDocument || document;

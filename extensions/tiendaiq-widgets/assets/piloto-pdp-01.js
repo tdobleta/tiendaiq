@@ -461,6 +461,90 @@
     show(timer);
   }
 
+  // --- secciones añadidas desde el editor ----------------------------------
+  // Las superficies opcionales se renderizan a partir del descriptor
+  // piloto_pdp_01.editor.sections. Los bloques fijos siguen usando el Liquid
+  // canónico; estos nodos sólo aparecen cuando el merchant agrega una
+  // sección desde la galería y siempre consumen media Shopify del payload.
+  const renderAddedSections = () => {
+    const editor = doc.editor;
+    if (!editor || !Array.isArray(editor.sections)) return;
+    const sections = editor.sections.filter((section) => section && section.enabled !== false && !section.fixed).sort((a, b) => (a.order || 0) - (b.order || 0));
+    if (!sections.length) return;
+    const host = document.createElement("div");
+    host.className = "tiq-p01-added-sections";
+    const safeColor = (value) => /^#[0-9a-f]{3,8}$/i.test(String(value || "")) ? String(value) : "";
+    const safeText = (value, fallback = "") => String(value || fallback).trim();
+    const primaryMedia = gallery[0] || "";
+    const addImage = (figure, id, alt) => { const url = image(id) || primaryMedia; if (!url) return; const img = document.createElement("img"); img.src = url; img.alt = alt || productTitle; figure.appendChild(img); };
+    const applySettings = (node, section) => {
+      const settings = section.settings || {};
+      const appearance = settings.appearance || settings;
+      const desktop = settings.desktop || {};
+      const mobile = settings.mobile || {};
+      const bg = safeColor(appearance.background_color); if (bg) node.style.backgroundColor = bg;
+      const radius = Number(appearance.rounded_corners); if (Number.isFinite(radius)) node.style.borderRadius = Math.max(0, Math.min(32, radius)) + "px";
+      const size = Number(settings.font_size); if (Number.isFinite(size)) node.style.setProperty("--tiq-p01-font-size", Math.max(10, Math.min(72, size)) + "px");
+      const mobileSize = Number(settings.mobile_font_size); if (Number.isFinite(mobileSize)) node.style.setProperty("--tiq-p01-mobile-font-size", Math.max(10, Math.min(48, mobileSize)) + "px");
+      const weight = String(settings.font_weight || ""); if (/^(400|500|600|700)$/.test(weight)) node.style.setProperty("--tiq-p01-font-weight", weight);
+      const gap = Number(settings.gap); if (Number.isFinite(gap)) node.style.setProperty("--tiq-p01-gap", Math.max(0, Math.min(64, gap)) + "px");
+      const mobileGap = Number(settings.mobile_gap); if (Number.isFinite(mobileGap)) node.style.setProperty("--tiq-p01-mobile-gap", Math.max(0, Math.min(48, mobileGap)) + "px");
+      const pt = Number(settings.padding_top), pb = Number(settings.padding_bottom), pl = Number(settings.padding_left), pr = Number(settings.padding_right);
+      if (Number.isFinite(pt)) node.style.paddingTop = Math.max(0, Math.min(120, pt)) + "px";
+      if (Number.isFinite(pb)) node.style.paddingBottom = Math.max(0, Math.min(120, pb)) + "px";
+      if (Number.isFinite(pl)) node.style.paddingLeft = Math.max(0, Math.min(80, pl)) + "px";
+      if (Number.isFinite(pr)) node.style.paddingRight = Math.max(0, Math.min(80, pr)) + "px";
+      node.dataset.tiqEditorBlock = section.id;
+      node.dataset.tiqEditorLabel = section.type;
+      if (desktop.width === "full") node.classList.add("is-full");
+      if (mobile.mobile_alignment) node.style.setProperty("--tiq-p01-mobile-align", mobile.mobile_alignment);
+    };
+    const makeBase = (section, title) => {
+      const node = document.createElement("section"); node.className = "tiq-p01-added-section tiq-p01-added-" + section.type; node.setAttribute("aria-label", title); applySettings(node, section);
+      const wrap = document.createElement("div"); wrap.className = "tiq-p01-added-section__wrap"; node.appendChild(wrap); return { node, wrap };
+    };
+    sections.forEach((section) => {
+      const title = ({ "trusted-proof": "Trusted by thousands customers", "review-card": "Featured review", "as-seen-on": "As seen on", "image-benefits": "Beneficios", "image-timeline": "Línea de tiempo", faq: "Preguntas frecuentes", timer: "Oferta", community: "Comunidad", newsletter: "Newsletter", "recommended-products": "Recommended products" }[section.type] || section.type);
+      const { node, wrap } = makeBase(section, title);
+      const settings = section.settings || {};
+      const content = settings.content || settings;
+      if (section.type === "trusted-proof" || section.type === "review-card") {
+        const grid = document.createElement("div"); grid.className = "tiq-p01-added-proof-grid";
+        const figure = document.createElement("figure"); figure.className = "tiq-p01-added-proof-media"; addImage(figure, settings.image_media_id, title);
+        const copy = document.createElement("div"); copy.className = "tiq-p01-added-copy";
+        const h = document.createElement("h2"); h.textContent = safeText(settings.heading || content.heading, section.type === "review-card" ? "Una experiencia que se entiende" : "Trusted by thousands customers");
+        const p = document.createElement("p"); p.textContent = safeText(settings.body || content.body, c.why?.body || c.hero?.claim || "Información clara para elegir con tranquilidad.");
+        copy.append(h, p); grid.append(figure, copy); wrap.appendChild(grid);
+      } else if (section.type === "as-seen-on") {
+        const h = document.createElement("h2"); h.textContent = safeText(settings.heading || content.heading, "As seen on"); wrap.appendChild(h);
+        const logos = document.createElement("div"); logos.className = "tiq-p01-added-logos"; ["Producto", "Calidad", "Shopify"].forEach((label) => { const span = document.createElement("span"); span.textContent = label; logos.appendChild(span); }); wrap.appendChild(logos);
+      } else if (section.type === "image-benefits" || section.type === "image-timeline" || section.type === "community") {
+        const grid = document.createElement("div"); grid.className = "tiq-p01-added-editorial-grid";
+        const figure = document.createElement("figure"); figure.className = "tiq-p01-added-editorial-media"; addImage(figure, settings.image_media_id || c.media?.community_media_id, title);
+        const copy = document.createElement("div"); copy.className = "tiq-p01-added-copy";
+        const h = document.createElement("h2"); h.textContent = safeText(settings.heading || content.heading, title);
+        const p = document.createElement("p"); p.textContent = safeText(settings.body || content.body, c.why?.body || c.hero?.claim || "Una sección editorial conectada al producto.");
+        copy.append(h, p); grid.append(figure, copy); wrap.appendChild(grid);
+      } else if (section.type === "faq") {
+        const h = document.createElement("h2"); h.textContent = safeText(settings.heading || content.heading, c.faq?.heading || "Preguntas frecuentes"); wrap.appendChild(h);
+        const list = document.createElement("div"); list.className = "tiq-p01-added-faq";
+        (c.faq?.items || []).slice(0, 6).forEach((item) => { const details = document.createElement("details"); const summary = document.createElement("summary"); summary.textContent = item.question; const p = document.createElement("p"); p.textContent = item.answer; details.append(summary, p); list.appendChild(details); }); wrap.appendChild(list);
+      } else if (section.type === "timer") {
+        const offerDeadline = conFuente(ev.offer) ? Date.parse(ev.offer.ends_at) : NaN;
+        const h = document.createElement("strong"); h.textContent = Number.isFinite(offerDeadline) && offerDeadline > Date.now() ? "Oferta disponible por tiempo limitado" : "Información de oferta"; const p = document.createElement("span"); p.textContent = Number.isFinite(offerDeadline) && offerDeadline > Date.now() ? new Date(offerDeadline).toLocaleString(document.documentElement.lang || undefined) : "Consultá las condiciones vigentes en la tienda."; wrap.append(h, p);
+      } else if (section.type === "newsletter") {
+        const h = document.createElement("h2"); h.textContent = safeText(settings.heading || content.heading, c.newsletter?.heading || "Recibí novedades por email"); const p = document.createElement("p"); p.textContent = safeText(settings.body || content.body, c.newsletter?.body || "Novedades y recursos de la tienda."); wrap.append(h, p);
+      } else if (section.type === "recommended-products") {
+        const h = document.createElement("h2"); h.textContent = safeText(settings.heading || content.heading, "También puede interesarte"); const p = document.createElement("p"); p.textContent = "Descubrí otros productos disponibles en la tienda."; wrap.append(h, p);
+      }
+      host.appendChild(node);
+    });
+    const style = document.createElement("style");
+    style.textContent = ".tiq-p01-added-sections{font-family:Helvetica,Arial,sans-serif;color:#171717;background:#fff}.tiq-p01-added-section{padding:56px 20px;border-top:1px solid #e8e5e1;font-size:var(--tiq-p01-font-size,16px);font-weight:var(--tiq-p01-font-weight,400);text-align:var(--tiq-p01-mobile-align,left)}.tiq-p01-added-section__wrap{width:min(100%,1080px);margin:0 auto}.tiq-p01-added-section h2{margin:0 0 12px;font-size:clamp(24px,4vw,38px);line-height:1.08;letter-spacing:-.04em}.tiq-p01-added-section p{margin:0;color:#555;line-height:1.6}.tiq-p01-added-proof-grid,.tiq-p01-added-editorial-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:var(--tiq-p01-gap,24px);align-items:center}.tiq-p01-added-proof-media,.tiq-p01-added-editorial-media{margin:0;aspect-ratio:1.25/1;overflow:hidden;border-radius:8px;background:#f4f2ee}.tiq-p01-added-proof-media img,.tiq-p01-added-editorial-media img{display:block;width:100%;height:100%;object-fit:cover}.tiq-p01-added-logos{display:flex;justify-content:center;gap:40px;flex-wrap:wrap;padding:20px 0;color:#6d6d6d;font-size:14px;font-weight:650;letter-spacing:.08em;text-transform:uppercase}.tiq-p01-added-faq{border-top:1px solid #ddd}.tiq-p01-added-faq details{border-bottom:1px solid #ddd}.tiq-p01-added-faq summary{padding:16px 30px 16px 0;cursor:pointer;font-weight:600}.tiq-p01-added-faq p{padding:0 0 16px}.tiq-p01-added-timer{display:flex;justify-content:center;gap:14px;align-items:baseline;background:#faf7f3}.tiq-p01-added-timer strong{font-size:18px}.tiq-p01-added-timer span{font-size:13px;color:#666}@media(max-width:719px){.tiq-p01-added-section{padding:42px 16px;font-size:var(--tiq-p01-mobile-font-size,16px)}.tiq-p01-added-proof-grid,.tiq-p01-added-editorial-grid{grid-template-columns:1fr;gap:var(--tiq-p01-mobile-gap,18px)}.tiq-p01-added-section h2{font-size:28px}.tiq-p01-added-logos{gap:18px;font-size:12px}}";
+    host.prepend(style); root.appendChild(host);
+  };
+  renderAddedSections();
+
   // --- puente de edición (sólo preview interno) ----------------------------
   // La tienda nunca recibe estas marcas. En el editor, cada superficie del
   // canvas comunica el mismo identificador que usa el árbol y el inspector.
@@ -484,6 +568,11 @@
         node.setAttribute("data-tiq-editor-label", block.label);
       });
     });
+    // Alias markers expose the finer-grained PagePilot tree without changing
+    // the canonical renderer: several Shopify-owned leaves may share the same
+    // visual surface, but each remains selectable in the inspector.
+    const aliases = { "p01:product-information": "hero", "p01:product-gallery": "hero", "p01:product-details": "quick", "p01:reviews-number": "evidence", "p01:product-title": "hero", "p01:text": "hero", "p01:price": "offer", "p01:value-proposition": "hero", "p01:ingredients-list": "quick", "p01:variant-picker": "offer", "p01:buy-buttons": "offer", "p01:payment-icons": "offer", "p01:featured-reviews": "evidence", "p01:history": "why", "p01:benefits": "stories", "p01:timeline": "timeline", "p01:faq": "faq", "p01:closing": "closing", "p01:newsletter": "newsletter" };
+    Object.entries(aliases).forEach(([alias, base]) => all(root, editorBlocks[base]?.selector || "").forEach((node) => { if (!node.dataset.tiqEditorBlock) { node.setAttribute("data-tiq-editor-block", alias); node.setAttribute("data-tiq-editor-label", alias.replace(/^p01:/, "")); } }));
 
     const editorStyle = document.createElement("style");
     editorStyle.textContent = `

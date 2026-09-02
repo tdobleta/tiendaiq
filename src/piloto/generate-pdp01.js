@@ -7,7 +7,8 @@ const {
   hashSource,
   sourceFieldsFromProduct,
   validatePdp01Copy,
-  validatePdp01
+  validatePdp01,
+  defaultPdp01Editor
 } = require("./pdp01-contract");
 
 const MODEL = env.MODELO_IA || "claude-sonnet-5";
@@ -101,7 +102,8 @@ async function generatePdp01(product, media, { idioma = "es", angulo = "" } = {}
   if (!text) throw new Error("La IA no devolvió el contenido de Piloto 01.");
   const document = {
     contract_version: 1, template: "piloto-pdp-01", source_fields,
-    source_hash: hashSource(source_fields), content: composePdp01Content(copyFromModelJson(text), source_fields), evidence: {}
+    source_hash: hashSource(source_fields), content: composePdp01Content(copyFromModelJson(text), source_fields), evidence: {},
+    editor: defaultPdp01Editor()
   };
   return { data: validatePdp01(document, { origin: "ai" }), uso: response.usage };
 }

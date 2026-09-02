@@ -11,6 +11,84 @@ const GID = {
   variant: /^gid:\/\/shopify\/ProductVariant\/\d+$/
 };
 
+// Editor configuration is intentionally separate from the storefront content
+// contract.  It describes merchant-controlled composition and presentation
+// only; product, price, variants, payments and evidence continue to come from
+// Shopify/source_fields and their dedicated endpoints.
+const P01_EDITOR_SECTION_TYPES = Object.freeze([
+  "product-information", "product-gallery", "product-details", "reviews-number",
+  "product-title", "text", "price", "value-proposition", "ingredients-list",
+  "variant-picker", "buy-buttons", "payment-icons", "featured-reviews",
+  "recommended-products", "as-seen-on", "trusted-proof", "review-card",
+  "image-benefits", "image-timeline", "history", "benefits", "timeline", "faq", "closing", "timer", "community", "newsletter"
+]);
+const P01_EDITOR_DEFAULT_SECTIONS = Object.freeze([
+  ["product-information", "product-information", true, true],
+  ["product-gallery", "product-gallery", true, true],
+  ["product-details", "product-details", true, true],
+  ["reviews-number", "reviews-number", true, true],
+  ["product-title", "product-title", true, true],
+  ["text", "text", true, true],
+  ["price", "price", true, true],
+  ["value-proposition", "value-proposition", true, true],
+  ["ingredients-list", "ingredients-list", true, true],
+  ["variant-picker", "variant-picker", true, true],
+  ["buy-buttons", "buy-buttons", true, true],
+  ["payment-icons", "payment-icons", true, true],
+  ["featured-reviews", "featured-reviews", true, true],
+  ["history", "history", true, true],
+  ["benefits", "benefits", true, true],
+  ["timeline", "timeline", true, true],
+  ["faq", "faq", true, true],
+  ["closing", "closing", true, true],
+  ["newsletter", "newsletter", true, true]
+]);
+
+function defaultPdp01Editor(editor) {
+  const source = plainObject(editor) ? editor : {};
+  const incoming = Array.isArray(source.sections) ? source.sections : [];
+  const sections = incoming.length ? incoming : P01_EDITOR_DEFAULT_SECTIONS.map(([id, type, enabled, fixed], order) => ({
+    id, type, enabled, order, fixed, settings: {}
+  }));
+  return { version: 1, sections: clone(sections), selected: typeof source.selected === "string" ? source.selected : null };
+}
+
+function validatePdp01Editor(editor) {
+  const value = defaultPdp01Editor(editor);
+  const errors = [];
+  assertKeys(value, ["version", "sections", "selected"], "editor", errors);
+  if (value.version !== 1) errors.push("editor.version no coincide");
+  if (!Array.isArray(value.sections) || value.sections.length > 40) errors.push("editor.sections debe tener hasta 40 secciones");
+  const ids = new Set();
+  (value.sections || []).forEach((section, index) => {
+    const where = `editor.sections[${index}]`;
+    assertKeys(section, ["id", "type", "enabled", "order", "fixed", "settings"], where, errors);
+    if (!/^[a-z0-9][a-z0-9-]{1,63}$/.test(String(section?.id || "")) || ids.has(section.id)) errors.push(`${where}.id no es único o válido`);
+    ids.add(section?.id);
+    if (!P01_EDITOR_SECTION_TYPES.includes(section?.type)) errors.push(`${where}.type no está permitido`);
+    if (typeof section?.enabled !== "boolean") errors.push(`${where}.enabled debe ser booleano`);
+    if (!Number.isInteger(section?.order) || section.order < 0 || section.order > 40) errors.push(`${where}.order no es válido`);
+    if (section?.fixed !== undefined && typeof section.fixed !== "boolean") errors.push(`${where}.fixed debe ser booleano`);
+    if (section?.settings !== undefined && !plainObject(section.settings)) errors.push(`${where}.settings debe ser un objeto`);
+    if (plainObject(section?.settings)) {
+      const allowed = ["desktop", "mobile", "appearance", "content", "media_id", "image_media_id", "autoplay", "interval", "columns", "gap", "mobile_gap", "padding", "text", "heading", "body", "label", "button_label", "font_size", "mobile_font_size", "font_weight", "letter_spacing", "case", "mobile_alignment", "width", "border_style", "background_color", "rounded_corners", "box_shadow", "padding_top", "padding_bottom", "padding_left", "padding_right", "custom_class"];
+      Object.keys(section.settings).forEach((key) => { if (!allowed.includes(key)) errors.push(`${where}.settings.${key} no está permitido`); });
+      for (const key of ["desktop", "mobile", "appearance", "content"]) {
+        if (section.settings[key] !== undefined && !plainObject(section.settings[key])) errors.push(`${where}.settings.${key} debe ser un objeto`);
+      }
+      for (const key of ["font_size", "mobile_font_size", "gap", "mobile_gap", "rounded_corners", "padding_top", "padding_bottom", "padding_left", "padding_right", "columns", "interval"]) {
+        if (section.settings[key] !== undefined && !Number.isFinite(Number(section.settings[key]))) errors.push(`${where}.settings.${key} debe ser numérico`);
+      }
+      for (const key of ["custom_class", "background_color", "border_style", "box_shadow", "font_weight", "letter_spacing", "case", "mobile_alignment", "width", "heading", "body", "text", "label", "button_label", "image_media_id", "media_id"]) {
+        if (section.settings[key] !== undefined && (typeof section.settings[key] !== "string" || section.settings[key].length > 1000)) errors.push(`${where}.settings.${key} no es texto válido`);
+      }
+    }
+  });
+  if (value.selected !== null && typeof value.selected !== "string") errors.push("editor.selected debe ser texto o null");
+  if (errors.length) throw new Pdp01ValidationError(errors);
+  return value;
+}
+
 // This is the only shape the model is allowed to produce. Commerce belongs to
 // Shopify, therefore packs, variants, availability and media are deliberately
 // absent here and are assembled from source_fields by generate-pdp01.js.
@@ -287,7 +365,7 @@ function sanitizeEvidence(document, origin) {
 function validatePdp01(document, { origin = "ai" } = {}) {
   const value = clone(document);
   const errors = [];
-  assertKeys(value, ["contract_version", "template", "source_fields", "source_hash", "content", "evidence"], "documento", errors);
+  assertKeys(value, ["contract_version", "template", "source_fields", "source_hash", "content", "evidence", "editor"], "documento", errors);
   if (value.contract_version !== 1 || value.template !== "piloto-pdp-01") errors.push("la versión o plantilla no coincide con Piloto 01");
   const source = value.source_fields;
   assertKeys(source, ["product_gid", "title", "description", "vendor", "product_type", "options", "media_ids", "variants"], "source_fields", errors);
@@ -331,6 +409,11 @@ function validatePdp01(document, { origin = "ai" } = {}) {
   if (Object.hasOwn(content?.media || {}, "story_media_ids") && (!Array.isArray(content.media.story_media_ids) || !content.media.story_media_ids.every((mediaId) => knownMedia.has(mediaId)))) errors.push("las tarjetas editoriales referencian medios ajenos al producto");
   for (const slot of ["comparison_media_id", "community_media_id"]) if (Object.hasOwn(content?.media || {}, slot) && !knownMedia.has(content.media[slot])) errors.push(`content.media.${slot} no pertenece al producto`);
   sanitizeEvidence(value, origin); validateEvidence(value.evidence, origin, errors, knownMedia);
+  try { value.editor = validatePdp01Editor(value.editor); }
+  catch (error) {
+    if (error instanceof Pdp01ValidationError) errors.push(...error.message.replace(/^El documento Piloto 01 no es válido:\s*/, "").split("; "));
+    else throw error;
+  }
   if (errors.length) throw new Pdp01ValidationError(errors);
   return value;
 }
@@ -338,4 +421,4 @@ function storefrontProjection(document) {
   const valid = validatePdp01(document, { origin: "merchant" });
   return { contract_version: valid.contract_version, template: valid.template, content: valid.content, evidence: valid.evidence };
 }
-module.exports = Object.freeze({ PDP01_COPY_OUTPUT_SCHEMA, Pdp01ValidationError, hashSource, sourceFieldsFromProduct, validatePdp01Copy, validatePdp01, storefrontProjection });
+module.exports = Object.freeze({ PDP01_COPY_OUTPUT_SCHEMA, Pdp01ValidationError, P01_EDITOR_SECTION_TYPES, P01_EDITOR_DEFAULT_SECTIONS, defaultPdp01Editor, validatePdp01Editor, hashSource, sourceFieldsFromProduct, validatePdp01Copy, validatePdp01, storefrontProjection });

@@ -64,3 +64,20 @@ test("Piloto 01 conserva cinco tarjetas de reseña independientes", () => {
   assert.equal(next.piloto_pdp_01.evidence.testimonials.items.length, 5);
   assert.equal(next.piloto_pdp_01.evidence.testimonials.items[4].author, "Cliente 5");
 });
+
+test("Piloto 01 permite componer secciones y ajustes seguros sin abrir commerce", () => {
+  const persisted = document();
+  const submitted = structuredClone(persisted);
+  submitted.piloto_pdp_01.editor = {
+    version: 1,
+    selected: "trusted-proof-demo",
+    sections: [{ id: "trusted-proof-demo", type: "trusted-proof", enabled: true, fixed: false, order: 0, settings: { heading: "Confianza clara", font_size: 18, mobile_gap: 12, background_color: "#f7f5f2" } }]
+  };
+  const next = applyTemplateBoundEdit({ persistedData: persisted, submittedData: submitted });
+  assert.equal(next.piloto_pdp_01.editor.sections[0].type, "trusted-proof");
+  assert.equal(next.piloto_pdp_01.editor.sections[0].settings.font_size, 18);
+
+  const invalid = structuredClone(submitted);
+  invalid.piloto_pdp_01.editor.sections[0].settings.html = "<script>";
+  assert.throws(() => applyTemplateBoundEdit({ persistedData: persisted, submittedData: invalid }), FixedTemplateEditError);
+});
