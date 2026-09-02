@@ -3988,7 +3988,8 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
 
   function abrirPanelSeccion(secId) { abrirPanelEditor(`sec:${secId}`); }
 
-  function abrirPanelEditor(editorId, { sourceDocument = null } = {}) {
+  function abrirPanelEditor(editorId) {
+    const sourceDocument = arguments[1]?.sourceDocument || null;
     const targetDocument = sourceDocument || panelDocument || document;
     cerrarPanelSeccion(targetDocument);
     panelDocument = targetDocument;
@@ -4457,7 +4458,8 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     // el chevron colapsa el grupo. Reusa la edición existente (abrirModalEdicion).
     vista.querySelectorAll(".pe-tree__row[data-tree]").forEach((el) => {
       el.onclick = () => {
-        if (esPiloto) return seleccionarBloquePiloto(el.dataset.tree, { sourceDocument: el.ownerDocument });
+        if (esPiloto) panelDocument = el.ownerDocument;
+        if (esPiloto) return seleccionarBloquePiloto(el.dataset.tree);
         vista.querySelectorAll(".pe-tree__row.is-sel").forEach((r) => r.classList.remove("is-sel"));
         el.classList.add("is-sel");
         abrirModalEdicion(el.dataset.tree);
