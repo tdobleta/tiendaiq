@@ -440,6 +440,17 @@ body.tiq-piloto-editor-v2 .pe-inspector__empty-icon{ width:32px; height:32px; co
 body.tiq-piloto-editor-v2 .p01-control{ border-color:#c9cccf; border-radius:4px; color:var(--piloto-text); }
 body.tiq-piloto-editor-v2 .p01-control:focus{ border-color:var(--piloto-focus); box-shadow:0 0 0 1px var(--piloto-focus); }
 
+/* Navegación y reseñas de Piloto 01: una sección a la vez, sin jerarquías
+   técnicas ni estados internos expuestos al merchant. */
+body.tiq-piloto-editor-v2 .pe-tree--simple .pe-tree__body{ padding:var(--piloto-space-2); }
+body.tiq-piloto-editor-v2 .pe-tree--simple .pe-tree__row{ padding-left:var(--piloto-space-2); }
+body.tiq-piloto-editor-v2 .pe-tree--simple .pe-tree__lead{ display:none; }
+body.tiq-piloto-editor-v2 .sp-review-tabs{ display:flex; gap:6px; margin:0 0 14px; padding:4px; border:1px solid var(--piloto-border); border-radius:6px; background:#f6f6f7; }
+body.tiq-piloto-editor-v2 .sp-review-tabs__tab{ display:grid; place-items:center; flex:1 1 0; min-width:0; height:30px; border:0; border-radius:4px; background:transparent; color:var(--piloto-muted); font:600 12px/1 system-ui,-apple-system,"Segoe UI",sans-serif; cursor:pointer; }
+body.tiq-piloto-editor-v2 .sp-review-tabs__tab:hover{ color:var(--piloto-text); background:#ededee; }
+body.tiq-piloto-editor-v2 .sp-review-tabs__tab.is-active{ color:var(--piloto-text); background:var(--piloto-surface); box-shadow:0 1px 2px rgba(0,0,0,.12); }
+body.tiq-piloto-editor-v2 .sp-review-card{ border-color:var(--piloto-border); background:var(--piloto-surface); }
+
 @media (max-width:1200px){
   body.tiq-piloto-editor-v2 .pe-editor--piloto{ grid-template-columns:256px minmax(0,1fr) 296px; }
   body.tiq-piloto-editor-v2 .pe-appbar__template{ display:none; }

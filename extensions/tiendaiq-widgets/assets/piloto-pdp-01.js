@@ -362,32 +362,31 @@
     all(root, ".phv4-rating").forEach(show);
   }
 
-  if (conFuente(ev.testimonial)) {
-    const slides = all(root, ".phv4-opinion-slide");
-    slides.forEach((slide, i) => {
-      if (i > 0) return hide(slide);
-      text(one(slide, ".phv4-review-copy p") || one(slide, "p"), ev.testimonial.text);
-      text(one(slide, "cite") || one(slide, ".phv4-review-head strong"), ev.testimonial.author);
-      const avatar = one(slide, ".phv4-avatar");
-      const avatarUrl = image(ev.testimonial.media_id);
-      if (avatarUrl && avatar) avatar.style.backgroundImage = `url("${avatarUrl}")`;
-      all(slide, ".phv4-verified, .phv4-review-stars").forEach(show);
-      show(slide);
-    });
-  } else {
-    const slides = all(root, ".phv4-opinion-slide");
-    slides.forEach((slide, i) => {
-      if (i > 0) return hide(slide);
-      text(one(slide, ".phv4-review-copy p") || one(slide, "p"), c.why?.body || c.hero?.claim || "Revisá los detalles del producto antes de elegir.");
-      text(one(slide, ".phv4-review-head strong"), "Sobre este producto");
-      const avatar = one(slide, ".phv4-avatar");
-      const avatarUrl = image(gallery[0]);
-      if (avatarUrl && avatar) avatar.style.backgroundImage = `url("${avatarUrl}")`;
-      all(slide, ".phv4-verified, .phv4-review-stars").forEach(hide);
-      show(slide);
-    });
-    all(root, ".phv4-opinion-carousel, .phv4-review").forEach(show);
-  }
+  // Las cinco tarjetas forman parte de la composición aprobada. Cuando el
+  // merchant aún no cargó reseñas, se muestran como fichas editoriales del
+  // producto (sin estrellas, nombres ni "compra verificada" ficticios).
+  // Cuando sí las completa en el editor, cada tarjeta conserva su propia foto
+  // y texto: no se colapsan todas en una única reseña.
+  const savedReviews = Array.isArray(ev.testimonials?.items) ? ev.testimonials.items : (conFuente(ev.testimonial) ? [ev.testimonial] : []);
+  const editorialReviews = storyCards.length
+    ? Array.from({ length: 5 }, (_item, index) => {
+      const card = storyCards[index % storyCards.length];
+      return { author: card.title || "Sobre este producto", text: card.body || c.why?.body || c.hero?.claim || "Revisá los detalles del producto antes de elegir.", media_id: storyImageMedia[index % Math.max(storyImageMedia.length, 1)] || gallery[0] };
+    })
+    : Array.from({ length: 5 }, () => ({ author: "Sobre este producto", text: c.why?.body || c.hero?.claim || "Revisá los detalles del producto antes de elegir.", media_id: gallery[0] }));
+  const reviewCards = savedReviews.length ? savedReviews : editorialReviews;
+  const slides = all(root, ".phv4-opinion-slide");
+  slides.forEach((slide, index) => {
+    const card = reviewCards[index % reviewCards.length];
+    text(one(slide, ".phv4-review-copy p") || one(slide, "p"), card.text);
+    text(one(slide, "cite") || one(slide, ".phv4-review-head strong"), card.author);
+    const avatar = one(slide, ".phv4-avatar");
+    const avatarUrl = image(card.media_id) || image(gallery[index % Math.max(gallery.length, 1)]);
+    if (avatarUrl && avatar) avatar.style.backgroundImage = `url("${avatarUrl}")`;
+    all(slide, ".phv4-verified, .phv4-review-stars").forEach(savedReviews.length ? show : hide);
+    show(slide);
+  });
+  all(root, ".phv4-opinion-carousel, .phv4-review").forEach(show);
 
   // El diseño escribe la garantía con pseudo-elementos. La fuente canónica las
   // dejó como `content:attr(data-tiq-text)`, así que el texto se inyecta por

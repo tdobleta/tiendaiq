@@ -183,6 +183,15 @@ function applyPdp01Evidence({ persistedData, evidence }) {
   if (!isPdp01Template(persistedData)) throw new FixedTemplateEditError("La página no usa la plantilla Piloto 01");
   if (!isPlainObject(evidence)) throw new FixedTemplateEditError("La evidencia debe ser un objeto");
   for (const [slot, value] of Object.entries(evidence)) {
+    if (slot === "testimonials") {
+      if (!Array.isArray(value?.items) || !value.items.length) throw new FixedTemplateEditError("Las reseñas deben incluir al menos una tarjeta completa");
+      for (const item of value.items) {
+        if (!isPlainObject(item?.source) || !item.source.kind || !item.source.reference) {
+          throw new FixedTemplateEditError("Cada reseña necesita sus datos completos");
+        }
+      }
+      continue;
+    }
     if (!isPlainObject(value?.source) || !value.source.kind || !value.source.reference) {
       throw new FixedTemplateEditError(`La evidencia ${slot} requiere una fuente verificable`);
     }

@@ -166,6 +166,14 @@ test("BINDER · conserva la composición completa con slots editoriales reales",
   assert.match(codigo, /button\.addEventListener\("click", \(\) => \{/);
 });
 
+test("BINDER · mantiene las cinco tarjetas de reseña y no inventa prueba social", () => {
+  assert.match(codigo, /const savedReviews = Array\.isArray\(ev\.testimonials\?\.items\)/);
+  assert.match(codigo, /Array\.from\(\{ length: 5 \}/);
+  assert.match(codigo, /slides\.forEach\(\(slide, index\) => \{/);
+  assert.match(codigo, /savedReviews\.length \? show : hide/);
+  assert.ok(!/if \(i > 0\) return hide\(slide\)/.test(codigo), "la plantilla no puede colapsar cinco tarjetas en una");
+});
+
 test("EDITOR · el runtime sólo marca y comunica bloques dentro del preview", () => {
   assert.match(codigo, /if \(previewMode\) \{\s*const editorBlocks/s);
   assert.match(codigo, /data-tiq-editor-block/);
