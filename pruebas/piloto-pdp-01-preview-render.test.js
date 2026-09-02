@@ -174,6 +174,13 @@ test("EDITOR · el runtime sólo marca y comunica bloques dentro del preview", (
   assert.match(codigo, /\.tiq-editor-active/);
 });
 
+test("EDITOR · la selección usa el foco sobrio del sistema, sin halo decorativo", () => {
+  assert.match(codigo, /--tiq-editor-focus:#005bd3/);
+  assert.match(codigo, /outline:2px solid var\(--tiq-editor-focus\)/);
+  assert.ok(!/#5740ff|rgba\(87,64,255/.test(codigo), "el canvas no debe conservar el foco violeta experimental");
+  assert.ok(!/box-shadow:0 0 0 5px/.test(codigo), "la selección no debe encerrar el contenido con un halo pesado");
+});
+
 // ---------------------------------------------------------------------- caché
 test("CACHÉ · todo asset versionado del preview participa de VERSION_ASSETS", () => {
   const indice = fs.readFileSync(path.join(RAIZ, "plantilla-producto", "index.html"), "utf8");

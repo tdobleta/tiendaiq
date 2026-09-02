@@ -470,9 +470,10 @@
 
     const editorStyle = document.createElement("style");
     editorStyle.textContent = `
-      #piloto-pdp-01 [data-tiq-editor-block]{cursor:pointer;outline:1px solid transparent;outline-offset:4px;transition:outline-color .14s ease,box-shadow .14s ease}
-      #piloto-pdp-01 [data-tiq-editor-block]:hover{outline-color:rgba(87,64,255,.48);box-shadow:0 0 0 4px rgba(87,64,255,.08)}
-      #piloto-pdp-01 [data-tiq-editor-block].tiq-editor-active{outline:2px solid #5740ff;box-shadow:0 0 0 5px rgba(87,64,255,.14)}
+      #piloto-pdp-01{--tiq-editor-focus:#005bd3;--tiq-editor-focus-hover:rgba(0,91,211,.45)}
+      #piloto-pdp-01 [data-tiq-editor-block]{cursor:pointer;outline:1px solid transparent;outline-offset:2px;transition:outline-color .12s ease}
+      #piloto-pdp-01 [data-tiq-editor-block]:hover{outline-color:var(--tiq-editor-focus-hover)}
+      #piloto-pdp-01 [data-tiq-editor-block].tiq-editor-active{outline:2px solid var(--tiq-editor-focus)}
     `;
     root.prepend(editorStyle);
 
