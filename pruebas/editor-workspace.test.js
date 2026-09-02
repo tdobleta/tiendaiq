@@ -20,7 +20,8 @@ test("el workspace reserva paneles consistentes y el canvas no crea scroll horiz
   assert.match(app, /const anchoTienda = isMobile \? 390 : 1200/);
   assert.match(app, /centro\.clientWidth - 40/);
   assert.match(app, /disponibleAltura = Math\.max\(420, centro\.clientHeight - 36\)/);
-  assert.match(app, /tiq-piloto-editor-modal/);
+  assert.match(app, /<ui-modal id="tiq-piloto-editor-modal" variant="max">/);
+  assert.match(app, /<ui-title-bar title="\$\{esc\("Editar página de producto/);
   assert.match(css, /grid-template-columns: 300px minmax\(0, 1fr\) 320px/);
   assert.match(css, /#vista\s*\{[\s\S]*?max-width: none;[\s\S]*?padding: 0/);
   assert.match(css, /\.pe-editor__centro\s*\{[\s\S]*?min-width: 0;[\s\S]*?overflow: hidden/);

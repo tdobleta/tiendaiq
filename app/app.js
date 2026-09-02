@@ -4110,11 +4110,14 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     // surface when App Bridge is available, while keeping a direct fallback
     // for local development and preview links outside the admin.
     vista.innerHTML = esPiloto
-      ? `<s-modal id="tiq-piloto-editor-modal" heading="${esc("Editar página de producto " + productTitle)}" size="large-100" padding="none"><div class="tiq-piloto-editor-modal-content">${editorMarkup}</div></s-modal>`
+      ? `<ui-modal id="tiq-piloto-editor-modal" variant="max">
+          <ui-title-bar title="${esc("Editar página de producto " + productTitle)}"></ui-title-bar>
+          <div class="tiq-piloto-editor-modal-content">${editorMarkup}</div>
+        </ui-modal>`
       : editorMarkup;
     if (esPiloto) {
-      customElements.whenDefined?.("s-modal").then(() => {
-        try { window.shopify?.modal?.show?.("tiq-piloto-editor-modal"); } catch {}
+      customElements.whenDefined?.("ui-modal").then(async () => {
+        try { await window.shopify?.modal?.show?.("tiq-piloto-editor-modal"); } catch {}
       });
     }
 
