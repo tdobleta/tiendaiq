@@ -37,6 +37,17 @@
   const data = payload?.data || window.TIENDAIQ_DATA;
   const doc = data?.piloto_pdp_01;
   if (!root || !doc?.content) return;
+  // El iframe del editor es una maqueta de ancho fijo que se escala desde el
+  // host. El documento nunca debe fabricar un segundo eje horizontal.
+  if (previewMode) {
+    document.documentElement.style.overflowX = "hidden";
+    document.documentElement.style.width = "100%";
+    document.body.style.overflowX = "hidden";
+    document.body.style.width = "100%";
+    document.body.style.margin = "0";
+    root.style.maxWidth = "100%";
+    root.style.overflowX = "hidden";
+  }
   // Todos los manejadores pertenecen a este montaje. Al reemplazar el DOM se
   // cancela el anterior para que una edición no acumule listeners ni timers.
   bridgeAbort?.abort();

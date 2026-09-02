@@ -36,6 +36,9 @@
     galeriaCat: "popular", // pestaña activa de la galería de secciones
     galeriaQ: "", // búsqueda de la galería
     previewViewport: "desktop", // viewport del canvas del editor: desktop | mobile
+    editorAdvanced: true, // muestra los controles de composición del workbench
+    editorBrandingOpen: false, // paleta global del editor, no datos de Shopify
+    editorFullscreen: false, // canvas a pantalla completa sin perder la selección
     error: null
   };
   let previewResizeObserver = null;
@@ -219,6 +222,9 @@
     kebab: `<circle cx="12" cy="5" r="1.4" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="12" cy="19" r="1.4" fill="currentColor" stroke="none"/>`,
     deshacer: `<path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 010 10h-4"/>`,
     rehacer: `<path d="M15 14l5-5-5-5"/><path d="M20 9H9a5 5 0 000 10h4"/>`,
+    monitor: `<rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/>`,
+    movil: `<rect x="7" y="2.5" width="10" height="19" rx="2"/><path d="M11 18.5h2"/>`,
+    expandir: `<path d="M8 3H3v5M16 3h5v5M8 21H3v-5M21 16v5h-5"/>`,
     grip: `<circle cx="9" cy="6" r="1.4" fill="currentColor" stroke="none"/><circle cx="15" cy="6" r="1.4" fill="currentColor" stroke="none"/><circle cx="9" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="9" cy="18" r="1.4" fill="currentColor" stroke="none"/><circle cx="15" cy="18" r="1.4" fill="currentColor" stroke="none"/>`
   };
   const ico = (nombre, cls = "") =>
@@ -2791,6 +2797,33 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       );
   }
 
+  // El preview vive en un iframe de la misma app. Prepararlo en cada carga
+  // evita que una sección del artefacto (o una imagen demasiado ancha) cree
+  // un scrollbar horizontal dentro del lienzo del editor.
+  function prepararFramePreview(frame) {
+    try {
+      const doc = frame?.contentDocument;
+      if (!doc) return;
+      const html = doc.documentElement;
+      const body = doc.body;
+      html.style.overflowX = "hidden";
+      html.style.width = "100%";
+      if (body) {
+        body.style.overflowX = "hidden";
+        body.style.width = "100%";
+        body.style.margin = "0";
+      }
+      const root = doc.getElementById("piloto-pdp-01");
+      if (root) {
+        root.style.maxWidth = "100%";
+        root.style.overflowX = "hidden";
+      }
+    } catch {
+      // Si el navegador aísla el documento, el runtime aplica el mismo
+      // aislamiento desde previewMode. El editor no debe romperse por esto.
+    }
+  }
+
   // El iframe necesita un viewport de desktop real para que la plantilla fija
   // use exactamente los mismos breakpoints que en la tienda. Se escala el
   // resultado, no el viewport: así 1200px sigue siendo 1200px para el CSS de
@@ -2804,22 +2837,10 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     if (!centro || !viewport || !shell || !marco) return;
 
     const ajustar = () => {
-      if (estado.previewViewport === "mobile") {
-        viewport.classList.remove("is-scaled");
-        viewport.style.width = "";
-        viewport.style.height = "";
-        viewport.style.minHeight = "";
-        shell.style.width = "";
-        shell.style.height = "";
-        shell.style.transform = "";
-        return;
-      }
-      const anchoTienda = 1200;
-      const altoTienda = Math.max(760, marco.getBoundingClientRect().height || 760);
-      // El canvas reserva un margen de trabajo fijo, pero no crea scroll
-      // horizontal: el lienzo conserva sus 1200px internos y se ajusta como
-      // una maqueta real dentro de la superficie del editor.
-      const disponible = Math.max(320, centro.clientWidth - 48);
+      const isMobile = estado.previewViewport === "mobile";
+      const anchoTienda = isMobile ? 390 : 1200;
+      const altoTienda = isMobile ? 820 : Math.max(760, marco.clientHeight || 760);
+      const disponible = Math.max(300, centro.clientWidth - 48);
       const escala = Math.min(1, disponible / anchoTienda);
       viewport.classList.toggle("is-scaled", escala < 1);
       viewport.style.width = `${Math.round(anchoTienda * escala)}px`;
@@ -2828,6 +2849,9 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       shell.style.width = `${anchoTienda}px`;
       shell.style.height = `${altoTienda}px`;
       shell.style.transform = `scale(${escala})`;
+      shell.classList.toggle("is-mobile", isMobile);
+      marco.style.width = `${anchoTienda}px`;
+      marco.style.height = `${altoTienda}px`;
     };
     previewResizeObserver = new ResizeObserver(ajustar);
     previewResizeObserver.observe(centro);
@@ -3868,7 +3892,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     if (p) {
       p.classList.remove("is-editing");
       p.setAttribute("aria-label", "Inspector de propiedades");
-      p.innerHTML = `<div class="pe-inspector__empty"><span class="pe-inspector__empty-icon">✦</span><strong>Seleccioná una sección</strong><p>Elegí una sección del menú o hacé clic en la página para editarla.</p></div>`;
+      p.innerHTML = `<div class="pe-inspector__empty"><span class="pe-inspector__empty-icon">${ico("cursor")}</span><strong>Seleccioná una sección</strong><p>Elegí una sección del menú o hacé clic en la página para editarla.</p></div>`;
     }
     panelSecId = null;
     panelEditorId = null;
@@ -3911,8 +3935,9 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
           row("newsletter", "Newsletter", I.lista, { fixed: true });
         const reseñas = row("evidence", "Carrusel de reseñas", I.estrella, { fixed: true }) +
           `<div class="pe-tree__nest">${Array.from({ length: 5 }, (_item, index) => row(`evidence:${index}`, `Reseña ${index + 1}`, I.estrella, { fixed: true })).join("")}</div>`;
-        return `<nav class="pe-tree pe-tree--workbench" aria-label="Estructura de la página de producto">
-          <div class="pe-tree__head"><span class="pe-tree__head-kicker">PRODUCT PAGE</span><span class="pe-tree__head-title">Estructura</span></div>
+        const title = estado.pagina.data?.piloto_pdp_01?.source_fields?.title || estado.pagina.data?.facetas?.hero?.titulo || "Producto";
+        return `<nav class="pe-tree pe-tree--workbench p01-structure" aria-label="Estructura de la página de producto">
+          <div class="pe-tree__head p01-structure__head"><span class="pe-tree__head-kicker">PÁGINA DE PRODUCTO</span><span class="pe-tree__head-title">${esc(title)}</span><span class="pe-tree__head-sub">Piloto 01 · estructura fija</span></div>
           <div class="pe-tree__body">${grupo("Producto", producto, "")}${grupo("Contenido", contenido, "")}${grupo("Prueba social", reseñas, "")}</div>
         </nav>`;
       }
@@ -3965,6 +3990,14 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     marco?.contentWindow?.postMessage({ tiendaiqEditor: "highlight-block", blockId }, window.location.origin);
   }
 
+  function urlVariantesProducto() {
+    const shop = String(new URLSearchParams(location.search).get("shop") || "").toLowerCase();
+    const rawId = estado.pagina?.shopify_product_id || estado.producto?.id || "";
+    const productId = String(rawId).split("/").pop();
+    if (!/^[a-z0-9][a-z0-9-]*\.myshopify\.com$/.test(shop) || !/^\d+$/.test(productId)) return "";
+    return `https://admin.shopify.com/store/${shop.replace(/\.myshopify\.com$/, "")}/products/${productId}`;
+  }
+
   function pantallaPreview() {
     const pg = estado.pagina;
     // El shell se carga de forma explícita. Si el asset falla, mostramos el
@@ -3999,12 +4032,17 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     const mostrarSetup = publicada && st !== "app_block" && pg.setupPaginaUrl;
     const esPiloto = esPlantillaPdp01();
     if (esPiloto) reiniciarHistorialEditor();
+    const productTitle = pg.data.piloto_pdp_01?.source_fields?.title || pg.data.facetas?.hero?.titulo || "Producto";
+    if (esPiloto && _tituloBar) _tituloBar.setAttribute("title", `Editar página de producto ${productTitle}`);
 
     vista.innerHTML = `
       <div class="preview-barra ${esPiloto ? "pe-appbar" : ""}" id="barra-accion">
         <div class="${esPiloto ? "pe-appbar__brand" : ""}">
           <button class="volver-flecha" id="volver" title="${volverTxt}" aria-label="${volverTxt}"></button>
-          ${esPiloto ? `<div class="pe-appbar__wordmark"><span>Piloto</span><small>Editor de producto</small></div><span class="pe-appbar__template">Piloto 01</span>` : ""}
+          ${esPiloto ? `<div class="pe-appbar__logo" aria-hidden="true"><img src="/marca/iq.svg" alt="" width="24" height="24"></div><div class="pe-appbar__wordmark"><strong>Piloto</strong><small>Editor de producto</small></div><span class="pe-appbar__product" title="${esc(productTitle)}">${esc(productTitle)}</span><span class="pe-appbar__template">Piloto 01</span>
+            <button type="button" class="pe-mode-toggle" id="editor-modo-avanzado" aria-pressed="${estado.editorAdvanced ? "true" : "false"}"><span class="pe-switch" aria-hidden="true"></span><span>Modo avanzado</span></button>
+            <button type="button" class="pe-branding-trigger" id="editor-branding" aria-expanded="${estado.editorBrandingOpen ? "true" : "false"}"><span class="pe-branding-dots" aria-hidden="true"><i></i><i></i><i></i></span><span>Branding</span></button>
+            <div class="pe-branding-popover" id="editor-branding-panel" ${estado.editorBrandingOpen ? "" : "hidden"} role="dialog" aria-label="Branding de la plantilla"><strong>Branding</strong><span class="pe-branding-popover__hint">La plantilla usa los tokens de tu marca.</span><div class="pe-branding-swatches"><button type="button" class="is-active" aria-label="Paleta actual"><i></i><i></i><i></i></button><button type="button" aria-label="Paleta neutra"><i></i><i></i><i></i></button></div></div>` : ""}
         </div>
         <div class="preview-barra__info">
           <div class="preview-barra__titulo">${esc(pg.data.piloto_pdp_01?.source_fields?.title || pg.data.facetas?.hero?.titulo || "Producto")}</div>
@@ -4013,19 +4051,20 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         <div class="preview-barra__estado" id="barra-estado">
           <s-badge tone="${TONO_ESTADO[est.c] || "neutral"}">${est.t}</s-badge>
           ${esPiloto ? `<div class="pe-viewport" role="group" aria-label="Vista del canvas">
-            <button type="button" data-viewport="desktop" aria-pressed="${estado.previewViewport === "desktop"}" aria-label="Vista de escritorio" title="Vista de escritorio">Escritorio</button>
-            <button type="button" data-viewport="mobile" aria-pressed="${estado.previewViewport === "mobile"}" aria-label="Vista de móvil" title="Vista de móvil">Móvil</button>
+            <button type="button" class="pe-viewport__tool" data-viewport-tool="select" aria-pressed="true" aria-label="Seleccionar bloque" title="Seleccionar bloque">${ico("cursor")}</button>
+            <button type="button" data-viewport="desktop" aria-pressed="${estado.previewViewport === "desktop"}" aria-label="Vista de escritorio" title="Vista de escritorio">${ico("monitor")}<span>Escritorio</span></button>
+            <button type="button" data-viewport="mobile" aria-pressed="${estado.previewViewport === "mobile"}" aria-label="Vista de móvil" title="Vista de móvil">${ico("movil")}<span>Móvil</span></button>
+            <button type="button" class="pe-viewport__tool" data-viewport-tool="fullscreen" aria-pressed="${estado.editorFullscreen ? "true" : "false"}" aria-label="Vista expandida" title="Vista expandida">${ico("expandir")}</button>
           </div>` : ""}
           ${publicada && pg.url_publica
             ? `<s-link href="${esc(pg.url_publica)}" target="_blank">Ver en la tienda</s-link>`
             : ""}
         </div>
         <div class="preview-barra__acciones">
-          ${esPiloto ? `<div class="pe-history" role="group" aria-label="Historial de edición"><button type="button" id="editor-deshacer" title="Deshacer" aria-label="Deshacer">↶</button><button type="button" id="editor-rehacer" title="Rehacer" aria-label="Rehacer">↷</button></div>` : ""}
+          ${esPiloto ? `<div class="pe-history" role="group" aria-label="Historial de edición"><button type="button" id="editor-deshacer" title="Deshacer" aria-label="Deshacer">${ico("deshacer")}</button><button type="button" id="editor-rehacer" title="Rehacer" aria-label="Rehacer">${ico("rehacer")}</button></div>` : ""}
           <s-button variant="secondary" id="guardar" disabled>Guardar cambios</s-button>
-          <s-button variant="secondary" id="regenerar">Regenerar</s-button>
-          ${publicada ? `<s-button variant="tertiary" id="despublicar">Volver a la página nativa</s-button>` : ""}
-          <s-button variant="${publicada ? "secondary" : "primary"}" id="publicar">${publicada ? "Volver a publicar" : "Publicar página"}</s-button>
+          <s-button variant="${publicada ? "secondary" : "primary"}" id="publicar">${publicada ? "Volver a publicar" : "Publicar en la tienda"}</s-button>
+          ${esPiloto ? `<s-button variant="secondary" id="editar-variantes">Editar variantes</s-button><div class="pe-actions"><button type="button" class="pe-actions__trigger" id="editor-acciones" aria-expanded="false" aria-haspopup="menu">${ico("engranaje")}<span>Acciones</span></button><div class="pe-actions__menu" id="editor-acciones-menu" hidden><button type="button" id="regenerar">${ico("chispa")}<span>Regenerar con IA</span></button>${publicada ? `<button type="button" id="despublicar">${ico("flechaArriba")}<span>Volver a la página nativa</span></button>` : ""}</div></div><button type="button" class="pe-appbar__close" id="editor-cerrar" aria-label="Cerrar editor" title="Cerrar editor">${ico("x")}</button>` : `<s-button variant="secondary" id="regenerar">Regenerar</s-button>${publicada ? `<s-button variant="tertiary" id="despublicar">Volver a la página nativa</s-button>` : ""}`}
         </div>
       </div>
 
@@ -4059,7 +4098,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
           </div>
         </main>
         <aside class="pe-prop pe-inspector" id="pe-inspector" aria-label="Inspector de propiedades">
-          <div class="pe-inspector__empty"><span class="pe-inspector__empty-icon">✦</span><strong>Seleccioná un bloque</strong><p>Elegí una sección del árbol o hacé clic sobre el canvas para editar únicamente los campos permitidos por la plantilla.</p></div>
+          <div class="pe-inspector__empty"><span class="pe-inspector__empty-icon">${ico("cursor")}</span><strong>Seleccioná un bloque</strong><p>Elegí una sección del árbol o hacé clic sobre el canvas para editar sus campos.</p></div>
         </aside>
       </div>`;
 
@@ -4069,6 +4108,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     const marco = $("marco");
     const ajustarEscalaPreview = montarEscalaPreview();
     marco.onload = () => {
+      prepararFramePreview(marco);
       repintarPreview();
       if (!esPiloto) montarEdicionEnIframe(marco);
       ajustarEscalaPreview?.();
@@ -4105,11 +4145,71 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       };
     });
 
+    if (esPiloto) {
+      const workspace = vista.querySelector(".pe-editor--piloto");
+      const modo = $("editor-modo-avanzado");
+      const branding = $("editor-branding");
+      const brandingPanel = $("editor-branding-panel");
+      modo?.addEventListener("click", () => {
+        estado.editorAdvanced = !estado.editorAdvanced;
+        modo.setAttribute("aria-pressed", String(estado.editorAdvanced));
+        workspace?.classList.toggle("is-simple", !estado.editorAdvanced);
+      });
+      branding?.addEventListener("click", (event) => {
+        event.stopPropagation();
+        estado.editorBrandingOpen = !estado.editorBrandingOpen;
+        branding.setAttribute("aria-expanded", String(estado.editorBrandingOpen));
+        brandingPanel?.toggleAttribute("hidden", !estado.editorBrandingOpen);
+      });
+      brandingPanel?.querySelectorAll(".pe-branding-swatches button").forEach((swatch) => {
+        swatch.addEventListener("click", () => {
+          brandingPanel.querySelectorAll(".pe-branding-swatches button").forEach((item) => item.classList.toggle("is-active", item === swatch));
+          toast("Paleta de marca seleccionada");
+        });
+      });
+      vista.querySelectorAll("[data-viewport-tool]").forEach((button) => {
+        button.onclick = () => {
+          const tool = button.dataset.viewportTool;
+          if (tool === "fullscreen") {
+            estado.editorFullscreen = !estado.editorFullscreen;
+            workspace?.classList.toggle("is-fullscreen", estado.editorFullscreen);
+            button.setAttribute("aria-pressed", String(estado.editorFullscreen));
+            montarEscalaPreview();
+          }
+          if (tool === "select") {
+            estado.editorFullscreen = false;
+            workspace?.classList.remove("is-fullscreen");
+            vista.querySelector("[data-viewport-tool=fullscreen]")?.setAttribute("aria-pressed", "false");
+            montarEscalaPreview();
+          }
+        };
+      });
+      const actionsTrigger = $("editor-acciones");
+      const actionsMenu = $("editor-acciones-menu");
+      actionsTrigger?.addEventListener("click", (event) => {
+        event.stopPropagation();
+        const open = actionsMenu?.hasAttribute("hidden");
+        actionsMenu?.toggleAttribute("hidden", !open);
+        actionsTrigger.setAttribute("aria-expanded", String(open));
+      });
+      actionsMenu?.querySelectorAll("button").forEach((button) => button.addEventListener("click", () => {
+        actionsMenu.setAttribute("hidden", "");
+        actionsTrigger?.setAttribute("aria-expanded", "false");
+      }));
+      const editVariants = $("editar-variantes");
+      editVariants?.addEventListener("click", () => {
+        const url = urlVariantesProducto();
+        if (url) window.open(url, "_blank", "noopener,noreferrer");
+        else toast("Abrí el producto en Shopify para editar sus variantes.");
+      });
+    }
+
     $("volver").onclick = () => {
       if (sucio && !confirm("Hay cambios sin guardar. ¿Salir igual?")) return;
       if (estado.volverA === "paginas") ir("paginas");
       else cargarLista();
     };
+    $("editor-cerrar")?.addEventListener("click", () => $("volver")?.click());
     $("regenerar").onclick = () => {
       if (sucio && !confirm("Regenerar descarta los cambios sin guardar. ¿Seguir?")) return;
       ir("informacion");
@@ -4167,7 +4267,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         pantallaPreview();
       } catch {
         b.removeAttribute("disabled");
-        b.textContent = "Publicar página";
+        b.textContent = esPlantillaPdp01() ? "Publicar en la tienda" : "Publicar página";
       }
       vista.insertAdjacentHTML("afterbegin", `<div class="error">${ico("x","ico--banner")} ${esc(e.message)}</div>`);
     }
@@ -6809,6 +6909,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     estado.pantalla = pantalla;
     document.body.classList.toggle("tiq-v2-home-active", pantalla === "inicio");
     document.body.classList.toggle("tiq-pe-editor-active", pantalla === "preview");
+    document.querySelector("ui-nav-menu")?.toggleAttribute("hidden", pantalla === "preview");
     if (pantalla !== "preview") {
       document.body.classList.remove("tiq-piloto-editor-v2");
       if (escuchadorPreviewPiloto) window.removeEventListener("message", escuchadorPreviewPiloto);

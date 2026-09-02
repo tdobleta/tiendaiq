@@ -1,111 +1,462 @@
 /* Piloto workbench: one editor surface, one token system. */
-.embebida.tiq-pe-editor-active main{width:100%;max-width:none;min-height:100vh;margin:0;padding:0}
-.tiq-pe-editor-active .pe-editor{height:calc(100vh - 62px)}
+body.tiq-piloto-editor-v2 {
+  --p01-canvas: #f6f6f7;
+  --p01-surface: #ffffff;
+  --p01-border: #e1e3e5;
+  --p01-border-strong: #c9cccf;
+  --p01-text: #202223;
+  --p01-muted: #616161;
+  --p01-subtle: #8c9196;
+  --p01-focus: #005bd3;
+  --p01-focus-soft: #f1f8ff;
+  --p01-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  min-height: 100dvh;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--p01-canvas);
+  color: var(--p01-text);
+  font-family: var(--p01-font);
+}
 
-body.tiq-piloto-editor-v2{--p01-canvas:#f6f6f7;--p01-surface:#fff;--p01-border:#e1e3e5;--p01-border-strong:#c9cccf;--p01-text:#202223;--p01-muted:#616161;--p01-subtle:#8c9196;--p01-focus:#005bd3;--p01-focus-soft:#f1f8ff;background:var(--p01-canvas);color:var(--p01-text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;overflow:hidden}
-body.tiq-piloto-editor-v2 .embebida{background:var(--p01-canvas)}
+body.tiq-piloto-editor-v2 #vista {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+body.tiq-piloto-editor-v2 #vista > * { animation: none; }
+body.tiq-piloto-editor-v2 ui-nav-menu { display: none !important; }
 
-/* App bar */
-body.tiq-piloto-editor-v2 .preview-barra.pe-appbar{position:sticky;top:0;z-index:20;display:grid;grid-template-columns:minmax(260px,1fr) auto minmax(260px,1fr);align-items:center;gap:16px;min-height:58px;margin:0;padding:8px 18px;border:0;border-bottom:1px solid var(--p01-border);border-radius:0;background:var(--p01-surface);box-shadow:none}
-body.tiq-piloto-editor-v2 .pe-appbar__brand{display:flex;align-items:center;min-width:0;gap:10px}
-body.tiq-piloto-editor-v2 .pe-appbar .volver-flecha{position:static;display:grid;place-items:center;flex:0 0 auto;width:32px;height:32px;margin:0;border:1px solid var(--p01-border);border-radius:4px;background:#fff}
-body.tiq-piloto-editor-v2 .pe-appbar__wordmark{display:flex;align-items:baseline;gap:7px;color:var(--p01-text);font-size:17px;font-weight:650;letter-spacing:-.2px}
-body.tiq-piloto-editor-v2 .pe-appbar__wordmark small{color:var(--p01-muted);font-size:12px;font-weight:400;letter-spacing:0}
-body.tiq-piloto-editor-v2 .pe-appbar__template{padding-left:9px;border-left:1px solid var(--p01-border);color:var(--p01-muted);font-size:12px;font-weight:500}
-body.tiq-piloto-editor-v2 .pe-appbar .preview-barra__info{display:none}
-body.tiq-piloto-editor-v2 .pe-appbar .preview-barra__estado{justify-self:center;display:flex;align-items:center;gap:10px}
-body.tiq-piloto-editor-v2 .pe-appbar .preview-barra__acciones{justify-self:end;display:flex;align-items:center;gap:8px}
-body.tiq-piloto-editor-v2 .pe-appbar s-badge{font-weight:600}
-body.tiq-piloto-editor-v2 .pe-viewport,body.tiq-piloto-editor-v2 .pe-history{display:inline-flex;align-items:center;gap:2px;padding:3px;border:1px solid var(--p01-border);border-radius:5px;background:#fff}
-body.tiq-piloto-editor-v2 .pe-viewport button,body.tiq-piloto-editor-v2 .pe-history button{display:grid;place-items:center;min-width:29px;height:28px;padding:0 9px;border:0;border-radius:3px;color:var(--p01-muted);background:transparent;font:600 12px/1 inherit;cursor:pointer}
-body.tiq-piloto-editor-v2 .pe-viewport button:hover,body.tiq-piloto-editor-v2 .pe-history button:hover:not(:disabled){color:var(--p01-text);background:#f1f2f3}
-body.tiq-piloto-editor-v2 .pe-viewport button[aria-pressed="true"]{color:var(--p01-text);background:#f1f2f3}
-body.tiq-piloto-editor-v2 .pe-history button:disabled{opacity:.38;cursor:not-allowed}
-body.tiq-piloto-editor-v2 .pe-appbar s-button::part(button){min-height:32px;border-radius:4px;font-weight:600}
+/* Header: flat Shopify-admin chrome, compact and predictable. */
+body.tiq-piloto-editor-v2 .preview-barra.pe-appbar {
+  position: relative;
+  z-index: 10;
+  display: grid;
+  grid-template-columns: minmax(320px, 1fr) auto minmax(360px, 1fr);
+  align-items: center;
+  gap: 18px;
+  flex: 0 0 64px;
+  min-height: 64px;
+  margin: 0;
+  padding: 10px 16px;
+  border: 0;
+  border-bottom: 1px solid var(--p01-border);
+  border-radius: 0;
+  background: #eaf4ff;
+  box-shadow: none;
+}
+body.tiq-piloto-editor-v2 .pe-appbar__brand {
+  display: flex;
+  position: relative;
+  min-width: 0;
+  align-items: center;
+  gap: 9px;
+}
+body.tiq-piloto-editor-v2 .pe-appbar .volver-flecha {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--p01-border);
+  border-radius: 4px;
+  background: #fff;
+}
+body.tiq-piloto-editor-v2 .pe-appbar .volver-flecha:hover { background: #f6f6f7; }
+body.tiq-piloto-editor-v2 .pe-appbar__logo {
+  display: grid;
+  place-items: center;
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+}
+body.tiq-piloto-editor-v2 .pe-appbar__logo img { width: 24px; height: 24px; }
+body.tiq-piloto-editor-v2 .pe-appbar__wordmark {
+  display: grid;
+  gap: 0;
+  flex: 0 0 auto;
+  line-height: 1.05;
+}
+body.tiq-piloto-editor-v2 .pe-appbar__wordmark strong {
+  color: var(--p01-text);
+  font-size: 16px;
+  font-weight: 650;
+  letter-spacing: -.15px;
+}
+body.tiq-piloto-editor-v2 .pe-appbar__wordmark small {
+  color: var(--p01-muted);
+  font-size: 10px;
+  font-weight: 400;
+}
+body.tiq-piloto-editor-v2 .pe-appbar__product {
+  min-width: 0;
+  max-width: min(330px, 28vw);
+  overflow: hidden;
+  padding-left: 10px;
+  border-left: 1px solid var(--p01-border);
+  color: var(--p01-muted);
+  font-size: 12px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+body.tiq-piloto-editor-v2 .pe-appbar__template {
+  flex: 0 0 auto;
+  padding: 5px 8px;
+  border: 1px solid var(--p01-border);
+  border-radius: 4px;
+  color: var(--p01-muted);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+body.tiq-piloto-editor-v2 .pe-mode-toggle,
+body.tiq-piloto-editor-v2 .pe-branding-trigger {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 9px;
+  border: 1px solid var(--p01-border);
+  border-radius: 5px;
+  color: var(--p01-text);
+  background: #fff;
+  font: 600 11px/1 var(--p01-font);
+  white-space: nowrap;
+}
+body.tiq-piloto-editor-v2 .pe-mode-toggle:hover,
+body.tiq-piloto-editor-v2 .pe-branding-trigger:hover { background: #f6f6f7; }
+body.tiq-piloto-editor-v2 .pe-switch {
+  position: relative;
+  display: inline-block;
+  width: 25px;
+  height: 15px;
+  border-radius: 999px;
+  background: #c9cccf;
+  transition: background .14s ease;
+}
+body.tiq-piloto-editor-v2 .pe-switch::after {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(32, 34, 35, .22);
+  content: "";
+  transition: transform .14s ease;
+}
+body.tiq-piloto-editor-v2 .pe-mode-toggle[aria-pressed="true"] .pe-switch { background: #202223; }
+body.tiq-piloto-editor-v2 .pe-mode-toggle[aria-pressed="true"] .pe-switch::after { transform: translateX(10px); }
+body.tiq-piloto-editor-v2 .pe-branding-dots { display: inline-flex; align-items: center; gap: 3px; }
+body.tiq-piloto-editor-v2 .pe-branding-dots i,
+body.tiq-piloto-editor-v2 .pe-branding-swatches i { display: block; width: 13px; height: 13px; border: 1px solid rgba(32, 34, 35, .15); border-radius: 50%; }
+body.tiq-piloto-editor-v2 .pe-branding-dots i:nth-child(1),
+body.tiq-piloto-editor-v2 .pe-branding-swatches button:first-child i:nth-child(1) { background: #1f4526; }
+body.tiq-piloto-editor-v2 .pe-branding-dots i:nth-child(2),
+body.tiq-piloto-editor-v2 .pe-branding-swatches button:first-child i:nth-child(2) { background: #fff; }
+body.tiq-piloto-editor-v2 .pe-branding-dots i:nth-child(3),
+body.tiq-piloto-editor-v2 .pe-branding-swatches button:first-child i:nth-child(3) { background: #e9f0c7; }
+body.tiq-piloto-editor-v2 .pe-branding-swatches button:last-child i:nth-child(1) { background: #202223; }
+body.tiq-piloto-editor-v2 .pe-branding-swatches button:last-child i:nth-child(2) { background: #f1f2f3; }
+body.tiq-piloto-editor-v2 .pe-branding-swatches button:last-child i:nth-child(3) { background: #d2d5d8; }
+body.tiq-piloto-editor-v2 .pe-branding-popover {
+  position: absolute;
+  top: 54px;
+  left: 146px;
+  z-index: 30;
+  display: grid;
+  gap: 8px;
+  width: 220px;
+  padding: 12px;
+  border: 1px solid var(--p01-border-strong);
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: 0 6px 18px rgba(32, 34, 35, .14);
+}
+body.tiq-piloto-editor-v2 .pe-branding-popover[hidden],
+body.tiq-piloto-editor-v2 .pe-actions__menu[hidden] { display: none; }
+body.tiq-piloto-editor-v2 .pe-branding-popover strong { font-size: 12px; font-weight: 650; }
+body.tiq-piloto-editor-v2 .pe-branding-popover__hint { color: var(--p01-muted); font-size: 11px; line-height: 1.35; }
+body.tiq-piloto-editor-v2 .pe-branding-swatches { display: flex; gap: 8px; }
+body.tiq-piloto-editor-v2 .pe-branding-swatches button { display: inline-flex; gap: 3px; padding: 5px; border: 1px solid var(--p01-border); border-radius: 4px; background: #fff; }
+body.tiq-piloto-editor-v2 .pe-branding-swatches button.is-active { border-color: var(--p01-focus); box-shadow: 0 0 0 1px var(--p01-focus); }
+body.tiq-piloto-editor-v2 .pe-appbar .preview-barra__info { display: none; }
+body.tiq-piloto-editor-v2 .pe-appbar .preview-barra__estado {
+  display: flex;
+  align-items: center;
+  justify-self: center;
+  gap: 10px;
+  min-width: 0;
+}
+body.tiq-piloto-editor-v2 .pe-appbar .preview-barra__estado > s-badge { order: 2; }
+body.tiq-piloto-editor-v2 .pe-appbar .preview-barra__acciones {
+  display: flex;
+  align-items: center;
+  justify-self: end;
+  gap: 7px;
+  min-width: 0;
+}
+body.tiq-piloto-editor-v2 .pe-appbar s-badge { font-size: 11px; font-weight: 600; }
+body.tiq-piloto-editor-v2 .pe-appbar s-button::part(button) {
+  min-height: 32px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+body.tiq-piloto-editor-v2 .pe-appbar #publicar::part(button) { border-color: #008060; color: #fff; background: #008060; }
+body.tiq-piloto-editor-v2 .pe-appbar #publicar:hover::part(button) { border-color: #006e52; background: #006e52; }
+body.tiq-piloto-editor-v2 .pe-appbar .pe-viewport { order: 1; }
+body.tiq-piloto-editor-v2 .pe-viewport button .ico { width: 14px; height: 14px; }
+body.tiq-piloto-editor-v2 .pe-viewport .pe-viewport__tool { width: 29px; padding: 0; }
+body.tiq-piloto-editor-v2 .pe-viewport .pe-viewport__tool[aria-pressed="true"] { color: var(--p01-text); background: #f1f2f3; }
+body.tiq-piloto-editor-v2 .pe-actions { position: relative; flex: 0 0 auto; }
+body.tiq-piloto-editor-v2 .pe-actions__trigger { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 10px; border: 1px solid var(--p01-border); border-radius: 4px; color: var(--p01-text); background: #fff; font: 600 12px/1 var(--p01-font); }
+body.tiq-piloto-editor-v2 .pe-actions__trigger:hover { background: #f6f6f7; }
+body.tiq-piloto-editor-v2 .pe-actions__trigger .ico { width: 14px; height: 14px; }
+body.tiq-piloto-editor-v2 .pe-actions__menu { position: absolute; top: calc(100% + 6px); right: 0; z-index: 25; display: grid; gap: 2px; min-width: 210px; padding: 5px; border: 1px solid var(--p01-border-strong); border-radius: 6px; background: #fff; box-shadow: 0 6px 18px rgba(32, 34, 35, .14); }
+body.tiq-piloto-editor-v2 .pe-actions__menu button { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 32px; padding: 0 8px; border: 0; border-radius: 3px; color: var(--p01-text); background: #fff; font: 500 12px/1 var(--p01-font); text-align: left; }
+body.tiq-piloto-editor-v2 .pe-actions__menu button:hover { background: #f6f6f7; }
+body.tiq-piloto-editor-v2 .pe-actions__menu .ico { width: 15px; height: 15px; color: var(--p01-muted); }
+body.tiq-piloto-editor-v2 .pe-appbar__close { display: grid; place-items: center; flex: 0 0 30px; width: 30px; height: 30px; margin-left: 2px; padding: 0; border: 0; border-radius: 4px; color: var(--p01-muted); background: transparent; }
+body.tiq-piloto-editor-v2 .pe-appbar__close:hover { color: var(--p01-text); background: #f1f2f3; }
+body.tiq-piloto-editor-v2 .pe-appbar__close .ico { width: 16px; height: 16px; }
+@media (max-width: 1450px) {
+  body.tiq-piloto-editor-v2 .preview-barra.pe-appbar { grid-template-columns: minmax(0, 1fr) auto minmax(300px, 1fr); gap: 10px; }
+  body.tiq-piloto-editor-v2 .pe-appbar__product { display: none; }
+  body.tiq-piloto-editor-v2 .pe-appbar s-button::part(button) { padding-inline: 8px; }
+}
 
-/* Workbench */
-body.tiq-piloto-editor-v2 .pe-editor--piloto{display:grid;grid-template-columns:276px minmax(0,1fr) 332px;height:calc(100dvh - 58px);min-height:560px;overflow:hidden;background:var(--p01-canvas)}
-body.tiq-piloto-editor-v2 .pe-tree,body.tiq-piloto-editor-v2 .pe-inspector{min-width:0;height:100%;overflow:auto;background:var(--p01-surface)}
-body.tiq-piloto-editor-v2 .pe-tree{border-right:1px solid var(--p01-border)}
-body.tiq-piloto-editor-v2 .pe-inspector{border-left:1px solid var(--p01-border);overflow-x:hidden}
+/* The center stage is the only flexible column. All children opt in to
+   min-width:0 so an internal 1200px product page cannot force the workbench
+   wider than the browser. */
+body.tiq-piloto-editor-v2 .pe-editor--piloto {
+  display: grid;
+  grid-template-columns: 288px minmax(0, 1fr) 360px;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  height: auto;
+  overflow: hidden;
+  background: var(--p01-canvas);
+}
+body.tiq-piloto-editor-v2 .pe-tree,
+body.tiq-piloto-editor-v2 .pe-inspector {
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  background: var(--p01-surface);
+}
+body.tiq-piloto-editor-v2 .pe-tree {
+  overflow-x: hidden;
+  overflow-y: auto;
+  border-right: 1px solid var(--p01-border);
+  scrollbar-color: #c9cccf transparent;
+}
+body.tiq-piloto-editor-v2 .pe-inspector {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-left: 1px solid var(--p01-border);
+}
+body.tiq-piloto-editor-v2 .pe-editor--piloto.is-fullscreen { grid-template-columns: 0 minmax(0, 1fr) 0; }
+body.tiq-piloto-editor-v2 .pe-editor--piloto.is-fullscreen > .pe-tree,
+body.tiq-piloto-editor-v2 .pe-editor--piloto.is-fullscreen > .pe-inspector { display: none; }
+body.tiq-piloto-editor-v2 .pe-editor--piloto.is-fullscreen .pe-editor__centro { padding: 16px 24px 32px; }
+body.tiq-piloto-editor-v2 .pe-editor--piloto.is-simple .pe-tree__nest { display: none; }
+body.tiq-piloto-editor-v2 .pe-editor--piloto.is-simple .pe-tree__group:not(:first-child) { display: none; }
 
-/* Left structure */
-body.tiq-piloto-editor-v2 .pe-tree__head{padding:17px 16px 13px;border-bottom:1px solid var(--p01-border)}
-body.tiq-piloto-editor-v2 .pe-tree__head-kicker{display:block;margin-bottom:4px;color:var(--p01-subtle);font-size:10px;font-weight:650;letter-spacing:.07em}
-body.tiq-piloto-editor-v2 .pe-tree__head-title{display:block;color:var(--p01-text);font-size:14px;font-weight:650;line-height:1.2}
-body.tiq-piloto-editor-v2 .pe-tree__head-sub{display:none}
-body.tiq-piloto-editor-v2 .pe-tree__body{padding:10px 8px 24px}
-body.tiq-piloto-editor-v2 .pe-tree__group{margin:0 0 8px}
-body.tiq-piloto-editor-v2 .pe-tree__children{display:block}
-body.tiq-piloto-editor-v2 .pe-tree__group.is-collapsed .pe-tree__children{display:none}
-body.tiq-piloto-editor-v2 .pe-tree__row{display:flex;align-items:center;gap:8px;min-height:32px;padding:0 8px;border-radius:4px;color:var(--p01-text);cursor:pointer;user-select:none}
-body.tiq-piloto-editor-v2 .pe-tree__row:hover{background:#f6f6f7}
-body.tiq-piloto-editor-v2 .pe-tree__row:focus-visible{outline:2px solid var(--p01-focus);outline-offset:-2px}
-body.tiq-piloto-editor-v2 .pe-tree__row.is-sel{background:var(--p01-focus-soft);box-shadow:inset 2px 0 var(--p01-focus)}
-body.tiq-piloto-editor-v2 .pe-tree__lead{display:grid;place-items:center;flex:0 0 16px;width:16px;height:16px;color:var(--p01-subtle)}
-body.tiq-piloto-editor-v2 .pe-tree__drag{display:none}
-body.tiq-piloto-editor-v2 .pe-tree__chevron{cursor:pointer;transition:transform .14s ease}
-body.tiq-piloto-editor-v2 .pe-tree__chevron svg{width:14px;height:14px}
-body.tiq-piloto-editor-v2 .pe-tree__group.is-collapsed .pe-tree__chevron{transform:rotate(-90deg)}
-body.tiq-piloto-editor-v2 .pe-tree__ico{display:grid;place-items:center;flex:0 0 16px;width:16px;height:16px;color:#5c5f62}
-body.tiq-piloto-editor-v2 .pe-tree__ico svg{display:block;width:16px;height:16px;fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round;stroke-width:1.8}
-body.tiq-piloto-editor-v2 .pe-tree__row.is-sel .pe-tree__ico{color:var(--p01-focus)}
-body.tiq-piloto-editor-v2 .pe-tree__label{min-width:0;overflow:hidden;color:#3f4143;font-size:12.5px;line-height:1;white-space:nowrap;text-overflow:ellipsis}
-body.tiq-piloto-editor-v2 .pe-tree__row--group{margin:4px 0 2px;color:var(--p01-text);cursor:default}
-body.tiq-piloto-editor-v2 .pe-tree__row--group:hover{background:transparent}
-body.tiq-piloto-editor-v2 .pe-tree__row--group .pe-tree__ico{color:var(--p01-text)}
-body.tiq-piloto-editor-v2 .pe-tree__row--group .pe-tree__label{font-size:12px;font-weight:650}
-body.tiq-piloto-editor-v2 .pe-tree__nest{margin-left:24px;border-left:1px solid var(--p01-border)}
-body.tiq-piloto-editor-v2 .pe-tree__nest .pe-tree__row{min-height:29px;padding-left:9px}
-body.tiq-piloto-editor-v2 .pe-tree__nest .pe-tree__ico{width:14px;height:14px;color:var(--p01-subtle)}
-body.tiq-piloto-editor-v2 .pe-tree__nest .pe-tree__ico svg{width:14px;height:14px}
+/* Structure rail. The hierarchy is deliberately quiet: one line per block,
+   nested review cards, and no implementation labels. */
+body.tiq-piloto-editor-v2 .pe-tree__head {
+  display: grid;
+  gap: 4px;
+  padding: 17px 16px 15px;
+  border-bottom: 1px solid var(--p01-border);
+}
+body.tiq-piloto-editor-v2 .pe-tree__head-kicker {
+  color: var(--p01-subtle);
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: .06em;
+  line-height: 1;
+}
+body.tiq-piloto-editor-v2 .pe-tree__head-title {
+  overflow: hidden;
+  color: var(--p01-text);
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+body.tiq-piloto-editor-v2 .pe-tree__head-sub {
+  color: var(--p01-muted);
+  font-size: 11px;
+  line-height: 1.2;
+}
+body.tiq-piloto-editor-v2 .pe-tree__body { padding: 10px 8px 24px; }
+body.tiq-piloto-editor-v2 .pe-tree__group { margin: 0 0 10px; }
+body.tiq-piloto-editor-v2 .pe-tree__children { display: block; }
+body.tiq-piloto-editor-v2 .pe-tree__group.is-collapsed .pe-tree__children { display: none; }
+body.tiq-piloto-editor-v2 .pe-tree__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 33px;
+  padding: 0 8px;
+  border-radius: 4px;
+  color: var(--p01-text);
+  cursor: pointer;
+  user-select: none;
+}
+body.tiq-piloto-editor-v2 .pe-tree__row:hover { background: #f6f6f7; }
+body.tiq-piloto-editor-v2 .pe-tree__row:focus-visible { outline: 2px solid var(--p01-focus); outline-offset: -2px; }
+body.tiq-piloto-editor-v2 .pe-tree__row.is-sel { background: var(--p01-focus-soft); box-shadow: inset 2px 0 var(--p01-focus); }
+body.tiq-piloto-editor-v2 .pe-tree__lead { display: grid; place-items: center; flex: 0 0 16px; width: 16px; height: 16px; color: var(--p01-subtle); }
+body.tiq-piloto-editor-v2 .pe-tree__drag { display: none; }
+body.tiq-piloto-editor-v2 .pe-tree__chevron { cursor: pointer; transition: transform .14s ease; }
+body.tiq-piloto-editor-v2 .pe-tree__chevron svg { width: 14px; height: 14px; }
+body.tiq-piloto-editor-v2 .pe-tree__group.is-collapsed .pe-tree__chevron { transform: rotate(-90deg); }
+body.tiq-piloto-editor-v2 .pe-tree__ico { display: grid; place-items: center; flex: 0 0 16px; width: 16px; height: 16px; color: #5c5f62; }
+body.tiq-piloto-editor-v2 .pe-tree__ico svg { display: block; width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
+body.tiq-piloto-editor-v2 .pe-tree__row.is-sel .pe-tree__ico { color: var(--p01-focus); }
+body.tiq-piloto-editor-v2 .pe-tree__label { min-width: 0; overflow: hidden; color: #3f4143; font-size: 12.5px; line-height: 1; text-overflow: ellipsis; white-space: nowrap; }
+body.tiq-piloto-editor-v2 .pe-tree__row--group { margin-top: 4px; cursor: default; }
+body.tiq-piloto-editor-v2 .pe-tree__row--group:hover { background: transparent; }
+body.tiq-piloto-editor-v2 .pe-tree__row--group .pe-tree__ico { color: var(--p01-text); }
+body.tiq-piloto-editor-v2 .pe-tree__row--group .pe-tree__label { font-size: 12px; font-weight: 650; }
+body.tiq-piloto-editor-v2 .pe-tree__group-meta { margin-left: auto; color: var(--p01-subtle); font-size: 10px; }
+body.tiq-piloto-editor-v2 .pe-tree__nest { margin-left: 24px; border-left: 1px solid var(--p01-border); }
+body.tiq-piloto-editor-v2 .pe-tree__nest .pe-tree__row { min-height: 29px; padding-left: 9px; }
+body.tiq-piloto-editor-v2 .pe-tree__nest .pe-tree__ico,
+body.tiq-piloto-editor-v2 .pe-tree__nest .pe-tree__ico svg { width: 14px; height: 14px; }
 
-/* Canvas */
-body.tiq-piloto-editor-v2 .pe-editor__centro{display:flex;min-width:0;height:100%;overflow:hidden;align-items:flex-start;justify-content:center;padding:24px;background:var(--p01-canvas)}
-body.tiq-piloto-editor-v2 .pe-canvas-viewport{position:relative;flex:0 0 auto;min-height:0}
-body.tiq-piloto-editor-v2 .pe-canvas-shell{transform-origin:top center}
-body.tiq-piloto-editor-v2 .pe-canvas-shell .marco{height:calc(100dvh - 106px);min-height:560px;overflow:hidden;border:1px solid var(--p01-border);border-radius:0;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08)}
-body.tiq-piloto-editor-v2 .pe-canvas-shell .marco iframe{display:block;width:100%;height:100%;border:0;background:#fff}
-body.tiq-piloto-editor-v2 .pe-canvas-shell.is-mobile{width:390px;max-width:100%;margin:0 auto}
-body.tiq-piloto-editor-v2 .pe-canvas-shell.is-mobile .marco{min-height:680px;border-radius:7px}
+/* Canvas. The iframe remains a real 1200px storefront viewport, while its
+   host reserves the scaled dimensions. This keeps breakpoints faithful and
+   eliminates the phantom horizontal scrollbar. */
+body.tiq-piloto-editor-v2 .pe-editor__centro {
+  display: flex;
+  max-width: none;
+  margin: 0;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 24px 28px 48px;
+  background: var(--p01-canvas);
+}
+body.tiq-piloto-editor-v2 .pe-canvas-viewport {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-color: #c9cccf transparent;
+}
+body.tiq-piloto-editor-v2 .pe-canvas-shell { flex: 0 0 auto; min-width: 0; transform-origin: top center; }
+body.tiq-piloto-editor-v2 .pe-canvas-shell .marco {
+  width: 1200px;
+  height: calc(100dvh - 112px);
+  min-height: 640px;
+  overflow: hidden;
+  border: 1px solid var(--p01-border-strong);
+  border-radius: 2px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .08);
+}
+body.tiq-piloto-editor-v2 .pe-canvas-shell .marco iframe { display: block; width: 100%; height: 100%; border: 0; background: #fff; }
+body.tiq-piloto-editor-v2 .pe-canvas-shell.is-mobile .marco { min-height: 820px; border-radius: 7px; }
 
-/* Inspector */
-body.tiq-piloto-editor-v2 .sec-panel__cab{position:sticky;top:0;z-index:2;display:flex;align-items:flex-start;justify-content:space-between;min-height:0;padding:16px;border-bottom:1px solid var(--p01-border);background:var(--p01-surface)}
-body.tiq-piloto-editor-v2 .sec-panel__eyebrow{color:var(--p01-subtle);font-size:10px;font-weight:650;letter-spacing:.07em}
-body.tiq-piloto-editor-v2 .sec-panel__tit{margin-top:3px;color:var(--p01-text);font-size:15px;font-weight:650;letter-spacing:-.1px}
-body.tiq-piloto-editor-v2 .sec-panel__x{display:grid;place-items:center;flex:0 0 auto;width:28px;height:28px;margin:-4px -4px 0 8px;padding:0;border:0;border-radius:4px;color:var(--p01-muted);background:transparent;cursor:pointer}
-body.tiq-piloto-editor-v2 .sec-panel__x:hover{color:var(--p01-text);background:#f1f2f3}
-body.tiq-piloto-editor-v2 .sec-panel__x .ico{width:16px;height:16px}
-body.tiq-piloto-editor-v2 .sec-panel__body{display:block;flex:none;overflow:visible;padding:16px}
-body.tiq-piloto-editor-v2 .pe-inspector__empty{display:grid;place-content:center;min-height:100%;padding:32px;text-align:center}
-body.tiq-piloto-editor-v2 .pe-inspector__empty-icon{display:none}
-body.tiq-piloto-editor-v2 .pe-inspector__empty strong{font-size:14px;font-weight:650}
-body.tiq-piloto-editor-v2 .pe-inspector__empty p{max-width:220px;margin:8px auto 0;color:var(--p01-muted);font-size:12.5px;line-height:1.45}
-body.tiq-piloto-editor-v2 .sp-sub{margin:0 0 12px;padding:0;color:var(--p01-text);font-size:12px;font-weight:650;letter-spacing:0;text-transform:none}
-body.tiq-piloto-editor-v2 .sp-content{display:grid;gap:12px;padding:0}
-body.tiq-piloto-editor-v2 .campo,body.tiq-piloto-editor-v2 .p01-field{display:grid;gap:6px;margin:0;color:var(--p01-text);font-size:12px;font-weight:500}
-body.tiq-piloto-editor-v2 .p01-control,body.tiq-piloto-editor-v2 .sp-content input,body.tiq-piloto-editor-v2 .sp-content select,body.tiq-piloto-editor-v2 .sp-content textarea{width:100%;min-height:36px;padding:8px 9px;border:1px solid var(--p01-border-strong);border-radius:4px;color:var(--p01-text);background:#fff;font:400 13px/1.4 inherit}
-body.tiq-piloto-editor-v2 .p01-control--area,body.tiq-piloto-editor-v2 .sp-content textarea{min-height:92px;resize:vertical}
-body.tiq-piloto-editor-v2 .p01-control:focus,body.tiq-piloto-editor-v2 .sp-content input:focus,body.tiq-piloto-editor-v2 .sp-content select:focus,body.tiq-piloto-editor-v2 .sp-content textarea:focus{outline:2px solid rgba(0,91,211,.2);outline-offset:0;border-color:var(--p01-focus)}
-body.tiq-piloto-editor-v2 .editor__ayuda{margin:0;color:var(--p01-muted);font-size:12px;line-height:1.45}
-body.tiq-piloto-editor-v2 .sp-ai-trigger{display:inline-flex;align-items:center;align-self:start;gap:5px;margin:-4px 0 2px;padding:4px 0;border:0;color:var(--p01-focus);background:transparent;font:600 12px/1.2 inherit;cursor:pointer}
-body.tiq-piloto-editor-v2 .sp-ai-trigger:hover{text-decoration:underline}
-body.tiq-piloto-editor-v2 .sp-item-card{padding:12px;border:1px solid var(--p01-border);border-radius:4px;background:#fff}
-body.tiq-piloto-editor-v2 .sp-item-card__head{margin-bottom:10px;font-size:12px;font-weight:650}
-body.tiq-piloto-editor-v2 .sp-item-card .campo + .campo{margin-top:10px}
-body.tiq-piloto-editor-v2 .sp-review-tabs{display:flex;gap:0;margin:0;border:1px solid var(--p01-border);border-radius:4px;background:#fff}
-body.tiq-piloto-editor-v2 .sp-review-tabs__tab{display:grid;place-items:center;flex:1 1 0;min-width:0;height:32px;border:0;border-right:1px solid var(--p01-border);background:#fff;color:var(--p01-muted);font:600 12px/1 inherit;cursor:pointer}
-body.tiq-piloto-editor-v2 .sp-review-tabs__tab:last-child{border-right:0}
-body.tiq-piloto-editor-v2 .sp-review-tabs__tab:hover{background:#f6f6f7;color:var(--p01-text)}
-body.tiq-piloto-editor-v2 .sp-review-tabs__tab.is-active{color:var(--p01-text);background:var(--p01-focus-soft);box-shadow:inset 0 -2px var(--p01-focus)}
-body.tiq-piloto-editor-v2 .galeria-picker__subir{display:grid;min-height:112px;place-content:center;gap:8px;border:1px dashed var(--p01-border-strong);border-radius:4px;color:var(--p01-muted);background:#fff;text-align:center;cursor:pointer}
-body.tiq-piloto-editor-v2 .galeria-picker__subir-mas{color:var(--p01-focus);font-size:23px;font-weight:300;line-height:1}
-body.tiq-piloto-editor-v2 .galeria-picker__subir-txt{font-size:12px}
-body.tiq-piloto-editor-v2 .sp-evidence-preview{display:block;width:100%;max-height:220px;object-fit:cover;border:1px solid var(--p01-border);border-radius:4px}
-body.tiq-piloto-editor-v2 .sp-evidence-save{width:100%;min-height:36px;border:1px solid #202223;border-radius:4px;color:#fff;background:#202223;font:600 13px/1 inherit;cursor:pointer}
-body.tiq-piloto-editor-v2 .sp-evidence-save:hover{background:#000}
+/* Inspector. One scroll context, native-looking controls, no decorative
+   cards stacked inside cards. */
+body.tiq-piloto-editor-v2 .pe-inspector__empty { display: grid; align-content: center; justify-items: center; height: 100%; min-height: 260px; padding: 32px; text-align: center; }
+body.tiq-piloto-editor-v2 .pe-inspector__empty-icon { display: none; }
+body.tiq-piloto-editor-v2 .pe-inspector__empty strong { font-size: 14px; font-weight: 650; }
+body.tiq-piloto-editor-v2 .pe-inspector__empty p { max-width: 240px; margin: 8px 0 0; color: var(--p01-muted); font-size: 12.5px; line-height: 1.45; }
+body.tiq-piloto-editor-v2 .sec-panel__cab { display: flex; align-items: flex-start; justify-content: space-between; flex: 0 0 auto; min-height: 70px; padding: 16px; border-bottom: 1px solid var(--p01-border); background: var(--p01-surface); }
+body.tiq-piloto-editor-v2 .sec-panel__eyebrow { color: var(--p01-subtle); font-size: 10px; font-weight: 650; letter-spacing: .06em; }
+body.tiq-piloto-editor-v2 .sec-panel__tit { display: block; margin-top: 4px; color: var(--p01-text); font-size: 15px; font-weight: 650; letter-spacing: -.1px; }
+body.tiq-piloto-editor-v2 .sec-panel__x { display: grid; place-items: center; flex: 0 0 28px; width: 28px; height: 28px; margin: -4px -4px 0 8px; padding: 0; border: 0; border-radius: 4px; color: var(--p01-muted); background: transparent; }
+body.tiq-piloto-editor-v2 .sec-panel__x:hover { background: #f1f2f3; color: var(--p01-text); }
+body.tiq-piloto-editor-v2 .sec-panel__body { display: grid; flex: 1 1 auto; min-height: 0; gap: 14px; overflow-x: hidden; overflow-y: auto; padding: 16px; scrollbar-color: #c9cccf transparent; }
+body.tiq-piloto-editor-v2 .sp-sub { margin: 0; padding: 0; color: var(--p01-text); font-size: 12px; font-weight: 650; line-height: 1.3; text-transform: none; }
+body.tiq-piloto-editor-v2 .sp-content { display: grid; gap: 13px; padding: 0; }
+body.tiq-piloto-editor-v2 .campo,
+body.tiq-piloto-editor-v2 .p01-field { display: grid; gap: 6px; margin: 0; color: var(--p01-text); font-size: 12px; font-weight: 500; }
+body.tiq-piloto-editor-v2 .p01-field__label { color: var(--p01-text); font-size: 12px; font-weight: 500; }
+body.tiq-piloto-editor-v2 .p01-control,
+body.tiq-piloto-editor-v2 .sp-content input,
+body.tiq-piloto-editor-v2 .sp-content select,
+body.tiq-piloto-editor-v2 .sp-content textarea { width: 100%; min-height: 36px; padding: 8px 9px; border: 1px solid var(--p01-border-strong); border-radius: 4px; color: var(--p01-text); background: #fff; font: 400 13px/1.4 var(--p01-font); }
+body.tiq-piloto-editor-v2 .p01-control--area,
+body.tiq-piloto-editor-v2 .sp-content textarea { min-height: 92px; resize: vertical; }
+body.tiq-piloto-editor-v2 .p01-control:focus,
+body.tiq-piloto-editor-v2 .sp-content input:focus,
+body.tiq-piloto-editor-v2 .sp-content select:focus,
+body.tiq-piloto-editor-v2 .sp-content textarea:focus { outline: 2px solid rgba(0, 91, 211, .2); outline-offset: 0; border-color: var(--p01-focus); }
+body.tiq-piloto-editor-v2 .editor__ayuda { margin: 0; color: var(--p01-muted); font-size: 12px; line-height: 1.45; }
+body.tiq-piloto-editor-v2 .sp-ai-trigger { display: inline-flex; align-items: center; align-self: start; gap: 5px; margin: -2px 0 0; padding: 2px 0; border: 0; color: var(--p01-focus); background: transparent; font: 600 12px/1.2 var(--p01-font); }
+body.tiq-piloto-editor-v2 .sp-ai-trigger:hover { text-decoration: underline; }
+body.tiq-piloto-editor-v2 .sp-item-card { display: grid; gap: 10px; padding: 12px; border: 1px solid var(--p01-border); border-radius: 4px; background: #fff; }
+body.tiq-piloto-editor-v2 .sp-item-card__head { display: flex; align-items: center; justify-content: space-between; color: var(--p01-text); font-size: 12px; font-weight: 650; }
+body.tiq-piloto-editor-v2 .sp-review-tabs { display: flex; overflow: hidden; border: 1px solid var(--p01-border); border-radius: 4px; background: #fff; }
+body.tiq-piloto-editor-v2 .sp-review-tabs__tab { flex: 1 1 0; min-width: 0; height: 32px; padding: 0; border: 0; border-right: 1px solid var(--p01-border); color: var(--p01-muted); background: #fff; font: 600 12px/1 var(--p01-font); }
+body.tiq-piloto-editor-v2 .sp-review-tabs__tab:last-child { border-right: 0; }
+body.tiq-piloto-editor-v2 .sp-review-tabs__tab:hover { background: #f6f6f7; color: var(--p01-text); }
+body.tiq-piloto-editor-v2 .sp-review-tabs__tab.is-active { color: var(--p01-text); background: var(--p01-focus-soft); box-shadow: inset 0 -2px var(--p01-focus); }
+body.tiq-piloto-editor-v2 .galeria-picker__subir { display: grid; min-height: 112px; place-content: center; gap: 8px; border: 1px dashed var(--p01-border-strong); border-radius: 4px; color: var(--p01-muted); background: #fff; text-align: center; }
+body.tiq-piloto-editor-v2 .galeria-picker__subir-mas { color: var(--p01-focus); font-size: 23px; font-weight: 300; line-height: 1; }
+body.tiq-piloto-editor-v2 .galeria-picker__subir-txt { font-size: 12px; }
+body.tiq-piloto-editor-v2 .sp-evidence-preview { display: block; width: 100%; max-height: 220px; object-fit: cover; border: 1px solid var(--p01-border); border-radius: 4px; }
+body.tiq-piloto-editor-v2 .sp-evidence-save { width: 100%; min-height: 36px; border: 1px solid #202223; border-radius: 4px; color: #fff; background: #202223; font: 600 13px/1 var(--p01-font); }
+body.tiq-piloto-editor-v2 .sp-evidence-save:hover { background: #000; }
 
-@media (max-width:1280px){body.tiq-piloto-editor-v2 .pe-editor--piloto{grid-template-columns:244px minmax(0,1fr) 304px}body.tiq-piloto-editor-v2 .pe-appbar__template{display:none}}
-@media (max-width:1024px){body.tiq-piloto-editor-v2{overflow:auto}body.tiq-piloto-editor-v2 .preview-barra.pe-appbar{grid-template-columns:1fr auto}body.tiq-piloto-editor-v2 .preview-barra__estado{display:none!important}body.tiq-piloto-editor-v2 .pe-editor--piloto{grid-template-columns:224px minmax(0,1fr);height:auto;min-height:calc(100dvh - 58px);overflow:visible}body.tiq-piloto-editor-v2 .pe-inspector{grid-column:1 / -1;min-height:320px;border-top:1px solid var(--p01-border);border-left:0}}
-@media (max-width:700px){body.tiq-piloto-editor-v2 .preview-barra.pe-appbar{display:flex;flex-wrap:wrap;padding:8px 10px}body.tiq-piloto-editor-v2 .preview-barra__acciones{margin-left:auto}body.tiq-piloto-editor-v2 .preview-barra__acciones #regenerar{display:none}body.tiq-piloto-editor-v2 .pe-editor--piloto{display:block}body.tiq-piloto-editor-v2 .pe-tree{height:auto;max-height:250px;border-right:0;border-bottom:1px solid var(--p01-border)}body.tiq-piloto-editor-v2 .pe-editor__centro{height:70dvh;padding:12px}}
-@media (prefers-reduced-motion:reduce){body.tiq-piloto-editor-v2 *{scroll-behavior:auto!important;transition:none!important}}
+/* Toolbar controls use real icons instead of text glyphs. */
+body.tiq-piloto-editor-v2 .pe-viewport,
+body.tiq-piloto-editor-v2 .pe-history { display: inline-flex; align-items: center; gap: 2px; padding: 3px; border: 1px solid var(--p01-border); border-radius: 5px; background: #fff; }
+body.tiq-piloto-editor-v2 .pe-viewport button,
+body.tiq-piloto-editor-v2 .pe-history button { display: grid; place-items: center; min-width: 29px; height: 28px; padding: 0 9px; border: 0; border-radius: 3px; color: var(--p01-muted); background: transparent; font: 600 12px/1 var(--p01-font); }
+body.tiq-piloto-editor-v2 .pe-viewport button:hover,
+body.tiq-piloto-editor-v2 .pe-history button:hover:not(:disabled) { color: var(--p01-text); background: #f1f2f3; }
+body.tiq-piloto-editor-v2 .pe-viewport button[aria-pressed="true"] { color: var(--p01-text); background: #f1f2f3; }
+body.tiq-piloto-editor-v2 .pe-history button { width: 29px; padding: 0; }
+body.tiq-piloto-editor-v2 .pe-history .ico { width: 15px; height: 15px; }
+body.tiq-piloto-editor-v2 .pe-history button:disabled { opacity: .38; cursor: not-allowed; }
+
+@media (max-width: 1280px) {
+  body.tiq-piloto-editor-v2 .pe-editor--piloto { grid-template-columns: 256px minmax(0, 1fr) 332px; }
+  body.tiq-piloto-editor-v2 .pe-appbar__product { display: none; }
+}
+@media (max-width: 1000px) {
+  body.tiq-piloto-editor-v2 { height: auto; min-height: 100dvh; overflow: auto; }
+  body.tiq-piloto-editor-v2 #vista { height: auto; min-height: 100dvh; overflow: visible; }
+  body.tiq-piloto-editor-v2 .preview-barra.pe-appbar { grid-template-columns: minmax(0, 1fr) auto; }
+  body.tiq-piloto-editor-v2 .preview-barra__estado { display: none !important; }
+  body.tiq-piloto-editor-v2 .pe-mode-toggle,
+  body.tiq-piloto-editor-v2 .pe-branding-trigger { display: none; }
+  body.tiq-piloto-editor-v2 .pe-editor--piloto { grid-template-columns: 232px minmax(0, 1fr); height: calc(100dvh - 64px); }
+  body.tiq-piloto-editor-v2 .pe-inspector { grid-column: 1 / -1; min-height: 360px; border-top: 1px solid var(--p01-border); border-left: 0; }
+}
+@media (max-width: 700px) {
+  body.tiq-piloto-editor-v2 .preview-barra.pe-appbar { display: flex; flex-wrap: wrap; height: auto; padding: 8px 10px; }
+  body.tiq-piloto-editor-v2 .preview-barra__acciones { margin-left: auto; }
+  body.tiq-piloto-editor-v2 .preview-barra__acciones #regenerar { display: none; }
+  body.tiq-piloto-editor-v2 .pe-editor--piloto { display: block; height: auto; min-height: calc(100dvh - 64px); overflow: visible; }
+  body.tiq-piloto-editor-v2 .pe-tree { height: auto; max-height: 280px; border-right: 0; border-bottom: 1px solid var(--p01-border); }
+  body.tiq-piloto-editor-v2 .pe-editor__centro { height: 70dvh; padding: 12px; }
+  body.tiq-piloto-editor-v2 .pe-inspector { min-height: 420px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  body.tiq-piloto-editor-v2 * { scroll-behavior: auto !important; transition: none !important; }
+}

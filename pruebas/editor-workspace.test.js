@@ -17,12 +17,27 @@ test("el preview abre como una superficie de trabajo y no conserva el stepper", 
 });
 
 test("el workspace reserva paneles consistentes y el canvas no crea scroll horizontal", () => {
-  assert.match(app, /const anchoTienda = 1200/);
+  assert.match(app, /const anchoTienda = isMobile \? 390 : 1200/);
   assert.match(app, /centro\.clientWidth - 48/);
-  assert.match(css, /grid-template-columns:276px minmax\(0,1fr\) 332px/);
-  assert.match(css, /\.pe-editor__centro\{display:flex;min-width:0;height:100%;overflow:hidden/);
-  assert.match(css, /\.pe-canvas-shell\{transform-origin:top center\}/);
-  assert.match(css, /\.pe-canvas-shell \.marco\{height:calc\(100dvh - 106px\)/);
+  assert.match(css, /grid-template-columns: 288px minmax\(0, 1fr\) 360px/);
+  assert.match(css, /\.pe-editor__centro\s*\{[\s\S]*?min-width: 0;[\s\S]*?overflow: hidden/);
+  assert.match(css, /\.pe-canvas-shell\s*\{[^}]*transform-origin: top center/);
+  assert.match(css, /\.pe-canvas-shell \.marco\s*\{[\s\S]*?height: calc\(100dvh - 112px\)/);
+  assert.match(css, /overflow-x: hidden/);
+  assert.match(app, /function prepararFramePreview\(frame\)/);
+});
+
+test("la barra de Piloto conserva el modelo de editor maduro", () => {
+  assert.match(app, /id="editor-modo-avanzado"/);
+  assert.match(app, /id="editor-branding"/);
+  assert.match(app, /data-viewport-tool="select"/);
+  assert.match(app, /data-viewport-tool="fullscreen"/);
+  assert.match(app, /id="editar-variantes"/);
+  assert.match(app, /id="editor-acciones-menu"/);
+  assert.match(app, /id="editor-cerrar"/);
+  assert.match(css, /\.pe-mode-toggle/);
+  assert.match(css, /\.pe-actions__menu/);
+  assert.match(css, /#publicar::part\(button\)[^{]*\{[^}]*background: #008060/);
 });
 
 test("Piloto 01 une árbol, canvas e inspector con ids reales de bloque", () => {
@@ -61,9 +76,9 @@ test("el preview se comunica sólo con el origen propio y no ejecuta el carrito"
 
 test("el sistema visual tiene un único set de tokens y ninguna decoración gratuita", () => {
   assert.match(css, /Piloto workbench: one editor surface, one token system/);
-  assert.match(css, /--p01-focus:#005bd3/);
-  assert.match(css, /--p01-canvas:#f6f6f7/);
-  assert.equal((css.match(/--p01-canvas:#f6f6f7/g) || []).length, 1, "los tokens base no se deben redefinir por capas");
+  assert.match(css, /--p01-focus:\s*#005bd3/);
+  assert.match(css, /--p01-canvas:\s*#f6f6f7/);
+  assert.equal((css.match(/--p01-canvas:\s*#f6f6f7/g) || []).length, 1, "los tokens base no se deben redefinir por capas");
   assert.ok(!css.includes("linear-gradient"), "el editor no usa gradientes decorativos");
   assert.ok(!css.includes("radial-gradient"), "el editor no usa fondos decorativos");
 });
