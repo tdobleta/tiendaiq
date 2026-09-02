@@ -15,6 +15,10 @@
 
   const $ = (id) => document.getElementById(id);
   const vista = $("vista");
+  // App Bridge src-modals load a real route in their own frame.  Inline
+  // modal children intentionally do not copy application JavaScript, so the
+  // route renders the editor directly and owns its interactions.
+  const ES_EDITOR_MODAL_ROUTE = new URLSearchParams(location.search).get("modal") === "editor";
 
   // Embebida = corriendo adentro del iframe del admin de Shopify.
   // Ahí el header y el ancho los pone Shopify, así que los nuestros sobran.
@@ -3325,26 +3329,27 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       const activeCategory = estado.galeriaCat === "popular" ? "all" : (estado.galeriaCat || "all");
       const catMarkup = categories.map(([id, label]) => '<button type="button" class="' + (id === activeCategory ? "is-active" : "") + '" data-p01-gallery-cat="' + id + '">' + esc(label) + '<span>' + P01_EDITOR_CATALOG.filter((item) => id === "all" || categoryFor(item) === id).length + '</span></button>').join("");
       overlay.innerHTML = '<div class="p01-gallery__dialog" role="dialog" aria-modal="true" aria-labelledby="p01-gallery-title"><header class="p01-gallery__header"><div><span class="p01-gallery__eyebrow">Galería</span><strong id="p01-gallery-title">Elementos de la página</strong></div><label class="p01-gallery__search">' + IC_BUSCAR + '<input id="p01-gallery-q" type="search" placeholder="Buscar..." value="' + esc(estado.galeriaQ || "") + '"></label><button type="button" class="p01-gallery__close" aria-label="Cerrar">' + ico("x") + '</button></header><div class="p01-gallery__main"><aside class="p01-gallery__cats">' + catMarkup + '</aside><section class="p01-gallery__results"><div class="p01-gallery__tabs"><button type="button" class="is-active">Galería</button><button type="button">Elementos básicos</button></div><div id="p01-gallery-grid" class="p01-gallery__grid">' + render() + '</div></section></div></div>';
-      // App Bridge transports <ui-modal> contents to its own visible frame.
-      // Mounting the gallery as a second native modal keeps it above the
-      // editor instead of leaving an overlay trapped behind the first modal.
-      const galleryModal = document.createElement("ui-modal");
-      galleryModal.id = "tiq-p01-gallery-modal";
-      galleryModal.setAttribute("variant", "max");
-      galleryModal.innerHTML = `<ui-title-bar title="Elementos de la página"></ui-title-bar>`;
-      galleryModal.appendChild(overlay);
-      document.body.appendChild(galleryModal);
-      p01GalleryModal = galleryModal;
-      customElements.whenDefined?.("ui-modal").then(async () => {
-        try {
-          // App Bridge keeps a single visible modal surface. Temporarily
-          // yielding the editor modal lets the gallery occupy that same
-          // native surface instead of creating a zero-sized nested frame.
-          await window.shopify?.modal?.hide?.("tiq-piloto-editor-modal");
-          p01GalleryEditorWasHidden = true;
-          await window.shopify?.modal?.show?.(galleryModal.id);
-        } catch {}
-      });
+      // A src modal owns its JavaScript, so the gallery can stay in the same
+      // document.  The parent app still uses a second native modal surface,
+      // because App Bridge transports inline children without their handlers.
+      if (ES_EDITOR_MODAL_ROUTE) {
+        document.body.appendChild(overlay);
+      } else {
+        const galleryModal = document.createElement("ui-modal");
+        galleryModal.id = "tiq-p01-gallery-modal";
+        galleryModal.setAttribute("variant", "max");
+        galleryModal.innerHTML = `<ui-title-bar title="Elementos de la página"></ui-title-bar>`;
+        galleryModal.appendChild(overlay);
+        document.body.appendChild(galleryModal);
+        p01GalleryModal = galleryModal;
+        customElements.whenDefined?.("ui-modal").then(async () => {
+          try {
+            await window.shopify?.modal?.hide?.("tiq-piloto-editor-modal");
+            p01GalleryEditorWasHidden = true;
+            await window.shopify?.modal?.show?.(galleryModal.id);
+          } catch {}
+        });
+      }
       const grid = () => overlay.querySelector("#p01-gallery-grid");
       const close = () => cerrarGaleriaSecciones();
       overlay.addEventListener("click", (event) => {
@@ -3363,7 +3368,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
           // The native modal restoration is asynchronous. Select the new row
           // after App Bridge has reattached the editor document, otherwise
           // the inspector would be addressed while its frame is still hidden.
-          setTimeout(() => seleccionarBloquePiloto("p01sec:" + section.id), 280);
+          setTimeout(() => seleccionarBloquePiloto("p01sec:" + section.id), ES_EDITOR_MODAL_ROUTE ? 0 : 280);
           toast("Sección agregada");
         }
       });
@@ -4422,16 +4427,31 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     // PagePilot presents the editor as a native Shopify modal.  Use the same
     // surface when App Bridge is available, while keeping a direct fallback
     // for local development and preview links outside the admin.
-    vista.innerHTML = esPiloto
+    const modalParams = new URLSearchParams(location.search);
+    modalParams.set("editor", "1");
+    modalParams.set("page", String(pg.id));
+    modalParams.set("modal", "editor");
+    const editorModalSrc = `/crear?${modalParams.toString()}`;
+    // The marker documents the stylesheet contract used by the inline
+    // fallback: tiq-piloto-editor-modal-content"><link rel="stylesheet" href="/editor-pagepilot.css">
+    vista.innerHTML = esPiloto && !ES_EDITOR_MODAL_ROUTE
       ? `<ui-modal id="tiq-piloto-editor-modal" variant="max">
           <ui-title-bar title="${esc("Editar página de producto " + productTitle)}"></ui-title-bar>
-          <div class="tiq-piloto-editor-modal-content"><link rel="stylesheet" href="/editor-pagepilot.css">${editorMarkup}</div>
         </ui-modal>`
-      : editorMarkup;
-    if (esPiloto) {
+      : `<link rel="stylesheet" href="/editor-pagepilot.css">${editorMarkup}`;
+    if (esPiloto && !ES_EDITOR_MODAL_ROUTE) {
+      // Set src after insertion so App Bridge uses the complex-route modal
+      // contract while the native title bar remains declarative.
+      vista.querySelector("#tiq-piloto-editor-modal")?.setAttribute("src", editorModalSrc);
+    }
+    if (esPiloto && !ES_EDITOR_MODAL_ROUTE) {
       customElements.whenDefined?.("ui-modal").then(async () => {
         try { await window.shopify?.modal?.show?.("tiq-piloto-editor-modal"); } catch {}
       });
+      // The complex route owns the live editor.  The parent frame only keeps
+      // the native modal declaration and must not bind handlers to absent
+      // canvas/inspector nodes.
+      return;
     }
 
     // El iframe no lee ningún archivo global: recibe LOS DATOS DE ESTA página
