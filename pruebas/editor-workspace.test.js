@@ -59,3 +59,20 @@ test("Piloto 01 tiene una superficie de trabajo propia, con preview y controles 
   assert.match(css, /grid-template-columns:288px minmax\(0,1fr\) 344px/);
   assert.match(css, /height:calc\(100dvh - 64px\)/);
 });
+
+test("Piloto 01 presenta un menú breve y editor directo de cinco reseñas", () => {
+  const treeStart = app.indexOf("function arbolPaginaHTML()");
+  const treeEnd = app.indexOf("const source = locked", treeStart);
+  const tree = app.slice(treeStart, treeEnd);
+  assert.match(tree, /pe-tree--simple/);
+  assert.match(tree, /row\("evidence", "Reseñas"/);
+  assert.ok(!tree.includes("Espacios del merchant"), "el menú no debe exponer implementaciones internas");
+  assert.ok(!tree.includes("Fuente real"), "el menú no debe usar etiquetas de validación como UI");
+
+  const panelStart = app.indexOf("function panelEvidenciaPdp01HTML()");
+  const panelEnd = app.indexOf("function valorEvidenciaPdp01", panelStart);
+  const panel = app.slice(panelStart, panelEnd);
+  assert.match(panel, /Array\.from\(\{ length: 5 \}/);
+  assert.match(panel, /Guardar reseñas/);
+  assert.ok(!panel.includes("Confirmo que"), "las reseñas no deben estar bloqueadas detrás de confirmaciones visuales");
+});

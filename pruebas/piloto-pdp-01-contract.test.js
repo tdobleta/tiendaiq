@@ -69,6 +69,22 @@ test("Piloto 01 admite evidencia del merchant sólo con fuente y sin campos libr
   const unsafe = structuredClone(data); unsafe.evidence.rating.html = "<script>";
   assert.throws(() => validatePdp01(unsafe, { origin: "merchant" }), /no pertenece al contrato/);
 });
+test("Piloto 01 admite hasta cinco reseñas con imagen y texto propio", () => {
+  const data = page();
+  data.evidence = {
+    testimonials: {
+      items: Array.from({ length: 5 }, (_item, index) => ({
+        source: { kind: "merchant_file", reference: `shopify-media:${index + 10}` },
+        author: `Cliente ${index + 1}`,
+        text: "Una reseña aportada por la tienda.",
+        media_id: "gid://shopify/MediaImage/10"
+      }))
+    }
+  };
+  assert.doesNotThrow(() => validatePdp01(data, { origin: "merchant" }));
+  data.evidence.testimonials.items.push(data.evidence.testimonials.items[0]);
+  assert.throws(() => validatePdp01(data, { origin: "merchant" }), /entre 1 y 5 reseñas/);
+});
 test("Piloto 01 rechaza campos libres, importes y referencias ajenas", () => {
   const extra = page(); extra.content.hero.html = "<script>";
   assert.throws(() => validatePdp01(extra), /no pertenece al contrato/);

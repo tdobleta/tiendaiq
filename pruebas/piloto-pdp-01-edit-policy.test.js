@@ -51,3 +51,16 @@ test("Piloto 01 recibe evidencia y fotos del merchant por una vía separada", ()
   assert.equal(next.piloto_pdp_01.evidence.testimonial.media_id, "gid://shopify/MediaImage/2");
   assert.throws(() => applyPdp01Evidence({ persistedData: persisted, evidence: { testimonial: { text: "Inventada" } } }), FixedTemplateEditError);
 });
+
+test("Piloto 01 conserva cinco tarjetas de reseña independientes", () => {
+  const persisted = attachPdp01MerchantMedia({ persistedData: document(), mediaId: "gid://shopify/MediaImage/2" });
+  const items = Array.from({ length: 5 }, (_item, index) => ({
+    source: { kind: "merchant_file", reference: `shopify-media:${index + 2}` },
+    author: `Cliente ${index + 1}`,
+    text: "Una reseña completa aportada por la tienda.",
+    media_id: "gid://shopify/MediaImage/2"
+  }));
+  const next = applyPdp01Evidence({ persistedData: persisted, evidence: { testimonials: { items } } });
+  assert.equal(next.piloto_pdp_01.evidence.testimonials.items.length, 5);
+  assert.equal(next.piloto_pdp_01.evidence.testimonials.items[4].author, "Cliente 5");
+});

@@ -3413,9 +3413,9 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       return catSeccion(s?.tipo)?.nombre || "Sección";
     }
     if (esPlantillaPdp01()) return ({
-      hero: "Introducción", offer: "Opciones de compra", quick: "Datos rápidos", why: "Sección editorial",
-      stories: "Tarjetas editoriales", timeline: "Recorrido", faq: "Preguntas frecuentes",
-      closing: "Cierre", newsletter: "Newsletter", evidence: "Espacios del merchant"
+      hero: "Introducción", offer: "Oferta y packs", quick: "Datos importantes", why: "Historia del producto",
+      stories: "Beneficios destacados", timeline: "Cómo se usa", faq: "Preguntas frecuentes",
+      closing: "Cierre", newsletter: "Newsletter", evidence: "Reseñas y confianza"
     })[id] || "Plantilla fija";
     if (esPlantillaPinzaFija()) {
       return ({ bullets: "Beneficios verificables", faq: "Preguntas frecuentes" })[id] || "Plantilla fija";
@@ -3439,12 +3439,12 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     const content = estado.pagina.data?.piloto_pdp_01?.content || {};
     const prefix = "piloto_pdp_01.content";
     if (id === "hero") return `<div class="sp-sub">Introducción</div><div class="sp-content">${campo(`${prefix}.hero.claim`, "Idea principal", 2)}${(content.hero?.bullets || []).map((_, i) => campo(`${prefix}.hero.bullets.${i}`, `Beneficio ${i + 1}`, 2)).join("")}</div>`;
-    if (id === "offer") return `<div class="sp-sub">Opciones de compra</div><div class="sp-content">${campo(`${prefix}.offer.heading`, "Título de las opciones", 2)}<p class="editor__ayuda">Los packs, precios y disponibilidad se leen en vivo desde Shopify y el sistema de bundles de Piloto.</p></div>`;
-    if (id === "quick") return `<div class="sp-sub">Datos rápidos</div><div class="sp-content">${(content.quick?.items || []).map((_, i) => `<section class="sp-item-card"><div class="sp-item-card__head"><strong>Dato ${i + 1}</strong><span>slot</span></div>${campo(`${prefix}.quick.items.${i}.question`, "Título")}${campo(`${prefix}.quick.items.${i}.answer`, "Texto", 3)}</section>`).join("")}</div>`;
-    if (id === "why") return `<div class="sp-sub">Sección editorial</div><div class="sp-content">${campo(`${prefix}.why.eyebrow`, "Antetítulo")}${campo(`${prefix}.why.heading`, "Título", 2)}${campo(`${prefix}.why.body`, "Texto", 3)}${(content.why?.points || []).map((_, i) => campo(`${prefix}.why.points.${i}`, `Punto ${i + 1}`)).join("")}</div>`;
-    if (id === "stories") return `<div class="sp-sub">Tarjetas editoriales</div><div class="sp-content">${campo(`${prefix}.stories.heading`, "Título", 2)}${campo(`${prefix}.stories.intro`, "Introducción", 2)}${(content.stories?.cards || []).map((_, i) => `<section class="sp-item-card"><div class="sp-item-card__head"><strong>Tarjeta ${i + 1}</strong><span>slot</span></div>${campo(`${prefix}.stories.cards.${i}.title`, "Título")}${campo(`${prefix}.stories.cards.${i}.body`, "Texto", 3)}${campo(`${prefix}.stories.cards.${i}.product_note`, "Etiqueta")}</section>`).join("")}</div>`;
-    if (id === "timeline") return `<div class="sp-sub">Recorrido</div><div class="sp-content">${campo(`${prefix}.timeline.heading`, "Título", 2)}${campo(`${prefix}.timeline.intro`, "Introducción", 2)}${(content.timeline?.steps || []).map((_, i) => `<section class="sp-item-card"><div class="sp-item-card__head"><strong>Paso ${i + 1}</strong><span>slot</span></div>${campo(`${prefix}.timeline.steps.${i}.heading`, "Título")}${campo(`${prefix}.timeline.steps.${i}.body`, "Texto", 3)}</section>`).join("")}</div>`;
-    if (id === "faq") return `<div class="sp-sub">Preguntas frecuentes</div><div class="sp-content">${campo(`${prefix}.faq.heading`, "Título")}${(content.faq?.items || []).map((_, i) => `<section class="sp-item-card"><div class="sp-item-card__head"><strong>Pregunta ${i + 1}</strong><span>slot</span></div>${campo(`${prefix}.faq.items.${i}.question`, "Pregunta")}${campo(`${prefix}.faq.items.${i}.answer`, "Respuesta", 3)}</section>`).join("")}</div>`;
+    if (id === "offer") return `<div class="sp-sub">Oferta y packs</div><div class="sp-content">${campo(`${prefix}.offer.heading`, "Título", 2)}<p class="editor__ayuda">Los precios, el stock y los packs se actualizan desde Shopify.</p></div>`;
+    if (id === "quick") return `<div class="sp-sub">Datos importantes</div><div class="sp-content">${(content.quick?.items || []).map((_, i) => `<section class="sp-item-card"><div class="sp-item-card__head"><strong>Dato ${i + 1}</strong></div>${campo(`${prefix}.quick.items.${i}.question`, "Título")}${campo(`${prefix}.quick.items.${i}.answer`, "Texto", 3)}</section>`).join("")}</div>`;
+    if (id === "why") return `<div class="sp-sub">Historia del producto</div><div class="sp-content">${campo(`${prefix}.why.eyebrow`, "Antetítulo")}${campo(`${prefix}.why.heading`, "Título", 2)}${campo(`${prefix}.why.body`, "Texto", 3)}${(content.why?.points || []).map((_, i) => campo(`${prefix}.why.points.${i}`, `Punto ${i + 1}`)).join("")}</div>`;
+    if (id === "stories") return `<div class="sp-sub">Beneficios destacados</div><div class="sp-content">${campo(`${prefix}.stories.heading`, "Título", 2)}${campo(`${prefix}.stories.intro`, "Introducción", 2)}${(content.stories?.cards || []).map((_, i) => `<section class="sp-item-card"><div class="sp-item-card__head"><strong>Beneficio ${i + 1}</strong></div>${campo(`${prefix}.stories.cards.${i}.title`, "Título")}${campo(`${prefix}.stories.cards.${i}.body`, "Texto", 3)}${campo(`${prefix}.stories.cards.${i}.product_note`, "Etiqueta")}</section>`).join("")}</div>`;
+    if (id === "timeline") return `<div class="sp-sub">Cómo se usa</div><div class="sp-content">${campo(`${prefix}.timeline.heading`, "Título", 2)}${campo(`${prefix}.timeline.intro`, "Introducción", 2)}${(content.timeline?.steps || []).map((_, i) => `<section class="sp-item-card"><div class="sp-item-card__head"><strong>Paso ${i + 1}</strong></div>${campo(`${prefix}.timeline.steps.${i}.heading`, "Título")}${campo(`${prefix}.timeline.steps.${i}.body`, "Texto", 3)}</section>`).join("")}</div>`;
+    if (id === "faq") return `<div class="sp-sub">Preguntas frecuentes</div><div class="sp-content">${campo(`${prefix}.faq.heading`, "Título")}${(content.faq?.items || []).map((_, i) => `<section class="sp-item-card"><div class="sp-item-card__head"><strong>Pregunta ${i + 1}</strong></div>${campo(`${prefix}.faq.items.${i}.question`, "Pregunta")}${campo(`${prefix}.faq.items.${i}.answer`, "Respuesta", 3)}</section>`).join("")}</div>`;
     if (id === "closing") return `<div class="sp-sub">Cierre</div><div class="sp-content">${campo(`${prefix}.closing.eyebrow`, "Antetítulo")}${campo(`${prefix}.closing.heading`, "Título", 2)}${campo(`${prefix}.closing.body`, "Texto", 3)}${campo(`${prefix}.closing.secondary_body`, "Texto secundario", 3)}</div>`;
     if (id === "newsletter") return `<div class="sp-sub">Newsletter</div><div class="sp-content">${campo(`${prefix}.newsletter.heading`, "Título", 2)}${campo(`${prefix}.newsletter.body`, "Texto", 2)}</div>`;
     if (id === "evidence") return panelEvidenciaPdp01HTML();
@@ -3454,40 +3454,30 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   function panelEvidenciaPdp01HTML() {
     const doc = estado.pagina.data?.piloto_pdp_01 || {};
     const evidence = doc.evidence || {};
-    const media = doc.source_fields?.media_ids || [];
+    const media = [...new Set([
+      ...(doc.source_fields?.media_ids || []),
+      ...(estado.pagina.data?.pool_imagenes || []).map((item) => item?.media_id).filter(Boolean)
+    ])];
     const urls = estado.pagina.urls || {};
-    const selected = evidence.testimonial?.media_id || "";
-    const options = [`<option value="">Usar imagen principal del producto</option>`]
-      .concat(media.map((id, index) => `<option value="${esc(id)}" ${id === selected ? "selected" : ""}>Imagen ${index + 1} del producto</option>`)).join("");
-    const check = (name) => evidence[name] ? "checked" : "";
-    return `<div class="sp-sub">Espacios del merchant</div><div class="sp-content">
-      <p class="editor__ayuda">El diseño no pierde ninguna tarjeta. Sólo marcá una sección cuando tengas datos reales para respaldarla; si no, Piloto mantiene su versión editorial neutra.</p>
-      <section class="sp-item-card"><div class="sp-item-card__head"><strong>Rating real</strong><span>fuente</span></div>
-        <label class="campo"><input type="checkbox" data-p01-evidence="rating.enabled" ${check("rating")}> Confirmo que el rating proviene de mi proveedor de reseñas.</label>
-        <div class="sp-grid-2"><label class="campo">Puntaje<input type="number" min="0" max="5" step="0.1" data-p01-evidence="rating.value" value="${esc(evidence.rating?.value ?? "")}"></label><label class="campo">Cantidad de reseñas<input type="number" min="1" step="1" data-p01-evidence="rating.count" value="${esc(evidence.rating?.count ?? "")}"></label></div>
+    const saved = Array.isArray(evidence.testimonials?.items) ? evidence.testimonials.items : (evidence.testimonial ? [evidence.testimonial] : []);
+    const pending = estado.p01ReviewMedia || {};
+    const draft = estado.p01ReviewDraft || {};
+    const cards = Array.from({ length: 5 }, (_item, index) => ({ ...saved[index], ...draft[index], media_id: draft[index]?.media_id || saved[index]?.media_id || pending[index] || "" }));
+    const activeIndex = Number.isInteger(estado.p01ReviewIndex) ? Math.min(Math.max(estado.p01ReviewIndex, 0), 4) : 0;
+    const card = cards[activeIndex];
+    const picker = (selected) => [`<option value="">Usar imagen del producto</option>`]
+      .concat(media.map((id, index) => `<option value="${esc(id)}" ${id === selected ? "selected" : ""}>Imagen ${index + 1}</option>`)).join("");
+    return `<div class="sp-sub">Reseñas</div><div class="sp-content">
+      <p class="editor__ayuda">La plantilla mantiene las cinco tarjetas. Personalizá cada una con su texto e imagen; las vacías conservan una presentación editorial del producto.</p>
+      <div class="sp-review-tabs" role="tablist" aria-label="Tarjetas de reseñas">${cards.map((_item, index) => `<button type="button" class="sp-review-tabs__tab${index === activeIndex ? " is-active" : ""}" role="tab" aria-selected="${index === activeIndex}" data-p01-review-tab="${index}">${index + 1}</button>`).join("")}</div>
+      <section class="sp-item-card sp-review-card"><div class="sp-item-card__head"><strong>Reseña ${activeIndex + 1}</strong></div>
+        <label class="campo">Nombre<input data-p01-review="${activeIndex}.author" value="${esc(card.author || "")}" placeholder="Nombre del cliente"></label>
+        <label class="campo">Texto<textarea rows="4" data-p01-review="${activeIndex}.text" placeholder="Escribí la reseña">${esc(card.text || "")}</textarea></label>
+        <label class="campo">Imagen<select data-p01-review="${activeIndex}.media_id">${picker(card.media_id)}</select></label>
+        <label class="galeria-picker__img galeria-picker__subir" title="Subir imagen"><span class="galeria-picker__subir-mas">${ico("mas")}</span><span class="galeria-picker__subir-txt">Subir imagen</span><input type="file" accept="image/*" hidden data-p01-evidence-upload data-p01-review-upload="${activeIndex}"></label>
+        ${card.media_id && urls[card.media_id] ? `<img class="sp-evidence-preview" src="${esc(urls[card.media_id])}" alt="Vista previa de la reseña ${activeIndex + 1}">` : ""}
       </section>
-      <section class="sp-item-card"><div class="sp-item-card__head"><strong>Reseña y foto reales</strong><span>merchant</span></div>
-        <label class="campo"><input type="checkbox" data-p01-evidence="testimonial.enabled" ${check("testimonial")}> Confirmo que tengo autorización para usar esta reseña.</label>
-        <label class="campo">Nombre o identificación<input data-p01-evidence="testimonial.author" value="${esc(evidence.testimonial?.author ?? "")}" placeholder="Ej.: Cliente de la tienda"></label>
-        <label class="campo">Texto de la reseña<textarea rows="3" data-p01-evidence="testimonial.text" placeholder="Pegá una reseña auténtica">${esc(evidence.testimonial?.text ?? "")}</textarea></label>
-        <label class="campo">Foto asociada<select data-p01-evidence="testimonial.media_id">${options}</select></label>
-        <label class="galeria-picker__img galeria-picker__subir" title="Subir una foto de reseña como media del producto"><span class="galeria-picker__subir-mas">${ico("mas")}</span><span class="galeria-picker__subir-txt">Subir foto</span><input type="file" accept="image/*" hidden data-p01-evidence-upload></label>
-        ${selected && urls[selected] ? `<img class="sp-evidence-preview" src="${esc(urls[selected])}" alt="Vista previa de la foto de reseña">` : ""}
-      </section>
-      <section class="sp-item-card"><div class="sp-item-card__head"><strong>Garantía o política</strong><span>Shopify</span></div>
-        <label class="campo"><input type="checkbox" data-p01-evidence="guarantee.enabled" ${check("guarantee")}> Confirmo que coincide con la política vigente de mi tienda.</label>
-        <label class="campo">Título<input data-p01-evidence="guarantee.title" value="${esc(evidence.guarantee?.title ?? "")}" placeholder="Ej.: Política de devoluciones"></label>
-        <label class="campo">Texto<textarea rows="3" data-p01-evidence="guarantee.body" placeholder="Condiciones reales de la tienda">${esc(evidence.guarantee?.body ?? "")}</textarea></label>
-      </section>
-      <section class="sp-item-card"><div class="sp-item-card__head"><strong>Oferta con fecha real</strong><span>opcional</span></div>
-        <label class="campo"><input type="checkbox" data-p01-evidence="offer.enabled" ${check("offer")}> Confirmo que la fecha corresponde a una oferta real.</label>
-        <label class="campo">Finaliza<input type="datetime-local" data-p01-evidence="offer.ends_at" value="${esc(evidence.offer?.ends_at ? String(evidence.offer.ends_at).slice(0, 16) : "")}"></label>
-      </section>
-      <section class="sp-item-card"><div class="sp-item-card__head"><strong>Comparación real</strong><span>opcional</span></div>
-        <label class="campo"><input type="checkbox" data-p01-evidence="comparison.enabled" ${check("comparison")}> Confirmo que la comparación tiene respaldo.</label>
-        <div class="sp-grid-2"><label class="campo">Etiqueta izquierda<input data-p01-evidence="comparison.left_label" value="${esc(evidence.comparison?.left_label ?? "")}"></label><label class="campo">Etiqueta derecha<input data-p01-evidence="comparison.right_label" value="${esc(evidence.comparison?.right_label ?? "")}"></label></div>
-      </section>
-      <button type="button" class="sp-evidence-save" data-p01-evidence-save>Guardar espacios del merchant</button>
+      <button type="button" class="sp-evidence-save" data-p01-evidence-save>Guardar reseñas</button>
     </div>`;
   }
 
@@ -3497,39 +3487,34 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
 
   async function guardarEvidenciaPdp01(panel) {
     if (sucio) return toast("Guardá primero los cambios de copy antes de modificar la evidencia.");
-    const enabled = (name) => Boolean(panel.querySelector(`[data-p01-evidence="${name}.enabled"]`)?.checked);
-    const evidence = {};
-    if (enabled("rating")) evidence.rating = {
-      source: { kind: "declarado_por_merchant", reference: `merchant-rating:${estado.pagina.id}` },
-      value: Number(valorEvidenciaPdp01(panel, "rating.value")), count: Number(valorEvidenciaPdp01(panel, "rating.count"))
-    };
-    if (enabled("testimonial")) evidence.testimonial = {
-      source: { kind: "declarado_por_merchant", reference: `merchant-testimonial:${estado.pagina.id}` },
-      author: valorEvidenciaPdp01(panel, "testimonial.author"), text: valorEvidenciaPdp01(panel, "testimonial.text"),
-      ...(valorEvidenciaPdp01(panel, "testimonial.media_id") ? { media_id: valorEvidenciaPdp01(panel, "testimonial.media_id") } : {})
-    };
-    if (enabled("guarantee")) evidence.guarantee = {
-      source: { kind: "shopify_policy", reference: "merchant-policy" },
-      title: valorEvidenciaPdp01(panel, "guarantee.title"), body: valorEvidenciaPdp01(panel, "guarantee.body")
-    };
-    if (enabled("offer")) {
-      const rawEnd = valorEvidenciaPdp01(panel, "offer.ends_at");
-      const parsedEnd = new Date(rawEnd);
-      evidence.offer = {
-        source: { kind: "declarado_por_merchant", reference: `merchant-offer:${estado.pagina.id}` },
-        ends_at: Number.isNaN(parsedEnd.getTime()) ? rawEnd : parsedEnd.toISOString()
-      };
+    const evidence = JSON.parse(JSON.stringify(estado.pagina.data?.piloto_pdp_01?.evidence || {}));
+    delete evidence.testimonial;
+    delete evidence.testimonials;
+    const reviews = [];
+    const existing = Array.isArray(estado.pagina.data?.piloto_pdp_01?.evidence?.testimonials?.items)
+      ? estado.pagina.data.piloto_pdp_01.evidence.testimonials.items
+      : (estado.pagina.data?.piloto_pdp_01?.evidence?.testimonial ? [estado.pagina.data.piloto_pdp_01.evidence.testimonial] : []);
+    const draft = estado.p01ReviewDraft || {};
+    for (let index = 0; index < 5; index += 1) {
+      const current = index === estado.p01ReviewIndex;
+      const author = (current ? panel.querySelector(`[data-p01-review="${index}.author"]`)?.value : draft[index]?.author) ?? existing[index]?.author ?? "";
+      const text = (current ? panel.querySelector(`[data-p01-review="${index}.text"]`)?.value : draft[index]?.text) ?? existing[index]?.text ?? "";
+      const media_id = (current ? panel.querySelector(`[data-p01-review="${index}.media_id"]`)?.value : draft[index]?.media_id) ?? existing[index]?.media_id ?? estado.p01ReviewMedia?.[index] ?? "";
+      const cleanAuthor = author.trim(); const cleanText = text.trim();
+      if (!cleanAuthor && !cleanText && !media_id) continue;
+      if (!cleanAuthor || !cleanText) return toast(`Completá nombre y texto en la reseña ${index + 1}.`, { error: true });
+      reviews.push({ source: { kind: "declarado_por_merchant", reference: `merchant-review:${estado.pagina.id}:${index + 1}` }, author: cleanAuthor, text: cleanText, ...(media_id ? { media_id } : {}) });
     }
-    if (enabled("comparison")) evidence.comparison = {
-      source: { kind: "declarado_por_merchant", reference: `merchant-comparison:${estado.pagina.id}` },
-      left_label: valorEvidenciaPdp01(panel, "comparison.left_label"), right_label: valorEvidenciaPdp01(panel, "comparison.right_label")
-    };
+    if (reviews.length) evidence.testimonials = { items: reviews };
     const button = panel.querySelector("[data-p01-evidence-save]");
     button?.setAttribute("disabled", "");
     try {
       estado.pagina = await api(`/paginas/${estado.pagina.id}/evidencia`, { method: "PUT", body: { evidence } });
       cambiosSinPublicar = estado.pagina.cambios_sin_publicar === true;
-      actualizarPill(); repintarPreview(); refrescarPanelSeccion(); toast("Espacios del merchant actualizados");
+      delete estado.p01ReviewMedia;
+      delete estado.p01ReviewDraft;
+      delete estado.p01ReviewIndex;
+      actualizarPill(); repintarPreview(); refrescarPanelSeccion(); toast("Reseñas actualizadas");
     } catch (error) {
       panel.insertAdjacentHTML("afterbegin", `<div class="sp-ai-error">${ico("x")} ${esc(error.message)}</div>`);
       button?.removeAttribute("disabled");
@@ -3546,9 +3531,12 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       estado.pagina.data.pool_imagenes = estado.pagina.data.pool_imagenes || [];
       estado.pagina.data.pool_imagenes.push({ media_id: uploaded.media_id, tipo: "evidencia_merchant" });
       estado.pagina.urls = { ...(estado.pagina.urls || {}), [uploaded.media_id]: uploaded.url };
-      const media = estado.pagina.data.piloto_pdp_01?.source_fields?.media_ids;
-      if (Array.isArray(media) && !media.includes(uploaded.media_id)) media.push(uploaded.media_id);
-      refrescarPanelSeccion(); toast("Foto cargada. Seleccionala y guardá la reseña.");
+      const index = Number(input.dataset.p01ReviewUpload);
+      if (Number.isInteger(index) && index >= 0) {
+        estado.p01ReviewMedia = { ...(estado.p01ReviewMedia || {}), [index]: uploaded.media_id };
+        estado.p01ReviewDraft = { ...(estado.p01ReviewDraft || {}), [index]: { ...(estado.p01ReviewDraft?.[index] || {}), media_id: uploaded.media_id } };
+      }
+      refrescarPanelSeccion(); toast("Imagen cargada");
     } catch (error) {
       tile?.classList.remove("galeria-picker__subir--ocupado"); if (label) label.textContent = "Subir foto";
       document.getElementById("sp-body")?.insertAdjacentHTML("afterbegin", `<div class="sp-ai-error">${ico("x")} ${esc(error.message)}</div>`);
@@ -3761,6 +3749,14 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       ${editorId.startsWith("sec:") && s ? `<div class="sec-panel__footer"><s-button variant="tertiary" tone="critical" class="sp-del" data-panel-del="${esc(s.id)}">${ico("basura")} Eliminar sección</s-button></div>` : ""}`;
     p.oninput = (e) => {
       const t = e.target;
+      if (t.dataset.p01Review !== undefined) {
+        const [index, field] = t.dataset.p01Review.split(".");
+        const reviewIndex = Number(index);
+        if (Number.isInteger(reviewIndex) && field) {
+          estado.p01ReviewDraft = { ...(estado.p01ReviewDraft || {}), [reviewIndex]: { ...(estado.p01ReviewDraft?.[reviewIndex] || {}), [field]: t.value } };
+        }
+        return;
+      }
       if (t.dataset.vk !== undefined) {
         const s2 = secActual(); if (!s2) return;
         const k = t.dataset.vk;
@@ -3802,6 +3798,8 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       if (t === p.querySelector(".sec-panel__x") || t.closest(".sec-panel__x")) return cerrarPanelSeccion();
       const aiTrigger = t.closest("[data-ai-text]");
       if (aiTrigger) { abrirAiText(aiTrigger.dataset.aiText); return; }
+      const reviewTab = t.closest("[data-p01-review-tab]");
+      if (reviewTab) { estado.p01ReviewIndex = Number(reviewTab.dataset.p01ReviewTab); refrescarPanelSeccion(); return; }
       if (t.closest("[data-p01-evidence-save]")) { guardarEvidenciaPdp01(p); return; }
       if (t.closest("[data-ai-cancel]")) { cerrarAiText(); return; }
       const aiMode = t.closest("[data-ai-mode]");
@@ -3853,6 +3851,12 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     p.onchange = (e) => {
       const t = e.target;
       if (t.dataset.p01EvidenceUpload !== undefined && t.files?.length) { subirImagenEvidenciaPdp01(t.files[0], t); return; }
+      if (t.dataset.p01Review !== undefined) {
+        const [index, field] = t.dataset.p01Review.split(".");
+        const reviewIndex = Number(index);
+        if (Number.isInteger(reviewIndex) && field) estado.p01ReviewDraft = { ...(estado.p01ReviewDraft || {}), [reviewIndex]: { ...(estado.p01ReviewDraft?.[reviewIndex] || {}), [field]: t.value } };
+        return;
+      }
       if (t.dataset.subir && t.files?.length) subirImagenNueva(t.files[0], t.dataset.subir, t.dataset.rutaSubir, t);
       if (t.dataset.videoEl && t.files?.length) subirVideoNuevo(t.files[0], t.dataset.videoEl, t);
     };
@@ -3864,7 +3868,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     if (p) {
       p.classList.remove("is-editing");
       p.setAttribute("aria-label", "Inspector de propiedades");
-      p.innerHTML = `<div class="pe-inspector__empty"><span class="pe-inspector__empty-icon">✦</span><strong>Seleccioná un bloque</strong><p>Elegí una sección del árbol o hacé clic sobre el canvas para editar únicamente los campos permitidos por la plantilla.</p></div>`;
+      p.innerHTML = `<div class="pe-inspector__empty"><span class="pe-inspector__empty-icon">✦</span><strong>Seleccioná una sección</strong><p>Elegí una sección del menú o hacé clic en la página para editarla.</p></div>`;
     }
     panelSecId = null;
     panelEditorId = null;
@@ -3893,16 +3897,30 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       `<section class="pe-tree__group"><div class="pe-tree__row pe-tree__row--group" tabindex="0"><span class="pe-tree__lead pe-tree__chevron">${I.chev}</span><span class="pe-tree__ico pe-tree__ico--group">${I.grupo}</span><span class="pe-tree__label">${esc(nombre)}</span>${meta ? `<span class="pe-tree__group-meta">${esc(meta)}</span>` : ""}</div><div class="pe-tree__children">${filas}</div></section>`;
     const fixedTemplate = esPlantillaPinzaFija() || esPlantillaPdp01();
     if (fixedTemplate) {
+      if (esPlantillaPdp01()) {
+        const sections = row("hero", "Introducción", I.beneficios, { fixed: true }) +
+          row("offer", "Oferta y packs", I.lista, { fixed: true }) +
+          row("quick", "Datos importantes", I.lista, { fixed: true }) +
+          row("why", "Historia del producto", I.lista, { fixed: true }) +
+          row("stories", "Beneficios destacados", I.estrella, { fixed: true }) +
+          row("timeline", "Cómo se usa", I.lista, { fixed: true }) +
+          row("faq", "Preguntas frecuentes", I.lista, { fixed: true }) +
+          row("closing", "Cierre", I.beneficios, { fixed: true }) +
+          row("newsletter", "Newsletter", I.lista, { fixed: true }) +
+          row("evidence", "Reseñas", I.estrella, { fixed: true });
+        return `<nav class="pe-tree pe-tree--simple" aria-label="Secciones de la página de producto">
+          <div class="pe-tree__head"><span class="pe-tree__head-title">Página de producto</span><span class="pe-tree__head-sub">Piloto 01</span></div>
+          <div class="pe-tree__body">${sections}</div>
+        </nav>`;
+      }
       const source = locked("Producto", I.encabezado) + locked("Galería de producto", I.galeria) +
         locked("Precio y variantes", I.lista) + locked("Agregar al carrito", I.beneficios);
-      const approved = esPlantillaPdp01()
-        ? row("hero", "Introducción", I.beneficios, { fixed: true }) + row("offer", "Opciones de compra", I.lista, { fixed: true }) + row("quick", "Datos rápidos", I.lista, { fixed: true }) + row("why", "Sección editorial", I.lista, { fixed: true }) + row("stories", "Tarjetas editoriales", I.estrella, { fixed: true }) + row("timeline", "Recorrido", I.lista, { fixed: true }) + row("faq", "Preguntas frecuentes", I.lista, { fixed: true }) + row("closing", "Cierre", I.beneficios, { fixed: true }) + row("newsletter", "Newsletter", I.lista, { fixed: true })
-        : row("bullets", "Beneficios verificables", I.beneficios) + row("faq", "Preguntas frecuentes", I.lista);
+      const approved = row("bullets", "Beneficios verificables", I.beneficios) + row("faq", "Preguntas frecuentes", I.lista);
       const evidence = row("evidence", "Espacios del merchant", I.estrella, { fixed: esPlantillaPdp01() }) +
         locked("Rating y reseñas", I.estrella, "Fuente real") + locked("Fotos de reseñas", I.galeria, "Merchant") +
         locked("Comparación", I.lista, "Fuente real") + locked("Garantías", I.beneficios, "Política Shopify") + locked("Contador de oferta", I.lista, "Fecha real");
       return `<nav class="pe-tree" aria-label="Bloques de la plantilla fija">
-        <div class="pe-tree__head"><span class="pe-tree__head-title">${esPlantillaPdp01() ? "Página de producto" : "Plantilla fija"}</span><span class="pe-tree__head-sub">${esPlantillaPdp01() ? "Piloto 01 · estructura fija" : "Pinza PagePilot · v1"}</span></div>
+        <div class="pe-tree__head"><span class="pe-tree__head-title">Plantilla fija</span><span class="pe-tree__head-sub">Pinza PagePilot · v1</span></div>
         <div class="pe-tree__body">${grupo("Datos de Shopify", source, "")}${grupo("Contenido", approved, "")}${grupo("Evidencia", evidence, "")}</div>
       </nav>`;
     }

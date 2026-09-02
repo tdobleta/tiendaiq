@@ -213,15 +213,39 @@ function evidenceText(value, where, errors, max = 2000) {
   if (typeof value === "string" && MONEY_OR_PERCENT.test(value)) errors.push(`${where} contiene un importe o porcentaje congelado`);
 }
 function validateEvidence(evidence, origin, errors, knownMedia = new Set()) {
-  assertKeys(evidence, ["rating", "testimonial", "guarantee", "offer", "comparison"], "evidence", errors);
+  assertKeys(evidence, ["rating", "testimonial", "testimonials", "guarantee", "offer", "comparison"], "evidence", errors);
+  const validateTestimonial = (item, where) => {
+    assertKeys(item, ["source", "text", "author", "media_id"], where, errors);
+    assertKeys(item?.source, ["kind", "reference"], `${where}.source`, errors);
+    if (!plainObject(item) || !validEvidenceSource(item.source)) {
+      errors.push(`${where} necesita una fuente verificable`);
+      return;
+    }
+    if (origin === "ai" && item.source.kind === "declarado_por_merchant") errors.push(`${where} no puede ser declarada por la IA`);
+    if (Object.hasOwn(item, "text")) evidenceText(item.text, `${where}.text`, errors);
+    if (Object.hasOwn(item, "author")) evidenceText(item.author, `${where}.author`, errors, 160);
+    if (Object.hasOwn(item, "media_id") && !knownMedia.has(item.media_id)) errors.push(`${where}.media_id no pertenece al producto`);
+  };
   for (const [name, item] of Object.entries(evidence || {})) {
     const allowed = {
       rating: ["source", "value", "count"],
       testimonial: ["source", "text", "author", "media_id"],
+      testimonials: ["items"],
       guarantee: ["source", "title", "body"],
       offer: ["source", "ends_at", "label"],
       comparison: ["source", "left_label", "right_label"]
     }[name] || [];
+    if (name === "testimonials") {
+      assertKeys(item, allowed, "evidence.testimonials", errors);
+      if (!Array.isArray(item?.items) || item.items.length < 1 || item.items.length > 5) {
+        errors.push("evidence.testimonials.items debe tener entre 1 y 5 reseñas");
+      } else item.items.forEach((entry, index) => validateTestimonial(entry, `evidence.testimonials.items[${index}]`));
+      continue;
+    }
+    if (name === "testimonial") {
+      validateTestimonial(item, "evidence.testimonial");
+      continue;
+    }
     assertKeys(item, allowed, `evidence.${name}`, errors);
     assertKeys(item?.source, ["kind", "reference"], `evidence.${name}.source`, errors);
     if (!plainObject(item) || !validEvidenceSource(item.source)) {
@@ -232,11 +256,6 @@ function validateEvidence(evidence, origin, errors, knownMedia = new Set()) {
     if (name === "rating") {
       if (!Number.isFinite(Number(item.value)) || Number(item.value) < 0 || Number(item.value) > 5) errors.push("evidence.rating.value debe estar entre 0 y 5");
       if (!Number.isInteger(item.count) || item.count < 1 || item.count > 100000000) errors.push("evidence.rating.count debe ser un entero positivo");
-    }
-    if (name === "testimonial") {
-      if (Object.hasOwn(item, "text")) evidenceText(item.text, "evidence.testimonial.text", errors);
-      if (Object.hasOwn(item, "author")) evidenceText(item.author, "evidence.testimonial.author", errors, 160);
-      if (Object.hasOwn(item, "media_id") && !knownMedia.has(item.media_id)) errors.push("evidence.testimonial.media_id no pertenece al producto");
     }
     if (name === "guarantee") {
       if (Object.hasOwn(item, "title")) evidenceText(item.title, "evidence.guarantee.title", errors, 300);
@@ -254,6 +273,14 @@ function validateEvidence(evidence, origin, errors, knownMedia = new Set()) {
 }
 function sanitizeEvidence(document, origin) {
   for (const [key, item] of Object.entries(document.evidence || {})) {
+    if (key === "testimonials") {
+      const entries = Array.isArray(item?.items) ? item.items.filter((entry) => (
+        plainObject(entry?.source) && entry.source.kind && entry.source.reference && !(origin === "ai" && entry.source.kind === "declarado_por_merchant")
+      )) : [];
+      if (entries.length) item.items = entries;
+      else delete document.evidence[key];
+      continue;
+    }
     if (!plainObject(item?.source) || !item.source.kind || !item.source.reference || (origin === "ai" && item.source.kind === "declarado_por_merchant")) delete document.evidence[key];
   }
 }
