@@ -4472,7 +4472,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     // App Bridge puede conservar el scroll del documento que abrió el modal.
     // El editor siempre entra desde el principio para que la barra, el árbol y
     // el canvas no aparezcan desplazados después de recargar.
-    const resetEditorScroll = () => { window.scrollTo(0, 0); document.documentElement.scrollTop = 0; if (document.body) document.body.scrollTop = 0; };
+    const resetEditorScroll = () => { window.scrollTo(0, 0); document.documentElement.scrollTop = 0; if (document.body) document.body.scrollTop = 0; const canvas = document.querySelector('.marco'); if (canvas) canvas.scrollTo(0, 0); };
     resetEditorScroll();
     if (ES_EDITOR_MODAL_ROUTE) {
       requestAnimationFrame(resetEditorScroll);
