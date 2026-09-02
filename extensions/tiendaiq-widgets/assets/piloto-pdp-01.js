@@ -14,7 +14,7 @@
   // El editor reenvía el documento al abrir el iframe y después de cada edición.
   // La vista previa debe actualizarse en el lugar: una recarga borra el scroll,
   // interrumpe la selección y hace que el canvas parezca inestable.
-  const sign = (payload) => JSON.stringify([payload?.data?.piloto_pdp_01 ?? null, payload?.urls ?? {}]);
+  const sign = (payload) => JSON.stringify([payload?.data?.piloto_pdp_01 ?? null, payload?.urls ?? {}, payload?.branding || "brand"]);
   let rendered = null;
   let bridgeAbort = null;
   let timerFrame = null;

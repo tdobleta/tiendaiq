@@ -68,6 +68,11 @@ test("cada sección fija del inspector tiene una superficie real y consume setti
   assert.match(runtime, /section\.enabled === false/);
 });
 
+test("el cambio de Branding invalida el render firmado del preview", () => {
+  assert.match(runtime, /payload\?\.branding \|\| "brand"/);
+  assert.match(runtime, /root\.dataset\.tiqBranding = palette/);
+});
+
 test("la galería separa elementos agregables de bloques básicos seleccionables", () => {
   assert.match(app, /galeriaTab: "gallery"/);
   assert.match(app, /data-p01-gallery-tab="gallery"/);
