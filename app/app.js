@@ -3360,7 +3360,11 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
           const section = p01EnsureSection(add.dataset.p01GalleryAdd);
           if (!section) return;
           marcarSucio(); repintarPreview(); refrescarArbolP01(); close();
-          seleccionarBloquePiloto("p01sec:" + section.id); toast("Sección agregada");
+          // The native modal restoration is asynchronous. Select the new row
+          // after App Bridge has reattached the editor document, otherwise
+          // the inspector would be addressed while its frame is still hidden.
+          setTimeout(() => seleccionarBloquePiloto("p01sec:" + section.id), 280);
+          toast("Sección agregada");
         }
       });
       overlay.querySelector("#p01-gallery-q")?.addEventListener("input", (event) => { estado.galeriaQ = event.target.value; grid().innerHTML = render(); });
