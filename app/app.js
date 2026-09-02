@@ -2830,12 +2830,12 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   // use exactamente los mismos breakpoints que en la tienda. Se escala el
   // resultado, no el viewport: así 1200px sigue siendo 1200px para el CSS de
   // la página aunque el editor tenga árbol e inspector a los costados.
-  function montarEscalaPreview() {
+  function montarEscalaPreview(doc = document) {
     previewResizeObserver?.disconnect();
-    const centro = document.querySelector(".pe-editor__centro");
-    const viewport = $("marco-viewport");
-    const shell = $("marco-shell");
-    const marco = $("marco");
+    const centro = doc.querySelector(".pe-editor__centro");
+    const viewport = doc.getElementById("marco-viewport");
+    const shell = doc.getElementById("marco-shell");
+    const marco = doc.getElementById("marco");
     if (!centro || !viewport || !shell || !marco) return;
 
     const ajustar = () => {
@@ -4127,7 +4127,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     // por mensaje. Dos merchants generando a la vez no se pisan. El botón
     // "✎ Editar" flotante y los lápices se montan una vez por carga.
     const marco = $("marco");
-    const ajustarEscalaPreview = montarEscalaPreview();
+    const ajustarEscalaPreview = montarEscalaPreview(marco?.ownerDocument || document);
     marco.onload = () => {
       prepararFramePreview(marco);
       repintarPreview();
@@ -4163,11 +4163,12 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     });
     const cambiarViewportPiloto = (button) => {
       if (!button?.dataset?.viewport) return;
+      const doc = button.ownerDocument || document;
       estado.previewViewport = button.dataset.viewport;
-        const shell = $("marco-shell");
+        const shell = doc.getElementById("marco-shell");
         shell?.classList.toggle("is-mobile", estado.previewViewport === "mobile");
-        montarEscalaPreview();
-        vista.querySelectorAll("[data-viewport]").forEach((item) => item.setAttribute("aria-pressed", String(item === button)));
+        montarEscalaPreview(doc);
+        doc.querySelectorAll("[data-viewport]").forEach((item) => item.setAttribute("aria-pressed", String(item === button)));
     };
     vista.querySelectorAll("[data-viewport]").forEach((button) => { button.onclick = () => cambiarViewportPiloto(button); });
     // ui-modal puede trasladar sus nodos al documento del modal nativo. La
