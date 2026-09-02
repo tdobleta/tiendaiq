@@ -3151,6 +3151,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     { type: "review-card", name: "Review Card", group: "Prueba social", icon: "estrella", desc: "Tarjeta de reseña individual" }
   ];
   const p01Catalog = (type) => P01_EDITOR_CATALOG.find((item) => item.type === type);
+  let p01GalleryModal = null;
   const p01DefaultEditor = () => ({
     version: 1,
     selected: null,
@@ -3323,7 +3324,19 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       const activeCategory = estado.galeriaCat === "popular" ? "all" : (estado.galeriaCat || "all");
       const catMarkup = categories.map(([id, label]) => '<button type="button" class="' + (id === activeCategory ? "is-active" : "") + '" data-p01-gallery-cat="' + id + '">' + esc(label) + '<span>' + P01_EDITOR_CATALOG.filter((item) => id === "all" || categoryFor(item) === id).length + '</span></button>').join("");
       overlay.innerHTML = '<div class="p01-gallery__dialog" role="dialog" aria-modal="true" aria-labelledby="p01-gallery-title"><header class="p01-gallery__header"><div><span class="p01-gallery__eyebrow">Galería</span><strong id="p01-gallery-title">Elementos de la página</strong></div><label class="p01-gallery__search">' + IC_BUSCAR + '<input id="p01-gallery-q" type="search" placeholder="Buscar..." value="' + esc(estado.galeriaQ || "") + '"></label><button type="button" class="p01-gallery__close" aria-label="Cerrar">' + ico("x") + '</button></header><div class="p01-gallery__main"><aside class="p01-gallery__cats">' + catMarkup + '</aside><section class="p01-gallery__results"><div class="p01-gallery__tabs"><button type="button" class="is-active">Galería</button><button type="button">Elementos básicos</button></div><div id="p01-gallery-grid" class="p01-gallery__grid">' + render() + '</div></section></div></div>';
-      document.body.appendChild(overlay);
+      // App Bridge transports <ui-modal> contents to its own visible frame.
+      // Mounting the gallery as a second native modal keeps it above the
+      // editor instead of leaving an overlay trapped behind the first modal.
+      const galleryModal = document.createElement("ui-modal");
+      galleryModal.id = "tiq-p01-gallery-modal";
+      galleryModal.setAttribute("variant", "max");
+      galleryModal.innerHTML = `<ui-title-bar title="Elementos de la página"></ui-title-bar>`;
+      galleryModal.appendChild(overlay);
+      document.body.appendChild(galleryModal);
+      p01GalleryModal = galleryModal;
+      customElements.whenDefined?.("ui-modal").then(async () => {
+        try { await window.shopify?.modal?.show?.(galleryModal.id); } catch {}
+      });
       const grid = () => overlay.querySelector("#p01-gallery-grid");
       const close = () => cerrarGaleriaSecciones();
       overlay.addEventListener("click", (event) => {
@@ -3397,6 +3410,11 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
 
   function galeriaEsc(e) { if (e.key === "Escape") cerrarGaleriaSecciones(); }
   function cerrarGaleriaSecciones() {
+    if (p01GalleryModal) {
+      try { window.shopify?.modal?.hide?.(p01GalleryModal.id); } catch {}
+      p01GalleryModal.remove();
+      p01GalleryModal = null;
+    }
     document.getElementById("galsec")?.remove();
     document.removeEventListener("keydown", galeriaEsc);
   }
