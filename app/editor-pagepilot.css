@@ -149,10 +149,12 @@
   align-items: center;
   flex: 0 0 auto;
   gap: 4px;
+  height: 30px;
   min-height: 30px;
   padding: 6px 12px;
   border: 1px solid var(--p01-border);
   border-radius: 8px;
+  box-sizing: border-box;
   color: var(--p01-text);
   background: #fff;
   font: 550 12px/16px var(--p01-font);
@@ -160,7 +162,7 @@
 }
 :is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-mode-toggle:hover,
 :is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-branding-trigger:hover { background: #f6f6f7; }
-:is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-branding-trigger { min-height: 28px; gap: 2px; padding: 4px 8px; }
+:is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-branding-trigger { height: 28px; min-height: 28px; gap: 4px; padding: 4px 8px; }
 :is(body.tiq-piloto-editor-v2, body:has(.tiq-piloto-editor-modal-content)) .pe-switch {
   position: relative;
   display: inline-block;
