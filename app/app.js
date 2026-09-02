@@ -2816,10 +2816,10 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       }
       const anchoTienda = 1200;
       const altoTienda = Math.max(760, marco.getBoundingClientRect().height || 760);
-      // La superficie de trabajo usa padding mínimo: el ancho es para la
-      // página, no para márgenes decorativos. El iframe sigue siendo de
-      // 1200px internamente, por lo que conserva el mismo layout que Shopify.
-      const disponible = Math.max(320, centro.clientWidth - 28);
+      // El canvas reserva un margen de trabajo fijo, pero no crea scroll
+      // horizontal: el lienzo conserva sus 1200px internos y se ajusta como
+      // una maqueta real dentro de la superficie del editor.
+      const disponible = Math.max(320, centro.clientWidth - 48);
       const escala = Math.min(1, disponible / anchoTienda);
       viewport.classList.toggle("is-scaled", escala < 1);
       viewport.style.width = `${Math.round(anchoTienda * escala)}px`;
@@ -3413,9 +3413,9 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       return catSeccion(s?.tipo)?.nombre || "Sección";
     }
     if (esPlantillaPdp01()) return ({
-      hero: "Introducción", offer: "Oferta y packs", quick: "Datos importantes", why: "Historia del producto",
+      hero: "Información del producto", offer: "Oferta y packs", quick: "Detalles del producto", why: "Historia del producto",
       stories: "Beneficios destacados", timeline: "Cómo se usa", faq: "Preguntas frecuentes",
-      closing: "Cierre", newsletter: "Newsletter", evidence: "Reseñas y confianza"
+      closing: "Cierre", newsletter: "Newsletter", evidence: "Carrusel de reseñas"
     })[id] || "Plantilla fija";
     if (esPlantillaPinzaFija()) {
       return ({ bullets: "Beneficios verificables", faq: "Preguntas frecuentes" })[id] || "Plantilla fija";
@@ -3898,19 +3898,22 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     const fixedTemplate = esPlantillaPinzaFija() || esPlantillaPdp01();
     if (fixedTemplate) {
       if (esPlantillaPdp01()) {
-        const sections = row("hero", "Introducción", I.beneficios, { fixed: true }) +
+        // El árbol describe la composición que se ve en el canvas. No expone
+        // estados internos ni trata la plantilla como una colección de campos.
+        const producto = row("hero", "Información del producto", I.encabezado, { fixed: true }) +
           row("offer", "Oferta y packs", I.lista, { fixed: true }) +
-          row("quick", "Datos importantes", I.lista, { fixed: true }) +
-          row("why", "Historia del producto", I.lista, { fixed: true }) +
+          row("quick", "Detalles del producto", I.lista, { fixed: true });
+        const contenido = row("why", "Historia del producto", I.lista, { fixed: true }) +
           row("stories", "Beneficios destacados", I.estrella, { fixed: true }) +
           row("timeline", "Cómo se usa", I.lista, { fixed: true }) +
           row("faq", "Preguntas frecuentes", I.lista, { fixed: true }) +
           row("closing", "Cierre", I.beneficios, { fixed: true }) +
-          row("newsletter", "Newsletter", I.lista, { fixed: true }) +
-          row("evidence", "Reseñas", I.estrella, { fixed: true });
-        return `<nav class="pe-tree pe-tree--simple" aria-label="Secciones de la página de producto">
-          <div class="pe-tree__head"><span class="pe-tree__head-title">Página de producto</span><span class="pe-tree__head-sub">Piloto 01</span></div>
-          <div class="pe-tree__body">${sections}</div>
+          row("newsletter", "Newsletter", I.lista, { fixed: true });
+        const reseñas = row("evidence", "Carrusel de reseñas", I.estrella, { fixed: true }) +
+          `<div class="pe-tree__nest">${Array.from({ length: 5 }, (_item, index) => row(`evidence:${index}`, `Reseña ${index + 1}`, I.estrella, { fixed: true })).join("")}</div>`;
+        return `<nav class="pe-tree pe-tree--workbench" aria-label="Estructura de la página de producto">
+          <div class="pe-tree__head"><span class="pe-tree__head-kicker">PRODUCT PAGE</span><span class="pe-tree__head-title">Estructura</span></div>
+          <div class="pe-tree__body">${grupo("Producto", producto, "")}${grupo("Contenido", contenido, "")}${grupo("Prueba social", reseñas, "")}</div>
         </nav>`;
       }
       const source = locked("Producto", I.encabezado) + locked("Galería de producto", I.galeria) +
@@ -3947,16 +3950,19 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   ]);
 
   function seleccionarBloquePiloto(id, { desdeCanvas = false } = {}) {
-    if (!BLOQUES_PILOTO_01.has(id)) return;
+    const reseña = /^evidence:(\d)$/.exec(id);
+    const blockId = reseña ? "evidence" : id;
+    if (!BLOQUES_PILOTO_01.has(blockId)) return;
+    if (reseña) estado.p01ReviewIndex = Number(reseña[1]);
     vista.querySelectorAll(".pe-tree__row.is-sel").forEach((row) => row.classList.remove("is-sel"));
     const fila = vista.querySelector(`.pe-tree__row[data-tree="${CSS.escape(id)}"]`);
     if (fila) {
       fila.classList.add("is-sel");
       if (desdeCanvas) fila.scrollIntoView({ block: "nearest", behavior: "smooth" });
     }
-    abrirPanelEditor(id);
+    abrirPanelEditor(blockId);
     const marco = $("marco");
-    marco?.contentWindow?.postMessage({ tiendaiqEditor: "highlight-block", blockId: id }, window.location.origin);
+    marco?.contentWindow?.postMessage({ tiendaiqEditor: "highlight-block", blockId }, window.location.origin);
   }
 
   function pantallaPreview() {
@@ -3998,7 +4004,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       <div class="preview-barra ${esPiloto ? "pe-appbar" : ""}" id="barra-accion">
         <div class="${esPiloto ? "pe-appbar__brand" : ""}">
           <button class="volver-flecha" id="volver" title="${volverTxt}" aria-label="${volverTxt}"></button>
-          ${esPiloto ? `<div class="pe-appbar__wordmark"><span class="pe-appbar__mark">✦</span><span>Piloto</span></div><span class="pe-appbar__template">Piloto 01 · plantilla fija</span>` : ""}
+          ${esPiloto ? `<div class="pe-appbar__wordmark"><span>Piloto</span><small>Editor de producto</small></div><span class="pe-appbar__template">Piloto 01</span>` : ""}
         </div>
         <div class="preview-barra__info">
           <div class="preview-barra__titulo">${esc(pg.data.piloto_pdp_01?.source_fields?.title || pg.data.facetas?.hero?.titulo || "Producto")}</div>
@@ -4006,15 +4012,15 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         </div>
         <div class="preview-barra__estado" id="barra-estado">
           <s-badge tone="${TONO_ESTADO[est.c] || "neutral"}">${est.t}</s-badge>
+          ${esPiloto ? `<div class="pe-viewport" role="group" aria-label="Vista del canvas">
+            <button type="button" data-viewport="desktop" aria-pressed="${estado.previewViewport === "desktop"}" aria-label="Vista de escritorio" title="Vista de escritorio">Escritorio</button>
+            <button type="button" data-viewport="mobile" aria-pressed="${estado.previewViewport === "mobile"}" aria-label="Vista de móvil" title="Vista de móvil">Móvil</button>
+          </div>` : ""}
           ${publicada && pg.url_publica
             ? `<s-link href="${esc(pg.url_publica)}" target="_blank">Ver en la tienda</s-link>`
             : ""}
         </div>
         <div class="preview-barra__acciones">
-          <div class="pe-viewport" role="group" aria-label="Vista del canvas">
-            <button type="button" data-viewport="desktop" aria-pressed="${estado.previewViewport === "desktop"}" aria-label="Vista de escritorio" title="Vista de escritorio">Escritorio</button>
-            <button type="button" data-viewport="mobile" aria-pressed="${estado.previewViewport === "mobile"}" aria-label="Vista de móvil" title="Vista de móvil">Móvil</button>
-          </div>
           ${esPiloto ? `<div class="pe-history" role="group" aria-label="Historial de edición"><button type="button" id="editor-deshacer" title="Deshacer" aria-label="Deshacer">↶</button><button type="button" id="editor-rehacer" title="Rehacer" aria-label="Rehacer">↷</button></div>` : ""}
           <s-button variant="secondary" id="guardar" disabled>Guardar cambios</s-button>
           <s-button variant="secondary" id="regenerar">Regenerar</s-button>
@@ -4043,15 +4049,15 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
 
       <div class="pe-editor ${esPiloto ? "pe-editor--piloto" : ""}">
         ${arbolPaginaHTML()}
-        <div class="pe-editor__centro">
+        <main class="pe-editor__centro" aria-label="Vista previa editable">
           <div class="pe-canvas-viewport" id="marco-viewport">
             <div class="pe-canvas-shell ${estado.previewViewport === "mobile" ? "is-mobile" : ""}" id="marco-shell">
-            <div class="marco marco--full">
-              <iframe id="marco" src="/preview/index.html?app=1&t=${Date.now()}"></iframe>
-            </div>
+              <div class="marco marco--full">
+                <iframe id="marco" title="Vista previa de la página de producto" src="/preview/index.html?app=1&t=${Date.now()}"></iframe>
+              </div>
             </div>
           </div>
-        </div>
+        </main>
         <aside class="pe-prop pe-inspector" id="pe-inspector" aria-label="Inspector de propiedades">
           <div class="pe-inspector__empty"><span class="pe-inspector__empty-icon">✦</span><strong>Seleccioná un bloque</strong><p>Elegí una sección del árbol o hacé clic sobre el canvas para editar únicamente los campos permitidos por la plantilla.</p></div>
         </aside>

@@ -228,6 +228,10 @@
   if (atc) {
     atc.addEventListener("click", async (event) => {
       event.preventDefault();
+      // El canvas no es un storefront. En modo preview el botón conserva su
+      // aspecto y su selección de pack, pero jamás llama a /cart ni mezcla un
+      // error operativo dentro de la maqueta de la página.
+      if (previewMode) return;
       if (!canBuy(active)) return;
       atc.disabled = true;
       try {
@@ -452,19 +456,22 @@
   // Es la diferencia entre "ver una página" y editarla de verdad.
   if (previewMode) {
     const editorBlocks = {
-      hero: ".phv4-gallery, .phv4-panel",
-      offer: ".phv4-packs, .phv4-atc",
-      quick: ".phv4-details",
-      why: ".scp-why, .scp-why-copy",
-      stories: ".scp-stories-v2",
-      timeline: ".scp-journey-head, .scp-timeline",
-      faq: ".scp-faq-v3, .scp-faq",
-      closing: ".scp-community",
-      newsletter: ".scp-email-wrap, .scp-email-form",
-      evidence: ".phv4-rating, .phv4-opinion-carousel, .phv4-guarantee"
+      hero: { selector: ".phv4-gallery, .phv4-panel", label: "Información del producto" },
+      offer: { selector: ".phv4-packs, .phv4-atc", label: "Oferta y packs" },
+      quick: { selector: ".phv4-details", label: "Detalles del producto" },
+      why: { selector: ".scp-why, .scp-why-copy", label: "Historia del producto" },
+      stories: { selector: ".scp-stories-v2", label: "Beneficios destacados" },
+      timeline: { selector: ".scp-journey-head, .scp-timeline", label: "Cómo se usa" },
+      faq: { selector: ".scp-faq-v3, .scp-faq", label: "Preguntas frecuentes" },
+      closing: { selector: ".scp-community", label: "Cierre" },
+      newsletter: { selector: ".scp-email-wrap, .scp-email-form", label: "Newsletter" },
+      evidence: { selector: ".phv4-rating, .phv4-opinion-carousel, .phv4-guarantee", label: "Carrusel de reseñas" }
     };
-    Object.entries(editorBlocks).forEach(([id, selector]) => {
-      all(root, selector).forEach((node) => node.setAttribute("data-tiq-editor-block", id));
+    Object.entries(editorBlocks).forEach(([id, block]) => {
+      all(root, block.selector).forEach((node) => {
+        node.setAttribute("data-tiq-editor-block", id);
+        node.setAttribute("data-tiq-editor-label", block.label);
+      });
     });
 
     const editorStyle = document.createElement("style");
@@ -472,7 +479,8 @@
       #piloto-pdp-01{--tiq-editor-focus:#005bd3;--tiq-editor-focus-hover:rgba(0,91,211,.45)}
       #piloto-pdp-01 [data-tiq-editor-block]{cursor:pointer;outline:1px solid transparent;outline-offset:2px;transition:outline-color .12s ease}
       #piloto-pdp-01 [data-tiq-editor-block]:hover{outline-color:var(--tiq-editor-focus-hover)}
-      #piloto-pdp-01 [data-tiq-editor-block].tiq-editor-active{outline:2px solid var(--tiq-editor-focus)}
+      #piloto-pdp-01 [data-tiq-editor-block].tiq-editor-active{position:relative;outline:2px solid var(--tiq-editor-focus)}
+      #piloto-pdp-01 [data-tiq-editor-block].tiq-editor-active::before{content:attr(data-tiq-editor-label);position:absolute;z-index:20;top:-24px;left:-2px;padding:4px 7px;border-radius:3px;color:#fff;background:var(--tiq-editor-focus);font:600 11px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;letter-spacing:0;white-space:nowrap;pointer-events:none}
     `;
     root.prepend(editorStyle);
 
@@ -485,7 +493,13 @@
       if (event.origin !== window.location.origin) return;
       if (event.data?.tiendaiqEditor !== "highlight-block") return;
       const id = event.data.blockId;
-      all(root, "[data-tiq-editor-block]").forEach((node) => node.classList.toggle("tiq-editor-active", node.dataset.tiqEditorBlock === id));
+      // Una misma sección puede tener nodos anidados (por ejemplo, el bloque
+      // de oferta contiene sus packs). El contorno debe señalar una superficie
+      // lógica, no apilar etiquetas sobre cada hijo como un overlay técnico.
+      all(root, "[data-tiq-editor-block]").forEach((node) => {
+        const sameParent = node.parentElement?.closest(`[data-tiq-editor-block="${id}"]`);
+        node.classList.toggle("tiq-editor-active", node.dataset.tiqEditorBlock === id && !sameParent);
+      });
     }, { signal: bridgeSignal });
   }
 
