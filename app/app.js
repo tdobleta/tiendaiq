@@ -2787,7 +2787,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     if (marco?.contentWindow)
       marco.contentWindow.postMessage(
         { tiendaiq: true, data: estado.pagina.data, urls: estado.pagina.urls },
-        "*"
+        window.location.origin
       );
   }
 
@@ -3738,9 +3738,16 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     cerrarPanelSeccion();
     panelEditorId = editorId;
     panelSecId = editorId.startsWith("sec:") ? editorId.slice(4) : null;
-    const s = secActual();
-    const def = editorId.startsWith("sec:") ? null : seccionesPagina()[editorId];
-    if (!s && !def) { panelSecId = null; panelEditorId = null; return; }
+    // Piloto 01 tiene un contrato propio: no comparte `facetas` con el editor
+    // histórico. Resolver primero por contrato evita que seleccionar un bloque
+    // intente leer `facetas.resenas` y deje el inspector vacío.
+    const esPilotoFijo = esPlantillaPdp01() && !editorId.startsWith("sec:");
+    if (esPilotoFijo && !BLOQUES_PILOTO_01.has(editorId)) {
+      panelSecId = null; panelEditorId = null; return;
+    }
+    const s = esPilotoFijo ? null : secActual();
+    const def = esPilotoFijo || editorId.startsWith("sec:") ? null : seccionesPagina()[editorId];
+    if (!esPilotoFijo && !s && !def) { panelSecId = null; panelEditorId = null; return; }
     const p = document.getElementById("pe-inspector");
     if (!p) return;
     p.classList.add("is-editing");
@@ -3751,7 +3758,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         <button class="sec-panel__x" type="button" aria-label="Cerrar">${ico("x")}</button>
       </div>
       <div class="sec-panel__body" id="sp-body">${panelEditorHTML(panelEditorId)}</div>
-      ${editorId.startsWith("sec:") ? `<div class="sec-panel__footer"><s-button variant="tertiary" tone="critical" class="sp-del" data-panel-del="${esc(s.id)}">${ico("basura")} Eliminar sección</s-button></div>` : ""}`;
+      ${editorId.startsWith("sec:") && s ? `<div class="sec-panel__footer"><s-button variant="tertiary" tone="critical" class="sp-del" data-panel-del="${esc(s.id)}">${ico("basura")} Eliminar sección</s-button></div>` : ""}`;
     p.oninput = (e) => {
       const t = e.target;
       if (t.dataset.vk !== undefined) {
@@ -3878,8 +3885,8 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       chev: '<svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>',
       drag: '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="9" cy="6" r="1.3"/><circle cx="15" cy="6" r="1.3"/><circle cx="9" cy="12" r="1.3"/><circle cx="15" cy="12" r="1.3"/><circle cx="9" cy="18" r="1.3"/><circle cx="15" cy="18" r="1.3"/></svg>'
     };
-    const row = (id, label, ico) =>
-      `<div class="pe-tree__row" tabindex="0" data-tree="${esc(id)}"><span class="pe-tree__lead pe-tree__drag">${I.drag}</span><span class="pe-tree__ico">${ico}</span><span class="pe-tree__label">${esc(label)}</span></div>`;
+    const row = (id, label, ico, { fixed = false } = {}) =>
+      `<div class="pe-tree__row${fixed ? " pe-tree__row--fixed" : ""}" tabindex="0" data-tree="${esc(id)}"><span class="pe-tree__lead${fixed ? "" : " pe-tree__drag"}">${fixed ? "" : I.drag}</span><span class="pe-tree__ico">${ico}</span><span class="pe-tree__label">${esc(label)}</span></div>`;
     const locked = (label, ico, hint = "Shopify") =>
       `<div class="pe-tree__row pe-tree__row--locked" aria-disabled="true"><span class="pe-tree__lead"></span><span class="pe-tree__ico">${ico}</span><span class="pe-tree__label">${esc(label)}</span><span class="pe-tree__lock-hint">${esc(hint)}</span></div>`;
     const grupo = (nombre, filas, meta) =>
@@ -3889,14 +3896,14 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       const source = locked("Producto", I.encabezado) + locked("Galería de producto", I.galeria) +
         locked("Precio y variantes", I.lista) + locked("Agregar al carrito", I.beneficios);
       const approved = esPlantillaPdp01()
-        ? row("hero", "Introducción", I.beneficios) + row("offer", "Opciones de compra", I.lista) + row("quick", "Datos rápidos", I.lista) + row("why", "Sección editorial", I.lista) + row("stories", "Tarjetas editoriales", I.estrella) + row("timeline", "Recorrido", I.lista) + row("faq", "Preguntas frecuentes", I.lista) + row("closing", "Cierre", I.beneficios) + row("newsletter", "Newsletter", I.lista)
+        ? row("hero", "Introducción", I.beneficios, { fixed: true }) + row("offer", "Opciones de compra", I.lista, { fixed: true }) + row("quick", "Datos rápidos", I.lista, { fixed: true }) + row("why", "Sección editorial", I.lista, { fixed: true }) + row("stories", "Tarjetas editoriales", I.estrella, { fixed: true }) + row("timeline", "Recorrido", I.lista, { fixed: true }) + row("faq", "Preguntas frecuentes", I.lista, { fixed: true }) + row("closing", "Cierre", I.beneficios, { fixed: true }) + row("newsletter", "Newsletter", I.lista, { fixed: true })
         : row("bullets", "Beneficios verificables", I.beneficios) + row("faq", "Preguntas frecuentes", I.lista);
-      const evidence = row("evidence", "Espacios del merchant", I.estrella) +
+      const evidence = row("evidence", "Espacios del merchant", I.estrella, { fixed: esPlantillaPdp01() }) +
         locked("Rating y reseñas", I.estrella, "Fuente real") + locked("Fotos de reseñas", I.galeria, "Merchant") +
         locked("Comparación", I.lista, "Fuente real") + locked("Garantías", I.beneficios, "Política Shopify") + locked("Contador de oferta", I.lista, "Fecha real");
       return `<nav class="pe-tree" aria-label="Bloques de la plantilla fija">
-        <div class="pe-tree__head"><span class="pe-tree__head-title">Plantilla fija</span><span class="pe-tree__head-sub">${esPlantillaPdp01() ? "Piloto 01" : "Pinza PagePilot"} · v1</span></div>
-        <div class="pe-tree__body">${grupo("Datos de Shopify", source, "solo lectura")}${grupo("Contenido autorizado", approved, esPlantillaPdp01() ? "9 grupos" : "2 grupos")}${grupo("Evidencia", evidence, "se conserva")}</div>
+        <div class="pe-tree__head"><span class="pe-tree__head-title">${esPlantillaPdp01() ? "Página de producto" : "Plantilla fija"}</span><span class="pe-tree__head-sub">${esPlantillaPdp01() ? "Piloto 01 · estructura fija" : "Pinza PagePilot · v1"}</span></div>
+        <div class="pe-tree__body">${grupo("Datos de Shopify", source, "")}${grupo("Contenido", approved, "")}${grupo("Evidencia", evidence, "")}</div>
       </nav>`;
     }
     const info = row("encabezado", "Encabezado", I.encabezado) + row("galeria", "Galería de producto", I.galeria) +
@@ -3931,12 +3938,14 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     }
     abrirPanelEditor(id);
     const marco = $("marco");
-    marco?.contentWindow?.postMessage({ tiendaiqEditor: "highlight-block", blockId: id }, "*");
+    marco?.contentWindow?.postMessage({ tiendaiqEditor: "highlight-block", blockId: id }, window.location.origin);
   }
 
   function pantallaPreview() {
     const pg = estado.pagina;
-    cargarWidget("/editor-pagepilot.css", "css"); // estilos del editor 3 paneles
+    // El shell se carga de forma explícita. Si el asset falla, mostramos el
+    // problema en vez de continuar con un editor a medio montar.
+    cargarEstiloEditor().catch(() => toast("No se pudo cargar el diseño del editor.", { error: true }));
     document.body.classList.toggle("tiq-piloto-editor-v2", esPlantillaPdp01());
     sucio = false;
     if (!Array.isArray(pg.data.secciones)) pg.data.secciones = [];
@@ -4039,12 +4048,12 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       repintarPreview();
       if (!esPiloto) montarEdicionEnIframe(marco);
       ajustarEscalaPreview?.();
-      if (esPiloto && panelEditorId) marco.contentWindow?.postMessage({ tiendaiqEditor: "highlight-block", blockId: panelEditorId }, "*");
+      if (esPiloto && panelEditorId) marco.contentWindow?.postMessage({ tiendaiqEditor: "highlight-block", blockId: panelEditorId }, window.location.origin);
     };
 
     if (escuchadorPreviewPiloto) window.removeEventListener("message", escuchadorPreviewPiloto);
     escuchadorPreviewPiloto = esPiloto ? (event) => {
-      if (event.source !== marco.contentWindow || event.data?.tiendaiqEditor !== "select-block") return;
+      if (event.origin !== window.location.origin || event.source !== marco.contentWindow || event.data?.tiendaiqEditor !== "select-block") return;
       seleccionarBloquePiloto(event.data.blockId, { desdeCanvas: true });
     } : null;
     if (escuchadorPreviewPiloto) window.addEventListener("message", escuchadorPreviewPiloto);
@@ -4510,6 +4519,29 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
   // Carga diferida de assets del preview de Bundles: en vez de bajarlos en toda
   // la app, se inyectan solo al entrar a la pantalla que los usa. Idempotente.
   const _widgetsCargados = new Set();
+  let cargaEstiloEditor = null;
+  // El CSS del workspace no es un adorno opcional: sin él, árbol, canvas e
+  // inspector dejan de ser tres regiones coordinadas. Se carga una vez y su
+  // error sí queda disponible para quien abre el editor.
+  function cargarEstiloEditor() {
+    if (cargaEstiloEditor) return cargaEstiloEditor;
+    const existente = document.querySelector('link[data-tiq-editor-style="true"], link[href="/editor-pagepilot.css"]');
+    if (existente?.sheet) return Promise.resolve();
+    cargaEstiloEditor = new Promise((resolve, reject) => {
+      const link = existente || Object.assign(document.createElement("link"), {
+        rel: "stylesheet", href: "/editor-pagepilot.css"
+      });
+      link.dataset.tiqEditorStyle = "true";
+      link.onload = () => resolve();
+      link.onerror = () => {
+        cargaEstiloEditor = null;
+        link.remove();
+        reject(new Error("No se pudo cargar editor-pagepilot.css"));
+      };
+      if (!existente) document.head.appendChild(link);
+    });
+    return cargaEstiloEditor;
+  }
   function cargarWidget(href, tipo) {
     if (_widgetsCargados.has(href)) return Promise.resolve();
     _widgetsCargados.add(href);
@@ -6727,7 +6759,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     preview: "Editor de página",
     inspiracion: "Inspírate de los mejores"
   };
-  const _tituloBar = document.getElementById("tiq-title-bar");
+  const _tituloBar = document.querySelector("ui-title-bar");
   function setTituloBar(pantalla) {
     if (_tituloBar) _tituloBar.setAttribute("title", TITULO_PANTALLA[pantalla] || "TiendaIQ");
   }

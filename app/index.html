@@ -28,7 +28,7 @@
 <body>
   <!-- Menú lateral del admin de Shopify (App Bridge lo dibuja bajo el nombre
        de la app). Fuera del admin no se muestra. -->
-  <ui-nav-menu style="display:none">
+  <ui-nav-menu>
     <a href="/" rel="home">Inicio</a>
     <a href="/paginas">Páginas de producto con IA</a>
     <a href="/bundles">Bundles y descuentos</a>
@@ -37,7 +37,7 @@
 
   <!-- Título nativo del header del admin (App Bridge lo dibuja arriba de todo).
        app.js le setea el title por pantalla. Fuera del admin no muestra nada. -->
-  <ui-title-bar id="tiq-title-bar"></ui-title-bar>
+  <ui-title-bar></ui-title-bar>
 
   <!-- Save Bar contextual de Shopify (App Bridge la dibuja en el chrome del
        admin cuando hay cambios sin guardar). La controla app.js. -->
