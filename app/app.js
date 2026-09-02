@@ -4112,7 +4112,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     vista.innerHTML = esPiloto
       ? `<ui-modal id="tiq-piloto-editor-modal" variant="max">
           <ui-title-bar title="${esc("Editar página de producto " + productTitle)}"></ui-title-bar>
-          <div class="tiq-piloto-editor-modal-content">${editorMarkup}</div>
+          <div class="tiq-piloto-editor-modal-content"><link rel="stylesheet" href="/editor-pagepilot.css">${editorMarkup}</div>
         </ui-modal>`
       : editorMarkup;
     if (esPiloto) {
