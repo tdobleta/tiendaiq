@@ -1537,6 +1537,7 @@
   let indiceHistorialEditor = -1;
   let snapshotInicialEditor = null;
   let escuchadorPreviewPiloto = null;
+  let escuchadorViewportPiloto = null;
 
   function snapshotEditor() {
     if (!estado.pagina?.data) return;
@@ -4160,15 +4161,25 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         group.querySelector(".pe-tree__row--group")?.setAttribute("aria-expanded", String(!collapsed));
       };
     });
-    vista.querySelectorAll("[data-viewport]").forEach((button) => {
-      button.onclick = () => {
-        estado.previewViewport = button.dataset.viewport;
+    const cambiarViewportPiloto = (button) => {
+      if (!button?.dataset?.viewport) return;
+      estado.previewViewport = button.dataset.viewport;
         const shell = $("marco-shell");
         shell?.classList.toggle("is-mobile", estado.previewViewport === "mobile");
         montarEscalaPreview();
         vista.querySelectorAll("[data-viewport]").forEach((item) => item.setAttribute("aria-pressed", String(item === button)));
-      };
-    });
+    };
+    vista.querySelectorAll("[data-viewport]").forEach((button) => { button.onclick = () => cambiarViewportPiloto(button); });
+    // ui-modal puede trasladar sus nodos al documento del modal nativo. La
+    // delegación mantiene la vista móvil operativa también después de ese
+    // traslado, sin depender de un listener atado a una copia del botón.
+    if (escuchadorViewportPiloto) vista.removeEventListener("click", escuchadorViewportPiloto, true);
+    escuchadorViewportPiloto = (event) => {
+      const path = event.composedPath?.() || [];
+      const button = path.find((node) => node?.dataset?.viewport) || event.target?.closest?.("[data-viewport]");
+      if (button) cambiarViewportPiloto(button);
+    };
+    vista.addEventListener("click", escuchadorViewportPiloto, true);
 
     if (esPiloto) {
       const workspace = vista.querySelector(".pe-editor--piloto");
@@ -6958,6 +6969,8 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       document.body.classList.remove("tiq-piloto-editor-v2");
       if (escuchadorPreviewPiloto) window.removeEventListener("message", escuchadorPreviewPiloto);
       escuchadorPreviewPiloto = null;
+      if (escuchadorViewportPiloto) vista.removeEventListener("click", escuchadorViewportPiloto, true);
+      escuchadorViewportPiloto = null;
     }
     sincronizarURL(pantalla);
     setTituloBar(pantalla);
