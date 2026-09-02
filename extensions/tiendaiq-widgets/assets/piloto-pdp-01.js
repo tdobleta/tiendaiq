@@ -648,6 +648,7 @@
       faq: ".scp-faq-v3, .scp-faq", closing: ".scp-community", newsletter: ".scp-email-wrap, .scp-email-form"
     };
     const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+    const safeColor = (value) => /^#[0-9a-f]{3,8}$/i.test(String(value || "")) ? String(value) : "";
     const fixedSettingStyle = document.createElement("style");
     fixedSettingStyle.textContent = `
       #piloto-pdp-01 [data-tiq-editor-setting-id]{font-size:var(--tiq-p01-editor-font-size,inherit)!important;font-weight:var(--tiq-p01-editor-font-weight,inherit)!important;letter-spacing:var(--tiq-p01-editor-letter-spacing,inherit)!important;text-transform:var(--tiq-p01-editor-case,inherit)!important}
