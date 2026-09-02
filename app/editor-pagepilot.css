@@ -267,7 +267,7 @@ body.tiq-piloto-editor-v2 .pe-appbar__close .ico { width: 16px; height: 16px; }
    wider than the browser. */
 body.tiq-piloto-editor-v2 .pe-editor--piloto {
   display: grid;
-  grid-template-columns: 288px minmax(0, 1fr) 360px;
+  grid-template-columns: 300px minmax(0, 1fr) 320px;
   flex: 1 1 auto;
   min-width: 0;
   min-height: 0;
@@ -466,7 +466,7 @@ body.tiq-piloto-editor-v2 .pe-history .ico { width: 15px; height: 15px; }
 body.tiq-piloto-editor-v2 .pe-history button:disabled { opacity: .38; cursor: not-allowed; }
 
 @media (max-width: 1280px) {
-  body.tiq-piloto-editor-v2 .pe-editor--piloto { grid-template-columns: 256px minmax(0, 1fr) 332px; }
+  body.tiq-piloto-editor-v2 .pe-editor--piloto { grid-template-columns: 260px minmax(0, 1fr) 300px; }
   body.tiq-piloto-editor-v2 .pe-appbar__product { display: none; }
 }
 @media (max-width: 1000px) {

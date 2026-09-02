@@ -21,7 +21,7 @@ test("el workspace reserva paneles consistentes y el canvas no crea scroll horiz
   assert.match(app, /centro\.clientWidth - 40/);
   assert.match(app, /disponibleAltura = Math\.max\(420, centro\.clientHeight - 36\)/);
   assert.match(app, /tiq-piloto-editor-modal/);
-  assert.match(css, /grid-template-columns: 288px minmax\(0, 1fr\) 360px/);
+  assert.match(css, /grid-template-columns: 300px minmax\(0, 1fr\) 320px/);
   assert.match(css, /#vista\s*\{[\s\S]*?max-width: none;[\s\S]*?padding: 0/);
   assert.match(css, /\.pe-editor__centro\s*\{[\s\S]*?min-width: 0;[\s\S]*?overflow: hidden/);
   assert.match(css, /\.pe-canvas-shell\s*\{[^}]*transform-origin: top center/);
