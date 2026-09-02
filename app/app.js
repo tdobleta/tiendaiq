@@ -3832,8 +3832,9 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
 
   function panelEsV2(id) { return id.startsWith("sec:"); }
 
-  function refrescarPanelSeccion() {
-    const body = document.getElementById("sp-body");
+  let panelDocument = null;
+  function refrescarPanelSeccion(targetDocument = panelDocument || document) {
+    const body = targetDocument?.getElementById("sp-body");
     if (panelEditorId && body) { body.innerHTML = panelEditorHTML(panelEditorId); sincSelectsPag(); }
   }
 
@@ -3845,10 +3846,10 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     timerPreview = setTimeout(repintarPreview, 120);
   }
 
-  function cerrarAiText() { document.getElementById("sp-ai-popover")?.remove(); }
+  function cerrarAiText(targetDocument = panelDocument || document) { targetDocument?.getElementById("sp-ai-popover")?.remove(); }
 
-  function abrirAiText(ruta) {
-    const p = document.getElementById("pe-inspector");
+  function abrirAiText(ruta, targetDocument = panelDocument || document) {
+    const p = targetDocument?.getElementById("pe-inspector");
     if (!p) return;
     cerrarAiText();
     p.insertAdjacentHTML("beforeend", `
@@ -3987,8 +3988,10 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
 
   function abrirPanelSeccion(secId) { abrirPanelEditor(`sec:${secId}`); }
 
-  function abrirPanelEditor(editorId) {
-    cerrarPanelSeccion();
+  function abrirPanelEditor(editorId, { sourceDocument = null } = {}) {
+    const targetDocument = sourceDocument || panelDocument || document;
+    cerrarPanelSeccion(targetDocument);
+    panelDocument = targetDocument;
     panelEditorId = editorId;
     panelSecId = editorId.startsWith("sec:") ? editorId.slice(4) : null;
     // Piloto 01 tiene un contrato propio: no comparte `facetas` con el editor
@@ -4002,7 +4005,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     const s = esPilotoFijo || esPilotoManaged ? null : secActual();
     const def = esPilotoFijo || editorId.startsWith("sec:") ? null : seccionesPagina()[editorId];
     if (!esPilotoFijo && !esPilotoManaged && !s && !def) { panelSecId = null; panelEditorId = null; return; }
-    const p = document.getElementById("pe-inspector");
+    const p = targetDocument.getElementById("pe-inspector");
     if (!p) return;
     p.classList.add("is-editing");
     p.setAttribute("aria-label", `Inspector: ${panelTitulo(editorId)}`);
@@ -4081,7 +4084,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         const editor = p01EditorState();
         const index = editor.sections.findIndex((item) => item.id === p01Delete.dataset.p01Delete);
         if (index > -1) editor.sections.splice(index, 1);
-        cerrarPanelSeccion(); marcarSucio(); repintarPreview(); refrescarArbolP01?.(); return;
+        cerrarPanelSeccion(p.ownerDocument); marcarSucio(); repintarPreview(); refrescarArbolP01?.(); return;
       }
       const ppbPago = t.closest("[data-ppb-payment]");
       if (ppbPago) {
@@ -4093,13 +4096,13 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         repintarPreview();
         return;
       }
-      if (t === p.querySelector(".sec-panel__x") || t.closest(".sec-panel__x")) return cerrarPanelSeccion();
+      if (t === p.querySelector(".sec-panel__x") || t.closest(".sec-panel__x")) return cerrarPanelSeccion(p.ownerDocument);
       const aiTrigger = t.closest("[data-ai-text]");
-      if (aiTrigger) { abrirAiText(aiTrigger.dataset.aiText); return; }
+      if (aiTrigger) { abrirAiText(aiTrigger.dataset.aiText, p.ownerDocument); return; }
       const reviewTab = t.closest("[data-p01-review-tab]");
-      if (reviewTab) { estado.p01ReviewIndex = Number(reviewTab.dataset.p01ReviewTab); refrescarPanelSeccion(); return; }
+      if (reviewTab) { estado.p01ReviewIndex = Number(reviewTab.dataset.p01ReviewTab); refrescarPanelSeccion(p.ownerDocument); return; }
       if (t.closest("[data-p01-evidence-save]")) { guardarEvidenciaPdp01(p); return; }
-      if (t.closest("[data-ai-cancel]")) { cerrarAiText(); return; }
+      if (t.closest("[data-ai-cancel]")) { cerrarAiText(p.ownerDocument); return; }
       const aiMode = t.closest("[data-ai-mode]");
       if (aiMode) {
         p.querySelectorAll("[data-ai-mode]").forEach((b) => b.classList.toggle("is-selected", b === aiMode));
@@ -4107,14 +4110,14 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
       }
       if (t.id === "sp-ai-send") { enviarAiText(t.dataset.aiRuta); return; }
       const acc = t.closest("[data-vacc]");
-      if (acc) { const id = acc.dataset.vacc; panelOpen[id] = !panelOpen[id]; refrescarPanelSeccion(); return; }
+      if (acc) { const id = acc.dataset.vacc; panelOpen[id] = !panelOpen[id]; refrescarPanelSeccion(p.ownerDocument); return; }
       const seg = t.closest("[data-vseg]");
       if (seg) {
         const s2 = secActual(); if (!s2) return;
         const k = seg.dataset.vseg;
         setVS(s2, k, seg.dataset.vval);
         seg.parentElement.querySelectorAll(".sp-seg__b").forEach((b) => b.classList.toggle("is-sel", b === seg));
-        if (k === "fondoEstilo") refrescarPanelSeccion(); // muestra/oculta "Fondo 2"
+        if (k === "fondoEstilo") refrescarPanelSeccion(p.ownerDocument); // muestra/oculta "Fondo 2"
         return;
       }
       const tog = t.closest("[data-vtog]");
@@ -4132,18 +4135,18 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
         const secs = estado.pagina.data.secciones;
         const idx = secs.findIndex((x) => x.id === del.dataset.panelDel);
         if (idx > -1) secs.splice(idx, 1);
-        cerrarPanelSeccion();
+        cerrarPanelSeccion(p.ownerDocument);
         marcarSucio();
         repintarPreview();
         return;
       }
       // Acciones de bloque (agregar/quitar/mover video) + selector de imagen.
       const acc2 = accionSeccion(t);
-      if (acc2 && acc2 !== "cerrado") { marcarSucio(); repintarPreview(); refrescarPanelSeccion(); return; }
+      if (acc2 && acc2 !== "cerrado") { marcarSucio(); repintarPreview(); refrescarPanelSeccion(p.ownerDocument); return; }
       const uno = t.closest("[data-img-uno]");
-      if (uno) { fijar(estado.pagina.data, uno.dataset.imgUno, uno.dataset.id); marcarSucio(); repintarPreview(); refrescarPanelSeccion(); return; }
+      if (uno) { fijar(estado.pagina.data, uno.dataset.imgUno, uno.dataset.id); marcarSucio(); repintarPreview(); refrescarPanelSeccion(p.ownerDocument); return; }
       const quitar = t.closest("[data-img-quitar]");
-      if (quitar) { fijar(estado.pagina.data, quitar.dataset.imgQuitar, null); marcarSucio(); repintarPreview(); refrescarPanelSeccion(); return; }
+      if (quitar) { fijar(estado.pagina.data, quitar.dataset.imgQuitar, null); marcarSucio(); repintarPreview(); refrescarPanelSeccion(p.ownerDocument); return; }
     };
 
     p.onchange = (e) => {
@@ -4169,9 +4172,9 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     };
   }
 
-  function cerrarPanelSeccion() {
-    cerrarAiText();
-    const p = document.getElementById("pe-inspector");
+  function cerrarPanelSeccion(targetDocument = panelDocument || document) {
+    cerrarAiText(targetDocument);
+    const p = targetDocument?.getElementById("pe-inspector");
     if (p) {
       p.classList.remove("is-editing");
       p.setAttribute("aria-label", "Inspector de propiedades");
@@ -4179,6 +4182,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     }
     panelSecId = null;
     panelEditorId = null;
+    panelDocument = null;
   }
 
   // Árbol de bloques del editor (panel izquierdo estilo PagePilot). Lista las
@@ -4261,27 +4265,30 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     "closing", "newsletter", "evidence"
   ]);
 
-  function seleccionarBloquePiloto(id, { desdeCanvas = false } = {}) {
+  function seleccionarBloquePiloto(id, { desdeCanvas = false, sourceDocument = null } = {}) {
+    const targetDocument = sourceDocument || panelDocument || document;
+    panelDocument = targetDocument;
     const reseña = /^evidence:(\d)$/.exec(id);
     const dynamicSection = !reseña && p01SectionById(id);
     const blockId = reseña ? "evidence" : (id.startsWith("p01:") ? p01AliasBlock(id) : (dynamicSection ? "p01sec:" + id : id));
     const isP01Managed = id.startsWith("p01:") || id.startsWith("p01sec:") || Boolean(dynamicSection);
     if (!BLOQUES_PILOTO_01.has(blockId) && !isP01Managed) return;
     if (reseña) estado.p01ReviewIndex = Number(reseña[1]);
-    vista.querySelectorAll(".pe-tree__row.is-sel").forEach((row) => row.classList.remove("is-sel"));
-    const fila = vista.querySelector(`.pe-tree__row[data-tree="${CSS.escape(id)}"]`);
+    targetDocument.querySelectorAll(".pe-tree__row.is-sel").forEach((row) => row.classList.remove("is-sel"));
+    const fila = targetDocument.querySelector(`.pe-tree__row[data-tree="${CSS.escape(id)}"]`);
     if (fila) {
       fila.classList.add("is-sel");
       if (desdeCanvas) fila.scrollIntoView({ block: "nearest", behavior: "smooth" });
     }
-    abrirPanelEditor(isP01Managed ? (dynamicSection ? "p01sec:" + id : id) : blockId);
+    abrirPanelEditor(isP01Managed ? (dynamicSection ? "p01sec:" + id : id) : blockId, { sourceDocument: targetDocument });
     const marco = $("marco");
     marco?.contentWindow?.postMessage({ tiendaiqEditor: "highlight-block", blockId: isP01Managed ? (id.startsWith("p01sec:") ? id : blockId) : blockId }, window.location.origin);
   }
 
   function refrescarArbolP01() {
     if (!esPlantillaPdp01()) return;
-    const current = vista.querySelector(".p01-structure");
+    const owner = panelDocument || document;
+    const current = owner.querySelector(".p01-structure") || vista.querySelector(".p01-structure");
     if (!current) return;
     const holder = document.createElement("div");
     holder.innerHTML = arbolPaginaHTML();
@@ -4289,7 +4296,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     if (!next) return;
     current.replaceWith(next);
     next.querySelectorAll(".pe-tree__row[data-tree]").forEach((el) => {
-      el.onclick = () => seleccionarBloquePiloto(el.dataset.tree);
+      el.onclick = () => seleccionarBloquePiloto(el.dataset.tree, { sourceDocument: el.ownerDocument });
     });
     next.querySelectorAll(".pe-tree__row--group .pe-tree__chevron").forEach((ch) => {
       ch.onclick = (event) => {
@@ -4442,7 +4449,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     if (escuchadorPreviewPiloto) window.removeEventListener("message", escuchadorPreviewPiloto);
     escuchadorPreviewPiloto = esPiloto ? (event) => {
       if (event.origin !== window.location.origin || event.source !== marco.contentWindow || event.data?.tiendaiqEditor !== "select-block") return;
-      seleccionarBloquePiloto(event.data.blockId, { desdeCanvas: true });
+      seleccionarBloquePiloto(event.data.blockId, { desdeCanvas: true, sourceDocument: panelDocument || document });
     } : null;
     if (escuchadorPreviewPiloto) window.addEventListener("message", escuchadorPreviewPiloto);
 
@@ -4450,7 +4457,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     // el chevron colapsa el grupo. Reusa la edición existente (abrirModalEdicion).
     vista.querySelectorAll(".pe-tree__row[data-tree]").forEach((el) => {
       el.onclick = () => {
-        if (esPiloto) return seleccionarBloquePiloto(el.dataset.tree);
+        if (esPiloto) return seleccionarBloquePiloto(el.dataset.tree, { sourceDocument: el.ownerDocument });
         vista.querySelectorAll(".pe-tree__row.is-sel").forEach((r) => r.classList.remove("is-sel"));
         el.classList.add("is-sel");
         abrirModalEdicion(el.dataset.tree);
