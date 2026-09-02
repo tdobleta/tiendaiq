@@ -17,8 +17,8 @@ test("el preview abre como una superficie de trabajo y no conserva el stepper", 
 });
 
 test("el workspace reserva paneles consistentes y el canvas no crea scroll horizontal", () => {
-  assert.match(app, /const anchoTienda = isMobile \? 390 : 1200/);
-  assert.match(app, /centro\.clientWidth - 40/);
+  assert.match(app, /const anchoTienda = isMobile \? 390 : Math\.max\(1200, Math\.min\(1400, disponible\)\)/);
+  assert.match(app, /centro\.clientWidth - 16/);
   assert.match(app, /disponibleAltura = Math\.max\(420, centro\.clientHeight - 36\)/);
   assert.match(app, /<ui-modal id="tiq-piloto-editor-modal" variant="max">/);
   assert.match(app, /<ui-title-bar title="\$\{esc\("Editar página de producto/);
@@ -71,6 +71,13 @@ test("cada sección fija del inspector tiene una superficie real y consume setti
 test("el cambio de Branding invalida el render firmado del preview", () => {
   assert.match(runtime, /payload\?\.branding \|\| "brand"/);
   assert.match(runtime, /root\.dataset\.tiqBranding = palette/);
+});
+
+test("el inspector queda limpio hasta seleccionar un bloque y luego se monta a la derecha", () => {
+  assert.match(app, /id="pe-inspector" aria-label="Inspector de propiedades"><\/aside>/);
+  assert.ok(!app.includes("Seleccioná una sección"), "el estado vacío no debe pedir una selección");
+  assert.ok(!app.includes("Seleccioná un bloque"), "el panel derecho no debe mostrar una instrucción redundante");
+  assert.match(app, /p\.innerHTML = "";/, "cerrar el editor debe limpiar el panel sin reemplazarlo por un placeholder");
 });
 
 test("la galería separa elementos agregables de bloques básicos seleccionables", () => {

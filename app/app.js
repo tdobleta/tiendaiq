@@ -2832,10 +2832,10 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     }
   }
 
-  // El iframe necesita un viewport de desktop real para que la plantilla fija
-  // use exactamente los mismos breakpoints que en la tienda. Se escala el
-  // resultado, no el viewport: así 1200px sigue siendo 1200px para el CSS de
-  // la página aunque el editor tenga árbol e inspector a los costados.
+  // El canvas conserva un viewport de tienda real, pero no encoge la ventana
+  // de trabajo cuando hay espacio disponible. PagePilot deja que la página
+  // ocupe todo el escenario central y sólo escala hacia abajo en tabletas o
+  // ventanas angostas.
   function montarEscalaPreview(doc = document) {
     previewResizeObserver?.disconnect();
     const centro = doc.querySelector(".pe-editor__centro");
@@ -2846,13 +2846,13 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
 
     const ajustar = () => {
       const isMobile = estado.previewViewport === "mobile";
-      const anchoTienda = isMobile ? 390 : 1200;
       // PagePilot keeps a real storefront viewport and scales that viewport
       // only when the workbench is narrower than the shop.  The old code used
       // the iframe's previous height here, which left a short scaled frame and
       // a large, empty stage below it.  Derive the source height from the
       // available stage instead so the canvas fills the visible work area.
-      const disponible = Math.max(300, centro.clientWidth - 40);
+      const disponible = Math.max(300, centro.clientWidth - 16);
+      const anchoTienda = isMobile ? 390 : Math.max(1200, Math.min(1400, disponible));
       const escala = Math.min(1, disponible / anchoTienda);
       const disponibleAltura = Math.max(420, centro.clientHeight - 36);
       const altoTienda = isMobile
@@ -4205,7 +4205,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
     if (p) {
       p.classList.remove("is-editing");
       p.setAttribute("aria-label", "Inspector de propiedades");
-      p.innerHTML = `<div class="pe-inspector__empty"><span class="pe-inspector__empty-icon">${ico("cursor")}</span><strong>Seleccioná una sección</strong><p>Elegí una sección del menú o hacé clic en la página para editarla.</p></div>`;
+      p.innerHTML = "";
     }
     panelSecId = null;
     panelEditorId = null;
@@ -4449,9 +4449,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
             </div>
           </div>
         </main>
-        <aside class="pe-prop pe-inspector" id="pe-inspector" aria-label="Inspector de propiedades">
-          <div class="pe-inspector__empty"><span class="pe-inspector__empty-icon">${ico("cursor")}</span><strong>Seleccioná un bloque</strong><p>Elegí una sección del árbol o hacé clic sobre el canvas para editar sus campos.</p></div>
-        </aside>
+        <aside class="pe-prop pe-inspector" id="pe-inspector" aria-label="Inspector de propiedades"></aside>
       </div>`;
 
     // PagePilot presents the editor as a native Shopify modal.  Use the same
