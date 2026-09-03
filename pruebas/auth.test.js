@@ -109,6 +109,18 @@ test("la app no fabrica enlaces OAuth sin firma para reinstalar en produccion", 
   assert.match(server, /iniciar desde Shopify Admin o el enlace oficial de Shopify/);
 });
 
+test("el frontend renueva un pase vencido y conserva el contexto embebido", () => {
+  const frontend = fs.readFileSync(path.join(__dirname, "..", "app", "app.js"), "utf8");
+  const editor = fs.readFileSync(path.join(__dirname, "..", "app", "editor-producto.html"), "utf8");
+
+  assert.match(frontend, /function esPaseVencido/);
+  assert.match(frontend, /reintentosPase === 0 && esPaseVencido\(error\)/);
+  assert.match(frontend, /conservarContextoShopify/);
+  assert.match(frontend, /\["shop", "host", "embedded"\]/);
+  assert.match(editor, /function esPaseVencido/);
+  assert.match(editor, /reintentosPase === 0 && esPaseVencido\(error\)/);
+});
+
 test("la cookie OAuth liga el state, usa atributos seguros y detecta alteraciones", () => {
   const estado = "0123456789abcdef0123456789abcdef";
   const setCookie = crearCookieEstadoOAuth(estado);

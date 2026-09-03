@@ -62,27 +62,57 @@
     return null;
   }
 
-  async function api(ruta, opciones = {}) {
-    const p = await pase();
-    const headers = { "Content-Type": "application/json" };
-    if (p) headers.Authorization = `Bearer ${p}`;
-    const r = await fetch(`/api${ruta}`, {
-      ...opciones,
-      headers,
-      body: opciones.body ? JSON.stringify(opciones.body) : undefined
-    });
-    const cuerpo = await r.json().catch(() => ({}));
-    if (!r.ok) {
-      const e = new Error(cuerpo.error || `Error ${r.status}`);
-      e.status = r.status;
-      e.reinstalar = cuerpo.reinstalar;
-      e.actualizar = cuerpo.actualizar || r.status === 402;
-      if (e.reinstalar) {
-        e.message = "Volvé a abrir TiendaIQ desde Apps en Shopify Admin para autorizarla.";
-      }
-      throw e;
+  function esPaseVencido(error) {
+    return /pase de sesión (vencido|expirado)|session token (expired|invalid)/i.test(
+      String(error?.message || "")
+    );
+  }
+
+  function conservarContextoShopify(destino) {
+    const actual = new URLSearchParams(location.search);
+    for (const clave of ["shop", "host", "embedded"]) {
+      const valor = actual.get(clave);
+      if (valor) destino.searchParams.set(clave, valor);
     }
-    return cuerpo;
+    return destino;
+  }
+
+  async function api(ruta, opciones = {}) {
+    let reintentosPase = 0;
+    while (true) {
+      try {
+        const p = await pase();
+        const headers = { "Content-Type": "application/json" };
+        if (p) headers.Authorization = `Bearer ${p}`;
+        const r = await fetch(`/api${ruta}`, {
+          ...opciones,
+          headers,
+          body: opciones.body ? JSON.stringify(opciones.body) : undefined
+        });
+        const cuerpo = await r.json().catch(() => ({}));
+        if (!r.ok) {
+          const e = new Error(cuerpo.error || `Error ${r.status}`);
+          e.status = r.status;
+          e.reinstalar = cuerpo.reinstalar;
+          e.actualizar = cuerpo.actualizar || r.status === 402;
+          if (e.reinstalar) {
+            e.message = "Volvé a abrir TiendaIQ desde Apps en Shopify Admin para autorizarla.";
+          }
+          throw e;
+        }
+        return cuerpo;
+      } catch (error) {
+        // Shopify rota el pase cada pocos minutos. Si la primera lectura llega
+        // justo al vencimiento, pedir uno nuevo una sola vez evita bloquear
+        // creación/guardado por una expiración transitoria.
+        if (reintentosPase === 0 && esPaseVencido(error)) {
+          reintentosPase++;
+          await new Promise((resolve) => setTimeout(resolve, 120));
+          continue;
+        }
+        throw error;
+      }
+    }
   }
 
   async function esperarJob(id, { timeoutMs = 180000, onUpdate = () => {} } = {}) {
@@ -759,10 +789,8 @@
   // versionado y el preview vivo; la tabla no mantiene un estado paralelo.
   function abrirEditorV3(id) {
     if (!id) return;
-    const destino = new URL("/editor-v3", location.origin);
+    const destino = conservarContextoShopify(new URL("/editor-v3", location.origin));
     destino.searchParams.set("id", id);
-    const shop = new URLSearchParams(location.search).get("shop");
-    if (shop) destino.searchParams.set("shop", shop);
     location.assign(destino.pathname + destino.search);
   }
 

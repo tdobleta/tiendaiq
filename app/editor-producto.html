@@ -39,17 +39,35 @@
         return window.shopify && window.shopify.idToken ? await window.shopify.idToken() : null;
       }
 
+      function esPaseVencido(error) {
+        return /pase de sesión (vencido|expirado)|session token (expired|invalid)/i.test(
+          String(error && error.message || "")
+        );
+      }
+
       async function api(ruta, opciones) {
-        const token = await pase();
-        const headers = { "Content-Type": "application/json" };
-        if (token) headers.Authorization = "Bearer " + token;
-        const respuesta = await fetch(ruta, Object.assign({}, opciones || {}, {
-          headers,
-          body: opciones && opciones.body ? JSON.stringify(opciones.body) : undefined
-        }));
-        const cuerpo = await respuesta.json().catch(() => ({}));
-        if (!respuesta.ok) throw new Error(cuerpo.error || ("Error " + respuesta.status));
-        return cuerpo;
+        let reintentosPase = 0;
+        while (true) {
+          try {
+            const token = await pase();
+            const headers = { "Content-Type": "application/json" };
+            if (token) headers.Authorization = "Bearer " + token;
+            const respuesta = await fetch(ruta, Object.assign({}, opciones || {}, {
+              headers,
+              body: opciones && opciones.body ? JSON.stringify(opciones.body) : undefined
+            }));
+            const cuerpo = await respuesta.json().catch(() => ({}));
+            if (!respuesta.ok) throw new Error(cuerpo.error || ("Error " + respuesta.status));
+            return cuerpo;
+          } catch (error) {
+            if (reintentosPase === 0 && esPaseVencido(error)) {
+              reintentosPase++;
+              await new Promise((resolver) => setTimeout(resolver, 120));
+              continue;
+            }
+            throw error;
+          }
+        }
       }
 
       function avisar(texto) {
@@ -114,8 +132,11 @@
       iniciar();
       raiz.addEventListener("tiq:volver", function () {
         const destino = new URL("/paginas", location.origin);
-        const shop = new URLSearchParams(location.search).get("shop");
-        if (shop) destino.searchParams.set("shop", shop);
+        const actual = new URLSearchParams(location.search);
+        for (const clave of ["shop", "host", "embedded"]) {
+          const valor = actual.get(clave);
+          if (valor) destino.searchParams.set(clave, valor);
+        }
         location.assign(destino.pathname + destino.search);
       });
     }());
