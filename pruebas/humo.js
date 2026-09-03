@@ -51,6 +51,27 @@ const CASOS = [
     espera: 200
   },
   {
+    nombre: "/editor-v3 sirve la entrada canónica del editor de producto",
+    ruta: "/editor-v3?id=pagina-humo",
+    espera: 200,
+    revisar: (cuerpo) =>
+      !cuerpo.includes("Editor de página") || !cuerpo.includes("/dist/editor.js")
+        ? "la entrada no contiene el shell y bundle del editor v3"
+        : null
+  },
+  {
+    nombre: "el bundle del editor v3 se sirve desde la app",
+    ruta: "/dist/editor.js",
+    espera: 200,
+    revisar: (cuerpo) => cuerpo.includes("TiqEditor") ? null : "el bundle no expone TiqEditor"
+  },
+  {
+    nombre: "los estilos del editor v3 se sirven desde la app",
+    ruta: "/dist/editor.css",
+    espera: 200,
+    revisar: (cuerpo) => cuerpo.includes(".ed") ? null : "faltan los estilos del shell del editor"
+  },
+  {
     nombre: "/ready falla cerrado sin PostgreSQL fuera de desarrollo",
     ruta: "/ready",
     espera: 503

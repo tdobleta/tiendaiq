@@ -84,6 +84,14 @@ const {
   bundleEsPublicable,
   configAplicadaBundles
 } = require("./bundles");
+// Núcleo del editor v3: un único contrato para árbol, inspector, preview y
+// publicación. Las rutas nuevas conviven con el flujo histórico hasta cerrar
+// la migración de páginas existentes.
+const registroEditor = require("./nucleo/registro");
+const documentoEditor = require("./nucleo/documento");
+const { documentoDePagina, guardarBorradorV1 } = require("./nucleo/migraciones/pagina");
+const { productoPreviewDePagina } = require("./nucleo/producto-preview");
+const { publicarDocumentoV1 } = require("./nucleo/publicar-v1");
 
 // Render (y cualquier host) fija el puerto por env; local usa 4321.
 const PUERTO = Number(env.PORT || process.env.PORT || 4321);
@@ -606,6 +614,21 @@ function servirIndex(res) {
   res.end(html);
 }
 
+// Entrada del editor v3 conectada a una página real. Se sirve como documento
+// independiente para que la app pueda cargar el contrato nuevo sin depender
+// del shell histórico ni de un estado duplicado en el navegador.
+function servirEditorProducto(res) {
+  const html = fs
+    .readFileSync(path.join(DIR_APP, "editor-producto.html"), "utf8")
+    .replace("{{SHOPIFY_CLIENT_ID}}", env.SHOPIFY_CLIENT_ID || "");
+  res.writeHead(200, {
+    "Content-Type": "text/html; charset=utf-8",
+    "Cache-Control": "no-cache",
+    "Content-Security-Policy": "frame-ancestors https://admin.shopify.com https://*.myshopify.com"
+  });
+  res.end(html);
+}
+
 // ---------- legales ----------
 //
 // Los datos del titular no van escritos en el HTML: se completan desde el
@@ -939,7 +962,31 @@ async function api(req, res, url) {
   const mGet = ruta.match(/^\/api\/paginas\/([^/]+)$/);
   if (req.method === "GET" && mGet) {
     const p = await leerPagina(sesion.tenant, mGet[1]);
-    return p ? json(res, 200, p) : json(res, 404, { error: "No existe esa página" });
+    if (!p) return json(res, 404, { error: "No existe esa página" });
+    // El editor nuevo recibe el mismo documento que validará al guardar. La
+    // migración es de lectura y no modifica el registro histórico.
+    let documento = null;
+    try {
+      documento = documentoDePagina(p);
+    } catch (error) {
+      return json(res, 200, { ...p, documento: null, documento_version: null, documento_error: error.message });
+    }
+    return json(res, 200, {
+      ...p,
+      documento,
+      documento_version: documento.version,
+      producto_preview: productoPreviewDePagina(p)
+    });
+  }
+
+  // Contrato serializable para que árbol, inspector y librería se alimenten
+  // del registro único de componentes.
+  if (req.method === "GET" && ruta === "/api/registro") {
+    return json(res, 200, {
+      version: documentoEditor.VERSION,
+      tipos: registroEditor.catalogo(),
+      paneles: Object.fromEntries(registroEditor.tipos().map((tipo) => [tipo, registroEditor.esquemaPanel(tipo)]))
+    });
   }
 
   // POST /api/texto/editar — registra una intención durable. Anthropic se llama
@@ -1162,7 +1209,28 @@ async function api(req, res, url) {
         return json(res, 409, { error: "La página se está publicando. Esperá a que termine antes de guardar nuevos cambios." });
       }
     }
-    const { data } = await leerCuerpo(req);
+    const cuerpo = await leerCuerpo(req);
+    // Camino canónico: el inspector v3 envía el documento completo y el mismo
+    // núcleo que renderiza lo valida antes de persistirlo.
+    if (Object.prototype.hasOwnProperty.call(cuerpo, "documento")) {
+      try {
+        const actualizado = guardarBorradorV1(existente, cuerpo.documento, {
+          tienda: sesion.tenant.tenantId,
+          productoId: existente.shopify_product_id
+        });
+        if (existente.estado === "publicada") actualizado.cambios_sin_publicar = true;
+        await guardarPagina(sesion.tenant, actualizado);
+        return json(res, 200, {
+          ...actualizado,
+          documento: actualizado.documento_borrador,
+          documento_version: actualizado.editor_version
+        });
+      } catch (error) {
+        return json(res, 400, { error: error.message || "El documento no cumple el contrato del editor." });
+      }
+    }
+
+    const { data } = cuerpo;
     if (!data) return json(res, 400, { error: "Falta data" });
     existente.data = applyTemplateBoundEdit({
       persistedData: existente.data,
@@ -1252,6 +1320,38 @@ async function api(req, res, url) {
     if (!publication) return json(res, 404, { error: "No existe esa página" });
     if (publication.conflict) return json(res, 409, { error: "La pagina tiene otra operacion en curso." });
     return json(res, 202, { job: jobPublico(publication.job) });
+  }
+
+  // Publicación del documento canónico del editor v3. Se mantiene separada del
+  // job histórico para que una página v1 nunca sea interpretada como data v0.
+  const mPubV1 = ruta.match(/^\/api\/paginas\/([^/]+)\/publicar-v1$/);
+  if (req.method === "POST" && mPubV1) {
+    const registro = await leerPagina(sesion.tenant, mPubV1[1]);
+    if (!registro) return json(res, 404, { error: "No existe esa página" });
+    if (!registro.documento_borrador) return json(res, 409, { error: "Guardá primero el documento en el editor nuevo." });
+    if (registro.active_job_id) {
+      const activo = await leerJobDB(sesion.tenant, registro.active_job_id);
+      if (activo && ["queued", "running"].includes(activo.status)) {
+        return json(res, 409, { error: "La página se está publicando. Esperá a que termine antes de volver a publicar." });
+      }
+    }
+    try {
+      const resultado = await publicarDocumentoV1(registro, sesion);
+      registro.documento_publicado = resultado.documento;
+      registro.publicado_en = new Date().toISOString();
+      registro.estado = "publicada";
+      registro.url_publica = resultado.url;
+      registro.cambios_sin_publicar = false;
+      registro.last_job_error = null;
+      await guardarPagina(sesion.tenant, registro);
+      return json(res, 200, {
+        ...registro,
+        documento: registro.documento_borrador,
+        documento_version: registro.editor_version
+      });
+    } catch (error) {
+      return json(res, 502, { error: error.message || "No se pudo publicar el documento v1." });
+    }
   }
 
   // POST /api/paginas/:id/despublicar — vuelve el producto a su página nativa
@@ -1354,6 +1454,10 @@ const servidor = http.createServer(async (req, res) => {
 
     // --- app ---
     if (url.pathname.startsWith("/api/")) return await api(req, res, url);
+
+    // Editor v3: entrada canónica para editar una página existente dentro del
+    // admin de Shopify, con el mismo pase de App Bridge que el resto de la app.
+    if (url.pathname === "/editor-v3") return servirEditorProducto(res);
 
     // Código del storefront (widget de bundles). Lo usa el
     // preview del admin, y es EL MISMO archivo que publica el extension.

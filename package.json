@@ -1,6 +1,7 @@
 {
   "dependencies": {
     "@anthropic-ai/sdk": "^0.112.0",
+    "ajv": "^8.17.1",
     "cloudflared": "^0.7.1",
     "esbuild": "^0.28.1",
     "pg": "^8.22.0"
@@ -27,7 +28,10 @@
     "ops:readiness": "node scripts/probar-readiness-operativa.js",
     "ops:requeue-compensation": "node scripts/reencolar-compensacion.js",
     "audit:legacy-review-avatars": "node scripts/inventariar-avatares-publicados.js",
-    "probar": "npm run verificar && npm run coherencia && npm run unidad && npm run humo"
+    "probar": "npm run verificar && npm run coherencia && node scripts/construir-render.js --verificar && node scripts/construir-editor.js --verificar && npm run unidad && npm run humo",
+    "construir:render": "node scripts/construir-render.js",
+    "construir:editor": "node scripts/construir-editor.js",
+    "construir": "node scripts/construir-render.js && node scripts/construir-editor.js"
   },
   "engines": {
     "node": ">=20"

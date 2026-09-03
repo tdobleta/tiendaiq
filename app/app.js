@@ -715,7 +715,7 @@
     const vacioCrear = $("vacio-crear");
     if (vacioCrear) vacioCrear.onclick = () => cargarLista();
     vista.querySelectorAll("[data-editar]").forEach((b) => {
-      b.onclick = () => abrirDesdeTabla(b.dataset.editar);
+      b.onclick = () => abrirEditorV3(b.dataset.editar);
     });
 
     // Banner persistente + AUTO-DIAGNÓSTICO: ¿las páginas publicadas se ven, y
@@ -755,25 +755,15 @@
     }
   }
 
-  async function abrirDesdeTabla(id) {
-    const resumen = estado.paginas.find((p) => p.id === id);
-    vista.innerHTML = `<div class="generando"><div class="giro"></div><h2>Abriendo la página…</h2></div>`;
-    try {
-      estado.pagina = await api(`/paginas/${id}`);
-      estado.producto = {
-        id: estado.pagina.shopify_product_id,
-        titulo: resumen?.titulo || estado.pagina.data?.fuente?.titulo_crudo || "",
-        imagen: resumen?.imagen || null,
-        estado: estado.pagina.estado
-      };
-      estado.volverA = "paginas";
-      ir("preview");
-    } catch (e) {
-      ir("paginas");
-      requestAnimationFrame(() =>
-        vista.insertAdjacentHTML("afterbegin", `<div class="error">${ico("x","ico--banner")} ${esc(e.message)}</div>`)
-      );
-    }
+  // Entrada única al editor canónico. La página se lee allí con el documento
+  // versionado y el preview vivo; la tabla no mantiene un estado paralelo.
+  function abrirEditorV3(id) {
+    if (!id) return;
+    const destino = new URL("/editor-v3", location.origin);
+    destino.searchParams.set("id", id);
+    const shop = new URLSearchParams(location.search).get("shop");
+    if (shop) destino.searchParams.set("shop", shop);
+    location.assign(destino.pathname + destino.search);
   }
 
   // ---------- 1. lista ----------
@@ -1445,7 +1435,7 @@
       }, 100);
       estado.pagina = await completarGeneracionPendiente(pending);
       clearInterval(reloj);
-      ir("preview");
+      abrirEditorV3(estado.pagina.id);
     } catch (e) {
       clearInterval(reloj);
       if (e.terminal || e.actualizar || e.status === 404) limpiarGeneracionPendiente();
@@ -1518,7 +1508,7 @@
     vista.innerHTML = `<div class="generando"><div class="giro"></div><h2>Abriendo la página…</h2></div>`;
     try {
       estado.pagina = await api(`/paginas/${id}`);
-      ir("preview");
+      abrirEditorV3(estado.pagina.id);
     } catch (e) {
       ir("informacion");
       requestAnimationFrame(() =>
@@ -7392,7 +7382,7 @@ Me llegó en 3 días y funciona tal cual el video."></textarea>
             estado: estado.pagina.estado
           };
           estado.volverA = params.get("from") === "paginas" ? "paginas" : "lista";
-          ir("preview");
+          abrirEditorV3(estado.pagina.id);
           return;
         } catch {
           // El identificador pudo haber sido eliminado: limpiamos la marca y

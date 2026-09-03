@@ -1,0 +1,175 @@
+/* ============================================================
+   RENDER — estilos base de los bloques.
+
+   Fuente única: scripts/construir-render.js la copia a app/dist/render.css y a
+   extensions/tiendaiq-widgets/assets/tiq-render.css. No se edita ninguna de las
+   dos copias: se edita esta.
+
+   Regla: acá va solo lo estructural (cómo se apila, cómo se centra, qué es
+   bloque y qué es línea). Los colores, tamaños y espacios NO se escriben acá;
+   llegan por variables --tiq-* que emite nucleo/tokens.js y por los estilos en
+   línea que produce el render. Si un color aparece en este archivo, el branding
+   dejó de mandar sobre él.
+   ============================================================ */
+
+.tiq-doc {
+  font-family: var(--tiq-fuente-cuerpo);
+  color: var(--tiq-parrafos);
+  box-sizing: border-box;
+}
+
+.tiq-doc *,
+.tiq-doc *::before,
+.tiq-doc *::after { box-sizing: inherit; }
+
+/* ---------- sección ---------- */
+
+.tiq-seccion {
+  display: flex;
+  width: 100%;
+  margin-inline: auto;
+}
+
+.tiq-seccion--pagina { max-width: 1200px; }
+.tiq-seccion--completo { max-width: none; }
+.tiq-seccion--horizontal { flex-direction: row; align-items: stretch; }
+.tiq-seccion--horizontal > * { flex: 1 1 0; min-width: 0; }
+
+.tiq-seccion--contenido-pagina > * { max-width: 1200px; margin-inline: auto; width: 100%; }
+.tiq-seccion--contenido-completo > * { max-width: none; }
+
+/* ---------- texto ---------- */
+
+.tiq-texto { margin: 0; }
+
+.tiq-doc h2.tiq-texto,
+.tiq-doc h3.tiq-texto,
+.tiq-doc h4.tiq-texto { font-family: var(--tiq-fuente-titulos); }
+
+.tiq-texto a { color: inherit; text-underline-offset: 2px; }
+
+/* ---------- imagen ---------- */
+
+.tiq-imagen {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-width: 100%;
+}
+
+.tiq-imagen__enlace { display: block; }
+
+/* ---------- catálogo atómico de producto ---------- */
+
+.tiq-galeria { display: block; }
+.tiq-galeria__principal { overflow: hidden; width: 100%; }
+.tiq-galeria__principal img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.tiq-galeria__miniaturas { display: flex; gap: 8px; margin-top: 12px; overflow-x: auto; }
+.tiq-galeria__miniaturas button { flex: 0 0 64px; width: 64px; height: 64px; padding: 2px; border: 1px solid var(--tiq-secundario); border-radius: var(--tiq-radio); background: var(--tiq-secundario_suave); cursor: pointer; }
+.tiq-galeria__miniaturas button[aria-current="true"] { border-color: var(--tiq-primario); }
+.tiq-galeria__miniaturas img { width: 100%; height: 100%; object-fit: cover; }
+.tiq-galeria__vacio { display: grid; min-height: 220px; place-items: center; border: 1px dashed var(--tiq-secundario); border-radius: var(--tiq-radio); color: var(--tiq-subtitulos); }
+
+.tiq-titulo-producto h1, .tiq-precio-producto p { margin: 0; font-family: var(--tiq-fuente-titulos); }
+.tiq-precio-producto p { display: flex; align-items: baseline; gap: 9px; }
+.tiq-precio-producto s { color: var(--tiq-subtitulos); font-size: .78em; font-weight: 400; }
+.tiq-precio__badge { display: inline-block; padding: 3px 8px; border-radius: 999px; background: var(--tiq-primario); color: var(--tiq-boton_texto); font-size: .58em; font-weight: 700; letter-spacing: .04em; }
+
+.tiq-beneficios h2, .tiq-packs-compra h2, .tiq-carrusel-resenas h2, .tiq-acordeon-faq h2, .tiq-linea-tiempo h2 { margin: 0 0 14px; font-family: var(--tiq-fuente-titulos); }
+.tiq-beneficios__imagen, .tiq-estadisticas__imagen { margin-bottom: 14px; overflow: hidden; border-radius: var(--tiq-radio); }
+.tiq-beneficios__imagen img, .tiq-estadisticas__imagen img { display: block; width: 100%; height: auto; }
+.tiq-beneficios ul { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.tiq-beneficios li { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 10px; align-items: center; }
+.tiq-beneficios li > span { display: grid; width: 28px; height: 28px; place-items: center; border: 1px solid var(--tiq-secundario); border-radius: 50%; color: var(--tiq-primario); }
+
+.tiq-packs { display: grid; gap: 8px; }
+.tiq-pack { display: grid; grid-template-columns: 18px 54px minmax(0, 1fr) auto; gap: 10px; align-items: center; min-height: 70px; padding: 8px 12px; border: 1px solid var(--tiq-secundario); border-radius: var(--tiq-radio); background: var(--tiq-secundario_suave); cursor: pointer; }
+.tiq-pack.es-activo { border-color: var(--tiq-pack-activo, var(--tiq-primario)); box-shadow: inset 0 0 0 1px var(--tiq-pack-activo, var(--tiq-primario)); }
+.tiq-pack:has(input:checked) { border-color: var(--tiq-pack-activo, var(--tiq-primario)); box-shadow: inset 0 0 0 1px var(--tiq-pack-activo, var(--tiq-primario)); }
+.tiq-pack input { accent-color: var(--tiq-primario); }
+.tiq-pack__imagen { width: 54px; height: 54px; overflow: hidden; border-radius: calc(var(--tiq-radio) / 2); background: var(--tiq-secundario_suave); }
+.tiq-pack__imagen img { width: 100%; height: 100%; object-fit: cover; }
+.tiq-pack__copy { display: grid; gap: 2px; }
+.tiq-pack__copy b { font-weight: 600; }
+.tiq-pack__copy small { color: var(--tiq-subtitulos); }
+.tiq-pack__copy em { width: fit-content; padding: 2px 6px; border-radius: 999px; background: var(--tiq-primario); color: var(--tiq-boton_texto); font-size: .7em; font-style: normal; font-weight: 600; }
+.tiq-pack > strong { color: var(--tiq-primario); white-space: nowrap; }
+
+.tiq-boton-carrito form { margin: 0; }
+.tiq-boton-carrito button { display: block; width: 100%; min-height: 48px; padding: 12px 18px; border: 0; cursor: pointer; font: inherit; font-weight: 600; }
+.tiq-boton-carrito button:hover { filter: brightness(.94); }
+
+.tiq-resena { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 14px; align-items: start; }
+.tiq-resena__avatar { width: 56px; height: 56px; overflow: hidden; border-radius: 50%; background: var(--tiq-secundario_suave); }
+.tiq-resena__avatar img { width: 100%; height: 100%; object-fit: cover; }
+.tiq-resena__estrellas { color: var(--tiq-primario); letter-spacing: .08em; }
+.tiq-resena blockquote { margin: 7px 0; }
+.tiq-resena p { margin: 0; color: var(--tiq-subtitulos); font-size: .86em; }
+.tiq-verificada { color: var(--tiq-primario); font-size: .9em; }
+.tiq-carrusel-resenas__pista { display: grid; grid-template-columns: repeat(var(--tiq-columnas, 3), minmax(0, 1fr)); gap: 16px; }
+.tiq-carrusel-resenas article { min-width: 0; padding: 16px; border: 1px solid var(--tiq-secundario); border-radius: var(--tiq-radio); background: var(--tiq-secundario_suave); }
+.tiq-carrusel-resenas figure { margin: -16px -16px 12px; aspect-ratio: 1; overflow: hidden; }
+.tiq-carrusel-resenas figure img { width: 100%; height: 100%; object-fit: cover; }
+.tiq-carrusel-resenas article p { margin: 8px 0; }
+
+.tiq-acordeon-faq { display: grid; gap: 8px; }
+.tiq-acordeon-faq h2 { margin-bottom: 6px; }
+.tiq-acordeon-faq details { border: 1px solid var(--tiq-secundario); border-radius: var(--tiq-radio); background: var(--tiq-secundario_suave); }
+.tiq-acordeon-faq summary { padding: 13px 16px; cursor: pointer; font-weight: 500; }
+.tiq-acordeon-faq details > div { padding: 0 16px 14px; color: var(--tiq-subtitulos); }
+
+.tiq-linea-tiempo > p { margin: 0 0 16px; color: var(--tiq-subtitulos); }
+.tiq-linea-tiempo__pasos { display: flex; }
+.tiq-linea-tiempo__pasos article { flex: 1; min-width: 0; padding-top: 12px; border-top: 2px solid var(--tiq-secundario); }
+.tiq-linea-tiempo__pasos article > span { color: var(--tiq-primario); font-size: .8em; font-weight: 600; }
+.tiq-linea-tiempo__pasos h3 { margin: 7px 0 4px; font-family: var(--tiq-fuente-titulos); }
+.tiq-linea-tiempo__pasos p { margin: 0; color: var(--tiq-subtitulos); font-size: .9em; }
+
+.tiq-contador-oferta { display: inline-flex; align-items: center; gap: 10px; }
+.tiq-contador-oferta strong { font-variant-numeric: tabular-nums; }
+
+/* ---------- bloques editoriales adicionales ---------- */
+
+.tiq-imagen-texto { display: flex; align-items: center; gap: 32px; }
+.tiq-imagen-texto__imagen, .tiq-imagen-texto__copy { flex: 1 1 0; min-width: 0; }
+.tiq-imagen-texto__imagen img { display: block; width: 100%; height: auto; }
+.tiq-imagen-texto__vacio { display: grid; min-height: 220px; place-items: center; border: 1px dashed var(--tiq-secundario); border-radius: var(--tiq-radio); color: var(--tiq-subtitulos); }
+.tiq-imagen-texto h2, .tiq-tabla-comparacion h2, .tiq-estadisticas h2, .tiq-garantia h2 { margin: 0 0 14px; font-family: var(--tiq-fuente-titulos); }
+.tiq-imagen-texto p, .tiq-garantia p { margin: 0; color: var(--tiq-subtitulos); }
+.tiq-imagen-texto__cta, .tiq-garantia a { display: inline-block; margin-top: 16px; color: var(--tiq-primario); font-weight: 600; text-underline-offset: 3px; }
+
+.tiq-tabla-comparacion { overflow-x: auto; }
+.tiq-tabla-comparacion table { width: 100%; border-collapse: collapse; }
+.tiq-tabla-comparacion > p { margin: -5px 0 14px; color: var(--tiq-subtitulos); }
+.tiq-tabla-comparacion th, .tiq-tabla-comparacion td { padding: 11px 12px; border-bottom: 1px solid var(--tiq-secundario); text-align: center; }
+.tiq-tabla-comparacion th:first-child, .tiq-tabla-comparacion td:first-child { text-align: left; }
+.tiq-tabla-comparacion thead th { font-weight: 600; color: var(--tiq-primario); }
+
+.tiq-estadisticas__lista { display: grid; gap: 14px; }
+.tiq-estadisticas article { display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 14px; align-items: center; }
+.tiq-estadisticas article > strong { color: var(--tiq-primario); font-size: 1.35em; font-variant-numeric: tabular-nums; }
+.tiq-estadisticas article span { display: block; }
+.tiq-estadisticas article i { display: block; height: 6px; margin-top: 7px; overflow: hidden; border-radius: 999px; background: var(--tiq-secundario_suave); }
+.tiq-estadisticas article i::after { display: block; width: var(--tiq-porcentaje); height: 100%; border-radius: inherit; background: var(--tiq-primario); content: ""; }
+
+.tiq-garantia { border: 1px solid var(--tiq-secundario); border-radius: var(--tiq-radio); background: var(--tiq-secundario_suave); }
+
+@media (max-width: 749px) {
+  .tiq-seccion--horizontal { flex-direction: column; }
+  .tiq-imagen-texto { flex-direction: column !important; align-items: stretch; gap: 20px; }
+  .tiq-carrusel-resenas__pista { grid-template-columns: 1fr; }
+  .tiq-linea-tiempo__pasos { flex-direction: column; }
+  .tiq-linea-tiempo__pasos article { border-top: 0; border-left: 2px solid var(--tiq-secundario); padding: 0 0 0 14px; }
+}
+
+/* ---------- bloque roto ----------
+   Solo se ve en el editor (modo "editor"). En la tienda, un bloque que falla
+   sale como comentario HTML y no ocupa espacio. */
+
+.tiq-error {
+  padding: 12px 14px;
+  border: 1px dashed currentColor;
+  border-radius: 6px;
+  font: 500 13px/1.4 var(--tiq-fuente-cuerpo);
+  opacity: .75;
+}

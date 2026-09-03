@@ -26,7 +26,31 @@
     un hint: si la URL no resuelve, el navegador lo ignora (no rompe nada).
   {%- endcomment -%}
   {%- assign tq_pagina = product.metafields.tiendaiq.pagina.value -%}
-  {%- if tq_pagina.piloto_pdp_01.template == 'piloto-pdp-01' and tq_pagina.piloto_pdp_01.contract_version == 1 -%}
+  {%- if tq_pagina.version == 1 and tq_pagina.arbol -%}
+    {{ 'tiq-render.css' | asset_url | stylesheet_tag }}
+    <div id="tiq-documento" aria-live="polite" style="min-height:70vh"></div>
+    <script>
+      window.TIQ_DOCUMENTO = {{ tq_pagina | json }};
+      window.TIQ_CARRITO_URL = {{ routes.cart_add_url | json }};
+      window.TIQ_PRODUCTO = {
+        titulo: {{ product.title | json }},
+        title: {{ product.title | json }},
+        moneda: {{ cart.currency.iso_code | default: shop.currency | json }},
+        variante_id: {{ product.selected_or_first_available_variant.id | json }},
+        variant_id: {{ product.selected_or_first_available_variant.id | json }},
+        precio_formateado: {{ product.selected_or_first_available_variant.price | money | json }},
+        precio_anterior_formateado: {% if product.selected_or_first_available_variant.compare_at_price > product.selected_or_first_available_variant.price %}{{ product.selected_or_first_available_variant.compare_at_price | money | json }}{% else %}null{% endif %},
+        imagenes: [
+          {%- assign imagenes_vivas = product.media | where: 'media_type', 'image' -%}
+          {%- for media in imagenes_vivas -%}
+            { "id": "gid://shopify/MediaImage/{{ media.id }}", "src": {{ media.preview_image | image_url: width: 1400 | json }}, "alt": {{ media.alt | default: product.title | json }} }{% unless forloop.last %},{% endunless %}
+          {%- endfor -%}
+        ]
+      };
+    </script>
+    <script src="{{ 'tiq-render.js' | asset_url }}" defer></script>
+    <script src="{{ 'tiq-storefront.js' | asset_url }}" defer></script>
+  {%- elsif tq_pagina.piloto_pdp_01.template == 'piloto-pdp-01' and tq_pagina.piloto_pdp_01.contract_version == 1 -%}
     {{ 'piloto-pdp-01.css' | asset_url | stylesheet_tag }}
     <script>
       window.TIENDAIQ_DATA = {{ product.metafields.tiendaiq.pagina.value | json }};

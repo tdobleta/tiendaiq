@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Editor v3 · TiendaIQ</title>
+<link rel="stylesheet" href="dist/editor.css">
+</head>
+<body style="margin:0">
+<!--
+  ARNÉS DEL EDITOR v3.
+
+  Monta el editor con un documento de ejemplo, sin backend y sin Shopify.
+  Sirve para trabajar en el editor sin instalar la app en una tienda, y para
+  mirar un cambio de CSS en dos segundos.
+
+  El editor de verdad se monta desde el router del admin cuando se retire el
+  viejo (Fase 3). Este archivo puede borrarse ese día o quedar como banco de
+  pruebas: no forma parte del producto.
+-->
+<div id="raiz"></div>
+<script src="dist/editor.js"></script>
+<script>
+  const documento = {
+    version: 1,
+    id: "pag_arnes",
+    tienda: "arnes.myshopify.com",
+    producto_id: null,
+    titulo: "Camisa de oficina",
+    branding: { preset: "verde", tokens: {}, radio: "pequeno", tipografia: { titulos: "grotesca", cuerpo: "sistema" } },
+    seo: { descripcion: null, palabras_clave: [] },
+    arbol: [
+      {
+        id: "n_10000001", tipo: "seccion",
+        props: { gap: 18, pad_arriba: 56, pad_abajo: 40, pad_izquierda: 24, pad_derecha: 24, alineacion: "centro", fondo: "@secundario_suave" },
+        props_movil: { pad_arriba: 28, gap: 12 },
+        hijos: [
+          { id: "n_10000002", tipo: "texto", props: { html: "Nueva colección", color: "@primario", tamano: 13, peso: "semibold", caja: "altas", interletrado: "amplio", alineacion: "centro" } },
+          { id: "n_10000003", tipo: "texto", props: { html: "Camisa de oficina <b>que no se arruga</b>", etiqueta: "h2", color: "@titulos", tamano: 44, peso: "bold", interletrado: "ajustado", alineacion: "centro", interlineado: 1.1 }, props_movil: { tamano: 28 } },
+          { id: "n_10000004", tipo: "texto", props: { html: "Pensada para durar todo el día. Envío gratis a todo el país.", tamano: 17, alineacion: "centro", interlineado: 1.6 } }
+        ]
+      },
+      {
+        id: "n_20000001", tipo: "seccion",
+        props: { gap: 14, pad_arriba: 36, pad_abajo: 56, pad_izquierda: 24, pad_derecha: 24, direccion: "horizontal" },
+        hijos: [
+          { id: "n_20000002", tipo: "texto", props: { html: "<b>4.9/5</b> según 1453 clientas", tamano: 15, alineacion: "centro", fondo: "@secundario_suave", pad_arriba: 18, pad_abajo: 18, radio: "marca", borde: "fino" } },
+          { id: "n_20000003", tipo: "texto", props: { html: "<b>Envío en 48h</b> a todo el país", tamano: 15, alineacion: "centro", fondo: "@secundario_suave", pad_arriba: 18, pad_abajo: 18, radio: "marca", borde: "fino" } },
+          { id: "n_20000004", tipo: "texto", props: { html: "<b>30 días</b> para devolverla", tamano: 15, alineacion: "centro", fondo: "@secundario_suave", pad_arriba: 18, pad_abajo: 18, radio: "marca", borde: "fino" } }
+        ]
+      }
+    ]
+  };
+
+  TiqEditor.montarEditor(document.getElementById("raiz"), {
+    documento,
+    rutaCss: "dist/render.css",
+    alGuardar: (doc) => console.log("guardar", doc),
+    alPublicar: (doc) => console.log("publicar", doc)
+  });
+</script>
+</body>
+</html>
