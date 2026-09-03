@@ -169,7 +169,10 @@
 .tiq-garantia { border: 1px solid var(--tiq-secundario); border-radius: var(--tiq-radio); background: var(--tiq-secundario_suave); }
 
 @media (max-width: 749px) {
-  .tiq-seccion--horizontal { flex-direction: column; }
+  /* Las composiciones guardan su dirección de escritorio como estilo inline.
+     El breakpoint móvil debe ganar para que la galería y la información no
+     conserven dos columnas estrechas ni creen scroll horizontal. */
+  .tiq-seccion--horizontal { flex-direction: column !important; }
   .tiq-grupo[style*="flex-direction:row"] { flex-direction: column !important; }
   .tiq-imagen-texto { flex-direction: column !important; align-items: stretch; gap: 20px; }
   .tiq-carrusel-resenas__pista { grid-template-columns: 1fr; }

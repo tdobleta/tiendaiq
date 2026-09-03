@@ -154,6 +154,15 @@ describe("estructura de la salida", () => {
 });
 
 describe("responsive: los valores de móvil viajan como CSS, no como otro HTML", () => {
+  test("el breakpoint móvil gana a la dirección inline de una sección horizontal", () => {
+    const css = fs.readFileSync(path.join(__dirname, "..", "nucleo", "render.css"), "utf8")
+      .replace(/\/\*[^]*?\*\//g, "");
+    assert.match(
+      css,
+      /@media\s*\(max-width:\s*749px\)[^]*\.tiq-seccion--horizontal\s*\{\s*flex-direction:\s*column\s*!important/
+    );
+  });
+
   test("solo se emiten las propiedades que de verdad cambian en móvil", () => {
     const { css } = render(REFERENCIA);
     assert.match(css, /@media \(max-width:749px\)/);
