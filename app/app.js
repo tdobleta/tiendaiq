@@ -94,8 +94,13 @@
           const e = new Error(cuerpo.error || `Error ${r.status}`);
           e.status = r.status;
           e.reinstalar = cuerpo.reinstalar;
+          // El backend distingue una autorización que sólo necesita un pase
+          // fresco de una instalación que realmente desapareció. El header es
+          // la señal canónica de App Bridge; conservarla evita que el mensaje
+          // genérico de reinstalación tape el reintento seguro.
+          e.renovarPase = r.headers.get("X-Shopify-Retry-Invalid-Session-Request") === "1";
           e.actualizar = cuerpo.actualizar || r.status === 402;
-          if (e.reinstalar) {
+          if (e.reinstalar && !e.renovarPase) {
             e.message = "Volvé a abrir TiendaIQ desde Apps en Shopify Admin para autorizarla.";
           }
           throw e;
@@ -105,7 +110,7 @@
         // Shopify rota el pase cada pocos minutos. Si la primera lectura llega
         // justo al vencimiento, pedir uno nuevo una sola vez evita bloquear
         // creación/guardado por una expiración transitoria.
-        if (reintentosPase === 0 && esPaseVencido(error)) {
+        if (reintentosPase === 0 && (esPaseVencido(error) || error.renovarPase)) {
           reintentosPase++;
           await new Promise((resolve) => setTimeout(resolve, 120));
           continue;

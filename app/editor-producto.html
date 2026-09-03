@@ -57,10 +57,19 @@
               body: opciones && opciones.body ? JSON.stringify(opciones.body) : undefined
             }));
             const cuerpo = await respuesta.json().catch(() => ({}));
-            if (!respuesta.ok) throw new Error(cuerpo.error || ("Error " + respuesta.status));
+            if (!respuesta.ok) {
+              const e = new Error(cuerpo.error || ("Error " + respuesta.status));
+              e.status = respuesta.status;
+              e.reinstalar = cuerpo.reinstalar;
+              e.renovarPase = respuesta.headers.get("X-Shopify-Retry-Invalid-Session-Request") === "1";
+              if (e.reinstalar && !e.renovarPase) {
+                e.message = "Volvé a abrir TiendaIQ desde Apps en Shopify Admin para autorizarla.";
+              }
+              throw e;
+            }
             return cuerpo;
           } catch (error) {
-            if (reintentosPase === 0 && esPaseVencido(error)) {
+            if (reintentosPase === 0 && (esPaseVencido(error) || error.renovarPase)) {
               reintentosPase++;
               await new Promise((resolver) => setTimeout(resolver, 120));
               continue;

@@ -114,11 +114,21 @@ test("el frontend renueva un pase vencido y conserva el contexto embebido", () =
   const editor = fs.readFileSync(path.join(__dirname, "..", "app", "editor-producto.html"), "utf8");
 
   assert.match(frontend, /function esPaseVencido/);
-  assert.match(frontend, /reintentosPase === 0 && esPaseVencido\(error\)/);
+  assert.match(frontend, /reintentosPase === 0 && \(esPaseVencido\(error\) \|\| error\.renovarPase\)/);
   assert.match(frontend, /conservarContextoShopify/);
   assert.match(frontend, /\["shop", "host", "embedded"\]/);
   assert.match(editor, /function esPaseVencido/);
-  assert.match(editor, /reintentosPase === 0 && esPaseVencido\(error\)/);
+  assert.match(editor, /reintentosPase === 0 && \(esPaseVencido\(error\) \|\| error\.renovarPase\)/);
+});
+
+test("el frontend reintenta la señal canónica de sesión inválida sin pedir reinstalación", () => {
+  const frontend = fs.readFileSync(path.join(__dirname, "..", "app", "app.js"), "utf8");
+  const editor = fs.readFileSync(path.join(__dirname, "..", "app", "editor-producto.html"), "utf8");
+  for (const source of [frontend, editor]) {
+    assert.match(source, /X-Shopify-Retry-Invalid-Session-Request/);
+    assert.match(source, /renovarPase/);
+    assert.match(source, /!e\.renovarPase/);
+  }
 });
 
 test("la cookie OAuth liga el state, usa atributos seguros y detecta alteraciones", () => {
