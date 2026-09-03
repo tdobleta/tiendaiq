@@ -3412,7 +3412,13 @@ var TiqEditor = (() => {
           }
           const panel = evento.target.closest("[data-panel-toggle]");
           if (panel) {
-            superficie.classList.toggle(`ed--${panel.dataset.panelToggle}-abierto`);
+            const nombre = panel.dataset.panelToggle;
+            const clase = `ed--${nombre}-abierto`;
+            const abrir = !superficie.classList.contains(clase);
+            superficie.classList.toggle(clase, abrir);
+            if (abrir) {
+              superficie.classList.remove(`ed--${nombre === "arbol" ? "panel" : "arbol"}-abierto`);
+            }
             return;
           }
         });

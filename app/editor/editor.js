@@ -656,7 +656,16 @@ function montarEditor(raiz, { documento: docInicial, producto = null, alGuardar 
     }
     const panel = evento.target.closest("[data-panel-toggle]");
     if (panel) {
-      superficie.classList.toggle(`ed--${panel.dataset.panelToggle}-abierto`);
+      const nombre = panel.dataset.panelToggle;
+      const clase = `ed--${nombre}-abierto`;
+      const abrir = !superficie.classList.contains(clase);
+      superficie.classList.toggle(clase, abrir);
+      // En teléfono los drawers salen de lados opuestos. Nunca deben quedar
+      // abiertos juntos: además de taparse, dejan el preview sin una acción
+      // inequívoca y se apartan del patrón de navegación de PagePilot.
+      if (abrir) {
+        superficie.classList.remove(`ed--${nombre === "arbol" ? "panel" : "arbol"}-abierto`);
+      }
       return;
     }
   });

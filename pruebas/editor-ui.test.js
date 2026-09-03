@@ -312,6 +312,20 @@ describe("árbol", () => {
     assert.match(editor, /raf\(\(\) => lienzo\.verNodo\(id\)\)/);
   });
 
+  test("el corte móvil compacta la barra y evita scroll horizontal global", () => {
+    const css = fs.readFileSync(path.join(__dirname, "..", "app", "editor", "editor.css"), "utf8");
+    assert.match(css, /overflow:\s*hidden/);
+    assert.match(css, /@media \(max-width: 520px\)/);
+    assert.match(css, /@media \(max-width: 390px\)/);
+    assert.match(css, /\[data-publicar\]\:\:before/);
+  });
+
+  test("los drawers móviles son mutuamente excluyentes", () => {
+    const editor = fs.readFileSync(path.join(__dirname, "..", "app", "editor", "editor.js"), "utf8");
+    assert.match(editor, /const abrir = !superficie\.classList\.contains\(clase\)/);
+    assert.match(editor, /superficie\.classList\.remove\(`ed--\$\{nombre === "arbol" \? "panel" : "arbol"\}-abierto`\)/);
+  });
+
   test("el modo simple oculta solo el grupo avanzado y la IA no se ofrece sin proveedor", () => {
     const css = fs.readFileSync(path.join(__dirname, "..", "app", "editor", "editor.css"), "utf8");
     const editor = fs.readFileSync(path.join(__dirname, "..", "app", "editor", "editor.js"), "utf8");
