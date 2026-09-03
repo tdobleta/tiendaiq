@@ -271,6 +271,15 @@ describe("límites por sección", () => {
     assert.equal(ed.insertarComposicion("no-existe"), false);
     assert.equal(ed.documento().arbol.length, 0);
   });
+
+  test("una composición completa solo se puede insertar en la raíz", () => {
+    const ed = crearEstado(documento.crear());
+    const seccion = ed.insertar("seccion");
+    assert.ok(seccion);
+    assert.equal(ed.insertarComposicion("hero_producto", { padreId: seccion }), false);
+    assert.equal(ed.documento().arbol.length, 1);
+    assert.equal(ed.nodo(seccion).hijos.length, 0);
+  });
 });
 
 describe("branding y seo", () => {

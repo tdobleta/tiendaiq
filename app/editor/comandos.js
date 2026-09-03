@@ -205,10 +205,11 @@ function crearEstado(documentoInicial, { alCambiar = null } = {}) {
   function insertarComposicion(composicionId, { padreId = null, indice = null } = {}) {
     const specs = catalogoComposiciones.arbolDe(composicionId);
     if (!specs || !specs.length) return false;
-    if (padreId) {
-      const padre = localizar(doc, padreId);
-      if (!padre || !registro.definicion(padre.nodo.tipo).admite_hijos) return false;
-    }
+    // Una composición es una sección completa, no un bloque anidable. Los
+    // grupos internos se editan después de insertarla; permitirla dentro de
+    // otra sección produciría árboles que el merchant no puede interpretar y
+    // rompe la separación PagePilot sección → grupo → bloque.
+    if (padreId) return false;
     const nuevos = specs.map(materializar);
     const hecho = aplicar((borrador) => {
       const lista = padreId ? localizar(borrador, padreId).nodo.hijos : borrador.arbol;

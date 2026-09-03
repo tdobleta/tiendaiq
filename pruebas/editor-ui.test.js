@@ -305,10 +305,31 @@ describe("librería", () => {
     assert.match(miniaturaDe({ icono: "garantia" }), /<svg/);
   });
 
+  test("las composiciones se previsualizan con el renderer único", () => {
+    const tarjeta = htmlTarjeta({ composicion_id: "hero_producto", tipo: "composicion:hero_producto", nombre: "Héroe", icono: "galeria", limite_por_pagina: null });
+    assert.match(tarjeta, /data-mini-render="true"/);
+    assert.match(tarjeta, /tiq-titulo-producto/);
+    assert.match(tarjeta, /Producto de ejemplo/);
+  });
+
   test("una tarjeta de composición identifica el árbol que va a insertar", () => {
     const tarjeta = htmlTarjeta({ composicion_id: "hero_producto", tipo: "composicion:hero_producto", nombre: "Héroe", icono: "galeria", limite_por_pagina: null });
     assert.match(tarjeta, /data-composicion="hero_producto"/);
     assert.equal(tarjeta.includes('data-tipo="composicion:hero_producto"'), false);
+  });
+
+  test("en modo secciones solo aparecen composiciones completas", () => {
+    const html = htmlLibreria(catalogo, { modo: "secciones" });
+    assert.match(html, /Añadir sección/);
+    assert.match(html, /data-composicion="hero_producto"/);
+    assert.equal(html.includes('data-tipo="titulo_producto"'), false);
+  });
+
+  test("en modo bloques no aparecen composiciones anidadas", () => {
+    const html = htmlLibreria(catalogo, { modo: "bloques" });
+    assert.match(html, /Añadir bloque/);
+    assert.match(html, /data-tipo="titulo_producto"/);
+    assert.equal(html.includes('data-composicion="hero_producto"'), false);
   });
 
   const catalogo = registro.catalogo();
@@ -333,13 +354,15 @@ describe("librería", () => {
   });
 
   // Esconder una sección agotada hace que el merchant crea que no existe.
-  test("una sección en su tope se muestra deshabilitada y con el cupo a la vista", (t) => {
+  test("un bloque en su tope se muestra no interactivo y con el cupo a la vista", (t) => {
     const definicion = registro.definicion("imagen");
     definicion.limite_por_pagina = 1;
     t.after(() => { definicion.limite_por_pagina = null; });
 
     const html = htmlLibreria(registro.catalogo(), { contarUsados: (tipo) => (tipo === "imagen" ? 1 : 0) });
-    assert.match(html, /data-tipo="imagen" disabled/);
+    assert.match(html, /data-tipo="imagen"/);
+    assert.match(html, /aria-disabled="true"/);
+    assert.match(html, /tabindex="-1"/);
     assert.match(html, /class="ed-lib__cupo">1\/1</);
   });
 });

@@ -9,7 +9,7 @@ Nuestro: `app/dist/editor.js` con un documento de 9 secciones armado con los 18 
 Este documento es la lista de trabajo previa a retirar el editor histórico. No propone arquitectura
 nueva: todo lo de acá entra dentro del contrato de `docs/arquitectura-editor-v3.md`.
 
-**Corte 2026-09-03:** los puntos **2.1 a 2.4** quedaron implementados en el editor v3: etiquetas
+**Corte 2026-09-03:** los puntos **2.1 a 2.5** quedaron implementados en el editor v3: etiquetas
 semánticas para contenedores, iconos SVG por tipo, selección sincronizada en ambas direcciones y
 posicionamiento de la barra flotante dentro del lienzo. También se cerró el foco visual del cromo:
 el teclado usa un anillo azul consistente y no el `outline: auto` naranja del navegador. Los puntos
@@ -84,15 +84,22 @@ Con el bloque más alto seleccionado, la barra flotante se dibuja encima de los 
 viewport. `colocarFlota()` hace `Math.max(8, arriba - 42)`: el tope es el viewport, cuando debería
 ser el borde superior del lienzo. Cuando no entra arriba, PagePilot la pone **debajo** del bloque.
 
-### 2.5 Miniaturas de la librería genéricas — **medio**
+### 2.5 Miniaturas de la librería genéricas — **cerrado en este corte**
 
 Son wireframes esquemáticos, y varias son indistinguibles entre sí (Texto vs Imagen con texto).
 PagePilot muestra **la sección renderizada con contenido real**, que es lo que hace que el merchant
 elija bien a la primera.
 
-Camino natural, y barato dado el invariante I2: renderizar cada tipo con su semilla usando el mismo
-`render()`, capturar una vez y guardar el resultado como miniatura. La miniatura nunca puede
-desincronizarse del bloque porque sale del mismo código.
+La librería ahora construye un documento mínimo con la semilla del tipo o la composición guardada
+y llama al mismo `render()` que usa el lienzo (`app/editor/libreria.js`). El HTML resultante se
+escala dentro de la tarjeta; los formularios se vuelven contenido no interactivo para no anidar
+controles dentro de la tarjeta. Si un tipo necesita un archivo externo y no produce HTML con su
+semilla, mantiene un wireframe vectorial explícito como fallback.
+
+Además, la librería dejó de mezclar niveles: en la raíz muestra composiciones profesionales
+(`Añadir sección`) y dentro de una sección muestra bloques atómicos (`Añadir bloque`). Esto evita
+que el merchant anide una página completa accidentalmente y refleja el flujo sección → grupo →
+bloques de PagePilot.
 
 ### 2.6 Casi no hay texto de ayuda — **medio**
 

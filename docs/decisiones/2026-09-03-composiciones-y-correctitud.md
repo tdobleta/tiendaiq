@@ -41,6 +41,10 @@ La experiencia se construye en este orden:
   `nucleo/catalogo/secciones.js`. Insertarlas materializa el árbol completo con
   ids nuevos y aplica las semillas de cada bloque; no se crea un tipo falso en
   el registro ni una segunda función de render.
+- La librería distingue el nivel de inserción: la raíz ofrece composiciones
+  completas y un contenedor ofrece bloques atómicos. Las tarjetas usan un
+  snapshot del `render()` único, con un wireframe explícito solo cuando la
+  semilla no puede producir HTML sin un archivo externo.
 
 ## Criterios de aceptación
 

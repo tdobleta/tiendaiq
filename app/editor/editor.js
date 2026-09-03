@@ -422,6 +422,10 @@ function montarEditor(raiz, { documento: docInicial, producto = null, alGuardar 
     zonaModal.innerHTML = htmlLibreria(registro.catalogo(), {
       categoria: libreriaAbierta.categoria,
       busqueda: libreriaAbierta.busqueda,
+      // En la raíz se agregan composiciones profesionales; dentro de una
+      // sección/grupo se agregan bloques atómicos. Mostrar ambos niveles a la
+      // vez es el patrón de "hoja en blanco" que PagePilot evita.
+      modo: libreriaAbierta.padreId ? "bloques" : "secciones",
       // El cupo se calcula en el ámbito donde se abrirá la librería: una
       // misma sección puede tener un bloque limitado aunque otra ya lo use.
       contarUsados: (tipo, item) => item?.composicion_id
@@ -469,7 +473,7 @@ function montarEditor(raiz, { documento: docInicial, producto = null, alGuardar 
     const cat = evento.target.closest("[data-categoria]");
     if (cat) { libreriaAbierta.categoria = cat.dataset.categoria || null; return void pintarLibreria(); }
     const tarjeta = evento.target.closest("[data-tipo], [data-composicion]");
-    if (tarjeta && !tarjeta.disabled) {
+    if (tarjeta && tarjeta.getAttribute("aria-disabled") !== "true") {
       if (tarjeta.dataset.composicion) {
         estado.insertarComposicion(tarjeta.dataset.composicion, { padreId: libreriaAbierta.padreId });
       } else {
@@ -478,6 +482,17 @@ function montarEditor(raiz, { documento: docInicial, producto = null, alGuardar 
       libreriaAbierta = null;
       pintarLibreria();
     }
+  });
+
+  // Las tarjetas son `article[role=button]` porque algunas miniaturas llevan
+  // markup de formulario generado por el renderer; así no anidamos botones
+  // interactivos inválidos. Enter y espacio conservan la misma UX de teclado.
+  zonaModal.addEventListener("keydown", (evento) => {
+    if (evento.key !== "Enter" && evento.key !== " ") return;
+    const tarjeta = evento.target.closest("[data-tipo], [data-composicion]");
+    if (!tarjeta || tarjeta.getAttribute("aria-disabled") === "true") return;
+    evento.preventDefault();
+    tarjeta.click();
   });
 
   zonaModal.addEventListener("input", (evento) => {

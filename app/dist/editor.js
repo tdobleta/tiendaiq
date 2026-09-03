@@ -1499,10 +1499,7 @@ var TiqEditor = (() => {
         function insertarComposicion(composicionId, { padreId = null, indice = null } = {}) {
           const specs = catalogoComposiciones.arbolDe(composicionId);
           if (!specs || !specs.length) return false;
-          if (padreId) {
-            const padre = localizar(doc, padreId);
-            if (!padre || !registro.definicion(padre.nodo.tipo).admite_hijos) return false;
-          }
+          if (padreId) return false;
           const nuevos = specs.map(materializar);
           const hecho = aplicar((borrador) => {
             const lista = padreId ? localizar(borrador, padreId).nodo.hijos : borrador.arbol;
@@ -2461,104 +2458,6 @@ var TiqEditor = (() => {
     }
   });
 
-  // app/editor/libreria.js
-  var require_libreria = __commonJS({
-    "app/editor/libreria.js"(exports, module) {
-      "use strict";
-      var { esc } = require_controles();
-      function normalizar(texto) {
-        return String(texto || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
-      }
-      function filtrar(catalogo, { categoria = null, busqueda = "" } = {}) {
-        const aguja = normalizar(busqueda);
-        return catalogo.filter((grupo) => !categoria || grupo.id === categoria).map((grupo) => ({
-          ...grupo,
-          items: grupo.items.filter((item) => !aguja || normalizar(item.nombre).includes(aguja))
-        })).filter((grupo) => grupo.items.length > 0);
-      }
-      function miniaturaDe(item) {
-        const icono = String(item.icono || "bloque");
-        const trazos = {
-          galeria: '<rect x="8" y="8" width="84" height="48" rx="4"/><circle cx="28" cy="24" r="5"/><path d="M12 50l18-16 12 9 12-12 34 19"/>',
-          titulo: '<path d="M12 22h64M12 32h48M12 42h30"/>',
-          precio: '<path d="M12 24h50M12 36h35"/><rect x="58" y="40" width="27" height="10" rx="5"/>',
-          beneficios: '<circle cx="18" cy="18" r="5"/><path d="M30 18h52M12 34h12M30 34h52M18 50h6M30 50h40"/>',
-          packs: '<rect x="10" y="13" width="80" height="12" rx="3"/><rect x="10" y="31" width="80" height="12" rx="3"/><rect x="10" y="49" width="80" height="8" rx="3"/>',
-          carrito: '<rect x="12" y="16" width="76" height="26" rx="5"/><path d="M28 51h44"/>',
-          resena: '<circle cx="22" cy="26" r="9"/><path d="M38 19h45M38 28h35M38 37h27"/>',
-          carrusel: '<rect x="8" y="14" width="25" height="38" rx="4"/><rect x="38" y="14" width="25" height="38" rx="4"/><rect x="68" y="14" width="25" height="38" rx="4"/>',
-          faq: '<path d="M12 18h76M12 34h76M12 50h76"/><path d="M78 14l5 4-5 4M78 30l5 4-5 4M78 46l5 4-5 4"/>',
-          tiempo: '<path d="M18 18v36M18 23h68M18 38h55M18 53h42"/><circle cx="18" cy="18" r="4"/><circle cx="18" cy="38" r="4"/><circle cx="18" cy="53" r="4"/>',
-          contador: '<rect x="14" y="22" width="72" height="24" rx="12"/><path d="M31 34h8M48 34h8M65 34h8"/>',
-          imagen: '<rect x="10" y="10" width="38" height="48" rx="4"/><path d="M54 20h32M54 31h27M54 42h32M54 53h20"/>',
-          tabla: '<path d="M10 16h80M10 30h80M10 44h80M10 58h80M10 16v42M38 16v42M64 16v42M90 16v42"/>',
-          estadisticas: '<path d="M14 55V35M34 55V22M54 55V30M74 55V14M94 55V40"/>',
-          garantia: '<path d="M50 10l30 10v18c0 14-12 22-30 29-18-7-30-15-30-29V20z"/><path d="M35 38l10 9 20-21"/>'
-        };
-        const cuerpo = trazos[icono] || '<rect x="12" y="14" width="76" height="40" rx="5"/><path d="M23 28h54M23 39h38"/>';
-        return `<svg class="ed-lib__miniatura" viewBox="0 0 100 66" aria-hidden="true" focusable="false"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${cuerpo}</g></svg>`;
-      }
-      function htmlTarjeta(item, { usados = 0 } = {}) {
-        const limite = item.limite_por_pagina;
-        const agotado = limite ? usados >= limite : false;
-        const identificador = item.composicion_id ? `data-composicion="${esc(item.composicion_id)}"` : `data-tipo="${esc(item.tipo)}"`;
-        return `<button type="button" class="ed-lib__tarjeta${agotado ? " es-agotada" : ""}" ${identificador}${agotado ? " disabled" : ""}><span class="ed-lib__nombre">${esc(item.nombre)}</span>` + (limite ? `<span class="ed-lib__cupo">${usados}/${limite}</span>` : "") + `<span class="ed-lib__vista" data-vista="${esc(item.tipo)}">${miniaturaDe(item)}</span></button>`;
-      }
-      function htmlLibreria(catalogo, { categoria = null, busqueda = "", contarUsados = () => 0 } = {}) {
-        const visibles = filtrar(catalogo, { categoria, busqueda });
-        const total = catalogo.reduce((suma, grupo) => suma + grupo.items.length, 0);
-        const lateral = `<aside class="ed-lib__lateral"><button type="button" class="ed-lib__cat${!categoria ? " es-activa" : ""}" data-categoria=""><span>Todas</span><span class="ed-lib__cuenta">${total}</span></button>` + catalogo.map(
-          (grupo) => `<button type="button" class="ed-lib__cat${categoria === grupo.id ? " es-activa" : ""}" data-categoria="${esc(grupo.id)}"><span>${esc(grupo.nombre)}</span><span class="ed-lib__cuenta">${grupo.items.length}</span></button>`
-        ).join("") + `</aside>`;
-        const cuerpo = visibles.length ? visibles.map(
-          (grupo) => `<section class="ed-lib__grupo"><h3 class="ed-lib__titulo">${esc(grupo.nombre)}</h3><div class="ed-lib__grilla">${grupo.items.map((item) => htmlTarjeta(item, { usados: contarUsados(item.tipo, item) })).join("")}</div></section>`
-        ).join("") : `<p class="ed-lib__vacio">No hay secciones que coincidan con \u201C${esc(busqueda)}\u201D.</p>`;
-        return `<div class="ed-lib" role="dialog" aria-label="A\xF1adir secci\xF3n"><header class="ed-lib__cabecera"><h2>A\xF1adir secci\xF3n</h2><button type="button" class="ed-lib__cerrar" data-cerrar aria-label="Cerrar">\u2715</button></header><input type="search" class="ed-lib__buscar" data-buscar placeholder="Buscar\u2026" value="${esc(busqueda)}"><div class="ed-lib__cuerpo">${lateral}<div class="ed-lib__lista">${cuerpo}</div></div></div>`;
-      }
-      module.exports = { htmlLibreria, htmlTarjeta, filtrar, normalizar, miniaturaDe };
-    }
-  });
-
-  // app/editor/marca.js
-  var require_marca = __commonJS({
-    "app/editor/marca.js"(exports, module) {
-      "use strict";
-      var {
-        CLAVES_TOKEN,
-        NOMBRES_TOKEN,
-        PRESETS,
-        RADIOS,
-        TIPOGRAFIAS,
-        tokensDe,
-        listaPresets
-      } = require_tokens();
-      var esc = (valor) => String(valor === null || valor === void 0 ? "" : valor).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
-      var HEX = /^#[0-9a-f]{6}$/i;
-      function color(valor, alternativo = "#ffffff") {
-        return HEX.test(valor || "") ? valor : alternativo;
-      }
-      function htmlMarca(branding = {}) {
-        const resueltos = tokensDe(branding);
-        const propios = branding.tokens || {};
-        const presets = listaPresets();
-        const presetActual = PRESETS[branding.preset] ? branding.preset : "verde";
-        const radioActual = RADIOS[branding.radio] ? branding.radio : "pequeno";
-        const tipografias = branding.tipografia || {};
-        const tarjetas = presets.map(
-          (preset) => `<button type="button" class="ed-marca__preset${preset.id === presetActual ? " es-activo" : ""}" data-branding-preset="${esc(preset.id)}" aria-pressed="${preset.id === presetActual}"><span class="ed-marca__muestras">${preset.muestra.map((muestra) => `<i style="background:${esc(muestra)}"></i>`).join("")}</span><span>${esc(preset.nombre)}</span></button>`
-        ).join("");
-        const tokens = CLAVES_TOKEN.map((clave) => {
-          const propio = HEX.test(propios[clave] || "");
-          const valor = propio ? propios[clave] : resueltos[clave];
-          return `<label class="ed-marca__token"><span class="ed-marca__token-cabecera"><button type="button" class="ed-marca__heredar${propio ? " es-propio" : ""}" data-branding-heredar="${esc(clave)}" aria-pressed="${propio}" title="${propio ? "Volver al color del preset" : "Color heredado del preset"}"></button><span>${esc(NOMBRES_TOKEN[clave] || clave)}</span></span><span class="ed-marca__color"><i style="background:${esc(valor)}"></i><input type="color" value="${esc(color(valor))}" data-branding-token="${esc(clave)}" aria-label="${esc(NOMBRES_TOKEN[clave] || clave)}"></span></label>`;
-        }).join("");
-        const opcionesFuente = (clave, seleccionada, titulo) => `<label class="ed-marca__select"><span>${titulo}</span><select data-branding-fuente="${esc(clave)}">` + Object.keys(TIPOGRAFIAS).map((id) => `<option value="${esc(id)}"${id === seleccionada ? " selected" : ""}>${esc(id[0].toUpperCase() + id.slice(1))}</option>`).join("") + `</select></label>`;
-        return `<div class="ed-marca" role="dialog" aria-modal="true" aria-label="Marca"><header class="ed-marca__cabecera"><div><h2>Marca</h2><p>La plantilla usa estos tokens en toda la p\xE1gina.</p></div><button type="button" class="ed-lib__cerrar" data-cerrar aria-label="Cerrar">\xD7</button></header><section class="ed-marca__seccion"><h3>Preset</h3><div class="ed-marca__presets">${tarjetas}</div></section><section class="ed-marca__seccion"><h3>Colores</h3><div class="ed-marca__tokens">${tokens}</div></section><section class="ed-marca__seccion ed-marca__fila"><label class="ed-marca__select"><span>Esquinas</span><select data-branding-radio>` + Object.keys(RADIOS).map((id) => `<option value="${esc(id)}"${id === radioActual ? " selected" : ""}>${esc(id === "ninguno" ? "Rectas" : id === "pequeno" ? "Chicas" : "Grandes")}</option>`).join("") + `</select></label>${opcionesFuente("titulos", tipografias.titulos || "grotesca", "Fuente de t\xEDtulos")}${opcionesFuente("cuerpo", tipografias.cuerpo || "sistema", "Fuente de cuerpo")}</section></div>`;
-      }
-      module.exports = { htmlMarca };
-    }
-  });
-
   // nucleo/render.js
   var require_render = __commonJS({
     "nucleo/render.js"(exports, module) {
@@ -2639,6 +2538,179 @@ var TiqEditor = (() => {
         return { html: completo.html.slice(desde, completo.html.lastIndexOf("</div>")), css: completo.css };
       }
       module.exports = { render, renderNodo, PUNTO_QUIEBRE, MEDIA_MOVIL, MEDIA_ESCRITORIO };
+    }
+  });
+
+  // app/editor/libreria.js
+  var require_libreria = __commonJS({
+    "app/editor/libreria.js"(exports, module) {
+      "use strict";
+      var { esc } = require_controles();
+      var registro = require_registro();
+      var { render } = require_render();
+      var catalogoComposiciones = require_secciones();
+      function normalizar(texto) {
+        return String(texto || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+      }
+      function esComposicion(item) {
+        return !!(item == null ? void 0 : item.composicion_id);
+      }
+      function coincideModo(item, modo) {
+        if (modo === "secciones") return esComposicion(item);
+        if (modo === "bloques") return !esComposicion(item);
+        return true;
+      }
+      function filtrar(catalogo, { categoria = null, busqueda = "", modo = "todos" } = {}) {
+        const aguja = normalizar(busqueda);
+        return catalogo.filter((grupo) => !categoria || grupo.id === categoria).map((grupo) => ({
+          ...grupo,
+          items: grupo.items.filter((item) => coincideModo(item, modo) && (!aguja || normalizar(item.nombre).includes(aguja)))
+        })).filter((grupo) => grupo.items.length > 0);
+      }
+      var PRODUCTO_MINI = {
+        titulo: "Producto de ejemplo",
+        title: "Producto de ejemplo",
+        precio_formateado: "$49,90",
+        precio_anterior_formateado: "$69,90",
+        imagenes: [],
+        images: [],
+        variantes: [
+          { id: "mini-variante-1", titulo: "Opci\xF3n est\xE1ndar", disponible: true },
+          { id: "mini-variante-2", titulo: "Opci\xF3n premium", disponible: true }
+        ],
+        variants: [
+          { id: "mini-variante-1", title: "Opci\xF3n est\xE1ndar", available: true },
+          { id: "mini-variante-2", title: "Opci\xF3n premium", available: true }
+        ],
+        variante_id: "mini-variante",
+        variant_id: "mini-variante",
+        resenas: []
+      };
+      var miniaturasCache = /* @__PURE__ */ new Map();
+      function nodoMini(spec, ruta = "0") {
+        const def = registro.definicion(spec.tipo);
+        const nodo = {
+          id: `mini_${ruta.replace(/[^a-z0-9]+/gi, "_")}`,
+          tipo: spec.tipo,
+          props: { ...def.semilla || {}, ...spec.props || {} }
+        };
+        if (Array.isArray(spec.hijos)) nodo.hijos = spec.hijos.map((hijo, indice) => nodoMini(hijo, `${ruta}_${indice}`));
+        return nodo;
+      }
+      function documentoMini(item) {
+        const arbol = item.composicion_id ? catalogoComposiciones.arbolDe(item.composicion_id) : [{ tipo: item.tipo, props: {} }];
+        if (!arbol || !arbol.length) return null;
+        return {
+          version: 1,
+          branding: { preset: "verde", tokens: {}, radio: "pequeno", tipografia: { titulos: "grotesca", cuerpo: "sistema" } },
+          arbol: arbol.map((spec, indice) => nodoMini(spec, String(indice)))
+        };
+      }
+      function snapshotSinInteraccion(html) {
+        return String(html || "").replace(/<button\b/gi, "<span").replace(/<\/button>/gi, "</span>").replace(/<form\b/gi, "<div").replace(/<\/form>/gi, "</div>").replace(/<input\b[^>]*>/gi, "<span></span>").replace(/<select\b[^>]*>/gi, "<span>").replace(/<\/select>/gi, "</span>").replace(/<option\b[^>]*>/gi, "<span>").replace(/<\/option>/gi, "</span>");
+      }
+      function miniaturaRenderizada(item) {
+        const clave = item.composicion_id || item.tipo;
+        if (clave && miniaturasCache.has(clave)) return miniaturasCache.get(clave);
+        let salida = null;
+        try {
+          const documento = documentoMini(item);
+          if (documento) {
+            const renderizado = render(documento, { modo: "editor", producto: PRODUCTO_MINI });
+            if (renderizado.html) salida = `<div class="ed-lib__vista ed-lib__vista--rendered" data-mini-render="true" aria-hidden="true">${snapshotSinInteraccion(renderizado.html)}</div>`;
+          }
+        } catch {
+        }
+        if (clave) miniaturasCache.set(clave, salida);
+        return salida;
+      }
+      function miniaturaWireframe(item) {
+        const icono = String(item.icono || "bloque");
+        const trazos = {
+          galeria: '<rect x="8" y="8" width="84" height="48" rx="4"/><circle cx="28" cy="24" r="5"/><path d="M12 50l18-16 12 9 12-12 34 19"/>',
+          titulo: '<path d="M12 22h64M12 32h48M12 42h30"/>',
+          precio: '<path d="M12 24h50M12 36h35"/><rect x="58" y="40" width="27" height="10" rx="5"/>',
+          beneficios: '<circle cx="18" cy="18" r="5"/><path d="M30 18h52M12 34h12M30 34h52M18 50h6M30 50h40"/>',
+          packs: '<rect x="10" y="13" width="80" height="12" rx="3"/><rect x="10" y="31" width="80" height="12" rx="3"/><rect x="10" y="49" width="80" height="8" rx="3"/>',
+          carrito: '<rect x="12" y="16" width="76" height="26" rx="5"/><path d="M28 51h44"/>',
+          resena: '<circle cx="22" cy="26" r="9"/><path d="M38 19h45M38 28h35M38 37h27"/>',
+          carrusel: '<rect x="8" y="14" width="25" height="38" rx="4"/><rect x="38" y="14" width="25" height="38" rx="4"/><rect x="68" y="14" width="25" height="38" rx="4"/>',
+          faq: '<path d="M12 18h76M12 34h76M12 50h76"/><path d="M78 14l5 4-5 4M78 30l5 4-5 4M78 46l5 4-5 4"/>',
+          tiempo: '<path d="M18 18v36M18 23h68M18 38h55M18 53h42"/><circle cx="18" cy="18" r="4"/><circle cx="18" cy="38" r="4"/><circle cx="18" cy="53" r="4"/>',
+          contador: '<rect x="14" y="22" width="72" height="24" rx="12"/><path d="M31 34h8M48 34h8M65 34h8"/>',
+          imagen: '<rect x="10" y="10" width="38" height="48" rx="4"/><path d="M54 20h32M54 31h27M54 42h32M54 53h20"/>',
+          tabla: '<path d="M10 16h80M10 30h80M10 44h80M10 58h80M10 16v42M38 16v42M64 16v42M90 16v42"/>',
+          estadisticas: '<path d="M14 55V35M34 55V22M54 55V30M74 55V14M94 55V40"/>',
+          garantia: '<path d="M50 10l30 10v18c0 14-12 22-30 29-18-7-30-15-30-29V20z"/><path d="M35 38l10 9 20-21"/>'
+        };
+        const cuerpo = trazos[icono] || '<rect x="12" y="14" width="76" height="40" rx="5"/><path d="M23 28h54M23 39h38"/>';
+        return `<svg class="ed-lib__miniatura" viewBox="0 0 100 66" aria-hidden="true" focusable="false"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${cuerpo}</g></svg>`;
+      }
+      function miniaturaDe(item) {
+        return miniaturaRenderizada(item) || `<div class="ed-lib__vista" data-vista="${esc(item.tipo)}">${miniaturaWireframe(item)}</div>`;
+      }
+      function htmlTarjeta(item, { usados = 0 } = {}) {
+        const limite = item.limite_por_pagina;
+        const agotado = limite ? usados >= limite : false;
+        const identificador = item.composicion_id ? `data-composicion="${esc(item.composicion_id)}"` : `data-tipo="${esc(item.tipo)}"`;
+        return `<article class="ed-lib__tarjeta${agotado ? " es-agotada" : ""}" role="button" tabindex="${agotado ? "-1" : "0"}" aria-disabled="${String(agotado)}" ${identificador}><span class="ed-lib__nombre">${esc(item.nombre)}</span>` + (limite ? `<span class="ed-lib__cupo">${usados}/${limite}</span>` : "") + miniaturaDe(item) + `</article>`;
+      }
+      function htmlLibreria(catalogo, { categoria = null, busqueda = "", modo = "todos", contarUsados = () => 0 } = {}) {
+        const catalogoModo = filtrar(catalogo, { modo });
+        const visibles = filtrar(catalogoModo, { categoria, busqueda, modo: "todos" });
+        const total = catalogoModo.reduce((suma, grupo) => suma + grupo.items.length, 0);
+        const esSecciones = modo !== "bloques";
+        const titulo = esSecciones ? "A\xF1adir secci\xF3n" : "A\xF1adir bloque";
+        const vacio = esSecciones ? "No hay secciones que coincidan" : "No hay bloques que coincidan";
+        const lateral = `<aside class="ed-lib__lateral"><button type="button" class="ed-lib__cat${!categoria ? " es-activa" : ""}" data-categoria=""><span>Todas</span><span class="ed-lib__cuenta">${total}</span></button>` + catalogoModo.map(
+          (grupo) => `<button type="button" class="ed-lib__cat${categoria === grupo.id ? " es-activa" : ""}" data-categoria="${esc(grupo.id)}"><span>${esc(grupo.nombre)}</span><span class="ed-lib__cuenta">${grupo.items.length}</span></button>`
+        ).join("") + `</aside>`;
+        const cuerpo = visibles.length ? visibles.map(
+          (grupo) => `<section class="ed-lib__grupo"><h3 class="ed-lib__titulo">${esc(grupo.nombre)}</h3><div class="ed-lib__grilla">${grupo.items.map((item) => htmlTarjeta(item, { usados: contarUsados(item.tipo, item) })).join("")}</div></section>`
+        ).join("") : `<p class="ed-lib__vacio">${vacio} con \u201C${esc(busqueda)}\u201D.</p>`;
+        return `<div class="ed-lib" role="dialog" aria-label="${titulo}"><header class="ed-lib__cabecera"><h2>${titulo}</h2><button type="button" class="ed-lib__cerrar" data-cerrar aria-label="Cerrar">\u2715</button></header><input type="search" class="ed-lib__buscar" data-buscar placeholder="Buscar\u2026" value="${esc(busqueda)}"><div class="ed-lib__cuerpo">${lateral}<div class="ed-lib__lista">${cuerpo}</div></div></div>`;
+      }
+      module.exports = { htmlLibreria, htmlTarjeta, filtrar, normalizar, miniaturaDe };
+    }
+  });
+
+  // app/editor/marca.js
+  var require_marca = __commonJS({
+    "app/editor/marca.js"(exports, module) {
+      "use strict";
+      var {
+        CLAVES_TOKEN,
+        NOMBRES_TOKEN,
+        PRESETS,
+        RADIOS,
+        TIPOGRAFIAS,
+        tokensDe,
+        listaPresets
+      } = require_tokens();
+      var esc = (valor) => String(valor === null || valor === void 0 ? "" : valor).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+      var HEX = /^#[0-9a-f]{6}$/i;
+      function color(valor, alternativo = "#ffffff") {
+        return HEX.test(valor || "") ? valor : alternativo;
+      }
+      function htmlMarca(branding = {}) {
+        const resueltos = tokensDe(branding);
+        const propios = branding.tokens || {};
+        const presets = listaPresets();
+        const presetActual = PRESETS[branding.preset] ? branding.preset : "verde";
+        const radioActual = RADIOS[branding.radio] ? branding.radio : "pequeno";
+        const tipografias = branding.tipografia || {};
+        const tarjetas = presets.map(
+          (preset) => `<button type="button" class="ed-marca__preset${preset.id === presetActual ? " es-activo" : ""}" data-branding-preset="${esc(preset.id)}" aria-pressed="${preset.id === presetActual}"><span class="ed-marca__muestras">${preset.muestra.map((muestra) => `<i style="background:${esc(muestra)}"></i>`).join("")}</span><span>${esc(preset.nombre)}</span></button>`
+        ).join("");
+        const tokens = CLAVES_TOKEN.map((clave) => {
+          const propio = HEX.test(propios[clave] || "");
+          const valor = propio ? propios[clave] : resueltos[clave];
+          return `<label class="ed-marca__token"><span class="ed-marca__token-cabecera"><button type="button" class="ed-marca__heredar${propio ? " es-propio" : ""}" data-branding-heredar="${esc(clave)}" aria-pressed="${propio}" title="${propio ? "Volver al color del preset" : "Color heredado del preset"}"></button><span>${esc(NOMBRES_TOKEN[clave] || clave)}</span></span><span class="ed-marca__color"><i style="background:${esc(valor)}"></i><input type="color" value="${esc(color(valor))}" data-branding-token="${esc(clave)}" aria-label="${esc(NOMBRES_TOKEN[clave] || clave)}"></span></label>`;
+        }).join("");
+        const opcionesFuente = (clave, seleccionada, titulo) => `<label class="ed-marca__select"><span>${titulo}</span><select data-branding-fuente="${esc(clave)}">` + Object.keys(TIPOGRAFIAS).map((id) => `<option value="${esc(id)}"${id === seleccionada ? " selected" : ""}>${esc(id[0].toUpperCase() + id.slice(1))}</option>`).join("") + `</select></label>`;
+        return `<div class="ed-marca" role="dialog" aria-modal="true" aria-label="Marca"><header class="ed-marca__cabecera"><div><h2>Marca</h2><p>La plantilla usa estos tokens en toda la p\xE1gina.</p></div><button type="button" class="ed-lib__cerrar" data-cerrar aria-label="Cerrar">\xD7</button></header><section class="ed-marca__seccion"><h3>Preset</h3><div class="ed-marca__presets">${tarjetas}</div></section><section class="ed-marca__seccion"><h3>Colores</h3><div class="ed-marca__tokens">${tokens}</div></section><section class="ed-marca__seccion ed-marca__fila"><label class="ed-marca__select"><span>Esquinas</span><select data-branding-radio>` + Object.keys(RADIOS).map((id) => `<option value="${esc(id)}"${id === radioActual ? " selected" : ""}>${esc(id === "ninguno" ? "Rectas" : id === "pequeno" ? "Chicas" : "Grandes")}</option>`).join("") + `</select></label>${opcionesFuente("titulos", tipografias.titulos || "grotesca", "Fuente de t\xEDtulos")}${opcionesFuente("cuerpo", tipografias.cuerpo || "sistema", "Fuente de cuerpo")}</section></div>`;
+      }
+      module.exports = { htmlMarca };
     }
   });
 
@@ -3001,6 +3073,10 @@ var TiqEditor = (() => {
           zonaModal.innerHTML = htmlLibreria(registro.catalogo(), {
             categoria: libreriaAbierta.categoria,
             busqueda: libreriaAbierta.busqueda,
+            // En la raíz se agregan composiciones profesionales; dentro de una
+            // sección/grupo se agregan bloques atómicos. Mostrar ambos niveles a la
+            // vez es el patrón de "hoja en blanco" que PagePilot evita.
+            modo: libreriaAbierta.padreId ? "bloques" : "secciones",
             // El cupo se calcula en el ámbito donde se abrirá la librería: una
             // misma sección puede tener un bloque limitado aunque otra ya lo use.
             contarUsados: (tipo, item) => (item == null ? void 0 : item.composicion_id) ? 0 : estado.contarPorTipo(tipo, { padreId: libreriaAbierta.padreId })
@@ -3050,7 +3126,7 @@ var TiqEditor = (() => {
             return void pintarLibreria();
           }
           const tarjeta = evento.target.closest("[data-tipo], [data-composicion]");
-          if (tarjeta && !tarjeta.disabled) {
+          if (tarjeta && tarjeta.getAttribute("aria-disabled") !== "true") {
             if (tarjeta.dataset.composicion) {
               estado.insertarComposicion(tarjeta.dataset.composicion, { padreId: libreriaAbierta.padreId });
             } else {
@@ -3059,6 +3135,13 @@ var TiqEditor = (() => {
             libreriaAbierta = null;
             pintarLibreria();
           }
+        });
+        zonaModal.addEventListener("keydown", (evento) => {
+          if (evento.key !== "Enter" && evento.key !== " ") return;
+          const tarjeta = evento.target.closest("[data-tipo], [data-composicion]");
+          if (!tarjeta || tarjeta.getAttribute("aria-disabled") === "true") return;
+          evento.preventDefault();
+          tarjeta.click();
         });
         zonaModal.addEventListener("input", (evento) => {
           if (!evento.target.closest("[data-buscar]")) return;
