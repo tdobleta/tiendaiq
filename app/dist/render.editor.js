@@ -1146,11 +1146,97 @@ var TiqRender = (() => {
     }
   });
 
+  // nucleo/catalogo/secciones.js
+  var require_secciones = __commonJS({
+    "nucleo/catalogo/secciones.js"(exports, module) {
+      "use strict";
+      var COMPOSICIONES = [
+        {
+          id: "hero_producto",
+          nombre: "H\xE9roe del producto",
+          categoria: "producto",
+          icono: "galeria",
+          limite_por_pagina: null,
+          arbol: [{
+            tipo: "seccion",
+            props: { ancho: "pagina", ancho_contenido: "pagina", direccion: "horizontal", gap: 32 },
+            hijos: [
+              { tipo: "galeria_producto", props: {} },
+              {
+                tipo: "grupo",
+                props: { direccion: "vertical", gap: 16 },
+                hijos: [
+                  { tipo: "titulo_producto", props: {} },
+                  { tipo: "precio_producto", props: {} },
+                  { tipo: "beneficios_producto", props: {} },
+                  { tipo: "packs_compra", props: {} },
+                  { tipo: "boton_carrito", props: {} }
+                ]
+              }
+            ]
+          }]
+        },
+        {
+          id: "beneficios_producto",
+          nombre: "Beneficios destacados",
+          categoria: "beneficios",
+          icono: "beneficios",
+          limite_por_pagina: null,
+          arbol: [{
+            tipo: "seccion",
+            props: { ancho: "pagina", ancho_contenido: "pagina", direccion: "vertical", gap: 16 },
+            hijos: [{
+              tipo: "grupo",
+              props: { direccion: "vertical", gap: 16 },
+              hijos: [{ tipo: "beneficios_producto", props: {} }]
+            }]
+          }]
+        },
+        {
+          id: "linea_tiempo_producto",
+          nombre: "L\xEDnea de tiempo",
+          categoria: "beneficios",
+          icono: "tiempo",
+          limite_por_pagina: null,
+          arbol: [{
+            tipo: "seccion",
+            props: { ancho: "pagina", ancho_contenido: "pagina", direccion: "vertical", gap: 16 },
+            hijos: [{
+              tipo: "grupo",
+              props: { direccion: "vertical", gap: 16 },
+              hijos: [{ tipo: "linea_tiempo", props: {} }]
+            }]
+          }]
+        }
+      ];
+      function clonar(valor) {
+        return JSON.parse(JSON.stringify(valor));
+      }
+      function todas() {
+        return COMPOSICIONES.map(({ arbol, ...meta }) => ({
+          ...meta,
+          tipo: `composicion:${meta.id}`,
+          composicion_id: meta.id,
+          admite_hijos: false
+        }));
+      }
+      function existe(id) {
+        return COMPOSICIONES.some((composicion) => composicion.id === id);
+      }
+      function arbolDe(id) {
+        const composicion = COMPOSICIONES.find((item) => item.id === id);
+        return composicion ? clonar(composicion.arbol) : null;
+      }
+      module.exports = { todas, existe, arbolDe };
+    }
+  });
+
   // nucleo/registro.js
   var require_registro = __commonJS({
     "nucleo/registro.js"(exports, module) {
       "use strict";
       var definiciones = require_indice();
+      var composiciones = require_secciones();
       var TIPOS_CAMPO = /* @__PURE__ */ new Set([
         "texto_plano",
         "texto_largo",
@@ -1311,6 +1397,39 @@ var TiqRender = (() => {
         }
         PorTipo.set(normalizada.tipo, normalizada);
       }
+      var idsComposiciones = /* @__PURE__ */ new Set();
+      for (const composicion of composiciones.todas()) {
+        if (idsComposiciones.has(composicion.composicion_id)) {
+          errores.push(`composici\xF3n duplicada "${composicion.composicion_id}"`);
+          continue;
+        }
+        idsComposiciones.add(composicion.composicion_id);
+        const specs = composiciones.arbolDe(composicion.composicion_id) || [];
+        if (!specs.length) {
+          errores.push(`composici\xF3n "${composicion.composicion_id}" sin \xE1rbol`);
+          continue;
+        }
+        const revisarSpec = (spec, ruta, raiz = false) => {
+          const def = PorTipo.get(spec && spec.tipo);
+          if (!def) {
+            errores.push(`composici\xF3n "${composicion.composicion_id}" ${ruta}: tipo desconocido "${spec && spec.tipo}"`);
+            return;
+          }
+          if (raiz && def.tipo !== "seccion") errores.push(`composici\xF3n "${composicion.composicion_id}" ${ruta}: la ra\xEDz debe ser "seccion"`);
+          for (const clave of Object.keys(spec.props || {})) {
+            if (!def.porClave[clave]) errores.push(`composici\xF3n "${composicion.composicion_id}" ${ruta}: prop desconocida "${clave}"`);
+          }
+          const hijos = Array.isArray(spec.hijos) ? spec.hijos : [];
+          if (hijos.length && !def.admite_hijos) errores.push(`composici\xF3n "${composicion.composicion_id}" ${ruta}: "${def.tipo}" no admite hijos`);
+          if (def.tipos_hijos) {
+            for (const hijo of hijos) {
+              if (!def.tipos_hijos.includes(hijo.tipo)) errores.push(`composici\xF3n "${composicion.composicion_id}" ${ruta}: "${def.tipo}" no admite "${hijo.tipo}"`);
+            }
+          }
+          hijos.forEach((hijo, indice) => revisarSpec(hijo, `${ruta}.hijos[${indice}]`));
+        };
+        specs.forEach((spec, indice) => revisarSpec(spec, `arbol[${indice}]`, true));
+      }
       if (errores.length) throw new RegistroInvalido(errores);
       function todos() {
         return [...PorTipo.values()];
@@ -1356,6 +1475,10 @@ var TiqRender = (() => {
             limite_por_pagina: def.limite_por_pagina
           });
         }
+        for (const item of composiciones.todas()) {
+          if (!porCategoria.has(item.categoria)) porCategoria.set(item.categoria, []);
+          porCategoria.get(item.categoria).push(item);
+        }
         return [...porCategoria.entries()].map(([id, items]) => ({
           id,
           nombre: NOMBRES_CATEGORIA[id] || id,
@@ -1375,6 +1498,9 @@ var TiqRender = (() => {
             campos: g.campos.map(({ render, ...campo }) => campo)
           }))
         };
+      }
+      function catalogoComposiciones() {
+        return composiciones.todas();
       }
       function esquemaPanelParaEditor(tipo) {
         const def = definicionParaEditor(tipo);
@@ -1401,6 +1527,7 @@ var TiqRender = (() => {
         definicion,
         definicionParaEditor,
         catalogo,
+        catalogoComposiciones,
         esquemaPanel,
         esquemaPanelParaEditor,
         resumenParaIA,

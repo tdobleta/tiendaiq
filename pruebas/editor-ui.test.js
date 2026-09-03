@@ -305,6 +305,12 @@ describe("librería", () => {
     assert.match(miniaturaDe({ icono: "garantia" }), /<svg/);
   });
 
+  test("una tarjeta de composición identifica el árbol que va a insertar", () => {
+    const tarjeta = htmlTarjeta({ composicion_id: "hero_producto", tipo: "composicion:hero_producto", nombre: "Héroe", icono: "galeria", limite_por_pagina: null });
+    assert.match(tarjeta, /data-composicion="hero_producto"/);
+    assert.equal(tarjeta.includes('data-tipo="composicion:hero_producto"'), false);
+  });
+
   const catalogo = registro.catalogo();
 
   test("los grupos internos no aparecen como secciones para el merchant", () => {

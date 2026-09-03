@@ -424,7 +424,9 @@ function montarEditor(raiz, { documento: docInicial, producto = null, alGuardar 
       busqueda: libreriaAbierta.busqueda,
       // El cupo se calcula en el ámbito donde se abrirá la librería: una
       // misma sección puede tener un bloque limitado aunque otra ya lo use.
-      contarUsados: (tipo) => estado.contarPorTipo(tipo, { padreId: libreriaAbierta.padreId })
+      contarUsados: (tipo, item) => item?.composicion_id
+        ? 0
+        : estado.contarPorTipo(tipo, { padreId: libreriaAbierta.padreId })
     });
     const buscador = zonaModal.querySelector("[data-buscar]");
     if (buscador && libreriaAbierta.busqueda) { buscador.focus(); buscador.selectionStart = buscador.value.length; }
@@ -466,9 +468,13 @@ function montarEditor(raiz, { documento: docInicial, producto = null, alGuardar 
     }
     const cat = evento.target.closest("[data-categoria]");
     if (cat) { libreriaAbierta.categoria = cat.dataset.categoria || null; return void pintarLibreria(); }
-    const tarjeta = evento.target.closest("[data-tipo]");
+    const tarjeta = evento.target.closest("[data-tipo], [data-composicion]");
     if (tarjeta && !tarjeta.disabled) {
-      estado.insertar(tarjeta.dataset.tipo, { padreId: libreriaAbierta.padreId });
+      if (tarjeta.dataset.composicion) {
+        estado.insertarComposicion(tarjeta.dataset.composicion, { padreId: libreriaAbierta.padreId });
+      } else {
+        estado.insertar(tarjeta.dataset.tipo, { padreId: libreriaAbierta.padreId });
+      }
       libreriaAbierta = null;
       pintarLibreria();
     }

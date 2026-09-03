@@ -27,6 +27,7 @@
 // vive en el borde del backend y no viaja al navegador (ver nucleo/nodos.js).
 const { crearNodo, nuevoId } = require("../../nucleo/nodos");
 const registro = require("../../nucleo/registro");
+const catalogoComposiciones = require("../../nucleo/catalogo/secciones");
 
 const MS_FUSION = 600;
 const MAX_HISTORIAL = 100;   // tope de memoria: 100 pasos es más de lo que nadie deshace
@@ -91,6 +92,18 @@ function conIdsNuevos(nodo) {
   const copia = clonar(nodo);
   recorrer([copia], (n) => { n.id = nuevoId(); });
   return copia;
+}
+
+// Materializa un spec de catálogo: los defaults de cada tipo siguen siendo la
+// fuente de contenido inicial y la composición solo aporta sus overrides.
+function materializar(spec) {
+  const nodo = crearNodo(spec.tipo);
+  nodo.id = nuevoId();
+  // `semilla` puede contener listas y objetos anidados; clonarlos evita que
+  // dos inserciones compartan referencias o puedan mutar el registro.
+  nodo.props = { ...clonar(nodo.props), ...clonar(spec.props || {}) };
+  if (Array.isArray(spec.hijos)) nodo.hijos = spec.hijos.map(materializar);
+  return nodo;
 }
 
 // ¿Este tipo entra una vez más en la página? Es lo que pinta el "1/1" en la
@@ -187,6 +200,22 @@ function crearEstado(documentoInicial, { alCambiar = null } = {}) {
     }, { etiqueta: `agregar ${tipo}` });
     if (hecho) seleccionar(nuevo.id);
     return hecho ? nuevo.id : false;
+  }
+
+  function insertarComposicion(composicionId, { padreId = null, indice = null } = {}) {
+    const specs = catalogoComposiciones.arbolDe(composicionId);
+    if (!specs || !specs.length) return false;
+    if (padreId) {
+      const padre = localizar(doc, padreId);
+      if (!padre || !registro.definicion(padre.nodo.tipo).admite_hijos) return false;
+    }
+    const nuevos = specs.map(materializar);
+    const hecho = aplicar((borrador) => {
+      const lista = padreId ? localizar(borrador, padreId).nodo.hijos : borrador.arbol;
+      lista.splice(indice === null ? lista.length : indice, 0, ...nuevos);
+    }, { etiqueta: `agregar composición ${composicionId}` });
+    if (hecho) seleccionar(nuevos[0].id);
+    return hecho ? nuevos[0].id : false;
   }
 
   function borrar(nodoId) {
@@ -318,7 +347,7 @@ function crearEstado(documentoInicial, { alCambiar = null } = {}) {
     ubicacion: (id) => localizar(doc, id),
 
     // comandos
-    fijarProp, heredarProp, insertar, borrar, duplicar, mover, fijarBranding, fijarSeo,
+    fijarProp, heredarProp, insertar, insertarComposicion, borrar, duplicar, mover, fijarBranding, fijarSeo,
 
     // historial
     deshacer: deshacerUno,

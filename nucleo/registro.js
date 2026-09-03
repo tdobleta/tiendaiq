@@ -20,6 +20,7 @@
 "use strict";
 
 const definiciones = require("./tipos/indice");
+const composiciones = require("./catalogo/secciones");
 
 // Las 16 clases de control. Ver docs/arquitectura-editor-v3.md §3.4.
 const TIPOS_CAMPO = new Set([
@@ -185,6 +186,43 @@ for (const definicion of definiciones) {
   PorTipo.set(normalizada.tipo, normalizada);
 }
 
+// Las composiciones son datos, pero no quedan fuera del guardián: un typo en
+// un tipo o una prop debe fallar al arrancar, antes de que una tarjeta inválida
+// llegue a la librería o al guardado.
+const idsComposiciones = new Set();
+for (const composicion of composiciones.todas()) {
+  if (idsComposiciones.has(composicion.composicion_id)) {
+    errores.push(`composición duplicada "${composicion.composicion_id}"`);
+    continue;
+  }
+  idsComposiciones.add(composicion.composicion_id);
+  const specs = composiciones.arbolDe(composicion.composicion_id) || [];
+  if (!specs.length) {
+    errores.push(`composición "${composicion.composicion_id}" sin árbol`);
+    continue;
+  }
+  const revisarSpec = (spec, ruta, raiz = false) => {
+    const def = PorTipo.get(spec && spec.tipo);
+    if (!def) {
+      errores.push(`composición "${composicion.composicion_id}" ${ruta}: tipo desconocido "${spec && spec.tipo}"`);
+      return;
+    }
+    if (raiz && def.tipo !== "seccion") errores.push(`composición "${composicion.composicion_id}" ${ruta}: la raíz debe ser "seccion"`);
+    for (const clave of Object.keys(spec.props || {})) {
+      if (!def.porClave[clave]) errores.push(`composición "${composicion.composicion_id}" ${ruta}: prop desconocida "${clave}"`);
+    }
+    const hijos = Array.isArray(spec.hijos) ? spec.hijos : [];
+    if (hijos.length && !def.admite_hijos) errores.push(`composición "${composicion.composicion_id}" ${ruta}: "${def.tipo}" no admite hijos`);
+    if (def.tipos_hijos) {
+      for (const hijo of hijos) {
+        if (!def.tipos_hijos.includes(hijo.tipo)) errores.push(`composición "${composicion.composicion_id}" ${ruta}: "${def.tipo}" no admite "${hijo.tipo}"`);
+      }
+    }
+    hijos.forEach((hijo, indice) => revisarSpec(hijo, `${ruta}.hijos[${indice}]`));
+  };
+  specs.forEach((spec, indice) => revisarSpec(spec, `arbol[${indice}]`, true));
+}
+
 if (errores.length) throw new RegistroInvalido(errores);
 
 function todos() {
@@ -242,6 +280,13 @@ function catalogo() {
       limite_por_pagina: def.limite_por_pagina
     });
   }
+  // Las composiciones son datos del catálogo y no tipos registrables: se
+  // agregan después de los átomos, en la misma categoría, para que la UI las
+  // trate como tarjetas sin duplicar esquemas ni funciones de render.
+  for (const item of composiciones.todas()) {
+    if (!porCategoria.has(item.categoria)) porCategoria.set(item.categoria, []);
+    porCategoria.get(item.categoria).push(item);
+  }
   return [...porCategoria.entries()].map(([id, items]) => ({
     id,
     nombre: NOMBRES_CATEGORIA[id] || id,
@@ -266,6 +311,10 @@ function esquemaPanel(tipo) {
   };
 }
 
+function catalogoComposiciones() {
+  return composiciones.todas();
+}
+
 function esquemaPanelParaEditor(tipo) {
   const def = definicionParaEditor(tipo);
   if (!def.desconocido) return esquemaPanel(tipo);
@@ -288,7 +337,7 @@ function resumenParaIA() {
 
 module.exports = {
   TIPOS_CAMPO, CATEGORIAS, NOMBRES_CATEGORIA, RegistroInvalido,
-  todos, tipos, existe, definicion, definicionParaEditor, catalogo, esquemaPanel, esquemaPanelParaEditor, resumenParaIA,
+  todos, tipos, existe, definicion, definicionParaEditor, catalogo, catalogoComposiciones, esquemaPanel, esquemaPanelParaEditor, resumenParaIA,
   // expuesto solo para las pruebas del propio registro
   _normalizar: normalizar
 };

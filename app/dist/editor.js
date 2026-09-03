@@ -946,11 +946,97 @@ var TiqEditor = (() => {
     }
   });
 
+  // nucleo/catalogo/secciones.js
+  var require_secciones = __commonJS({
+    "nucleo/catalogo/secciones.js"(exports, module) {
+      "use strict";
+      var COMPOSICIONES = [
+        {
+          id: "hero_producto",
+          nombre: "H\xE9roe del producto",
+          categoria: "producto",
+          icono: "galeria",
+          limite_por_pagina: null,
+          arbol: [{
+            tipo: "seccion",
+            props: { ancho: "pagina", ancho_contenido: "pagina", direccion: "horizontal", gap: 32 },
+            hijos: [
+              { tipo: "galeria_producto", props: {} },
+              {
+                tipo: "grupo",
+                props: { direccion: "vertical", gap: 16 },
+                hijos: [
+                  { tipo: "titulo_producto", props: {} },
+                  { tipo: "precio_producto", props: {} },
+                  { tipo: "beneficios_producto", props: {} },
+                  { tipo: "packs_compra", props: {} },
+                  { tipo: "boton_carrito", props: {} }
+                ]
+              }
+            ]
+          }]
+        },
+        {
+          id: "beneficios_producto",
+          nombre: "Beneficios destacados",
+          categoria: "beneficios",
+          icono: "beneficios",
+          limite_por_pagina: null,
+          arbol: [{
+            tipo: "seccion",
+            props: { ancho: "pagina", ancho_contenido: "pagina", direccion: "vertical", gap: 16 },
+            hijos: [{
+              tipo: "grupo",
+              props: { direccion: "vertical", gap: 16 },
+              hijos: [{ tipo: "beneficios_producto", props: {} }]
+            }]
+          }]
+        },
+        {
+          id: "linea_tiempo_producto",
+          nombre: "L\xEDnea de tiempo",
+          categoria: "beneficios",
+          icono: "tiempo",
+          limite_por_pagina: null,
+          arbol: [{
+            tipo: "seccion",
+            props: { ancho: "pagina", ancho_contenido: "pagina", direccion: "vertical", gap: 16 },
+            hijos: [{
+              tipo: "grupo",
+              props: { direccion: "vertical", gap: 16 },
+              hijos: [{ tipo: "linea_tiempo", props: {} }]
+            }]
+          }]
+        }
+      ];
+      function clonar(valor) {
+        return JSON.parse(JSON.stringify(valor));
+      }
+      function todas() {
+        return COMPOSICIONES.map(({ arbol, ...meta }) => ({
+          ...meta,
+          tipo: `composicion:${meta.id}`,
+          composicion_id: meta.id,
+          admite_hijos: false
+        }));
+      }
+      function existe(id) {
+        return COMPOSICIONES.some((composicion) => composicion.id === id);
+      }
+      function arbolDe(id) {
+        const composicion = COMPOSICIONES.find((item) => item.id === id);
+        return composicion ? clonar(composicion.arbol) : null;
+      }
+      module.exports = { todas, existe, arbolDe };
+    }
+  });
+
   // nucleo/registro.js
   var require_registro = __commonJS({
     "nucleo/registro.js"(exports, module) {
       "use strict";
       var definiciones = require_indice();
+      var composiciones = require_secciones();
       var TIPOS_CAMPO = /* @__PURE__ */ new Set([
         "texto_plano",
         "texto_largo",
@@ -1111,6 +1197,39 @@ var TiqEditor = (() => {
         }
         PorTipo.set(normalizada.tipo, normalizada);
       }
+      var idsComposiciones = /* @__PURE__ */ new Set();
+      for (const composicion of composiciones.todas()) {
+        if (idsComposiciones.has(composicion.composicion_id)) {
+          errores.push(`composici\xF3n duplicada "${composicion.composicion_id}"`);
+          continue;
+        }
+        idsComposiciones.add(composicion.composicion_id);
+        const specs = composiciones.arbolDe(composicion.composicion_id) || [];
+        if (!specs.length) {
+          errores.push(`composici\xF3n "${composicion.composicion_id}" sin \xE1rbol`);
+          continue;
+        }
+        const revisarSpec = (spec, ruta, raiz = false) => {
+          const def = PorTipo.get(spec && spec.tipo);
+          if (!def) {
+            errores.push(`composici\xF3n "${composicion.composicion_id}" ${ruta}: tipo desconocido "${spec && spec.tipo}"`);
+            return;
+          }
+          if (raiz && def.tipo !== "seccion") errores.push(`composici\xF3n "${composicion.composicion_id}" ${ruta}: la ra\xEDz debe ser "seccion"`);
+          for (const clave of Object.keys(spec.props || {})) {
+            if (!def.porClave[clave]) errores.push(`composici\xF3n "${composicion.composicion_id}" ${ruta}: prop desconocida "${clave}"`);
+          }
+          const hijos = Array.isArray(spec.hijos) ? spec.hijos : [];
+          if (hijos.length && !def.admite_hijos) errores.push(`composici\xF3n "${composicion.composicion_id}" ${ruta}: "${def.tipo}" no admite hijos`);
+          if (def.tipos_hijos) {
+            for (const hijo of hijos) {
+              if (!def.tipos_hijos.includes(hijo.tipo)) errores.push(`composici\xF3n "${composicion.composicion_id}" ${ruta}: "${def.tipo}" no admite "${hijo.tipo}"`);
+            }
+          }
+          hijos.forEach((hijo, indice) => revisarSpec(hijo, `${ruta}.hijos[${indice}]`));
+        };
+        specs.forEach((spec, indice) => revisarSpec(spec, `arbol[${indice}]`, true));
+      }
       if (errores.length) throw new RegistroInvalido(errores);
       function todos() {
         return [...PorTipo.values()];
@@ -1156,6 +1275,10 @@ var TiqEditor = (() => {
             limite_por_pagina: def.limite_por_pagina
           });
         }
+        for (const item of composiciones.todas()) {
+          if (!porCategoria.has(item.categoria)) porCategoria.set(item.categoria, []);
+          porCategoria.get(item.categoria).push(item);
+        }
         return [...porCategoria.entries()].map(([id, items]) => ({
           id,
           nombre: NOMBRES_CATEGORIA[id] || id,
@@ -1175,6 +1298,9 @@ var TiqEditor = (() => {
             campos: g.campos.map(({ render, ...campo }) => campo)
           }))
         };
+      }
+      function catalogoComposiciones() {
+        return composiciones.todas();
       }
       function esquemaPanelParaEditor(tipo) {
         const def = definicionParaEditor(tipo);
@@ -1201,6 +1327,7 @@ var TiqEditor = (() => {
         definicion,
         definicionParaEditor,
         catalogo,
+        catalogoComposiciones,
         esquemaPanel,
         esquemaPanelParaEditor,
         resumenParaIA,
@@ -1237,6 +1364,7 @@ var TiqEditor = (() => {
       "use strict";
       var { crearNodo, nuevoId } = require_nodos();
       var registro = require_registro();
+      var catalogoComposiciones = require_secciones();
       var MS_FUSION = 600;
       var MAX_HISTORIAL = 100;
       var AMBITO_PAGINA = "__pagina__";
@@ -1288,6 +1416,13 @@ var TiqEditor = (() => {
           n.id = nuevoId();
         });
         return copia;
+      }
+      function materializar(spec) {
+        const nodo = crearNodo(spec.tipo);
+        nodo.id = nuevoId();
+        nodo.props = { ...clonar(nodo.props), ...clonar(spec.props || {}) };
+        if (Array.isArray(spec.hijos)) nodo.hijos = spec.hijos.map(materializar);
+        return nodo;
       }
       function puedeInsertar(doc, tipo, opciones = {}) {
         if (!registro.existe(tipo)) return false;
@@ -1360,6 +1495,21 @@ var TiqEditor = (() => {
           }, { etiqueta: `agregar ${tipo}` });
           if (hecho) seleccionar(nuevo.id);
           return hecho ? nuevo.id : false;
+        }
+        function insertarComposicion(composicionId, { padreId = null, indice = null } = {}) {
+          const specs = catalogoComposiciones.arbolDe(composicionId);
+          if (!specs || !specs.length) return false;
+          if (padreId) {
+            const padre = localizar(doc, padreId);
+            if (!padre || !registro.definicion(padre.nodo.tipo).admite_hijos) return false;
+          }
+          const nuevos = specs.map(materializar);
+          const hecho = aplicar((borrador) => {
+            const lista = padreId ? localizar(borrador, padreId).nodo.hijos : borrador.arbol;
+            lista.splice(indice === null ? lista.length : indice, 0, ...nuevos);
+          }, { etiqueta: `agregar composici\xF3n ${composicionId}` });
+          if (hecho) seleccionar(nuevos[0].id);
+          return hecho ? nuevos[0].id : false;
         }
         function borrar(nodoId) {
           const ubicacion = localizar(doc, nodoId);
@@ -1473,6 +1623,7 @@ var TiqEditor = (() => {
           fijarProp,
           heredarProp,
           insertar,
+          insertarComposicion,
           borrar,
           duplicar,
           mover,
@@ -2350,7 +2501,8 @@ var TiqEditor = (() => {
       function htmlTarjeta(item, { usados = 0 } = {}) {
         const limite = item.limite_por_pagina;
         const agotado = limite ? usados >= limite : false;
-        return `<button type="button" class="ed-lib__tarjeta${agotado ? " es-agotada" : ""}" data-tipo="${esc(item.tipo)}"${agotado ? " disabled" : ""}><span class="ed-lib__nombre">${esc(item.nombre)}</span>` + (limite ? `<span class="ed-lib__cupo">${usados}/${limite}</span>` : "") + `<span class="ed-lib__vista" data-vista="${esc(item.tipo)}">${miniaturaDe(item)}</span></button>`;
+        const identificador = item.composicion_id ? `data-composicion="${esc(item.composicion_id)}"` : `data-tipo="${esc(item.tipo)}"`;
+        return `<button type="button" class="ed-lib__tarjeta${agotado ? " es-agotada" : ""}" ${identificador}${agotado ? " disabled" : ""}><span class="ed-lib__nombre">${esc(item.nombre)}</span>` + (limite ? `<span class="ed-lib__cupo">${usados}/${limite}</span>` : "") + `<span class="ed-lib__vista" data-vista="${esc(item.tipo)}">${miniaturaDe(item)}</span></button>`;
       }
       function htmlLibreria(catalogo, { categoria = null, busqueda = "", contarUsados = () => 0 } = {}) {
         const visibles = filtrar(catalogo, { categoria, busqueda });
@@ -2359,7 +2511,7 @@ var TiqEditor = (() => {
           (grupo) => `<button type="button" class="ed-lib__cat${categoria === grupo.id ? " es-activa" : ""}" data-categoria="${esc(grupo.id)}"><span>${esc(grupo.nombre)}</span><span class="ed-lib__cuenta">${grupo.items.length}</span></button>`
         ).join("") + `</aside>`;
         const cuerpo = visibles.length ? visibles.map(
-          (grupo) => `<section class="ed-lib__grupo"><h3 class="ed-lib__titulo">${esc(grupo.nombre)}</h3><div class="ed-lib__grilla">${grupo.items.map((item) => htmlTarjeta(item, { usados: contarUsados(item.tipo) })).join("")}</div></section>`
+          (grupo) => `<section class="ed-lib__grupo"><h3 class="ed-lib__titulo">${esc(grupo.nombre)}</h3><div class="ed-lib__grilla">${grupo.items.map((item) => htmlTarjeta(item, { usados: contarUsados(item.tipo, item) })).join("")}</div></section>`
         ).join("") : `<p class="ed-lib__vacio">No hay secciones que coincidan con \u201C${esc(busqueda)}\u201D.</p>`;
         return `<div class="ed-lib" role="dialog" aria-label="A\xF1adir secci\xF3n"><header class="ed-lib__cabecera"><h2>A\xF1adir secci\xF3n</h2><button type="button" class="ed-lib__cerrar" data-cerrar aria-label="Cerrar">\u2715</button></header><input type="search" class="ed-lib__buscar" data-buscar placeholder="Buscar\u2026" value="${esc(busqueda)}"><div class="ed-lib__cuerpo">${lateral}<div class="ed-lib__lista">${cuerpo}</div></div></div>`;
       }
@@ -2851,7 +3003,7 @@ var TiqEditor = (() => {
             busqueda: libreriaAbierta.busqueda,
             // El cupo se calcula en el ámbito donde se abrirá la librería: una
             // misma sección puede tener un bloque limitado aunque otra ya lo use.
-            contarUsados: (tipo) => estado.contarPorTipo(tipo, { padreId: libreriaAbierta.padreId })
+            contarUsados: (tipo, item) => (item == null ? void 0 : item.composicion_id) ? 0 : estado.contarPorTipo(tipo, { padreId: libreriaAbierta.padreId })
           });
           const buscador = zonaModal.querySelector("[data-buscar]");
           if (buscador && libreriaAbierta.busqueda) {
@@ -2897,9 +3049,13 @@ var TiqEditor = (() => {
             libreriaAbierta.categoria = cat.dataset.categoria || null;
             return void pintarLibreria();
           }
-          const tarjeta = evento.target.closest("[data-tipo]");
+          const tarjeta = evento.target.closest("[data-tipo], [data-composicion]");
           if (tarjeta && !tarjeta.disabled) {
-            estado.insertar(tarjeta.dataset.tipo, { padreId: libreriaAbierta.padreId });
+            if (tarjeta.dataset.composicion) {
+              estado.insertarComposicion(tarjeta.dataset.composicion, { padreId: libreriaAbierta.padreId });
+            } else {
+              estado.insertar(tarjeta.dataset.tipo, { padreId: libreriaAbierta.padreId });
+            }
             libreriaAbierta = null;
             pintarLibreria();
           }

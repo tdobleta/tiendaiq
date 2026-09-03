@@ -241,6 +241,36 @@ describe("límites por sección", () => {
     assert.ok(ed.insertar("imagen", { padreId: "n_44444444" }));
     assert.equal(ed.puedeInsertar("imagen", { padreId: "n_44444444" }), false);
   });
+
+  test("insertar una composición materializa el árbol completo con ids nuevos", () => {
+    const ed = crearEstado(documento.crear({ tienda: "prueba.myshopify.com" }));
+    const id = ed.insertarComposicion("hero_producto");
+    assert.ok(id);
+    assert.equal(ed.documento().arbol.length, 1);
+    const hero = ed.nodo(id);
+    assert.equal(hero.tipo, "seccion");
+    assert.equal(hero.hijos.some((nodo) => nodo.tipo === "grupo"), true);
+    assert.doesNotThrow(() => documento.validar(ed.documento()));
+  });
+
+  test("dos composiciones no comparten sus semillas anidadas", () => {
+    const ed = crearEstado(documento.crear({ tienda: "prueba.myshopify.com" }));
+    const primero = ed.insertarComposicion("hero_producto");
+    const segundo = ed.insertarComposicion("hero_producto");
+    const packs = (id) => {
+      const hero = ed.nodo(id);
+      const grupo = hero.hijos.find((nodo) => nodo.tipo === "grupo");
+      return grupo.hijos.find((nodo) => nodo.tipo === "packs_compra");
+    };
+    packs(primero).props.packs[0].titulo = "Uno";
+    assert.notEqual(packs(segundo).props.packs[0].titulo, "Uno");
+  });
+
+  test("una composición desconocida no modifica el documento", () => {
+    const ed = crearEstado(documento.crear());
+    assert.equal(ed.insertarComposicion("no-existe"), false);
+    assert.equal(ed.documento().arbol.length, 0);
+  });
 });
 
 describe("branding y seo", () => {

@@ -77,6 +77,15 @@ describe("catálogo", () => {
     }
   });
 
+  test("el catálogo incluye composiciones como datos, sin convertirlas en tipos", () => {
+    const composiciones = registro.catalogoComposiciones();
+    assert.ok(composiciones.length >= 3);
+    assert.ok(composiciones.some((item) => item.composicion_id === "hero_producto"));
+    assert.equal(registro.existe("composicion:hero_producto"), false);
+    const producto = registro.catalogo().find((grupo) => grupo.id === "producto");
+    assert.ok(producto.items.some((item) => item.composicion_id === "hero_producto"));
+  });
+
   test("esquemaPanel() entrega lo que el panel necesita y nada más", () => {
     const panel = registro.esquemaPanel("texto");
     assert.equal(panel.tipo, "texto");

@@ -37,6 +37,10 @@ La experiencia se construye en este orden:
 - La migración v0 → v1 convierte tres superficies reales de Piloto 01 al corte
   composable: héroe, beneficios y línea de tiempo. Cada una conserva su
   contenido y suma un grupo interno editable.
+- La librería también conoce tres composiciones guardadas como datos en
+  `nucleo/catalogo/secciones.js`. Insertarlas materializa el árbol completo con
+  ids nuevos y aplica las semillas de cada bloque; no se crea un tipo falso en
+  el registro ni una segunda función de render.
 
 ## Criterios de aceptación
 
@@ -53,7 +57,7 @@ La experiencia se construye en este orden:
 
 ## Fuera de alcance
 
-La migración de las 19 secciones actuales (más allá de las tres piloto), pasar
-el catálogo a árboles de datos, la edición inline, Polaris completo, el cart
-drawer y el flujo de instalación gestionado requieren QA visual y cortes
+La migración de las 19 secciones actuales (más allá de las tres piloto), ampliar
+el catálogo de composiciones por categoría, la edición inline, Polaris completo,
+el cart drawer y el flujo de instalación gestionado requieren QA visual y cortes
 separados. No se mezclan con este vertical slice.

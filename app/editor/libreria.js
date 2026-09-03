@@ -60,8 +60,11 @@ function miniaturaDe(item) {
 function htmlTarjeta(item, { usados = 0 } = {}) {
   const limite = item.limite_por_pagina;
   const agotado = limite ? usados >= limite : false;
+  const identificador = item.composicion_id
+    ? `data-composicion="${esc(item.composicion_id)}"`
+    : `data-tipo="${esc(item.tipo)}"`;
   return `<button type="button" class="ed-lib__tarjeta${agotado ? " es-agotada" : ""}" ` +
-    `data-tipo="${esc(item.tipo)}"${agotado ? " disabled" : ""}>` +
+    `${identificador}${agotado ? " disabled" : ""}>` +
     `<span class="ed-lib__nombre">${esc(item.nombre)}</span>` +
     (limite ? `<span class="ed-lib__cupo">${usados}/${limite}</span>` : "") +
     `<span class="ed-lib__vista" data-vista="${esc(item.tipo)}">${miniaturaDe(item)}</span>` +
@@ -87,7 +90,7 @@ function htmlLibreria(catalogo, { categoria = null, busqueda = "", contarUsados 
     ? visibles.map((grupo) =>
         `<section class="ed-lib__grupo">` +
         `<h3 class="ed-lib__titulo">${esc(grupo.nombre)}</h3>` +
-        `<div class="ed-lib__grilla">${grupo.items.map((item) => htmlTarjeta(item, { usados: contarUsados(item.tipo) })).join("")}</div>` +
+        `<div class="ed-lib__grilla">${grupo.items.map((item) => htmlTarjeta(item, { usados: contarUsados(item.tipo, item) })).join("")}</div>` +
         `</section>`
       ).join("")
     : `<p class="ed-lib__vacio">No hay secciones que coincidan con “${esc(busqueda)}”.</p>`;
