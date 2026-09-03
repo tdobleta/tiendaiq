@@ -28,11 +28,19 @@ test("solo el valor 0 abre la admision y Retry-After queda acotado", () => {
 test("el endpoint de generacion revisa la pausa antes de consultar plan o reservar cupo", () => {
   const serverSource = fs.readFileSync(path.join(__dirname, "..", "server.js"), "utf8");
 
-  const pause = serverSource.indexOf("generationAdmissionPause(env)");
-  const plan = serverSource.indexOf("const plan = await estadoPlan(sesion)");
-  const enqueue = serverSource.indexOf("await encolarGeneracionDB");
+  const editRoute = serverSource.indexOf('ruta === "/api/texto/editar"');
+  const generationRoute = serverSource.indexOf('// POST /api/paginas — el botón "Crear página con IA"');
+  const pause = serverSource.indexOf("const admissionPause = generationAdmissionPause(env)", generationRoute);
+  const shell = serverSource.indexOf("const base = await crearPaginaBase", generationRoute);
+  const plan = serverSource.indexOf("const plan = await estadoPlan(sesion)", generationRoute);
+  const enqueue = serverSource.indexOf("await encolarGeneracionDB", generationRoute);
 
-  assert.ok(pause > 0, "server.js debe evaluar la pausa de admision");
+  assert.ok(generationRoute > 0, "server.js debe tener la ruta de creación de páginas");
+  assert.ok(editRoute > 0 && editRoute < generationRoute, "la edición asistida debe mantener su ruta separada");
+  assert.match(serverSource.slice(editRoute, generationRoute), /return json\(res, 503, \{ error: admissionPause\.message/,
+    "la IA de edición debe seguir cerrada si la compuerta está pausada");
+  assert.ok(pause > generationRoute, "la ruta de creación debe evaluar la pausa de admisión");
+  assert.ok(shell > pause, "con IA pausada la ruta de creación debe preparar la plantilla");
   assert.ok(plan > pause, "la pausa debe ocurrir antes de consultar el plan");
   assert.ok(enqueue > pause, "la pausa debe ocurrir antes de encolar y reservar cupo");
 });
