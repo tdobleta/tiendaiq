@@ -33,11 +33,16 @@ function imagenDe(referencia, urls, alt) {
 function productoPreviewDePagina(pagina) {
   if (!pagina || typeof pagina !== "object") return null;
   const data = pagina.data && typeof pagina.data === "object" ? pagina.data : {};
-  const fuente = data.fuente || data.source_fields || {};
+  const piloto = data.piloto_pdp_01 || {};
+  const fuente = {
+    ...(piloto.source_fields || {}),
+    ...(data.source_fields || {}),
+    ...(data.fuente || {})
+  };
   const facetas = data.facetas || {};
   const hero = facetas.hero || {};
   const urls = pagina.urls || {};
-  const media = data.content?.media || {};
+  const media = data.content?.media || piloto.content?.media || {};
   const referencias = [
     ...lista(media.gallery_media_ids),
     media.hero_media_id,
@@ -47,7 +52,7 @@ function productoPreviewDePagina(pagina) {
   const titulo = texto(fuente.titulo_crudo || fuente.title || hero.titulo || pagina.titulo) || "Producto";
   const imagenes = unicas.map((id) => imagenDe(id, urls, titulo)).filter(Boolean);
   const primeraVariante = lista(fuente.variantes).find((v) => v && (v.variant_id || v.id));
-  const packs = lista(data.content?.offer?.packs);
+  const packs = lista(data.content?.offer?.packs || piloto.content?.offer?.packs);
   const variante = packs.find((p) => p && (p.variant_id || p.variantId)) || primeraVariante || {};
   const precio = texto(fuente.precio || fuente.price);
   const anterior = texto(fuente.precio_comparativo || fuente.compare_at_price || fuente.precio_anterior);

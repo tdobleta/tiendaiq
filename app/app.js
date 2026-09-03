@@ -1403,9 +1403,20 @@
   }
 
   async function aceptarGeneracionPendiente(pending) {
-    if (!pending.jobId) {
-      const { job } = await api("/paginas", { method: "POST", body: pending.body });
-      pending.jobId = job.id;
+    if (!pending.jobId && !pending.pageId) {
+      const respuesta = await api("/paginas", { method: "POST", body: pending.body });
+      // Con la admisión de IA cerrada el servidor crea igualmente un borrador
+      // completo y devuelve `page` en la misma respuesta. No lo tratamos como
+      // un error ni mostramos una espera falsa: el editor se abre ahora y el
+      // estado de IA queda visible como pendiente.
+      if (respuesta.page && !respuesta.job) {
+        pending.pageId = respuesta.page.id;
+        pending.generation = respuesta.generation || null;
+      } else if (respuesta.job?.id) {
+        pending.jobId = respuesta.job.id;
+      } else {
+        throw new Error("El servidor no devolvió una página ni un trabajo de generación.");
+      }
       guardarGeneracionPendiente(pending);
     }
     return pending;
@@ -1413,6 +1424,21 @@
 
   async function completarGeneracionPendiente(pending) {
     await aceptarGeneracionPendiente(pending);
+    if (!pending.jobId && pending.pageId) {
+      // El borrador de plantilla ya está persistido. Leerlo por la misma ruta
+      // que usa la tabla garantiza que el editor reciba documento v1 y la
+      // proyección viva del producto, no una copia incompleta del POST.
+      estado.pagina = await api(`/paginas/${pending.pageId}`);
+      if (pending.tema && pending.tema !== "auto" && estado.pagina?.data) {
+        (estado.pagina.data.global ||= {}).tema = pending.tema;
+        estado.pagina = await api(`/paginas/${estado.pagina.id}`, {
+          method: "PUT",
+          body: { data: estado.pagina.data }
+        });
+      }
+      limpiarGeneracionPendiente();
+      return estado.pagina;
+    }
     const completed = await esperarJob(pending.jobId, { timeoutMs: 6 * 60 * 1000 });
     const pageId = completed.result?.pageId || String(pending.body.producto_id).split("/").pop();
     estado.pagina = await api(`/paginas/${pageId}`);
@@ -1452,9 +1478,14 @@
     let reloj;
 
     try {
-      // Mostrar progreso solo despues de que la cola acepte el trabajo. Con
-      // admission control pausado, el merchant ve el error real de inmediato.
       await aceptarGeneracionPendiente(pending);
+      // Un borrador de plantilla es inmediato; sólo mostramos el progreso
+      // cuando realmente hay un trabajo de IA en cola.
+      if (!pending.jobId) {
+        estado.pagina = await completarGeneracionPendiente(pending);
+        abrirEditorV3(estado.pagina.id);
+        return;
+      }
       ir("generando");
       const t0 = Date.now();
       reloj = setInterval(() => {

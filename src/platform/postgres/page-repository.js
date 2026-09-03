@@ -233,12 +233,17 @@ function createPageRepository(pool) {
            datos->>'actualizado'                AS actualizado,
            COALESCE(
              datos#>>'{data,facetas,hero,titulo}',
-             datos#>>'{facetas,hero,titulo}'
+             datos#>>'{facetas,hero,titulo}',
+             datos#>>'{data,piloto_pdp_01,source_fields,title}',
+             datos#>>'{data,source_fields,title}',
+             datos#>>'{titulo}'
            ) AS titulo,
            COALESCE(
              (datos->'urls') ->> (datos#>>'{data,facetas,hero,galeria,0}'),
              (datos->'data'->'urls') ->> (datos#>>'{data,facetas,hero,galeria,0}'),
-             (datos->'urls') ->> (datos#>>'{facetas,hero,galeria,0}')
+             (datos->'urls') ->> (datos#>>'{facetas,hero,galeria,0}'),
+             (datos->'urls') ->> (datos#>>'{data,piloto_pdp_01,content,media,hero_media_id}'),
+             (datos->'urls') ->> (datos#>>'{data,content,media,hero_media_id}')
            ) AS imagen
          FROM public.paginas
          WHERE tienda = $1

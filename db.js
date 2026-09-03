@@ -605,15 +605,15 @@ async function listarPaginasDB(context) {
   }
   // Archivos (dev): mismo resumen, calculado en memoria.
   return fileListar(path.join(DIR_PAGINAS, seguro(tenant.tenantId))).map((p) => {
-    const galeria = p.data?.facetas?.hero?.galeria || [];
+    const galeria = p.data?.facetas?.hero?.galeria || p.data?.piloto_pdp_01?.content?.media?.gallery_media_ids || [];
     return {
       id: p.id,
       shopify_product_id: p.shopify_product_id || null,
       estado: p.estado,
       url_publica: p.url_publica || null,
       actualizado: p.actualizado || null,
-      titulo: p.data?.facetas?.hero?.titulo || null,
-      imagen: (galeria.length && p.urls?.[galeria[0]]) || null
+      titulo: p.data?.facetas?.hero?.titulo || p.data?.piloto_pdp_01?.source_fields?.title || p.titulo || null,
+      imagen: (galeria.length && p.urls?.[galeria[0]]) || (p.urls?.[p.data?.piloto_pdp_01?.content?.media?.hero_media_id] || null)
     };
   });
 }

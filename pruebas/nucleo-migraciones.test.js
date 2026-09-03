@@ -7,6 +7,7 @@ const path = require("node:path");
 
 const documento = require("../nucleo/documento");
 const { documentoDePagina, guardarBorradorV1 } = require("../nucleo/migraciones/pagina");
+const { hashSource } = require("../src/piloto/pdp01-contract");
 
 function paginaVieja() {
   return {
@@ -42,6 +43,34 @@ function paginaModerna() {
         rating: { value: 4.8, count: 123, source: { kind: "shopify_review_import", reference: "reviews:987" } },
         testimonial: { text: "Excelente", author: "Ana", source: { kind: "merchant_document", reference: "doc:1" } }
       }
+    }
+  };
+}
+
+function paginaPilotoGenerada() {
+  const media = [1, 2, 3].map((id) => `gid://shopify/MediaImage/${id}`);
+  const source_fields = {
+    product_gid: "gid://shopify/Product/456", title: "Producto Piloto", description: "", vendor: "", product_type: "",
+    options: [], media_ids: media, variants: [{ id: "gid://shopify/ProductVariant/456", title: "Default Title" }]
+  };
+  const content = {
+    hero: { claim: "Conocé el producto en detalle.", bullets: ["Información clara", "Imágenes visibles"] },
+    offer: { heading: "Opciones de compra", packs: [{ id: "cantidad-1", label: "1 unidad", subtitle: "Presentación", quantity: 1, mechanism: "multi_quantity", variant_id: source_fields.variants[0].id }] },
+    quick: { items: [{ question: "¿Qué incluye?", answer: "La ficha del producto." }, { question: "¿Cómo elegir?", answer: "Seleccioná una opción." }] },
+    why: { eyebrow: "Información", heading: "Todo claro", body: "Una ficha ordenada.", points: ["Detalles visibles", "Compra simple"] },
+    stories: { heading: "Conocé el producto", intro: "Explorá la ficha.", cards: [{ title: "Vista", body: "Mirá las imágenes.", product_note: "Producto" }, { title: "Opciones", body: "Elegí una opción.", product_note: "Shopify" }, { title: "Compra", body: "Agregalo al carrito.", product_note: "Información" }] },
+    timeline: { heading: "Cómo empezar", intro: "Pasos simples.", steps: [{ label: "Primero", heading: "Revisá", body: "Mirá la ficha." }, { label: "Después", heading: "Elegí", body: "Seleccioná una opción." }] },
+    faq: { heading: "Preguntas frecuentes", intro: "Respuestas.", items: [{ question: "¿Cómo compro?", answer: "Agregá al carrito." }, { question: "¿Puedo elegir?", answer: "Sí." }, { question: "¿Dónde veo detalles?", answer: "En la ficha." }] },
+    closing: { eyebrow: "Compra", heading: "Elegí con tranquilidad", body: "Revisá los datos.", secondary_body: "Consultá a la tienda." },
+    newsletter: { heading: "Recibí novedades", body: "Suscribite." },
+    media: { hero_media_id: media[0], gallery_media_ids: media, comparison_media_id: media[1], community_media_id: media[2], story_media_ids: media }
+  };
+  return {
+    id: "pag_piloto_generada", tienda: "demo.myshopify.com", shopify_product_id: source_fields.product_gid,
+    urls: Object.fromEntries(media.map((id, i) => [id, `https://cdn.shopify.com/${i}.webp`])),
+    data: {
+      fuente: { shopify_product_id: source_fields.product_gid, titulo_crudo: source_fields.title },
+      piloto_pdp_01: { contract_version: 1, template: "piloto-pdp-01", source_fields, source_hash: hashSource(source_fields), content, evidence: {}, editor: { version: 1, sections: [] } }
     }
   };
 }
@@ -111,6 +140,26 @@ describe("frontera de migración de páginas", () => {
     const html = require("../nucleo/render").render(doc, { modo: "editor" }).html;
     assert.match(html, /Una mejora visible/);
     assert.match(html, /Preguntas/);
+  });
+
+  test("migra la página Piloto 01 recién generada a un árbol atómico visible", () => {
+    const pagina = paginaPilotoGenerada();
+    const doc = documentoDePagina(pagina);
+    const recolectar = (nodos) => (nodos || []).flatMap((nodo) => [nodo, ...recolectar(nodo.hijos)]);
+    const tipos = recolectar(doc.arbol).map((nodo) => nodo.tipo);
+    assert.equal(doc.titulo, "Producto Piloto");
+    assert.ok(doc.arbol.length >= 7);
+    for (const tipo of ["galeria_producto", "titulo_producto", "precio_producto", "beneficios_producto", "packs_compra", "boton_carrito", "linea_tiempo", "acordeon_faq", "imagen_texto"]) {
+      assert.equal(tipos.includes(tipo), true, `falta ${tipo}`);
+    }
+    assert.equal(documento.esValido(doc), true);
+    const salida = require("../nucleo/render").render(doc, {
+      modo: "editor",
+      producto: { titulo: "Producto Piloto", imagenes: Object.values(pagina.urls), precio_formateado: "$ 10", variante_id: "gid://shopify/ProductVariant/456" }
+    });
+    assert.match(salida.html, /Producto Piloto/);
+    assert.match(salida.html, /Conocé el producto en detalle/);
+    assert.match(salida.html, /cdn\.shopify\.com\/0\.webp/);
   });
 
   test("migrar todas las imágenes de la galería legacy y no duplica el titular", () => {

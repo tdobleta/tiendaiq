@@ -121,6 +121,9 @@
               return { src: subida.url, alt: archivo.name, id: subida.media_id };
             },
           });
+          if (pagina.generacion?.status === "paused" || (Array.isArray(pagina.avisos) && pagina.avisos.length)) {
+            notificar("La página ya está creada y lista para editar. La generación asistida por IA queda pendiente; no se inventó contenido.");
+          }
           raiz.addEventListener("tiq:ia", () => notificar("La edición con IA por bloque queda preparada en este editor; la conexión al proveedor se habilita en la fase de IA."));
           raiz.addEventListener("tiq:elegir-producto", () => notificar("El selector de producto se conecta al catálogo Shopify en la fase de producto."));
           raiz.addEventListener("tiq:error", (evento) => notificar(evento.detail?.mensaje || "No se pudo completar la acción."));

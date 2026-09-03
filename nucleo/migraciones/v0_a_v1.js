@@ -191,6 +191,16 @@ function preguntasDe(items) {
   }).filter(Boolean);
 }
 
+function pasosDe(steps) {
+  return lista(steps).map((step, indice) => {
+    if (!step || typeof step !== "object") return null;
+    const etiqueta = texto(step.label) || `Paso ${indice + 1}`;
+    const titulo = texto(step.heading) || `Etapa ${indice + 1}`;
+    const cuerpo = texto(step.body);
+    return cuerpo ? { etiqueta, titulo, texto: cuerpo } : null;
+  }).filter(Boolean);
+}
+
 function resenasConProcedencia(items, urls) {
   // Las tarjetas de la IA que contienen instrucciones ("Reseña que…") no son
   // testimonios. No se migran a una superficie visible hasta que exista autor,
@@ -387,6 +397,130 @@ function arbolDesdeContenidoModerno(contenido, media, urls, ids, titulo) {
   return arbol;
 }
 
+// Piloto 01 ya no guarda facetas de texto: guarda copy editorial y comercio
+// vivo en `piloto_pdp_01`.  La primera versión del editor sólo miraba
+// `data.content`, por lo que las páginas recién creadas llegaban con un árbol
+// vacío aunque la generación hubiera terminado correctamente.  Este camino
+// convierte el contrato de Piloto en los mismos bloques atómicos que usa el
+// editor y el storefront; no crea una segunda representación editable.
+function arbolDesdePiloto(piloto, urls, ids, titulo) {
+  if (!piloto || typeof piloto !== "object") return [];
+  const content = piloto.content || {};
+  const media = content.media || {};
+  const arbol = [];
+
+  const referenciasGaleria = [...new Set([
+    media.hero_media_id,
+    ...lista(media.gallery_media_ids)
+  ].filter(Boolean))];
+  const galeria = referenciasGaleria.length
+    ? nodoTipo(ids, "galeria_producto", "piloto:hero:galeria", {
+      imagenes: itemsGaleria(referenciasGaleria, urls, titulo)
+    })
+    : null;
+
+  const hero = content.hero || {};
+  const beneficiosHero = puntosDeBullets(hero.bullets);
+  const detalleHijos = [
+    nodoTipo(ids, "titulo_producto", "piloto:hero:titulo", { texto: "" }),
+    nodoTipo(ids, "precio_producto", "piloto:hero:precio", {}),
+    nodoTipo(ids, "texto", "piloto:hero:claim", { html: texto(hero.claim), etiqueta: "p" }),
+    beneficiosHero.length
+      ? nodoTipo(ids, "beneficios_producto", "piloto:hero:beneficios", {
+        titulo: "Detalles que marcan la diferencia", puntos: beneficiosHero
+      })
+      : null
+  ].filter(Boolean);
+
+  const packs = lista(content.offer?.packs).map((pack, indice) => ({
+    titulo: texto(pack?.label) || `Opción ${indice + 1}`,
+    subtitulo: texto(pack?.subtitle) || "Presentación del producto",
+    cantidad: String(pack?.quantity || indice + 1),
+    precio: "",
+    badge: "",
+    imagen: null
+  }));
+  if (packs.length) detalleHijos.push(nodoTipo(ids, "packs_compra", "piloto:hero:packs", {
+    titulo: texto(content.offer?.heading) || "Opciones de compra", packs
+  }));
+  const quick = preguntasDe(content.quick?.items);
+  if (quick.length) detalleHijos.push(nodoTipo(ids, "acordeon_faq", "piloto:hero:quick", {
+    titulo: "Información del producto", items: quick
+  }));
+  detalleHijos.push(nodoTipo(ids, "boton_carrito", "piloto:hero:boton", { texto: "Añadir al carrito" }));
+
+  const detalles = nodoTipo(ids, "seccion", "piloto:hero:detalles", {
+    ancho: "pagina", ancho_contenido: "pagina", direccion: "vertical", gap: 16
+  }, detalleHijos);
+  const heroHijos = [galeria, detalles].filter(Boolean);
+  if (heroHijos.length) arbol.push(nodoTipo(ids, "seccion", "piloto:hero", {
+    ancho: "pagina", ancho_contenido: "pagina", direccion: "horizontal", gap: 32
+  }, heroHijos));
+
+  const why = content.why || {};
+  const whyPoints = lista(why.points).map((point) => ({ icono: "✓", texto: texto(point) })).filter((point) => point.texto);
+  if (whyPoints.length || texto(why.body)) {
+    arbol.push(nodoTipo(ids, "beneficios_producto", "piloto:why", {
+      titulo: texto(why.heading) || "Por qué elegirlo",
+      puntos: whyPoints.length ? whyPoints : [{ icono: "✓", texto: texto(why.body) || "Información clara para elegir." }],
+      ...(imagenProp(media.comparison_media_id, urls, texto(why.heading) || titulo)
+        ? { imagen: imagenProp(media.comparison_media_id, urls, texto(why.heading) || titulo) } : {})
+    }));
+  }
+
+  const stories = content.stories || {};
+  const storyMedia = lista(media.story_media_ids);
+  for (const [indice, card] of lista(stories.cards).entries()) {
+    if (!card || typeof card !== "object") continue;
+    const copy = { titulo: texto(card.title) || `Sobre el producto ${indice + 1}`, texto: texto(card.body) || texto(card.product_note) };
+    const foto = imagenProp(storyMedia[indice] || storyMedia[0], urls, copy.titulo);
+    if (foto) copy.imagen = foto;
+    if (copy.titulo || copy.texto || copy.imagen) arbol.push(nodoTipo(ids, "imagen_texto", `piloto:stories:${indice}`, copy));
+  }
+
+  const timeline = content.timeline || {};
+  const pasos = pasosDe(timeline.steps);
+  if (pasos.length) arbol.push(nodoTipo(ids, "linea_tiempo", "piloto:timeline", {
+    titulo: texto(timeline.heading) || "Línea de tiempo",
+    intro: texto(timeline.intro), pasos
+  }));
+
+  const faq = preguntasDe(content.faq?.items);
+  if (faq.length) arbol.push(nodoTipo(ids, "acordeon_faq", "piloto:faq", {
+    titulo: texto(content.faq?.heading) || "Preguntas frecuentes", items: faq
+  }));
+
+  const community = imagenProp(media.community_media_id, urls, "Experiencia de clientes");
+  if (community) arbol.push(nodoTipo(ids, "seccion", "piloto:community", {
+    ancho: "pagina", ancho_contenido: "pagina", direccion: "vertical", gap: 12
+  }, [
+    nodoTipo(ids, "imagen", "piloto:community:imagen", { imagen: community }),
+    nodoTipo(ids, "texto", "piloto:community:texto", {
+      html: "Explorá las imágenes y la información disponible del producto.", etiqueta: "p"
+    })
+  ]));
+
+  const cierre = content.closing || {};
+  const cierreHijos = [
+    nodoTexto(ids, "piloto:closing:eyebrow", cierre.eyebrow),
+    nodoTexto(ids, "piloto:closing:heading", cierre.heading, { etiqueta: "h2" }),
+    nodoTexto(ids, "piloto:closing:body", cierre.body),
+    nodoTexto(ids, "piloto:closing:secondary", cierre.secondary_body)
+  ].filter(Boolean);
+  const cierreSeccion = seccion(ids, "piloto:closing", texto(cierre.heading) || "Conocé el producto", cierreHijos);
+  if (cierreSeccion) arbol.push(cierreSeccion);
+
+  const newsletter = content.newsletter || {};
+  const newsletterHijos = [
+    nodoTexto(ids, "piloto:newsletter:heading", newsletter.heading, { etiqueta: "h2" }),
+    nodoTexto(ids, "piloto:newsletter:body", newsletter.body)
+  ].filter(Boolean);
+  const newsletterSeccion = seccion(ids, "piloto:newsletter", texto(newsletter.heading) || "Novedades", newsletterHijos);
+  if (newsletterSeccion) arbol.push(newsletterSeccion);
+
+  return arbol;
+}
+
 function migrar(entrada) {
   const original = clonar(entrada || {});
   const envoltorio = original.data && typeof original.data === "object" ? original : null;
@@ -395,13 +529,20 @@ function migrar(entrada) {
   const urls = envoltorio?.urls || original.urls || {};
   const ids = generadorIds();
   const hero = facetas.hero || {};
-  const fuente = viejo.fuente || viejo.source_fields || {};
+  const piloto = viejo.piloto_pdp_01 && typeof viejo.piloto_pdp_01 === "object" ? viejo.piloto_pdp_01 : null;
+  const fuente = {
+    ...(piloto?.source_fields || {}),
+    ...(viejo.source_fields || {}),
+    ...(viejo.fuente || {})
+  };
   const titulo = texto(hero.titulo) || texto(fuente.title) || texto(envoltorio?.titulo) || "Página de producto";
   const productoId = texto(envoltorio?.shopify_product_id) || texto(fuente.product_gid) || null;
   const arbol = [];
 
   const contenidoModerno = viejo.content && typeof viejo.content === "object" ? viejo.content : null;
-  if (contenidoModerno) {
+  if (piloto?.content) {
+    arbol.push(...arbolDesdePiloto(piloto, urls, ids, titulo));
+  } else if (contenidoModerno) {
     arbol.push(...arbolDesdeContenidoModerno(contenidoModerno, contenidoModerno.media || {}, urls, ids, titulo));
   }
 
@@ -415,7 +556,7 @@ function migrar(entrada) {
   }
   // La página nueva usa bloques atómicos para el héroe. El camino genérico de
   // texto queda solo como fallback para un registro sin datos de producto.
-  const heroNuevo = heroAtomico(hero, viejo, urls, ids, titulo);
+  const heroNuevo = !piloto?.content ? heroAtomico(hero, viejo, urls, ids, titulo) : null;
   if (heroNuevo) arbol.push(heroNuevo);
   heroHijos.push(nodoTexto(ids, "hero:subtitulo", hero.subtitulo));
   heroHijos.push(nodoTexto(ids, "hero:bullets", lineaDeBullets(hero.bullets)));

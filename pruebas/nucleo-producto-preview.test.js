@@ -28,4 +28,21 @@ describe("proyección de producto para el preview", () => {
     const salida = productoPreviewDePagina({ data: { facetas: { hero: { galeria: ["gid://shopify/MediaImage/404"] } } } });
     assert.deepEqual(salida.imagenes, []);
   });
+
+  test("usa la fuente y los medios de Piloto 01 cuando no existe faceta legacy", () => {
+    const media = "gid://shopify/MediaImage/9";
+    const salida = productoPreviewDePagina({
+      titulo: "Fallback",
+      urls: { [media]: "https://cdn.shopify.com/piloto.webp" },
+      data: {
+        piloto_pdp_01: {
+          source_fields: { title: "Producto Piloto", media_ids: [media], variants: [] },
+          content: { media: { hero_media_id: media, gallery_media_ids: [media] }, offer: { packs: [{ variant_id: "gid://shopify/ProductVariant/9" }] } }
+        }
+      }
+    });
+    assert.equal(salida.titulo, "Producto Piloto");
+    assert.equal(salida.imagenes[0].src, "https://cdn.shopify.com/piloto.webp");
+    assert.equal(salida.variante_id, "gid://shopify/ProductVariant/9");
+  });
 });

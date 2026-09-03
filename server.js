@@ -21,7 +21,7 @@
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
-const { listarProductos } = require("./adaptador");
+const { listarProductos, crearPaginaBase } = require("./adaptador");
 const { env, gql, sesionDeEnv } = require("./shopify");
 const { sesionDe, borrarTienda, esDominioValido, normalizar } = require("./tiendas");
 const { createSyntheticLoadHandler, safeEqual } = require("./src/capacity/synthetic-load-endpoints");
@@ -1014,8 +1014,43 @@ async function api(req, res, url) {
     }
     const admissionPause = generationAdmissionPause(env);
     if (admissionPause.paused) {
-      res.setHeader("Retry-After", String(admissionPause.retryAfter));
-      return json(res, 503, { error: admissionPause.message, code: admissionPause.code });
+      // La admisión de IA puede estar cerrada en staging o durante una
+      // ventana de capacidad. Eso no debe convertir el botón de creación en
+      // una pantalla sin página: dejamos un borrador real con el producto y
+      // sus medios vivos, y marcamos con claridad que el copy asistido queda
+      // pendiente. El merchant puede editarlo y publicarlo sin pagar uso de
+      // IA ni inventar claims.
+      const pageId = idDePagina(producto_id);
+      const existente = await leerPagina(sesion.tenant, pageId);
+      if (existente) {
+        return json(res, 200, {
+          page: existente,
+          generation: { status: "paused", code: admissionPause.code, message: admissionPause.message, ai: false }
+        });
+      }
+      try {
+        const base = await crearPaginaBase(producto_id, sesion, { idioma, angulo, estilo });
+        const page = {
+          id: pageId,
+          shopify_product_id: producto_id,
+          estado: "borrador",
+          data: base.data,
+          urls: base.urls,
+          avisos: base.avisos,
+          generacion: { status: "paused", code: admissionPause.code, message: admissionPause.message, ai: false },
+          url_publica: null,
+          actualizado: new Date().toISOString(),
+          titulo: base.titulo
+        };
+        await guardarPagina(sesion.tenant, page);
+        return json(res, 201, {
+          page,
+          generation: { status: "paused", code: admissionPause.code, message: admissionPause.message, ai: false }
+        });
+      } catch (error) {
+        const codigo = Number(error?.status) >= 400 && Number(error?.status) < 500 ? Number(error.status) : 422;
+        return json(res, codigo, { error: error.message || "No se pudo preparar la plantilla del producto.", code: error.code || "PRODUCT_TEMPLATE_CREATION_FAILED" });
+      }
     }
 
     const idempotencyKey = `edit-text:${request_id}`;

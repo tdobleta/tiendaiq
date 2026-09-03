@@ -17,7 +17,17 @@ const path = require("path");
 const Anthropic = require("@anthropic-ai/sdk");
 const { gql, env, sesionDeEnv } = require("./shopify");
 const { resolveTemplateForCreation, templateMetadata } = require("./src/domain/template-registry");
-const { generatePdp01 } = require("./src/piloto/generate-pdp01");
+const {
+  generatePdp01,
+  composePdp01Content
+} = require("./src/piloto/generate-pdp01");
+const {
+  hashSource,
+  sourceFieldsFromProduct,
+  validatePdp01,
+  defaultPdp01Editor,
+  validatePdp01Copy
+} = require("./src/piloto/pdp01-contract");
 
 // El modelo y el esfuerzo salen de env para poder compararlos sobre los mismos
 // productos sin tocar código ni deployar.
@@ -853,6 +863,111 @@ async function crearPagina(idProducto, sesion, {
   return { data, urls, avisos: validar(data, salida), uso };
 }
 
+// Una página no debe desaparecer sólo porque el proveedor de IA esté cerrado
+// por capacidad, presupuesto o mantenimiento. Esta semilla es deliberadamente
+// honesta: trae el producto, las imágenes, el precio, las variantes y los
+// packs desde Shopify, y deja copy neutro editable. No se inventan reseñas,
+// descuentos, resultados ni características. Cuando la admisión de IA vuelva a
+// abrirse, una generación posterior puede reemplazar solamente el copy.
+function copyPdp01Base() {
+  return validatePdp01Copy({
+    hero: {
+      claim: "Conocé el producto en detalle.",
+      bullets: ["Imágenes del producto visibles", "Información clara para elegir"]
+    },
+    offer: { heading: "Opciones de compra" },
+    quick: { items: [
+      { question: "¿Qué incluye esta página?", answer: "Encontrás las imágenes, los detalles y las opciones disponibles del producto." },
+      { question: "¿Cómo elegir una opción?", answer: "Seleccioná la variante o cantidad que prefieras y agregala al carrito." }
+    ] },
+    why: {
+      eyebrow: "Información del producto",
+      heading: "Todo claro antes de comprar",
+      body: "Una presentación ordenada para revisar el producto y sus opciones.",
+      points: ["Detalles del producto visibles", "Compra simple y clara"]
+    },
+    stories: {
+      heading: "Conocé el producto",
+      intro: "Explorá las imágenes y la información disponible.",
+      cards: [
+        { title: "Vista general", body: "Explorá las imágenes del producto.", product_note: "Contenido del producto" },
+        { title: "Opciones disponibles", body: "Elegí entre las opciones que ofrece la tienda.", product_note: "Datos de Shopify" },
+        { title: "Antes de comprar", body: "Revisá la información disponible y agregalo al carrito cuando estés listo.", product_note: "Información clara" }
+      ]
+    },
+    timeline: {
+      heading: "Cómo empezar",
+      intro: "Tres pasos simples para avanzar.",
+      steps: [
+        { label: "Primero", heading: "Revisá", body: "Mirá las imágenes y los detalles disponibles." },
+        { label: "Después", heading: "Elegí", body: "Seleccioná la variante o cantidad que prefieras." }
+      ]
+    },
+    faq: {
+      heading: "Preguntas frecuentes",
+      intro: "Información básica para decidir.",
+      items: [
+        { question: "¿Cómo compro?", answer: "Elegí las opciones disponibles y agregá el producto al carrito." },
+        { question: "¿Puedo revisar las variantes?", answer: "Sí, las variantes disponibles aparecen antes de agregar al carrito." },
+        { question: "¿Dónde consulto más detalles?", answer: "Revisá la ficha del producto y la información de la tienda." }
+      ]
+    },
+    closing: {
+      eyebrow: "Tu próxima compra",
+      heading: "Elegí con tranquilidad",
+      body: "Revisá la información disponible y tomá tu decisión.",
+      secondary_body: "Si necesitás más datos, consultá a la tienda."
+    },
+    newsletter: {
+      heading: "Recibí novedades",
+      body: "Suscribite para enterarte de nuevas opciones de la tienda."
+    }
+  });
+}
+
+async function crearPaginaBase(idProducto, sesion, {
+  idioma = "es",
+  angulo = "",
+  estilo = "piloto-pdp-01",
+  signal
+} = {}) {
+  const template = resolveTemplateForCreation(estilo);
+  const { fuente, medios, product } = await extraer(idProducto, sesion, { signal });
+  if (template.rendererKey !== "piloto-pdp-01") {
+    throw new Error(`La plantilla "${estilo}" no tiene una semilla de producto disponible.`);
+  }
+  const source_fields = sourceFieldsFromProduct(product);
+  if (!source_fields.media_ids.length) throw new Error("Para crear la página necesitamos al menos una imagen del producto.");
+  if (!source_fields.variants.length) throw new Error("Para crear la página necesitamos al menos una variante del producto.");
+  const documento = validatePdp01({
+    contract_version: 1,
+    template: "piloto-pdp-01",
+    source_fields,
+    source_hash: hashSource(source_fields),
+    content: composePdp01Content(copyPdp01Base(), source_fields),
+    evidence: {},
+    editor: defaultPdp01Editor()
+  }, { origin: "merchant" });
+  const metadata = templateMetadata(template);
+  const data = {
+    global: { estilo: metadata.legacyStyle, template: metadata.template, idioma, angulo, cta: "Agregar al carrito" },
+    // La forma histórica sigue siendo útil para el preview de precio/título y
+    // para la tabla de páginas durante la migración; el documento Piloto es la
+    // fuente canónica del editor.
+    fuente,
+    compliance: { claims_verified: false },
+    piloto_pdp_01: documento
+  };
+  return {
+    data,
+    urls: Object.fromEntries(medios.map((m) => [m.media_id, m.url])),
+    avisos: ["Plantilla creada. La generación asistida por IA está pendiente de habilitación."],
+    uso: null,
+    titulo: source_fields.title,
+    producto: product
+  };
+}
+
 // Asistente puntual del editor de páginas: reescribe / acorta / amplía el
 // texto de UN campo, con el contexto de su sección. No inventa hechos.
 async function editarTexto({
@@ -941,6 +1056,8 @@ function escribirPreview(data, urls) {
 module.exports = {
   listarProductos,
   crearPagina,
+  crearPaginaBase,
+  copyPdp01Base,
   escribirPreview,
   extraer,
   generar,
