@@ -54,6 +54,56 @@ const PARTES = {
 
 const vacio = (v) => v === null || v === undefined || v === "";
 
+// PagePilot no deja que un control vacío parezca un fallo del editor: explica
+// qué dato espera y conserva la posibilidad de usar el valor real de Shopify.
+// Estos textos viven en la clase de campo, no en cada sección, para que una
+// composición nueva herede el mismo nivel de orientación automáticamente.
+const PLACEHOLDERS = {
+  titulo: "Escribí un título",
+  titular: "Escribí un titular",
+  nombre: "Escribí un nombre",
+  texto: "Escribí el texto",
+  html: "Escribí el contenido",
+  intro: "Escribí una introducción",
+  respuesta: "Escribí la respuesta",
+  pregunta: "Escribí la pregunta",
+  subtitulo: "Escribí un subtítulo",
+  etiqueta: "Escribí una etiqueta",
+  precio: "Ej.: $ 19,99",
+  badge: "Ej.: Más vendido",
+  autor: "Nombre del cliente",
+  prefijo: "Ej.: Desde"
+};
+
+function placeholderDe(campo) {
+  if (campo?.placeholder) return String(campo.placeholder);
+  if (!campo || !["texto_plano", "texto_largo", "richtext"].includes(campo.tipo)) return "";
+  return PLACEHOLDERS[campo.clave] || (
+    campo.tipo === "richtext" ? "Escribí el contenido" :
+      campo.tipo === "texto_largo" ? "Escribí una descripción" : "Escribí un valor"
+  );
+}
+
+// Ayuda resuelta: la definición explícita gana y, si no existe, la clase de
+// control aporta una explicación corta. Las filas pequeñas la muestran como
+// tooltip para conservar la densidad; los controles largos la muestran debajo.
+function ayudaDe(campo) {
+  if (campo?.ayuda) return String(campo.ayuda);
+  if (!campo) return "";
+  switch (campo.tipo) {
+    case "richtext": return "Admite formato y enlaces sin salir del editor.";
+    case "texto_largo": return "Escribí una explicación breve y fácil de escanear.";
+    case "token_color": return "De la marca sigue Branding; Personalizado crea un color propio para este bloque.";
+    case "color": return "Elegí un color propio o activá Sin color para dejarlo transparente.";
+    case "imagen": return "Subí una imagen o usá una URL segura. El texto alternativo mejora accesibilidad y SEO.";
+    case "video": return "Usá una URL accesible; la portada se muestra antes de reproducirlo.";
+    case "enlace": return "Usá una URL HTTPS o una ruta interna de la tienda.";
+    case "producto": return "Elegí un producto real del catálogo de Shopify.";
+    case "lista": return "Agregá, quitá y reordená elementos desde este bloque.";
+    default: return "";
+  }
+}
+
 // Un repetidor puede llegar desde el DOM como un mapa de partes
 // (`{valor:"Ana"}`), pero también desde una semilla, una migración o una
 // prueba como valor ya tipado (`"Ana"`, `5`, `{src:"…"}`). Normalizar acá evita
@@ -173,10 +223,10 @@ function opciones(lista, seleccionado) {
 function htmlEntrada(campo, valor, muestra) {
   switch (campo.tipo) {
     case "texto_plano":
-      return `<input type="text" class="ed-texto"${parte("valor")} value="${esc(valor)}">`;
+      return `<input type="text" class="ed-texto"${parte("valor")} value="${esc(valor)}" placeholder="${esc(placeholderDe(campo))}">`;
 
     case "texto_largo":
-      return `<textarea class="ed-area" rows="3"${parte("valor")}>${esc(valor)}</textarea>`;
+      return `<textarea class="ed-area" rows="3"${parte("valor")} placeholder="${esc(placeholderDe(campo))}">${esc(valor)}</textarea>`;
 
     case "richtext":
       return `<div class="ed-rich">` +
@@ -188,7 +238,7 @@ function htmlEntrada(campo, valor, muestra) {
         `<button type="button" data-formato="enlace" title="Enlace">${ICONO_ENLACE}</button>` +
         `<button type="button" class="ed-rich__ia" data-ia="${esc(campo.clave)}">Editar con IA</button>` +
         `</div>` +
-        `<div class="ed-rich__area" contenteditable="true"${parte("valor")}>${sanear(valor)}</div>` +
+        `<div class="ed-rich__area" contenteditable="true"${parte("valor")} data-placeholder="${esc(placeholderDe(campo))}">${sanear(valor)}</div>` +
         `</div>`;
 
     case "numero":
@@ -234,16 +284,16 @@ function htmlEntrada(campo, valor, muestra) {
       return `<div class="ed-media">` +
         (v.src ? `<img class="ed-media__vista" src="${esc(v.src)}" alt="">` : `<div class="ed-media__vacio">Sin imagen</div>`) +
         `<label class="ed-media__archivo">Subir imagen<input type="file" data-subir-imagen accept="image/jpeg,image/png,image/webp,image/gif"></label>` +
-        `<input type="url" class="ed-texto"${parte("src")} value="${esc(v.src)}" placeholder="URL de la imagen">` +
-        `<input type="text" class="ed-texto"${parte("alt")} value="${esc(v.alt)}" placeholder="Texto alternativo (accesibilidad y SEO)">` +
+        `<input type="url" class="ed-texto"${parte("src")} value="${esc(v.src)}" placeholder="${esc(campo.placeholder_src || "URL de la imagen")}">` +
+        `<input type="text" class="ed-texto"${parte("alt")} value="${esc(v.alt)}" placeholder="${esc(campo.placeholder_alt || "Texto alternativo (accesibilidad y SEO)")}">` +
         `</div>`;
     }
 
     case "video": {
       const v = valor || {};
       return `<div class="ed-media">` +
-        `<input type="url" class="ed-texto"${parte("src")} value="${esc(v.src)}" placeholder="URL del video">` +
-        `<input type="url" class="ed-texto"${parte("poster")} value="${esc(v.poster)}" placeholder="Imagen de portada">` +
+        `<input type="url" class="ed-texto"${parte("src")} value="${esc(v.src)}" placeholder="${esc(campo.placeholder_src || "URL del video")}">` +
+        `<input type="url" class="ed-texto"${parte("poster")} value="${esc(v.poster)}" placeholder="${esc(campo.placeholder_poster || "Imagen de portada")}">` +
         `</div>`;
     }
 
@@ -254,8 +304,8 @@ function htmlEntrada(campo, valor, muestra) {
     case "enlace": {
       const v = valor || {};
       return `<div class="ed-enlace">` +
-        `<input type="url" class="ed-texto"${parte("url")} value="${esc(v.url)}" placeholder="https://">` +
-        `<input type="text" class="ed-texto"${parte("texto")} value="${esc(v.texto)}" placeholder="Texto del botón">` +
+        `<input type="url" class="ed-texto"${parte("url")} value="${esc(v.url)}" placeholder="${esc(campo.placeholder_url || "https://")}">` +
+        `<input type="text" class="ed-texto"${parte("texto")} value="${esc(v.texto)}" placeholder="${esc(campo.placeholder_texto || "Texto del botón")}">` +
         `<label class="ed-check"><input type="checkbox"${parte("nueva_pestana")}${v.nueva_pestana ? " checked" : ""}> Abrir en otra pestaña</label>` +
         `</div>`;
     }
@@ -270,6 +320,7 @@ function htmlEntrada(campo, valor, muestra) {
     case "lista": {
       const items = Array.isArray(valor) ? valor : [];
       return `<div class="ed-lista">` +
+        (items.length ? "" : `<p class="ed-lista__vacio">Todavía no hay ${esc((campo.nombre_item || "elementos").toLowerCase())}. Agregá el primero para empezar.</p>`) +
         items.map((item, i) =>
           `<div class="ed-lista__item" data-item="${i}">` +
           `<div class="ed-lista__cabecera"><span>${esc(campo.nombre_item || "Elemento")} ${i + 1}</span>` +
@@ -293,14 +344,20 @@ function htmlEntrada(campo, valor, muestra) {
 // Un campo completo: etiqueta, micro-toggle de herencia, control y ayuda.
 function htmlCampo(campo, valor, { overrideado = false, muestra = null } = {}) {
   const enPila = ["richtext", "texto_largo", "imagen", "video", "enlace", "lista", "producto"].includes(campo.tipo);
+  const ayuda = ayudaDe(campo);
+  // Las filas cortas conservan el patrón compacto del inspector de PagePilot;
+  // su ayuda queda disponible en la etiqueta. Los controles largos sí reciben
+  // la explicación debajo, donde no puede colapsar la etiqueta.
+  const ayudaEnTooltip = ayuda && !enPila ? ` title="${esc(ayuda)}"` : "";
+  const ayudaVisible = ayuda && enPila ? `<p class="ed-campo__ayuda">${esc(ayuda)}</p>` : "";
   return `<div class="ed-campo${enPila ? " ed-campo--pila" : ""}" data-clave="${esc(campo.clave)}" data-tipo="${esc(campo.tipo)}">` +
     `<div class="ed-campo__cabecera">` +
     htmlHerencia(campo, overrideado) +
-    `<label class="ed-campo__etiqueta">${esc(campo.etiqueta)}</label>` +
+    `<label class="ed-campo__etiqueta"${ayudaEnTooltip}>${esc(campo.etiqueta)}</label>` +
     `</div>` +
     `<div class="ed-campo__control">${htmlEntrada(campo, valor, muestra)}</div>` +
-    (campo.ayuda ? `<p class="ed-campo__ayuda">${esc(campo.ayuda)}</p>` : "") +
+    ayudaVisible +
     `</div>`;
 }
 
-module.exports = { PARTES, parsear, htmlCampo, htmlEntrada, htmlHerencia, esc };
+module.exports = { PARTES, parsear, htmlCampo, htmlEntrada, htmlHerencia, placeholderDe, ayudaDe, esc };

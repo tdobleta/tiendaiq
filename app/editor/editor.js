@@ -161,6 +161,15 @@ function montarEditor(raiz, { documento: docInicial, producto = null, alGuardar 
     rutaCss
   });
 
+  // Al seleccionar desde el árbol el iframe puede estar terminando su
+  // repintado. Repetir el desplazamiento en el siguiente frame evita que el
+  // primer cálculo use la geometría anterior y deje el bloque fuera de vista.
+  function verNodoDesdeArbol(id) {
+    lienzo.verNodo(id);
+    const raf = raiz.ownerDocument.defaultView?.requestAnimationFrame;
+    if (raf) raf(() => lienzo.verNodo(id));
+  }
+
   // ---------- pintado ----------
 
   function repintar() {
@@ -425,7 +434,7 @@ function montarEditor(raiz, { documento: docInicial, producto = null, alGuardar 
     const fila = evento.target.closest("[data-nodo]");
     if (fila) {
       estado.seleccionar(fila.dataset.nodo);
-      lienzo.verNodo(fila.dataset.nodo);
+      verNodoDesdeArbol(fila.dataset.nodo);
     }
   });
 
@@ -559,7 +568,7 @@ function montarEditor(raiz, { documento: docInicial, producto = null, alGuardar 
     if (!fila) return;
     evento.preventDefault();
     estado.seleccionar(fila.dataset.nodo);
-    lienzo.verNodo(fila.dataset.nodo);
+    verNodoDesdeArbol(fila.dataset.nodo);
   });
 
   // ---------- barra flotante ----------

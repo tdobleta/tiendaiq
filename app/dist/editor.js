@@ -2176,6 +2176,53 @@ var TiqEditor = (() => {
         lista: ["items"]
       };
       var vacio = (v) => v === null || v === void 0 || v === "";
+      var PLACEHOLDERS = {
+        titulo: "Escrib\xED un t\xEDtulo",
+        titular: "Escrib\xED un titular",
+        nombre: "Escrib\xED un nombre",
+        texto: "Escrib\xED el texto",
+        html: "Escrib\xED el contenido",
+        intro: "Escrib\xED una introducci\xF3n",
+        respuesta: "Escrib\xED la respuesta",
+        pregunta: "Escrib\xED la pregunta",
+        subtitulo: "Escrib\xED un subt\xEDtulo",
+        etiqueta: "Escrib\xED una etiqueta",
+        precio: "Ej.: $ 19,99",
+        badge: "Ej.: M\xE1s vendido",
+        autor: "Nombre del cliente",
+        prefijo: "Ej.: Desde"
+      };
+      function placeholderDe(campo) {
+        if (campo == null ? void 0 : campo.placeholder) return String(campo.placeholder);
+        if (!campo || !["texto_plano", "texto_largo", "richtext"].includes(campo.tipo)) return "";
+        return PLACEHOLDERS[campo.clave] || (campo.tipo === "richtext" ? "Escrib\xED el contenido" : campo.tipo === "texto_largo" ? "Escrib\xED una descripci\xF3n" : "Escrib\xED un valor");
+      }
+      function ayudaDe(campo) {
+        if (campo == null ? void 0 : campo.ayuda) return String(campo.ayuda);
+        if (!campo) return "";
+        switch (campo.tipo) {
+          case "richtext":
+            return "Admite formato y enlaces sin salir del editor.";
+          case "texto_largo":
+            return "Escrib\xED una explicaci\xF3n breve y f\xE1cil de escanear.";
+          case "token_color":
+            return "De la marca sigue Branding; Personalizado crea un color propio para este bloque.";
+          case "color":
+            return "Eleg\xED un color propio o activ\xE1 Sin color para dejarlo transparente.";
+          case "imagen":
+            return "Sub\xED una imagen o us\xE1 una URL segura. El texto alternativo mejora accesibilidad y SEO.";
+          case "video":
+            return "Us\xE1 una URL accesible; la portada se muestra antes de reproducirlo.";
+          case "enlace":
+            return "Us\xE1 una URL HTTPS o una ruta interna de la tienda.";
+          case "producto":
+            return "Eleg\xED un producto real del cat\xE1logo de Shopify.";
+          case "lista":
+            return "Agreg\xE1, quit\xE1 y reorden\xE1 elementos desde este bloque.";
+          default:
+            return "";
+        }
+      }
       function partesDeItem(campo, valor) {
         if (valor && typeof valor === "object" && !Array.isArray(valor)) {
           if (campo.tipo === "imagen" && Object.prototype.hasOwnProperty.call(valor, "src")) {
@@ -2258,14 +2305,14 @@ var TiqEditor = (() => {
       function htmlEntrada(campo, valor, muestra) {
         switch (campo.tipo) {
           case "texto_plano":
-            return `<input type="text" class="ed-texto"${parte("valor")} value="${esc(valor)}">`;
+            return `<input type="text" class="ed-texto"${parte("valor")} value="${esc(valor)}" placeholder="${esc(placeholderDe(campo))}">`;
           case "texto_largo":
-            return `<textarea class="ed-area" rows="3"${parte("valor")}>${esc(valor)}</textarea>`;
+            return `<textarea class="ed-area" rows="3"${parte("valor")} placeholder="${esc(placeholderDe(campo))}">${esc(valor)}</textarea>`;
           case "richtext":
             return `<div class="ed-rich"><div class="ed-rich__barra">` + ["bold:B", "italic:I", "underline:U"].map((par) => {
               const [comando, letra] = par.split(":");
               return `<button type="button" data-formato="${comando}" title="${comando}">${letra}</button>`;
-            }).join("") + `<button type="button" data-formato="enlace" title="Enlace">${ICONO_ENLACE}</button><button type="button" class="ed-rich__ia" data-ia="${esc(campo.clave)}">Editar con IA</button></div><div class="ed-rich__area" contenteditable="true"${parte("valor")}>${sanear(valor)}</div></div>`;
+            }).join("") + `<button type="button" data-formato="enlace" title="Enlace">${ICONO_ENLACE}</button><button type="button" class="ed-rich__ia" data-ia="${esc(campo.clave)}">Editar con IA</button></div><div class="ed-rich__area" contenteditable="true"${parte("valor")} data-placeholder="${esc(placeholderDe(campo))}">${sanear(valor)}</div></div>`;
           case "numero":
           case "medida":
             return `<span class="ed-num"><input type="number" class="ed-num__input"${parte("valor")} value="${esc(valor)}"${campo.min !== void 0 ? ` min="${campo.min}"` : ""}${campo.max !== void 0 ? ` max="${campo.max}"` : ""}${campo.tipo === "medida" && campo.unidad === "" ? ' step="0.1"' : ""}>${campo.unidad ? `<span class="ed-num__unidad">${esc(campo.unidad)}</span>` : ""}</span>`;
@@ -2287,17 +2334,17 @@ var TiqEditor = (() => {
             return `<div class="ed-color"><input type="color" class="ed-color__hex"${parte("hex")} value="${esc(valor || "#000000")}"${valor ? "" : " hidden"}><label class="ed-color__sin"><input type="checkbox"${parte("sin")}${valor ? "" : " checked"}> Sin color</label></div>`;
           case "imagen": {
             const v = valor || {};
-            return `<div class="ed-media">` + (v.src ? `<img class="ed-media__vista" src="${esc(v.src)}" alt="">` : `<div class="ed-media__vacio">Sin imagen</div>`) + `<label class="ed-media__archivo">Subir imagen<input type="file" data-subir-imagen accept="image/jpeg,image/png,image/webp,image/gif"></label><input type="url" class="ed-texto"${parte("src")} value="${esc(v.src)}" placeholder="URL de la imagen"><input type="text" class="ed-texto"${parte("alt")} value="${esc(v.alt)}" placeholder="Texto alternativo (accesibilidad y SEO)"></div>`;
+            return `<div class="ed-media">` + (v.src ? `<img class="ed-media__vista" src="${esc(v.src)}" alt="">` : `<div class="ed-media__vacio">Sin imagen</div>`) + `<label class="ed-media__archivo">Subir imagen<input type="file" data-subir-imagen accept="image/jpeg,image/png,image/webp,image/gif"></label><input type="url" class="ed-texto"${parte("src")} value="${esc(v.src)}" placeholder="${esc(campo.placeholder_src || "URL de la imagen")}"><input type="text" class="ed-texto"${parte("alt")} value="${esc(v.alt)}" placeholder="${esc(campo.placeholder_alt || "Texto alternativo (accesibilidad y SEO)")}"></div>`;
           }
           case "video": {
             const v = valor || {};
-            return `<div class="ed-media"><input type="url" class="ed-texto"${parte("src")} value="${esc(v.src)}" placeholder="URL del video"><input type="url" class="ed-texto"${parte("poster")} value="${esc(v.poster)}" placeholder="Imagen de portada"></div>`;
+            return `<div class="ed-media"><input type="url" class="ed-texto"${parte("src")} value="${esc(v.src)}" placeholder="${esc(campo.placeholder_src || "URL del video")}"><input type="url" class="ed-texto"${parte("poster")} value="${esc(v.poster)}" placeholder="${esc(campo.placeholder_poster || "Imagen de portada")}"></div>`;
           }
           case "icono":
             return `<div class="ed-select"><select${parte("valor")}>` + opciones((campo.opciones || []).length ? campo.opciones : [["", "Ninguno"]], valor) + `</select></div>`;
           case "enlace": {
             const v = valor || {};
-            return `<div class="ed-enlace"><input type="url" class="ed-texto"${parte("url")} value="${esc(v.url)}" placeholder="https://"><input type="text" class="ed-texto"${parte("texto")} value="${esc(v.texto)}" placeholder="Texto del bot\xF3n"><label class="ed-check"><input type="checkbox"${parte("nueva_pestana")}${v.nueva_pestana ? " checked" : ""}> Abrir en otra pesta\xF1a</label></div>`;
+            return `<div class="ed-enlace"><input type="url" class="ed-texto"${parte("url")} value="${esc(v.url)}" placeholder="${esc(campo.placeholder_url || "https://")}"><input type="text" class="ed-texto"${parte("texto")} value="${esc(v.texto)}" placeholder="${esc(campo.placeholder_texto || "Texto del bot\xF3n")}"><label class="ed-check"><input type="checkbox"${parte("nueva_pestana")}${v.nueva_pestana ? " checked" : ""}> Abrir en otra pesta\xF1a</label></div>`;
           }
           case "producto":
             return `<div class="ed-producto"><input type="text" class="ed-texto"${parte("valor")} value="${esc(valor)}" placeholder="gid://shopify/Product/\u2026" readonly><button type="button" class="ed-boton" data-elegir-producto>Elegir</button></div>`;
@@ -2305,7 +2352,7 @@ var TiqEditor = (() => {
           // beneficios y estadísticas son todas la misma cosa con otros subcampos.
           case "lista": {
             const items = Array.isArray(valor) ? valor : [];
-            return `<div class="ed-lista">` + items.map(
+            return `<div class="ed-lista">` + (items.length ? "" : `<p class="ed-lista__vacio">Todav\xEDa no hay ${esc((campo.nombre_item || "elementos").toLowerCase())}. Agreg\xE1 el primero para empezar.</p>`) + items.map(
               (item, i) => `<div class="ed-lista__item" data-item="${i}"><div class="ed-lista__cabecera"><span>${esc(campo.nombre_item || "Elemento")} ${i + 1}</span><button type="button" data-subir="${i}" title="Subir">\u2191</button><button type="button" data-bajar="${i}" title="Bajar">\u2193</button><button type="button" data-quitar="${i}" title="Quitar">\u2715</button></div>` + campo.item_campos.map(
                 (sub) => `<div class="ed-lista__campo" data-subcampo="${esc(sub.clave)}"><span>${esc(sub.etiqueta)}</span>` + htmlEntrada(sub, item[sub.clave]) + `</div>`
               ).join("") + `</div>`
@@ -2317,9 +2364,12 @@ var TiqEditor = (() => {
       }
       function htmlCampo(campo, valor, { overrideado = false, muestra = null } = {}) {
         const enPila = ["richtext", "texto_largo", "imagen", "video", "enlace", "lista", "producto"].includes(campo.tipo);
-        return `<div class="ed-campo${enPila ? " ed-campo--pila" : ""}" data-clave="${esc(campo.clave)}" data-tipo="${esc(campo.tipo)}"><div class="ed-campo__cabecera">` + htmlHerencia(campo, overrideado) + `<label class="ed-campo__etiqueta">${esc(campo.etiqueta)}</label></div><div class="ed-campo__control">${htmlEntrada(campo, valor, muestra)}</div>` + (campo.ayuda ? `<p class="ed-campo__ayuda">${esc(campo.ayuda)}</p>` : "") + `</div>`;
+        const ayuda = ayudaDe(campo);
+        const ayudaEnTooltip = ayuda && !enPila ? ` title="${esc(ayuda)}"` : "";
+        const ayudaVisible = ayuda && enPila ? `<p class="ed-campo__ayuda">${esc(ayuda)}</p>` : "";
+        return `<div class="ed-campo${enPila ? " ed-campo--pila" : ""}" data-clave="${esc(campo.clave)}" data-tipo="${esc(campo.tipo)}"><div class="ed-campo__cabecera">` + htmlHerencia(campo, overrideado) + `<label class="ed-campo__etiqueta"${ayudaEnTooltip}>${esc(campo.etiqueta)}</label></div><div class="ed-campo__control">${htmlEntrada(campo, valor, muestra)}</div>` + ayudaVisible + `</div>`;
       }
-      module.exports = { PARTES, parsear, htmlCampo, htmlEntrada, htmlHerencia, esc };
+      module.exports = { PARTES, parsear, htmlCampo, htmlEntrada, htmlHerencia, placeholderDe, ayudaDe, esc };
     }
   });
 
@@ -2902,6 +2952,12 @@ var TiqEditor = (() => {
           alDesplazar: colocarFlota,
           rutaCss
         });
+        function verNodoDesdeArbol(id) {
+          var _a2;
+          lienzo.verNodo(id);
+          const raf = (_a2 = raiz.ownerDocument.defaultView) == null ? void 0 : _a2.requestAnimationFrame;
+          if (raf) raf(() => lienzo.verNodo(id));
+        }
         function repintar() {
           const doc = estado.documento();
           const ctx = contexto(doc, { viewport: estado.viewport() });
@@ -3140,7 +3196,7 @@ var TiqEditor = (() => {
           const fila = evento.target.closest("[data-nodo]");
           if (fila) {
             estado.seleccionar(fila.dataset.nodo);
-            lienzo.verNodo(fila.dataset.nodo);
+            verNodoDesdeArbol(fila.dataset.nodo);
           }
         });
         function abrirLibreria(padreId) {
@@ -3264,7 +3320,7 @@ var TiqEditor = (() => {
           if (!fila) return;
           evento.preventDefault();
           estado.seleccionar(fila.dataset.nodo);
-          lienzo.verNodo(fila.dataset.nodo);
+          verNodoDesdeArbol(fila.dataset.nodo);
         });
         flota.addEventListener("click", (evento) => {
           const nodo = estado.nodoSeleccionado();

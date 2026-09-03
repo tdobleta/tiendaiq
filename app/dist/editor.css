@@ -41,10 +41,10 @@
    conserva para teclado y se oculta solo en interacciones de puntero; todos
    los botones, campos, tarjetas y filas navegables comparten el azul de
    selección del editor. */
-.ed :where(button, input, select, textarea, [tabindex="0"], [contenteditable="true"]):focus {
+.ed :where(button, input, select, textarea, a, [role="button"], [role="tab"], [role="switch"], [role="radio"], [tabindex="0"], [contenteditable="true"]):focus {
   outline: none;
 }
-.ed :where(button, input, select, textarea, [tabindex="0"], [contenteditable="true"]):focus-visible {
+.ed :where(button, input, select, textarea, a, [role="button"], [role="tab"], [role="switch"], [role="radio"], [tabindex="0"], [contenteditable="true"]):focus-visible {
   outline: 2px solid var(--ed-acento);
   outline-offset: 2px;
 }
@@ -218,6 +218,7 @@
 .ed-campo__cabecera { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; }
 .ed-campo--pila .ed-campo__cabecera { margin-bottom: 4px; }
 .ed-campo__etiqueta { color: var(--ed-suave); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ed-campo__etiqueta[title] { cursor: help; }
 .ed-campo__control { flex: none; }
 .ed-campo--pila .ed-campo__control { width: 100%; }
 .ed-campo__ayuda { margin: 4px 0 0; color: var(--ed-suave); font-size: 11px; }
@@ -281,6 +282,7 @@
 .ed-rich__barra button:hover { background: var(--ed-fondo); color: var(--ed-texto); }
 .ed-rich__ia { margin-left: auto; padding: 0 8px; color: #8a2be2 !important; font-weight: 500; }
 .ed-rich__area { min-height: 60px; padding: 8px; outline: none; }
+.ed-rich__area:empty::before { content: attr(data-placeholder); color: #8a9199; pointer-events: none; }
 
 .ed-media, .ed-enlace, .ed-producto, .ed-lista { display: flex; flex-direction: column; gap: 6px; }
 .ed-media__vista { width: 100%; height: 96px; object-fit: cover; border-radius: 6px; background: var(--ed-fondo); }
@@ -299,6 +301,7 @@
 .ed-producto { flex-direction: row; }
 
 .ed-lista__item { border: 1px solid var(--ed-borde); border-radius: 6px; padding: 8px; }
+.ed-lista__vacio { margin: 0; padding: 10px; border: 1px dashed var(--ed-borde); border-radius: 6px; color: var(--ed-suave); font-size: 11px; line-height: 1.4; }
 .ed-lista__cabecera { display: flex; align-items: center; gap: 4px; margin-bottom: 6px; color: var(--ed-suave); }
 .ed-lista__cabecera span { flex: 1; font-weight: 500; }
 .ed-lista__cabecera button { border: 0; background: none; color: var(--ed-suave); cursor: pointer; padding: 2px 4px; }

@@ -18,7 +18,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const { parsear, htmlCampo } = require("../app/editor/controles");
+const { parsear, htmlCampo, placeholderDe, ayudaDe } = require("../app/editor/controles");
 const { htmlPanel, htmlPanelVacio, htmlPanelDesconocido } = require("../app/editor/panel");
 const { htmlArbol, etiquetaDe, contarHijos, iconoDe, ancestrosDe } = require("../app/editor/arbol");
 const { htmlLibreria, htmlTarjeta, filtrar, normalizar, miniaturaDe } = require("../app/editor/libreria");
@@ -153,6 +153,27 @@ describe("dibujo de un campo", () => {
     assert.match(html, /accept="image\/jpeg,image\/png,image\/webp,image\/gif"/);
     assert.match(html, /placeholder="URL de la imagen"/);
   });
+
+  test("los campos vacíos tienen un placeholder semántico", () => {
+    assert.equal(placeholderDe(campo({ clave: "titulo", tipo: "texto_plano" })), "Escribí un título");
+    assert.match(htmlCampo(campo({ clave: "titulo", tipo: "texto_plano" }), ""), /placeholder="Escribí un título"/);
+    assert.match(htmlCampo(campo({ clave: "html", tipo: "richtext" }), ""), /data-placeholder="Escribí el contenido"/);
+  });
+
+  test("la ayuda resuelta no destruye la etiqueta de una fila corta", () => {
+    const corta = htmlCampo(campo({ tipo: "token_color" }), null);
+    assert.equal(ayudaDe(campo({ tipo: "token_color" })).length > 0, true);
+    assert.match(corta, /class="ed-campo__etiqueta" title="/);
+    assert.equal(corta.includes("ed-campo__ayuda"), false);
+    const larga = htmlCampo(campo({ tipo: "texto_largo" }), "");
+    assert.match(larga, /class="ed-campo__ayuda"/);
+  });
+
+  test("una lista vacía explica cómo empezar", () => {
+    const html = htmlCampo(campo({ tipo: "lista", nombre_item: "Reseña", item_campos: [] }), []);
+    assert.match(html, /Todavía no hay reseña/);
+    assert.match(html, /data-agregar-item/);
+  });
 });
 
 describe("panel", () => {
@@ -273,6 +294,7 @@ describe("árbol", () => {
     const css = fs.readFileSync(path.join(__dirname, "..", "app", "editor", "editor.css"), "utf8");
     assert.match(css, /:focus-visible/);
     assert.match(css, /outline:\s*2px solid var\(--ed-acento\)/);
+    assert.match(css, /\[role="radio"\]/);
   });
 
   test("la barra superior ofrece modo avanzado, viewport expandido, estado y acciones reales", () => {
@@ -282,6 +304,12 @@ describe("árbol", () => {
     assert.match(editor, /data-editor-estado/);
     assert.match(editor, /data-accion-editor="copiar-documento"/);
     assert.match(editor, /alEditarVariantes/);
+  });
+
+  test("seleccionar desde el árbol reintenta el scroll después del repintado", () => {
+    const editor = fs.readFileSync(path.join(__dirname, "..", "app", "editor", "editor.js"), "utf8");
+    assert.match(editor, /function verNodoDesdeArbol\(id\)/);
+    assert.match(editor, /raf\(\(\) => lienzo\.verNodo\(id\)\)/);
   });
 
   test("el modo simple oculta solo el grupo avanzado y la IA no se ofrece sin proveedor", () => {
