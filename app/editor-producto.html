@@ -114,6 +114,14 @@
               if (!publicado.url_publica) throw new Error("La tienda no devolvió la URL publicada.");
               notificar("Página publicada en la tienda.");
             },
+            alEditarVariantes: () => {
+              const shop = new URLSearchParams(location.search).get("shop") || "";
+              const productoId = String(pagina.shopify_product_id || "").split("/").pop() || "";
+              if (!/^[a-z0-9][a-z0-9.-]*\.myshopify\.com$/i.test(shop) || !/^\d+$/.test(productoId)) {
+                return notificar("Abrí el producto en Shopify para editar sus variantes.");
+              }
+              window.open("https://" + shop + "/admin/products/" + productoId, "_blank", "noopener,noreferrer");
+            },
             alSubirImagen: async (archivo) => {
               if (!/^image\/(jpeg|png|webp|gif)$/i.test(archivo.type || "")) throw new Error("Elegí una imagen JPG, PNG, WEBP o GIF.");
               if (archivo.size > 10 * 1024 * 1024) throw new Error("La imagen supera el límite de 10 MB.");
@@ -134,6 +142,7 @@
             notificar("La página ya está creada y lista para editar. La generación asistida por IA queda pendiente; no se inventó contenido.");
           }
           raiz.addEventListener("tiq:ia", () => notificar("La edición con IA por bloque queda preparada en este editor; la conexión al proveedor se habilita en la fase de IA."));
+          raiz.addEventListener("tiq:notificar", (evento) => notificar(evento.detail?.mensaje || "Acción completada."));
           raiz.addEventListener("tiq:elegir-producto", () => notificar("El selector de producto se conecta al catálogo Shopify en la fase de producto."));
           raiz.addEventListener("tiq:error", (evento) => notificar(evento.detail?.mensaje || "No se pudo completar la acción."));
         } catch (e) {

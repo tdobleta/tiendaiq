@@ -2780,7 +2780,7 @@ var TiqEditor = (() => {
       var { crearEstado } = require_comandos();
       var { crearLienzo } = require_lienzo();
       var { leerCampo } = require_lector();
-      var { htmlPanel, htmlPanelVacio, htmlPanelDesconocido, htmlToggleViewport } = require_panel();
+      var { htmlPanel, htmlPanelVacio, htmlPanelDesconocido } = require_panel();
       var { htmlArbol, ancestrosDe } = require_arbol();
       var { htmlLibreria } = require_libreria();
       var { htmlMarca } = require_marca();
@@ -2796,24 +2796,45 @@ var TiqEditor = (() => {
         borrar: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m-9 0v13h12V7M10 11v5M14 11v5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>',
         ia: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3zM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8L19 16z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>'
       };
+      var ICONOS_CROMO = {
+        cursor: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 2l8.4 5.1-4 1.1-1.4 4.1L3 2z" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/></svg>',
+        escritorio: '<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="2" width="13" height="9" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.25"/><path d="M6 14h4M8 11v3" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/></svg>',
+        movil: '<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="4.5" y="1.5" width="7" height="13" rx="1.4" fill="none" stroke="currentColor" stroke-width="1.25"/><path d="M7 12.5h2" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/></svg>',
+        expandir: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+        acciones: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2.2l1.2 2.4 2.6.4-1.9 1.9.5 2.7L8 8.4 5.6 9.6l.5-2.7-1.9-1.9 2.6-.4L8 2.2z" fill="none" stroke="currentColor" stroke-width="1.15" stroke-linejoin="round"/><path d="M12.5 10.5v3M11 12h3" stroke="currentColor" stroke-width="1.15" stroke-linecap="round"/></svg>'
+      };
       var ESQUELETO = `
-<div class="ed">
+<div class="ed ed--avanzado">
   <header class="ed__barra">
     <div class="ed__barra-izq">
       <button type="button" class="ed-icono ed-icono--volver" data-volver title="Volver a p\xE1ginas">${ICONOS_FLOTA.volver}</button>
       <div class="ed-identidad"><strong data-editor-titulo>P\xE1gina de producto</strong><span data-editor-subtitulo>Editor</span></div>
-      <button type="button" class="ed-boton" data-branding>Marca</button>
+      <button type="button" class="ed-boton ed-boton--branding" data-branding aria-expanded="false"><span class="ed-branding__muestras" aria-hidden="true"><i></i><i></i><i></i></span><span>Marca</span></button>
+      <button type="button" class="ed-boton ed-boton--modo" data-modo-avanzado aria-pressed="true"><span class="ed-modo__switch" aria-hidden="true"><i></i></span><span>Modo avanzado</span></button>
       <button type="button" class="ed-boton ed-boton--panel" data-panel-toggle="arbol">Estructura</button>
       <button type="button" class="ed-boton ed-boton--panel" data-panel-toggle="panel">Inspector</button>
     </div>
     <div class="ed__barra-centro">
-      ${htmlToggleViewport("escritorio").replace('class="ed-vp"', 'class="ed-vp ed-vp--grande"')}
+      <div class="ed-vp ed-vp--grande" role="group" aria-label="Vista del lienzo">
+        <button type="button" class="ed-vp__boton ed-vp__herramienta es-activo" data-viewport-tool="select" aria-pressed="true" aria-label="Seleccionar bloque" title="Seleccionar bloque">${ICONOS_CROMO.cursor}</button>
+        <button type="button" class="ed-vp__boton es-activo" data-viewport="escritorio" aria-pressed="true" aria-label="Vista de escritorio" title="Vista de escritorio">${ICONOS_CROMO.escritorio}</button>
+        <button type="button" class="ed-vp__boton" data-viewport="movil" aria-pressed="false" aria-label="Vista m\xF3vil" title="Vista m\xF3vil">${ICONOS_CROMO.movil}</button>
+        <button type="button" class="ed-vp__boton ed-vp__herramienta" data-viewport-tool="fullscreen" aria-pressed="false" aria-label="Vista expandida" title="Vista expandida">${ICONOS_CROMO.expandir}</button>
+      </div>
     </div>
     <div class="ed__barra-der">
+      <span class="ed-estado" data-editor-estado data-estado="borrador">Borrador</span>
       <button type="button" class="ed-icono" data-deshacer title="Deshacer (Ctrl+Z)" disabled>\u21B6</button>
       <button type="button" class="ed-icono" data-rehacer title="Rehacer (Ctrl+Shift+Z)" disabled>\u21B7</button>
       <button type="button" class="ed-boton" data-guardar disabled>Guardar</button>
       <button type="button" class="ed-boton ed-boton--primario" data-publicar>Publicar en la tienda</button>
+      <button type="button" class="ed-boton ed-boton--secundario" data-editar-variantes hidden>Editar variantes</button>
+      <div class="ed-acciones" data-acciones-wrap>
+        <button type="button" class="ed-boton ed-boton--acciones" data-acciones aria-expanded="false" aria-haspopup="menu">${ICONOS_CROMO.acciones}<span>Acciones</span></button>
+        <div class="ed-acciones__menu" data-acciones-menu hidden role="menu">
+          <button type="button" data-accion-editor="copiar-documento" role="menuitem">Copiar estructura</button>
+        </div>
+      </div>
     </div>
   </header>
   <div class="ed__cuerpo">
@@ -2842,9 +2863,11 @@ var TiqEditor = (() => {
           debajo: arriba < lienzoCaja.top + margen
         };
       }
-      function montarEditor(raiz, { documento: docInicial, producto = null, alGuardar = null, alPublicar = null, alSubirImagen = null, rutaCss, titulo = "P\xE1gina de producto", subtitulo = "Editor" } = {}) {
-        var _a;
+      function montarEditor(raiz, { documento: docInicial, producto = null, alGuardar = null, alPublicar = null, alSubirImagen = null, alEditarVariantes = null, alEditarConIA = null, rutaCss, titulo = "P\xE1gina de producto", subtitulo = "Editor" } = {}) {
+        var _a, _b;
         raiz.innerHTML = ESQUELETO;
+        const superficie = raiz.querySelector(".ed");
+        superficie.classList.toggle("ed--sin-ia", !alEditarConIA);
         raiz.querySelector("[data-editor-titulo]").textContent = titulo || "P\xE1gina de producto";
         raiz.querySelector("[data-editor-subtitulo]").textContent = subtitulo || "Editor";
         const zona = (nombre) => raiz.querySelector(`[data-zona="${nombre}"]`);
@@ -2852,8 +2875,9 @@ var TiqEditor = (() => {
         const zonaPanel = zona("panel");
         const zonaModal = zona("modal");
         const flota = zona("flota");
+        if (alEditarVariantes) (_a = raiz.querySelector("[data-editar-variantes]")) == null ? void 0 : _a.removeAttribute("hidden");
         const estado = crearEstado(docInicial);
-        const primerNodo = (_a = docInicial == null ? void 0 : docInicial.arbol) == null ? void 0 : _a[0];
+        const primerNodo = (_b = docInicial == null ? void 0 : docInicial.arbol) == null ? void 0 : _b[0];
         if (primerNodo) estado.seleccionar(primerNodo.id);
         let omitirPanel = false;
         let libreriaAbierta = null;
@@ -2926,6 +2950,12 @@ var TiqEditor = (() => {
           raiz.querySelector("[data-deshacer]").disabled = !estado.puedeDeshacer();
           raiz.querySelector("[data-rehacer]").disabled = !estado.puedeRehacer();
           raiz.querySelector("[data-guardar]").disabled = !estado.hayCambios();
+          const estadoUI = raiz.querySelector("[data-editor-estado]");
+          if (estadoUI) {
+            const sucio = estado.hayCambios();
+            estadoUI.dataset.estado = sucio ? "pendiente" : "borrador";
+            estadoUI.textContent = sucio ? "Cambios sin guardar" : "Borrador guardado";
+          }
           const publicar2 = raiz.querySelector("[data-publicar]");
           publicar2.disabled = !alPublicar;
           publicar2.title = alPublicar ? "Publicar en la tienda" : "La publicaci\xF3n se habilita al completar el renderer v1";
@@ -3041,6 +3071,7 @@ var TiqEditor = (() => {
           }
           const asistente = evento.target.closest("[data-ia]");
           if (asistente) {
+            if (!alEditarConIA) return;
             return void raiz.dispatchEvent(new CustomEvent("tiq:ia", {
               detail: { nodo, campo: asistente.dataset.ia },
               bubbles: true
@@ -3255,14 +3286,65 @@ var TiqEditor = (() => {
             // La edición con IA por bloque llega en la Fase 6; el botón ya está en su
             // lugar para no tener que rehacer la barra después.
             case "ia":
-              return void raiz.dispatchEvent(new CustomEvent("tiq:ia", { detail: { nodo }, bubbles: true }));
+              if (alEditarConIA) return void raiz.dispatchEvent(new CustomEvent("tiq:ia", { detail: { nodo }, bubbles: true }));
+              return;
           }
         });
         raiz.querySelector(".ed__barra").addEventListener("click", (evento) => {
+          var _a2, _b2, _c, _d;
           const vp = evento.target.closest("[data-viewport]");
           if (vp) {
             estado.fijarViewport(vp.dataset.viewport);
             return void lienzo.fijarViewport(vp.dataset.viewport);
+          }
+          const herramienta = evento.target.closest("[data-viewport-tool]");
+          if (herramienta) {
+            const tipo = herramienta.dataset.viewportTool;
+            if (tipo === "fullscreen") {
+              const activo = !superficie.classList.contains("ed--pantalla-completa");
+              superficie.classList.toggle("ed--pantalla-completa", activo);
+              herramienta.setAttribute("aria-pressed", String(activo));
+              return void raiz.ownerDocument.defaultView.requestAnimationFrame(colocarFlota);
+            }
+            if (tipo === "select") {
+              superficie.classList.remove("ed--pantalla-completa");
+              (_a2 = raiz.querySelector('[data-viewport-tool="fullscreen"]')) == null ? void 0 : _a2.setAttribute("aria-pressed", "false");
+              herramienta.setAttribute("aria-pressed", "true");
+              return void raiz.ownerDocument.defaultView.requestAnimationFrame(colocarFlota);
+            }
+          }
+          const modo = evento.target.closest("[data-modo-avanzado]");
+          if (modo) {
+            const avanzado = modo.getAttribute("aria-pressed") !== "true";
+            modo.setAttribute("aria-pressed", String(avanzado));
+            superficie.classList.toggle("ed--avanzado", avanzado);
+            return;
+          }
+          const variantes = evento.target.closest("[data-editar-variantes]");
+          if (variantes && alEditarVariantes) return void alEditarVariantes({ documento: estado.documento() });
+          const acciones = evento.target.closest("[data-acciones]");
+          if (acciones) {
+            const menu = raiz.querySelector("[data-acciones-menu]");
+            const abierto = menu == null ? void 0 : menu.hasAttribute("hidden");
+            menu == null ? void 0 : menu.toggleAttribute("hidden", !abierto);
+            acciones.setAttribute("aria-expanded", String(abierto));
+            return;
+          }
+          const accion = evento.target.closest("[data-accion-editor]");
+          if (accion) {
+            (_b2 = raiz.querySelector("[data-acciones-menu]")) == null ? void 0 : _b2.setAttribute("hidden", "");
+            (_c = raiz.querySelector("[data-acciones]")) == null ? void 0 : _c.setAttribute("aria-expanded", "false");
+            if (accion.dataset.accionEditor === "copiar-documento") {
+              const serializado = JSON.stringify(estado.documento(), null, 2);
+              const portapapeles = (_d = raiz.ownerDocument.defaultView.navigator) == null ? void 0 : _d.clipboard;
+              if (portapapeles == null ? void 0 : portapapeles.writeText) {
+                Promise.resolve(portapapeles.writeText(serializado)).then(() => {
+                  raiz.dispatchEvent(new CustomEvent("tiq:notificar", { detail: { mensaje: "Estructura copiada" }, bubbles: true }));
+                }).catch(() => {
+                });
+              }
+            }
+            return;
           }
           if (evento.target.closest("[data-deshacer]")) return void estado.deshacer();
           if (evento.target.closest("[data-rehacer]")) return void estado.rehacer();
@@ -3274,7 +3356,7 @@ var TiqEditor = (() => {
           }
           const panel = evento.target.closest("[data-panel-toggle]");
           if (panel) {
-            raiz.classList.toggle(`ed--${panel.dataset.panelToggle}-abierto`);
+            superficie.classList.toggle(`ed--${panel.dataset.panelToggle}-abierto`);
             return;
           }
         });

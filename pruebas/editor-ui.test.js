@@ -275,6 +275,23 @@ describe("árbol", () => {
     assert.match(css, /outline:\s*2px solid var\(--ed-acento\)/);
   });
 
+  test("la barra superior ofrece modo avanzado, viewport expandido, estado y acciones reales", () => {
+    const editor = fs.readFileSync(path.join(__dirname, "..", "app", "editor", "editor.js"), "utf8");
+    assert.match(editor, /data-modo-avanzado/);
+    assert.match(editor, /data-viewport-tool="fullscreen"/);
+    assert.match(editor, /data-editor-estado/);
+    assert.match(editor, /data-accion-editor="copiar-documento"/);
+    assert.match(editor, /alEditarVariantes/);
+  });
+
+  test("el modo simple oculta solo el grupo avanzado y la IA no se ofrece sin proveedor", () => {
+    const css = fs.readFileSync(path.join(__dirname, "..", "app", "editor", "editor.css"), "utf8");
+    const editor = fs.readFileSync(path.join(__dirname, "..", "app", "editor", "editor.js"), "utf8");
+    assert.match(css, /\.ed:not\(\.ed--avanzado\) \[data-grupo="avanzado"\]/);
+    assert.match(css, /\.ed\.ed--sin-ia \.ed-flota__ia/);
+    assert.match(editor, /superficie\.classList\.toggle\("ed--sin-ia", !alEditarConIA\)/);
+  });
+
   test("solo los contenedores ofrecen añadir bloque adentro", () => {
     const html = htmlArbol(doc, opciones);
     assert.match(html, /data-agregar-en="n_11111111"/);

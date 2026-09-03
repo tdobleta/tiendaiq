@@ -88,8 +88,27 @@
 .ed-boton:hover:not(:disabled) { background: #fafafa; }
 .ed-boton:disabled { opacity: .45; cursor: default; }
 .ed-boton--primario { background: #1a1a1a; border-color: #1a1a1a; color: #fff; }
+.ed-boton--secundario { background: var(--ed-panel); }
 .ed-boton--peligro { color: var(--ed-peligro); border-color: #f0c2b8; }
 .ed-boton--ancho { width: 100%; margin-top: 6px; }
+
+.ed-boton--branding, .ed-boton--modo, .ed-boton--acciones { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.ed-branding__muestras { display: inline-flex; gap: 2px; }
+.ed-branding__muestras i { width: 13px; height: 13px; border: 1px solid rgba(0,0,0,.14); border-radius: 50%; }
+.ed-branding__muestras i:nth-child(1) { background: #1d3b1d; }
+.ed-branding__muestras i:nth-child(2) { background: #fff; }
+.ed-branding__muestras i:nth-child(3) { background: #eaf0c8; }
+.ed-modo__switch { position: relative; display: inline-block; width: 27px; height: 16px; border-radius: 999px; background: #c9cccf; }
+.ed-modo__switch i { position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: #fff; transition: transform .15s ease; }
+.ed-boton--modo[aria-pressed="true"] .ed-modo__switch { background: #1a1a1a; }
+.ed-boton--modo[aria-pressed="true"] .ed-modo__switch i { transform: translateX(11px); }
+.ed-boton--acciones svg { width: 15px; height: 15px; }
+.ed-estado { max-width: 132px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 5px 8px; border-radius: 999px; background: #f1f2f3; color: var(--ed-suave); font-size: 11px; line-height: 1.2; }
+.ed-estado[data-estado="pendiente"] { background: #fff4e5; color: #8a4b00; }
+.ed-acciones { position: relative; }
+.ed-acciones__menu { position: absolute; z-index: 45; top: calc(100% + 6px); right: 0; min-width: 170px; padding: 4px; border: 1px solid var(--ed-borde); border-radius: 8px; background: var(--ed-panel); box-shadow: 0 8px 24px rgba(0,0,0,.16); }
+.ed-acciones__menu button { display: block; width: 100%; padding: 8px 10px; border: 0; border-radius: 5px; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.ed-acciones__menu button:hover { background: var(--ed-fondo); }
 
 .ed-icono {
   width: 32px; height: 32px;
@@ -109,6 +128,9 @@
 }
 .ed-vp__boton.es-activo { background: var(--ed-panel); color: var(--ed-texto); box-shadow: 0 1px 2px rgba(0,0,0,.12); }
 .ed-vp--grande .ed-vp__boton { width: 34px; height: 28px; font-size: 14px; }
+.ed-vp--grande .ed-vp__boton svg { width: 16px; height: 16px; display: block; }
+.ed-vp--grande .ed-vp__herramienta { color: var(--ed-suave); }
+.ed-vp--grande .ed-vp__herramienta + .ed-vp__boton { margin-left: 2px; }
 
 /* ---------- cuerpo ---------- */
 
@@ -130,6 +152,10 @@
   box-shadow: 0 1px 3px rgba(0,0,0,.1);
 }
 .ed-lienzo__marco.es-movil { border: 1px solid var(--ed-borde); }
+.ed.ed--pantalla-completa .ed__izq, .ed.ed--pantalla-completa .ed__der { display: none; }
+.ed.ed--pantalla-completa .ed__centro { padding: 24px; }
+.ed:not(.ed--avanzado) [data-grupo="avanzado"] { display: none; }
+.ed.ed--sin-ia .ed-flota__ia, .ed.ed--sin-ia .ed-rich__ia { display: none; }
 
 /* ---------- árbol ---------- */
 
@@ -417,6 +443,7 @@
   .ed-boton--panel { display: inline-flex; padding: 0 8px; }
   .ed__barra-der { gap: 2px; }
   .ed__barra-der .ed-boton { padding: 0 8px; }
+  .ed__barra-der .ed-estado, .ed__barra-der [data-editar-variantes], .ed__barra-der .ed-acciones { display: none; }
   .ed__izq, .ed__der { position: fixed; top: var(--ed-barra); bottom: 0; z-index: 25; width: min(300px, calc(100vw - 44px)); box-shadow: 0 8px 24px rgba(0,0,0,.18); transition: transform .18s ease; }
   .ed__izq { left: 0; transform: translateX(-105%); }
   .ed__der { right: 0; transform: translateX(105%); }
@@ -430,5 +457,6 @@
   .ed-vp--grande .ed-vp__boton { width: 28px; }
   .ed__barra-der .ed-icono { width: 26px; }
   .ed__barra-der .ed-boton { max-width: 92px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ed__barra-der .ed-boton--primario { max-width: 118px; }
   .ed-marca__tokens, .ed-marca__fila { grid-template-columns: 1fr; }
 }
