@@ -13,7 +13,7 @@ nueva: todo lo de acá entra dentro del contrato de `docs/arquitectura-editor-v3
 semánticas para contenedores, iconos SVG por tipo, selección sincronizada en ambas direcciones y
 posicionamiento de la barra flotante dentro del lienzo. También se cerró el foco visual del cromo:
 el teclado usa un anillo azul consistente y no el `outline: auto` naranja del navegador. Los puntos
-2.5 en adelante siguen pendientes y no se mezclan con este corte.
+2.6 en adelante siguen pendientes y no se mezclan con este corte.
 
 ---
 
@@ -96,8 +96,9 @@ escala dentro de la tarjeta; los formularios se vuelven contenido no interactivo
 controles dentro de la tarjeta. Si un tipo necesita un archivo externo y no produce HTML con su
 semilla, mantiene un wireframe vectorial explícito como fallback.
 
-Además, la librería dejó de mezclar niveles: en la raíz muestra composiciones profesionales
-(`Añadir sección`) y dentro de una sección muestra bloques atómicos (`Añadir bloque`). Esto evita
+Además, la librería dejó de mezclar niveles: en la raíz muestra seis composiciones profesionales
+(`Añadir sección`: héroe, beneficios, línea de tiempo, reseñas, FAQ y garantía/urgencia) y dentro
+de una sección muestra bloques atómicos (`Añadir bloque`). Esto evita
 que el merchant anide una página completa accidentalmente y refleja el flujo sección → grupo →
 bloques de PagePilot.
 

@@ -140,6 +140,17 @@ describe("estructura de la salida", () => {
     assert.match(html, /data-tiq-variante-form/);
     assert.match(html, /data-tiq-cantidad-form/);
   });
+
+  test("el carrusel vacío explica el siguiente paso solo en el editor", () => {
+    const doc = {
+      ...REFERENCIA,
+      arbol: [{ id: "n_63000001", tipo: "carrusel_resenas", props: { titulo: "Lo que dicen tus clientes", resenas: [] } }]
+    };
+    const editor = render(doc, { modo: "editor" }).html;
+    const tienda = render(doc, { modo: "tienda" }).html;
+    assert.match(editor, /Agregá reseñas aportadas por tus clientes/);
+    assert.equal(tienda.includes("Agregá reseñas aportadas por tus clientes"), false);
+  });
 });
 
 describe("responsive: los valores de móvil viajan como CSS, no como otro HTML", () => {

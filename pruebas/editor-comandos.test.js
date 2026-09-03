@@ -280,6 +280,15 @@ describe("límites por sección", () => {
     assert.equal(ed.documento().arbol.length, 1);
     assert.equal(ed.nodo(seccion).hijos.length, 0);
   });
+
+  test("todas las composiciones del catálogo producen documentos guardables", () => {
+    const catalogo = require("../nucleo/registro").catalogoComposiciones();
+    for (const composicion of catalogo) {
+      const ed = crearEstado(documento.crear({ tienda: "prueba.myshopify.com" }));
+      assert.ok(ed.insertarComposicion(composicion.composicion_id), `no se pudo insertar ${composicion.composicion_id}`);
+      assert.doesNotThrow(() => documento.validar(ed.documento()), composicion.composicion_id);
+    }
+  });
 });
 
 describe("branding y seo", () => {

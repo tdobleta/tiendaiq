@@ -120,6 +120,7 @@
 .tiq-resena p { margin: 0; color: var(--tiq-subtitulos); font-size: .86em; }
 .tiq-verificada { color: var(--tiq-primario); font-size: .9em; }
 .tiq-carrusel-resenas__pista { display: grid; grid-template-columns: repeat(var(--tiq-columnas, 3), minmax(0, 1fr)); gap: 16px; }
+.tiq-carrusel-resenas__vacio { margin: 0; padding: 18px; border: 1px dashed var(--tiq-secundario); border-radius: var(--tiq-radio); color: var(--tiq-subtitulos); text-align: center; }
 .tiq-carrusel-resenas article { min-width: 0; padding: 16px; border: 1px solid var(--tiq-secundario); border-radius: var(--tiq-radio); background: var(--tiq-secundario_suave); }
 .tiq-carrusel-resenas figure { margin: -16px -16px 12px; aspect-ratio: 1; overflow: hidden; }
 .tiq-carrusel-resenas figure img { width: 100%; height: 100%; object-fit: cover; }

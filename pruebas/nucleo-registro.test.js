@@ -79,8 +79,11 @@ describe("catálogo", () => {
 
   test("el catálogo incluye composiciones como datos, sin convertirlas en tipos", () => {
     const composiciones = registro.catalogoComposiciones();
-    assert.ok(composiciones.length >= 3);
+    assert.ok(composiciones.length >= 6);
     assert.ok(composiciones.some((item) => item.composicion_id === "hero_producto"));
+    for (const id of ["resenas_producto", "faq_producto", "garantia_urgencia"]) {
+      assert.ok(composiciones.some((item) => item.composicion_id === id), `falta la composición ${id}`);
+    }
     assert.equal(registro.existe("composicion:hero_producto"), false);
     const producto = registro.catalogo().find((grupo) => grupo.id === "producto");
     assert.ok(producto.items.some((item) => item.composicion_id === "hero_producto"));

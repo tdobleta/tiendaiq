@@ -1063,7 +1063,8 @@ var TiqRender = (() => {
           const v = ctx.valores(nodo);
           const items = Array.isArray(v.resenas) ? v.resenas : [];
           const datos = items.length ? items : ((_a = ctx.producto) == null ? void 0 : _a.resenas) || ((_b = ctx.producto) == null ? void 0 : _b.reviews) || [];
-          return envoltorio(nodo, ctx, "tiq-carrusel-resenas", `${v.titulo ? `<h2>${textoSeguro(ctx, v.titulo)}</h2>` : ""}<div class="tiq-carrusel-resenas__pista" style="${css(nodo, ctx, ["columnas"])}">${datos.map((item) => `<article>${item.imagen ? `<figure>${imagenProducto(ctx, item.imagen, item.autor)}</figure>` : ""}<div class="tiq-resena__estrellas">${"\u2605".repeat(Math.max(0, Math.min(5, Number(item.puntaje) || 0)))}</div><p>${textoSeguro(ctx, item.texto || item.comentario)}</p><b>${textoSeguro(ctx, item.autor, "Cliente")}</b></article>`).join("")}</div>`, css(nodo, ctx, base.CLAVES_COMUNES));
+          const cuerpo = datos.length ? `<div class="tiq-carrusel-resenas__pista" style="${css(nodo, ctx, ["columnas"])}">${datos.map((item) => `<article>${item.imagen ? `<figure>${imagenProducto(ctx, item.imagen, item.autor)}</figure>` : ""}<div class="tiq-resena__estrellas">${"\u2605".repeat(Math.max(0, Math.min(5, Number(item.puntaje) || 0)))}</div><p>${textoSeguro(ctx, item.texto || item.comentario)}</p><b>${textoSeguro(ctx, item.autor, "Cliente")}</b></article>`).join("")}</div>` : ctx.modo === "editor" ? `<p class="tiq-carrusel-resenas__vacio">Agreg\xE1 rese\xF1as aportadas por tus clientes para mostrarlas ac\xE1.</p>` : "";
+          return envoltorio(nodo, ctx, "tiq-carrusel-resenas", `${v.titulo ? `<h2>${textoSeguro(ctx, v.titulo)}</h2>` : ""}${cuerpo}`, css(nodo, ctx, base.CLAVES_COMUNES));
         }
       };
       var acordeon = {
@@ -1205,6 +1206,65 @@ var TiqRender = (() => {
               tipo: "grupo",
               props: { direccion: "vertical", gap: 16 },
               hijos: [{ tipo: "linea_tiempo", props: {} }]
+            }]
+          }]
+        },
+        {
+          id: "resenas_producto",
+          nombre: "Rese\xF1as destacadas",
+          categoria: "prueba_social",
+          icono: "carrusel",
+          limite_por_pagina: null,
+          arbol: [{
+            tipo: "seccion",
+            props: { ancho: "pagina", ancho_contenido: "pagina", direccion: "vertical", gap: 24 },
+            hijos: [{
+              tipo: "grupo",
+              props: { direccion: "vertical", gap: 16 },
+              hijos: [{
+                // La lista nace vacía a propósito: las reseñas son evidencia del
+                // merchant, nunca copy que la plantilla pueda inventar.
+                tipo: "carrusel_resenas",
+                props: { titulo: "Lo que dicen quienes ya lo probaron" }
+              }]
+            }]
+          }]
+        },
+        {
+          id: "faq_producto",
+          nombre: "Preguntas frecuentes",
+          categoria: "faq",
+          icono: "faq",
+          limite_por_pagina: null,
+          arbol: [{
+            tipo: "seccion",
+            props: { ancho: "pagina", ancho_contenido: "pagina", direccion: "vertical", gap: 16 },
+            hijos: [{
+              tipo: "grupo",
+              props: { direccion: "vertical", gap: 12 },
+              hijos: [{
+                tipo: "acordeon_faq",
+                props: { titulo: "Preguntas frecuentes" }
+              }]
+            }]
+          }]
+        },
+        {
+          id: "garantia_urgencia",
+          nombre: "Garant\xEDa y urgencia",
+          categoria: "garantia",
+          icono: "garantia",
+          limite_por_pagina: null,
+          arbol: [{
+            tipo: "seccion",
+            props: { ancho: "pagina", ancho_contenido: "pagina", direccion: "vertical", gap: 16 },
+            hijos: [{
+              tipo: "grupo",
+              props: { direccion: "vertical", gap: 16 },
+              hijos: [
+                { tipo: "garantia", props: { titulo: "Compra tranquila" } },
+                { tipo: "contador_oferta", props: { texto: "La oferta finaliza en", minutos: 60 } }
+              ]
             }]
           }]
         }

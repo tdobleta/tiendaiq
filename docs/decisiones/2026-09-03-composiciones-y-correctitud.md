@@ -37,14 +37,17 @@ La experiencia se construye en este orden:
 - La migración v0 → v1 convierte tres superficies reales de Piloto 01 al corte
   composable: héroe, beneficios y línea de tiempo. Cada una conserva su
   contenido y suma un grupo interno editable.
-- La librería también conoce tres composiciones guardadas como datos en
-  `nucleo/catalogo/secciones.js`. Insertarlas materializa el árbol completo con
-  ids nuevos y aplica las semillas de cada bloque; no se crea un tipo falso en
-  el registro ni una segunda función de render.
+- La librería también conoce seis composiciones guardadas como datos en
+  `nucleo/catalogo/secciones.js`: héroe, beneficios, línea de tiempo, reseñas,
+  FAQ y garantía/urgencia. Insertarlas materializa el árbol completo con ids
+  nuevos y aplica las semillas de cada bloque; no se crea un tipo falso en el
+  registro ni una segunda función de render.
 - La librería distingue el nivel de inserción: la raíz ofrece composiciones
   completas y un contenedor ofrece bloques atómicos. Las tarjetas usan un
   snapshot del `render()` único, con un wireframe explícito solo cuando la
   semilla no puede producir HTML sin un archivo externo.
+- El estado vacío del carrusel de reseñas se explica únicamente en el editor:
+  la tienda no muestra un mensaje que pueda confundirse con contenido editorial.
 
 ## Criterios de aceptación
 
@@ -58,10 +61,12 @@ La experiencia se construye en este orden:
   el inspector un estado accionable, sin controles falsos.
 - Validación, sintaxis y los tests de núcleo/UI pasan; no se hace merge ni
   publicación como parte de este corte.
+- Cada composición del catálogo se puede insertar en un documento nuevo y
+  validar sin exceder límites ni producir nodos desconocidos.
 
 ## Fuera de alcance
 
-La migración de las 19 secciones actuales (más allá de las tres piloto), ampliar
-el catálogo de composiciones por categoría, la edición inline, Polaris completo,
+La migración de las 19 secciones actuales (más allá de las seis composiciones
+base), ampliar el catálogo de composiciones por categoría, la edición inline, Polaris completo,
 el cart drawer y el flujo de instalación gestionado requieren QA visual y cortes
 separados. No se mezclan con este vertical slice.

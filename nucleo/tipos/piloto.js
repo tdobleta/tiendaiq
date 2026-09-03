@@ -196,7 +196,10 @@ const carrusel = {
   render(nodo, ctx) {
     const v = ctx.valores(nodo); const items = Array.isArray(v.resenas) ? v.resenas : [];
     const datos = items.length ? items : (ctx.producto?.resenas || ctx.producto?.reviews || []);
-    return envoltorio(nodo, ctx, "tiq-carrusel-resenas", `${v.titulo ? `<h2>${textoSeguro(ctx, v.titulo)}</h2>` : ""}<div class="tiq-carrusel-resenas__pista" style="${css(nodo, ctx, ["columnas"])}">${datos.map((item) => `<article>${item.imagen ? `<figure>${imagenProducto(ctx, item.imagen, item.autor)}</figure>` : ""}<div class="tiq-resena__estrellas">${"★".repeat(Math.max(0, Math.min(5, Number(item.puntaje) || 0)))}</div><p>${textoSeguro(ctx, item.texto || item.comentario)}</p><b>${textoSeguro(ctx, item.autor, "Cliente")}</b></article>`).join("")}</div>`, css(nodo, ctx, base.CLAVES_COMUNES));
+    const cuerpo = datos.length
+      ? `<div class="tiq-carrusel-resenas__pista" style="${css(nodo, ctx, ["columnas"])}">${datos.map((item) => `<article>${item.imagen ? `<figure>${imagenProducto(ctx, item.imagen, item.autor)}</figure>` : ""}<div class="tiq-resena__estrellas">${"★".repeat(Math.max(0, Math.min(5, Number(item.puntaje) || 0)))}</div><p>${textoSeguro(ctx, item.texto || item.comentario)}</p><b>${textoSeguro(ctx, item.autor, "Cliente")}</b></article>`).join("")}</div>`
+      : (ctx.modo === "editor" ? `<p class="tiq-carrusel-resenas__vacio">Agregá reseñas aportadas por tus clientes para mostrarlas acá.</p>` : "");
+    return envoltorio(nodo, ctx, "tiq-carrusel-resenas", `${v.titulo ? `<h2>${textoSeguro(ctx, v.titulo)}</h2>` : ""}${cuerpo}`, css(nodo, ctx, base.CLAVES_COMUNES));
   }
 };
 

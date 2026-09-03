@@ -362,6 +362,7 @@
 .ed-lib__vista--rendered .tiq-beneficios li { display: grid; grid-template-columns: 12px minmax(0, 1fr); gap: 4px; align-items: center; }
 .ed-lib__vista--rendered .tiq-beneficios li > span { display: grid; width: 12px; height: 12px; place-items: center; border: 1px solid var(--tiq-secundario); border-radius: 50%; font-size: 8px; }
 .ed-lib__vista--rendered :is(.tiq-galeria__vacio, .tiq-imagen-texto__vacio) { display: grid; min-height: 84px; place-items: center; border: 1px dashed var(--tiq-secundario); border-radius: 4px; font-size: 9px; text-align: center; }
+.ed-lib__vista--rendered .tiq-carrusel-resenas__vacio { margin: 0; padding: 12px; border: 1px dashed var(--tiq-secundario); border-radius: 4px; color: var(--tiq-subtitulos); font-size: 9px; text-align: center; }
 .ed-lib__vista--rendered .tiq-packs { display: grid; gap: 3px; }
 .ed-lib__vista--rendered .tiq-pack { display: block; min-height: 22px; padding: 4px; border: 1px solid var(--tiq-secundario); border-radius: 4px; background: var(--tiq-secundario_suave); }
 .ed-lib__vista--rendered :is(.tiq-pack__imagen, .tiq-pack > input, .tiq-pack > strong) { display: none; }

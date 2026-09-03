@@ -70,6 +70,65 @@ const COMPOSICIONES = [
         hijos: [{ tipo: "linea_tiempo", props: {} }]
       }]
     }]
+  },
+  {
+    id: "resenas_producto",
+    nombre: "Reseñas destacadas",
+    categoria: "prueba_social",
+    icono: "carrusel",
+    limite_por_pagina: null,
+    arbol: [{
+      tipo: "seccion",
+      props: { ancho: "pagina", ancho_contenido: "pagina", direccion: "vertical", gap: 24 },
+      hijos: [{
+        tipo: "grupo",
+        props: { direccion: "vertical", gap: 16 },
+        hijos: [{
+          // La lista nace vacía a propósito: las reseñas son evidencia del
+          // merchant, nunca copy que la plantilla pueda inventar.
+          tipo: "carrusel_resenas",
+          props: { titulo: "Lo que dicen quienes ya lo probaron" }
+        }]
+      }]
+    }]
+  },
+  {
+    id: "faq_producto",
+    nombre: "Preguntas frecuentes",
+    categoria: "faq",
+    icono: "faq",
+    limite_por_pagina: null,
+    arbol: [{
+      tipo: "seccion",
+      props: { ancho: "pagina", ancho_contenido: "pagina", direccion: "vertical", gap: 16 },
+      hijos: [{
+        tipo: "grupo",
+        props: { direccion: "vertical", gap: 12 },
+        hijos: [{
+          tipo: "acordeon_faq",
+          props: { titulo: "Preguntas frecuentes" }
+        }]
+      }]
+    }]
+  },
+  {
+    id: "garantia_urgencia",
+    nombre: "Garantía y urgencia",
+    categoria: "garantia",
+    icono: "garantia",
+    limite_por_pagina: null,
+    arbol: [{
+      tipo: "seccion",
+      props: { ancho: "pagina", ancho_contenido: "pagina", direccion: "vertical", gap: 16 },
+      hijos: [{
+        tipo: "grupo",
+        props: { direccion: "vertical", gap: 16 },
+        hijos: [
+          { tipo: "garantia", props: { titulo: "Compra tranquila" } },
+          { tipo: "contador_oferta", props: { texto: "La oferta finaliza en", minutos: 60 } }
+        ]
+      }]
+    }]
   }
 ];
 
