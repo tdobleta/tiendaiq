@@ -152,6 +152,13 @@ describe("frontera de migración de páginas", () => {
     for (const tipo of ["galeria_producto", "titulo_producto", "precio_producto", "beneficios_producto", "packs_compra", "boton_carrito", "linea_tiempo", "acordeon_faq", "imagen_texto"]) {
       assert.equal(tipos.includes(tipo), true, `falta ${tipo}`);
     }
+    // El corte de composiciones migra tres superficies reales al modelo
+    // sección → grupo → bloques: héroe, beneficios y línea de tiempo.
+    const grupos = recolectar(doc.arbol).filter((nodo) => nodo.tipo === "grupo");
+    assert.equal(grupos.length, 3);
+    assert.ok(grupos.some((nodo) => nodo.hijos.some((hijo) => hijo.tipo === "titulo_producto")), "falta composición del héroe");
+    assert.ok(grupos.some((nodo) => nodo.hijos.some((hijo) => hijo.tipo === "beneficios_producto")), "falta composición de beneficios");
+    assert.ok(grupos.some((nodo) => nodo.hijos.some((hijo) => hijo.tipo === "linea_tiempo")), "falta composición de línea de tiempo");
     assert.equal(documento.esValido(doc), true);
     const salida = require("../nucleo/render").render(doc, {
       modo: "editor",

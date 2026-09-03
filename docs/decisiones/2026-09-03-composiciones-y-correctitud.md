@@ -31,6 +31,12 @@ La experiencia se construye en este orden:
   y la cantidad se sincronizan con el formulario real del CTA.
 - `registro.definicionParaEditor()` y panel de estado: un documento futuro puede
   abrirse y repararse sin inventar campos ni debilitar la validación del backend.
+- `limite_por_pagina` se evalúa dentro de la sección más cercana (los nodos que
+  todavía cuelgan de la raíz conservan el ámbito de página). Así un bloque
+  limitado puede aparecer una vez en cada composición independiente.
+- La migración v0 → v1 convierte tres superficies reales de Piloto 01 al corte
+  composable: héroe, beneficios y línea de tiempo. Cada una conserva su
+  contenido y suma un grupo interno editable.
 
 ## Criterios de aceptación
 
@@ -47,6 +53,7 @@ La experiencia se construye en este orden:
 
 ## Fuera de alcance
 
-La migración de las 19 secciones actuales a composiciones, la edición inline,
-Polaris completo, el cart drawer y el flujo de instalación gestionado requieren
-QA visual y cortes separados. No se mezclan con este primer vertical slice.
+La migración de las 19 secciones actuales (más allá de las tres piloto), pasar
+el catálogo a árboles de datos, la edición inline, Polaris completo, el cart
+drawer y el flujo de instalación gestionado requieren QA visual y cortes
+separados. No se mezclan con este vertical slice.

@@ -139,7 +139,7 @@ describe("rechazos", () => {
   });
 });
 
-describe("límites por página", () => {
+describe("límites por sección", () => {
   test("los bloques estructurales únicos declaran su límite", () => {
     assert.deepEqual(
       registro.todos().filter((d) => d.limite_por_pagina !== null).map((d) => d.tipo).sort(),
@@ -147,7 +147,7 @@ describe("límites por página", () => {
     );
   });
 
-  test("un tipo con límite rechaza el segundo bloque", (t) => {
+  test("un tipo con límite rechaza el segundo bloque dentro de la misma sección", (t) => {
     // El límite se prueba forzándolo sobre un tipo real: lo que importa validar
     // es NUESTRA lógica de conteo, no el dato que declare tal o cual sección.
     const definicion = registro.definicion("imagen");
@@ -156,7 +156,21 @@ describe("límites por página", () => {
 
     const doc = ejemplo();
     doc.arbol[0].hijos.push({ id: "n_44444444", tipo: "imagen", props: { imagen: { src: "https://x/b.jpg" } } });
-    assert.throws(() => documento.validar(doc), /"imagen" admite 1 por página y hay 2/);
+    assert.throws(() => documento.validar(doc), /"imagen" admite 1 por sección y hay 2/);
+  });
+
+  test("el mismo tipo limitado se puede repetir en secciones distintas", (t) => {
+    const definicion = registro.definicion("imagen");
+    definicion.limite_por_pagina = 1;
+    t.after(() => { definicion.limite_por_pagina = null; });
+
+    const doc = ejemplo();
+    doc.arbol.push({
+      id: "n_55555555", tipo: "seccion", props: {}, hijos: [
+        { id: "n_66666666", tipo: "imagen", props: { imagen: { src: "https://x/b.jpg" } } }
+      ]
+    });
+    assert.doesNotThrow(() => documento.validar(doc));
   });
 });
 

@@ -1239,6 +1239,7 @@ var TiqEditor = (() => {
       var registro = require_registro();
       var MS_FUSION = 600;
       var MAX_HISTORIAL = 100;
+      var AMBITO_PAGINA = "__pagina__";
       var clonar = (valor) => JSON.parse(JSON.stringify(valor));
       var sello = (doc) => JSON.stringify(doc);
       function localizar(doc, id, lista = doc.arbol, padre = null) {
@@ -1258,10 +1259,26 @@ var TiqEditor = (() => {
           if (nodo.hijos) recorrer(nodo.hijos, fn, nodo);
         }
       }
-      function contarPorTipo(doc, tipo) {
+      function recorrerConAmbito(lista, fn, padre = null, ambito = AMBITO_PAGINA) {
+        for (const nodo of lista || []) {
+          fn(nodo, padre, ambito);
+          const ambitoHijos = nodo.tipo === "seccion" ? nodo.id : ambito;
+          if (nodo.hijos) recorrerConAmbito(nodo.hijos, fn, nodo, ambitoHijos);
+        }
+      }
+      function ambitoDePadre(doc, padreId) {
+        if (!padreId) return AMBITO_PAGINA;
+        let resultado = AMBITO_PAGINA;
+        recorrerConAmbito(doc.arbol, (nodo, _padre, ambito) => {
+          if (nodo.id === padreId) resultado = nodo.tipo === "seccion" ? nodo.id : ambito;
+        });
+        return resultado;
+      }
+      function contarPorTipo(doc, tipo, { padreId = null, excluirId = null } = {}) {
+        const ambitoObjetivo = ambitoDePadre(doc, padreId);
         let total = 0;
-        recorrer(doc.arbol, (nodo) => {
-          if (nodo.tipo === tipo) total++;
+        recorrerConAmbito(doc.arbol, (nodo, _padre, ambito) => {
+          if (nodo.tipo === tipo && ambito === ambitoObjetivo && nodo.id !== excluirId) total++;
         });
         return total;
       }
@@ -1272,11 +1289,11 @@ var TiqEditor = (() => {
         });
         return copia;
       }
-      function puedeInsertar(doc, tipo) {
+      function puedeInsertar(doc, tipo, opciones = {}) {
         if (!registro.existe(tipo)) return false;
         const limite = registro.definicion(tipo).limite_por_pagina;
-        if (!limite) return true;
-        return contarPorTipo(doc, tipo) < limite;
+        if (limite === null || limite === void 0) return true;
+        return contarPorTipo(doc, tipo, opciones) < limite;
       }
       function crearEstado(documentoInicial, { alCambiar = null } = {}) {
         let doc = clonar(documentoInicial);
@@ -1331,11 +1348,11 @@ var TiqEditor = (() => {
         }
         const heredarProp = (nodoId, clave) => fijarProp(nodoId, clave, void 0);
         function insertar(tipo, { padreId = null, indice = null } = {}) {
-          if (!puedeInsertar(doc, tipo)) return false;
           if (padreId) {
             const padre = localizar(doc, padreId);
             if (!padre || !registro.definicion(padre.nodo.tipo).admite_hijos) return false;
           }
+          if (!puedeInsertar(doc, tipo, { padreId })) return false;
           const nuevo = crearNodo(tipo);
           const hecho = aplicar((borrador) => {
             const lista = padreId ? localizar(borrador, padreId).nodo.hijos : borrador.arbol;
@@ -1357,7 +1374,7 @@ var TiqEditor = (() => {
         function duplicar(nodoId) {
           const ubicacion = localizar(doc, nodoId);
           if (!ubicacion) return false;
-          if (!puedeInsertar(doc, ubicacion.nodo.tipo)) return false;
+          if (!puedeInsertar(doc, ubicacion.nodo.tipo, { padreId: ubicacion.padre ? ubicacion.padre.id : null })) return false;
           const copia = conIdsNuevos(ubicacion.nodo);
           const hecho = aplicar((borrador) => {
             const donde = localizar(borrador, nodoId);
@@ -1375,6 +1392,7 @@ var TiqEditor = (() => {
             if (!destino || !registro.definicion(destino.nodo.tipo).admite_hijos) return false;
             if (localizar(doc, padreId, [ubicacion.nodo])) return false;
           }
+          if (!puedeInsertar(doc, ubicacion.nodo.tipo, { padreId, excluirId: nodoId })) return false;
           return aplicar((borrador) => {
             const desde = localizar(borrador, nodoId);
             const mismoPadre = (desde.padre ? desde.padre.id : null) === padreId;
@@ -1448,7 +1466,8 @@ var TiqEditor = (() => {
           nodoSeleccionado: () => seleccion ? localizar(doc, seleccion).nodo : null,
           seleccion: () => seleccion,
           viewport: () => viewport,
-          puedeInsertar: (tipo) => puedeInsertar(doc, tipo),
+          puedeInsertar: (tipo, opciones = {}) => puedeInsertar(doc, tipo, opciones),
+          contarPorTipo: (tipo, opciones = {}) => contarPorTipo(doc, tipo, opciones),
           ubicacion: (id) => localizar(doc, id),
           // comandos
           fijarProp,
@@ -2830,7 +2849,9 @@ var TiqEditor = (() => {
           zonaModal.innerHTML = htmlLibreria(registro.catalogo(), {
             categoria: libreriaAbierta.categoria,
             busqueda: libreriaAbierta.busqueda,
-            contarUsados: (tipo) => estado.puedeInsertar(tipo) ? 0 : registro.definicion(tipo).limite_por_pagina
+            // El cupo se calcula en el ámbito donde se abrirá la librería: una
+            // misma sección puede tener un bloque limitado aunque otra ya lo use.
+            contarUsados: (tipo) => estado.contarPorTipo(tipo, { padreId: libreriaAbierta.padreId })
           });
           const buscador = zonaModal.querySelector("[data-buscar]");
           if (buscador && libreriaAbierta.busqueda) {

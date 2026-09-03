@@ -422,7 +422,9 @@ function montarEditor(raiz, { documento: docInicial, producto = null, alGuardar 
     zonaModal.innerHTML = htmlLibreria(registro.catalogo(), {
       categoria: libreriaAbierta.categoria,
       busqueda: libreriaAbierta.busqueda,
-      contarUsados: (tipo) => (estado.puedeInsertar(tipo) ? 0 : registro.definicion(tipo).limite_por_pagina)
+      // El cupo se calcula en el ámbito donde se abrirá la librería: una
+      // misma sección puede tener un bloque limitado aunque otra ya lo use.
+      contarUsados: (tipo) => estado.contarPorTipo(tipo, { padreId: libreriaAbierta.padreId })
     });
     const buscador = zonaModal.querySelector("[data-buscar]");
     if (buscador && libreriaAbierta.busqueda) { buscador.focus(); buscador.selectionStart = buscador.value.length; }

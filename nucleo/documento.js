@@ -279,10 +279,21 @@ const validarEsquema = ajv.compile(esquema);
 // anidamiento permitido y tamaño del árbol.
 function revisarArbol(arbol, errores) {
   const vistos = new Set();
-  const conteo = new Map();
+  // Los límites pertenecen a una composición, no a la página entera. Un
+  // mismo bloque puede aparecer una vez en cada sección (por ejemplo, un
+  // precio en el héroe y otro en una sección de compra). Los nodos que aún
+  // cuelgan de la raíz usan la página como ámbito de compatibilidad.
+  const conteoPorAmbito = new Map();
+  const AMBITO_PAGINA = "__pagina__";
   let total = 0;
 
-  function recorrer(nodos, profundidad, ruta) {
+  function incrementar(tipo, ambito) {
+    if (!conteoPorAmbito.has(ambito)) conteoPorAmbito.set(ambito, new Map());
+    const conteo = conteoPorAmbito.get(ambito);
+    conteo.set(tipo, (conteo.get(tipo) || 0) + 1);
+  }
+
+  function recorrer(nodos, profundidad, ruta, ambito = AMBITO_PAGINA) {
     if (profundidad > MAX_PROFUNDIDAD) {
       errores.push(`${ruta}: el árbol supera ${MAX_PROFUNDIDAD} niveles de anidamiento`);
       return;
@@ -300,7 +311,7 @@ function revisarArbol(arbol, errores) {
 
       if (!registro.existe(nodo.tipo)) continue; // ya lo reportó el esquema
       const definicion = registro.definicion(nodo.tipo);
-      conteo.set(nodo.tipo, (conteo.get(nodo.tipo) || 0) + 1);
+      incrementar(nodo.tipo, ambito);
 
       const hijos = nodo.hijos || [];
       if (hijos.length && !definicion.admite_hijos) {
@@ -314,16 +325,26 @@ function revisarArbol(arbol, errores) {
           }
         }
       }
-      if (hijos.length) recorrer(hijos, profundidad + 1, `${aqui}.hijos`);
+      // Una sección abre un ámbito nuevo para todos sus descendientes. El
+      // propio nodo sección sigue contando en el ámbito de su padre, aunque
+      // hoy ninguna sección tenga límite.
+      const ambitoHijos = nodo.tipo === "seccion" ? nodo.id : ambito;
+      if (hijos.length) recorrer(hijos, profundidad + 1, `${aqui}.hijos`, ambitoHijos);
     }
   }
 
   recorrer(arbol || [], 1, "arbol");
 
-  for (const [tipo, cantidad] of conteo) {
-    const limite = registro.definicion(tipo).limite_por_pagina;
-    if (limite && cantidad > limite) {
-      errores.push(`"${tipo}" admite ${limite} por página y hay ${cantidad}`);
+  for (const [ambito, conteo] of conteoPorAmbito) {
+    for (const [tipo, cantidad] of conteo) {
+      const limite = registro.definicion(tipo).limite_por_pagina;
+      if (limite && cantidad > limite) {
+        if (ambito === AMBITO_PAGINA) {
+          errores.push(`"${tipo}" admite ${limite} por página y hay ${cantidad}`);
+        } else {
+          errores.push(`"${tipo}" admite ${limite} por sección y hay ${cantidad} en la sección "${ambito}"`);
+        }
+      }
     }
   }
 }

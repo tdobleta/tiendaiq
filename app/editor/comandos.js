@@ -30,6 +30,7 @@ const registro = require("../../nucleo/registro");
 
 const MS_FUSION = 600;
 const MAX_HISTORIAL = 100;   // tope de memoria: 100 pasos es más de lo que nadie deshace
+const AMBITO_PAGINA = "__pagina__";
 
 const clonar = (valor) => JSON.parse(JSON.stringify(valor));
 const sello = (doc) => JSON.stringify(doc);
@@ -55,9 +56,32 @@ function recorrer(lista, fn, padre = null) {
   }
 }
 
-function contarPorTipo(doc, tipo) {
+// Igual que el validador del núcleo, el editor cuenta límites dentro de la
+// sección más cercana. Mantener este cálculo acá evita que la librería permita
+// una inserción que luego el guardado rechazaría.
+function recorrerConAmbito(lista, fn, padre = null, ambito = AMBITO_PAGINA) {
+  for (const nodo of lista || []) {
+    fn(nodo, padre, ambito);
+    const ambitoHijos = nodo.tipo === "seccion" ? nodo.id : ambito;
+    if (nodo.hijos) recorrerConAmbito(nodo.hijos, fn, nodo, ambitoHijos);
+  }
+}
+
+function ambitoDePadre(doc, padreId) {
+  if (!padreId) return AMBITO_PAGINA;
+  let resultado = AMBITO_PAGINA;
+  recorrerConAmbito(doc.arbol, (nodo, _padre, ambito) => {
+    if (nodo.id === padreId) resultado = nodo.tipo === "seccion" ? nodo.id : ambito;
+  });
+  return resultado;
+}
+
+function contarPorTipo(doc, tipo, { padreId = null, excluirId = null } = {}) {
+  const ambitoObjetivo = ambitoDePadre(doc, padreId);
   let total = 0;
-  recorrer(doc.arbol, (nodo) => { if (nodo.tipo === tipo) total++; });
+  recorrerConAmbito(doc.arbol, (nodo, _padre, ambito) => {
+    if (nodo.tipo === tipo && ambito === ambitoObjetivo && nodo.id !== excluirId) total++;
+  });
   return total;
 }
 
@@ -71,11 +95,11 @@ function conIdsNuevos(nodo) {
 
 // ¿Este tipo entra una vez más en la página? Es lo que pinta el "1/1" en la
 // librería de secciones.
-function puedeInsertar(doc, tipo) {
+function puedeInsertar(doc, tipo, opciones = {}) {
   if (!registro.existe(tipo)) return false;
   const limite = registro.definicion(tipo).limite_por_pagina;
-  if (!limite) return true;
-  return contarPorTipo(doc, tipo) < limite;
+  if (limite === null || limite === undefined) return true;
+  return contarPorTipo(doc, tipo, opciones) < limite;
 }
 
 function crearEstado(documentoInicial, { alCambiar = null } = {}) {
@@ -151,11 +175,11 @@ function crearEstado(documentoInicial, { alCambiar = null } = {}) {
   // ---------- estructura ----------
 
   function insertar(tipo, { padreId = null, indice = null } = {}) {
-    if (!puedeInsertar(doc, tipo)) return false;
     if (padreId) {
       const padre = localizar(doc, padreId);
       if (!padre || !registro.definicion(padre.nodo.tipo).admite_hijos) return false;
     }
+    if (!puedeInsertar(doc, tipo, { padreId })) return false;
     const nuevo = crearNodo(tipo);
     const hecho = aplicar((borrador) => {
       const lista = padreId ? localizar(borrador, padreId).nodo.hijos : borrador.arbol;
@@ -179,7 +203,7 @@ function crearEstado(documentoInicial, { alCambiar = null } = {}) {
   function duplicar(nodoId) {
     const ubicacion = localizar(doc, nodoId);
     if (!ubicacion) return false;
-    if (!puedeInsertar(doc, ubicacion.nodo.tipo)) return false;
+    if (!puedeInsertar(doc, ubicacion.nodo.tipo, { padreId: ubicacion.padre ? ubicacion.padre.id : null })) return false;
     const copia = conIdsNuevos(ubicacion.nodo);
     const hecho = aplicar((borrador) => {
       const donde = localizar(borrador, nodoId);
@@ -201,6 +225,10 @@ function crearEstado(documentoInicial, { alCambiar = null } = {}) {
       if (!destino || !registro.definicion(destino.nodo.tipo).admite_hijos) return false;
       if (localizar(doc, padreId, [ubicacion.nodo])) return false;   // el destino cuelga del que se mueve
     }
+    // Se excluye el nodo que se mueve: cambiarlo de posición dentro de la
+    // misma sección no debe contar como una segunda instancia. Duplicar, en
+    // cambio, no excluye nada y respeta el límite real.
+    if (!puedeInsertar(doc, ubicacion.nodo.tipo, { padreId, excluirId: nodoId })) return false;
     return aplicar((borrador) => {
       const desde = localizar(borrador, nodoId);
       const mismoPadre = (desde.padre ? desde.padre.id : null) === padreId;
@@ -285,7 +313,8 @@ function crearEstado(documentoInicial, { alCambiar = null } = {}) {
     nodoSeleccionado: () => (seleccion ? localizar(doc, seleccion).nodo : null),
     seleccion: () => seleccion,
     viewport: () => viewport,
-    puedeInsertar: (tipo) => puedeInsertar(doc, tipo),
+    puedeInsertar: (tipo, opciones = {}) => puedeInsertar(doc, tipo, opciones),
+    contarPorTipo: (tipo, opciones = {}) => contarPorTipo(doc, tipo, opciones),
     ubicacion: (id) => localizar(doc, id),
 
     // comandos

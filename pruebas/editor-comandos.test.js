@@ -214,19 +214,32 @@ describe("estructura", () => {
   });
 });
 
-describe("límites por página", () => {
-  test("un tipo con límite deja de poder insertarse al llegar al tope", (t) => {
+describe("límites por sección", () => {
+  test("un tipo con límite deja de poder insertarse al llegar al tope de la sección", (t) => {
     const definicion = registro.definicion("imagen");
     definicion.limite_por_pagina = 1;
     t.after(() => { definicion.limite_por_pagina = null; });
 
     const ed = crearEstado(docBase());   // ya trae una imagen
-    assert.equal(ed.puedeInsertar("imagen"), false);
+    assert.equal(ed.puedeInsertar("imagen", { padreId: "n_11111111" }), false);
     assert.equal(ed.insertar("imagen", { padreId: "n_11111111" }), false);
     assert.equal(ed.duplicar("n_33333333"), false, "duplicar también cuenta contra el límite");
 
     ed.borrar("n_33333333");
-    assert.equal(ed.puedeInsertar("imagen"), true);
+    assert.equal(ed.puedeInsertar("imagen", { padreId: "n_11111111" }), true);
+  });
+
+  test("el límite se reinicia en otra sección", (t) => {
+    const definicion = registro.definicion("imagen");
+    definicion.limite_por_pagina = 1;
+    t.after(() => { definicion.limite_por_pagina = null; });
+
+    const doc = docBase();
+    doc.arbol.push({ id: "n_44444444", tipo: "seccion", props: {}, hijos: [] });
+    const ed = crearEstado(doc);
+    assert.equal(ed.puedeInsertar("imagen", { padreId: "n_44444444" }), true);
+    assert.ok(ed.insertar("imagen", { padreId: "n_44444444" }));
+    assert.equal(ed.puedeInsertar("imagen", { padreId: "n_44444444" }), false);
   });
 });
 

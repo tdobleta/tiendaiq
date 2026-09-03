@@ -156,6 +156,13 @@ function nodoTipo(ids, tipo, clave, props = {}, hijos) {
   return nodo;
 }
 
+// Un grupo es una composición interna: no aparece como una sección elegible
+// en la librería, pero permite que una sección real tenga una jerarquía
+// editable (sección → grupo → bloques) sin volver a una bolsa monolítica.
+function grupo(ids, clave, props, hijos) {
+  return nodoTipo(ids, "grupo", clave, props, hijos);
+}
+
 function imagenProp(referencia, urls, alt) {
   const src = normalizarUrl(referencia, urls);
   if (!src) return null;
@@ -449,8 +456,8 @@ function arbolDesdePiloto(piloto, urls, ids, titulo) {
   }));
   detalleHijos.push(nodoTipo(ids, "boton_carrito", "piloto:hero:boton", { texto: "Añadir al carrito" }));
 
-  const detalles = nodoTipo(ids, "seccion", "piloto:hero:detalles", {
-    ancho: "pagina", ancho_contenido: "pagina", direccion: "vertical", gap: 16
+  const detalles = grupo(ids, "piloto:hero:detalles", {
+    direccion: "vertical", gap: 16
   }, detalleHijos);
   const heroHijos = [galeria, detalles].filter(Boolean);
   if (heroHijos.length) arbol.push(nodoTipo(ids, "seccion", "piloto:hero", {
@@ -460,12 +467,15 @@ function arbolDesdePiloto(piloto, urls, ids, titulo) {
   const why = content.why || {};
   const whyPoints = lista(why.points).map((point) => ({ icono: "✓", texto: texto(point) })).filter((point) => point.texto);
   if (whyPoints.length || texto(why.body)) {
-    arbol.push(nodoTipo(ids, "beneficios_producto", "piloto:why", {
+    const beneficios = nodoTipo(ids, "beneficios_producto", "piloto:why:beneficios", {
       titulo: texto(why.heading) || "Por qué elegirlo",
       puntos: whyPoints.length ? whyPoints : [{ icono: "✓", texto: texto(why.body) || "Información clara para elegir." }],
       ...(imagenProp(media.comparison_media_id, urls, texto(why.heading) || titulo)
         ? { imagen: imagenProp(media.comparison_media_id, urls, texto(why.heading) || titulo) } : {})
-    }));
+    });
+    arbol.push(nodoTipo(ids, "seccion", "piloto:why", {
+      ancho: "pagina", ancho_contenido: "pagina", direccion: "vertical", gap: 16
+    }, [grupo(ids, "piloto:why:contenido", { direccion: "vertical", gap: 16 }, [beneficios])]));
   }
 
   const stories = content.stories || {};
@@ -480,10 +490,15 @@ function arbolDesdePiloto(piloto, urls, ids, titulo) {
 
   const timeline = content.timeline || {};
   const pasos = pasosDe(timeline.steps);
-  if (pasos.length) arbol.push(nodoTipo(ids, "linea_tiempo", "piloto:timeline", {
-    titulo: texto(timeline.heading) || "Línea de tiempo",
-    intro: texto(timeline.intro), pasos
-  }));
+  if (pasos.length) {
+    const linea = nodoTipo(ids, "linea_tiempo", "piloto:timeline:linea", {
+      titulo: texto(timeline.heading) || "Línea de tiempo",
+      intro: texto(timeline.intro), pasos
+    });
+    arbol.push(nodoTipo(ids, "seccion", "piloto:timeline", {
+      ancho: "pagina", ancho_contenido: "pagina", direccion: "vertical", gap: 16
+    }, [grupo(ids, "piloto:timeline:contenido", { direccion: "vertical", gap: 16 }, [linea])]));
+  }
 
   const faq = preguntasDe(content.faq?.items);
   if (faq.length) arbol.push(nodoTipo(ids, "acordeon_faq", "piloto:faq", {
