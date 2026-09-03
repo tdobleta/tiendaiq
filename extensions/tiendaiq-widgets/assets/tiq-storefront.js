@@ -35,6 +35,7 @@
       estilo.textContent = salida.css || "";
       conectarGaleria();
       conectarPacks();
+      conectarCompra();
       conectarContadores();
     } catch (error) {
       // Una página publicada no debe romper el layout del tema por un bloque
@@ -75,6 +76,31 @@
         raiz.querySelectorAll(".tiq-boton-carrito input[name=quantity]").forEach((entrada) => { entrada.value = cantidad; });
       });
     });
+  }
+
+  // Los controles de compra son primitivas independientes en el árbol, pero
+  // todos escriben en el mismo formulario del CTA. Así el merchant puede
+  // ordenar variante, cantidad y botón como una composición sin dejar un
+  // selector decorativo que no llegue al carrito.
+  function conectarCompra() {
+    const formularios = raiz.querySelectorAll("[data-tiq-variante-form]");
+    const variantes = raiz.querySelectorAll("[data-tiq-variante]");
+    const cantidades = raiz.querySelectorAll("[data-tiq-cantidad]");
+    const sincronizarVariante = (valor) => formularios.forEach((campo) => { campo.value = valor; });
+    const sincronizarCantidad = (valor) => {
+      const cantidad = Math.max(1, Math.min(99, Math.floor(Number(valor) || 1)));
+      raiz.querySelectorAll("[data-tiq-cantidad-form]").forEach((campo) => { campo.value = String(cantidad); });
+      cantidades.forEach((campo) => { if (campo.value !== String(cantidad)) campo.value = String(cantidad); });
+    };
+    variantes.forEach((select) => select.addEventListener("change", () => sincronizarVariante(select.value)));
+    cantidades.forEach((campo) => {
+      campo.addEventListener("input", () => sincronizarCantidad(campo.value));
+      campo.addEventListener("change", () => sincronizarCantidad(campo.value));
+    });
+    const inicial = [...variantes].find((select) => select.value)?.value || producto.variante_id || producto.variant_id;
+    if (inicial) sincronizarVariante(inicial);
+    const cantidadInicial = [...cantidades].find((campo) => campo.value)?.value || 1;
+    sincronizarCantidad(cantidadInicial);
   }
 
   function conectarContadores() {

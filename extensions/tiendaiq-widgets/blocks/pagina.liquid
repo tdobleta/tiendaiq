@@ -38,6 +38,11 @@
         moneda: {{ cart.currency.iso_code | default: shop.currency | json }},
         variante_id: {{ product.selected_or_first_available_variant.id | json }},
         variant_id: {{ product.selected_or_first_available_variant.id | json }},
+        variantes: [
+          {%- for variant in product.variants -%}
+            { id: {{ variant.id | json }}, titulo: {{ variant.title | json }}, disponible: {{ variant.available | json }} }{% unless forloop.last %},{% endunless %}
+          {%- endfor -%}
+        ],
         precio_formateado: {{ product.selected_or_first_available_variant.price | money | json }},
         precio_anterior_formateado: {% if product.selected_or_first_available_variant.compare_at_price > product.selected_or_first_available_variant.price %}{{ product.selected_or_first_available_variant.compare_at_price | money | json }}{% else %}null{% endif %},
         imagenes: [

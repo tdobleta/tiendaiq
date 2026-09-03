@@ -19,7 +19,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const { parsear, htmlCampo } = require("../app/editor/controles");
-const { htmlPanel, htmlPanelVacio } = require("../app/editor/panel");
+const { htmlPanel, htmlPanelVacio, htmlPanelDesconocido } = require("../app/editor/panel");
 const { htmlArbol, etiquetaDe, contarHijos, iconoDe, ancestrosDe } = require("../app/editor/arbol");
 const { htmlLibreria, htmlTarjeta, filtrar, normalizar, miniaturaDe } = require("../app/editor/libreria");
 const { htmlMarca } = require("../app/editor/marca");
@@ -186,6 +186,14 @@ describe("panel", () => {
     const bloque = html.slice(html.indexOf('data-clave="tamano"') - 400, html.indexOf('data-clave="tamano"') + 200);
     assert.match(bloque, /data-heredar="tamano" aria-pressed="true"/);
   });
+
+  test("un tipo desconocido deja el inspector operativo, sin controles falsos", () => {
+    const html = htmlPanelDesconocido({ id: "n_12345678", tipo: "bloque_de_otra_version" });
+    assert.match(html, /Bloque no disponible/);
+    assert.match(html, /bloque_de_otra_version/);
+    assert.match(html, /data-borrar-nodo/);
+    assert.equal(html.includes("data-clave="), false);
+  });
 });
 
 describe("árbol", () => {
@@ -298,6 +306,11 @@ describe("librería", () => {
   });
 
   const catalogo = registro.catalogo();
+
+  test("los grupos internos no aparecen como secciones para el merchant", () => {
+    assert.equal(registro.existe("grupo"), true);
+    assert.equal(catalogo.some((g) => g.items.some((item) => item.tipo === "grupo")), false);
+  });
 
   test("busca sin acentos", () => {
     assert.equal(normalizar("Sección"), "seccion");

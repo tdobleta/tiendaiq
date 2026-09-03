@@ -36,6 +36,20 @@ function htmlPanelVacio() {
     `</div>`;
 }
 
+// Un documento puede contener un tipo escrito por una versión más nueva del
+// editor. No inventamos controles para sus props: mostramos el estado con una
+// acción segura (el bloque puede seleccionarse y eliminarse) y dejamos intacto
+// el resto de la página.
+function htmlPanelDesconocido({ nodo, tipo } = {}) {
+  const nombre = tipo || nodo?.tipo || "desconocido";
+  return `<div class="ed-panel ed-panel--desconocido" data-nodo="${esc(nodo?.id || "")}">` +
+    `<header class="ed-panel__cabecera"><h2 class="ed-panel__titulo">Bloque no disponible</h2></header>` +
+    `<div class="ed-panel__estado" role="status"><strong>${esc(nombre)}</strong>` +
+    `<p>Este bloque fue creado con una versión más nueva. Podés eliminarlo o actualizar la app para editarlo.</p></div>` +
+    `<footer class="ed-panel__pie"><button type="button" class="ed-boton ed-boton--peligro" data-borrar-nodo>Eliminar bloque</button></footer>` +
+    `</div>`;
+}
+
 // `esquema` viene de registro.esquemaPanel(tipo); `valores` es el resultado de
 // resolver.contexto(...).valores(nodo) — es decir, el valor EFECTIVO, herencia
 // ya aplicada. El control muestra lo que se ve en la página, no lo que está
@@ -62,4 +76,4 @@ function htmlPanel({ esquema, nodo, valores, overrideado = () => false, muestra 
     `</div>`;
 }
 
-module.exports = { htmlPanel, htmlPanelVacio, htmlToggleViewport };
+module.exports = { htmlPanel, htmlPanelVacio, htmlPanelDesconocido, htmlToggleViewport };

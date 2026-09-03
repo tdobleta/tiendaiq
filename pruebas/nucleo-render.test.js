@@ -98,6 +98,48 @@ describe("estructura de la salida", () => {
     assert.match(html, /\$24,90/);
     assert.ok(html.includes('name="id" value="gid://shopify/ProductVariant/1"'));
   });
+
+  test("una sección puede componerse con grupos anidados sin otro renderer", () => {
+    const doc = {
+      ...REFERENCIA,
+      arbol: [{
+        id: "n_61000001", tipo: "seccion", props: {}, hijos: [{
+          id: "n_61000002", tipo: "grupo", props: { direccion: "horizontal", gap: 20 }, hijos: [
+            { id: "n_61000003", tipo: "texto", props: { html: "Primera columna" } },
+            { id: "n_61000004", tipo: "texto", props: { html: "Segunda columna" } }
+          ]
+        }]
+      }]
+    };
+    assert.equal(documento.esValido(doc), true);
+    const { html } = render(doc);
+    assert.match(html, /class="tiq-grupo"[^>]*data-nodo="n_61000002"/);
+    assert.match(html, /Primera columna/);
+    assert.match(html, /Segunda columna/);
+  });
+
+  test("las primitivas de compra llegan al mismo formulario del carrito", () => {
+    const doc = {
+      ...REFERENCIA,
+      arbol: [
+        { id: "n_62000001", tipo: "selector_variantes", props: {} },
+        { id: "n_62000002", tipo: "cantidad_producto", props: {} },
+        { id: "n_62000003", tipo: "boton_carrito", props: {} }
+      ]
+    };
+    const { html } = render(doc, { producto: {
+      variantes: [
+        { id: "gid://shopify/ProductVariant/1", titulo: "Negro", disponible: true },
+        { id: "gid://shopify/ProductVariant/2", titulo: "Azul", disponible: false }
+      ],
+      variant_id: "gid://shopify/ProductVariant/1"
+    } });
+    assert.match(html, /data-tiq-variante/);
+    assert.ok(html.includes('value="gid://shopify/ProductVariant/2"') && html.includes('disabled'), "la variante agotada queda deshabilitada");
+    assert.match(html, /data-tiq-cantidad/);
+    assert.match(html, /data-tiq-variante-form/);
+    assert.match(html, /data-tiq-cantidad-form/);
+  });
 });
 
 describe("responsive: los valores de móvil viajan como CSS, no como otro HTML", () => {

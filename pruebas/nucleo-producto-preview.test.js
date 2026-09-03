@@ -45,4 +45,19 @@ describe("proyección de producto para el preview", () => {
     assert.equal(salida.imagenes[0].src, "https://cdn.shopify.com/piloto.webp");
     assert.equal(salida.variante_id, "gid://shopify/ProductVariant/9");
   });
+
+  test("expone variantes reales para que el editor no dibuje un selector decorativo", () => {
+    const salida = productoPreviewDePagina({
+      titulo: "Variantes",
+      data: { source_fields: { title: "Producto", variants: [
+        { id: "gid://shopify/ProductVariant/1", title: "Negro" },
+        { id: "gid://shopify/ProductVariant/2", title: "Azul", available: false }
+      ] } }
+    });
+    assert.deepEqual(salida.variantes, [
+      { id: "gid://shopify/ProductVariant/1", titulo: "Negro", disponible: true },
+      { id: "gid://shopify/ProductVariant/2", titulo: "Azul", disponible: false }
+    ]);
+    assert.deepEqual(salida.variants, salida.variantes);
+  });
 });

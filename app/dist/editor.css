@@ -177,6 +177,9 @@
 .ed-panel__cabecera { padding: 14px; border-bottom: 1px solid var(--ed-borde); }
 .ed-panel__titulo { margin: 0; font-size: 13px; font-weight: 600; }
 .ed-panel--vacio { padding: 14px; color: var(--ed-suave); }
+.ed-panel--desconocido .ed-panel__estado { margin: 14px; padding: 12px; border: 1px solid #f0c36d; border-radius: 8px; background: #fff8e6; color: #5c4311; font-size: 12px; line-height: 1.45; }
+.ed-panel--desconocido .ed-panel__estado strong { display: block; margin-bottom: 6px; font-weight: 600; overflow-wrap: anywhere; }
+.ed-panel--desconocido .ed-panel__estado p { margin: 0; }
 .ed-panel__ayuda { margin: 6px 0 0; color: var(--ed-suave); }
 .ed-panel__pie { padding: 14px; border-top: 1px solid var(--ed-borde); }
 

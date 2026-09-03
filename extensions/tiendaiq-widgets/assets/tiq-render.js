@@ -322,6 +322,130 @@ var TiqRender = (() => {
     }
   });
 
+  // nucleo/tipos/grupo.js
+  var require_grupo = __commonJS({
+    "nucleo/tipos/grupo.js"(exports, module) {
+      "use strict";
+      var base = require_base();
+      function css(nodo, ctx, claves) {
+        return ctx.estilos(nodo, claves);
+      }
+      module.exports = {
+        tipo: "grupo",
+        nombre: "Grupo",
+        categoria: "layout",
+        icono: "grupo",
+        visible_en_catalogo: false,
+        admite_hijos: true,
+        limite_por_pagina: null,
+        grupos: [
+          {
+            id: "disposicion",
+            nombre: "Disposici\xF3n",
+            responsive: true,
+            campos: [
+              {
+                clave: "direccion",
+                tipo: "segmentado",
+                etiqueta: "Direcci\xF3n",
+                opciones: [["vertical", "Vertical"], ["horizontal", "Horizontal"]],
+                defecto: "vertical",
+                css: "flex-direction",
+                mapa_css: { vertical: "column", horizontal: "row" }
+              },
+              { clave: "gap", tipo: "medida", etiqueta: "Separaci\xF3n", unidad: "px", defecto: 16, min: 0, max: 120, css: "gap" },
+              base.alineacion()
+            ]
+          },
+          ...base.gruposComunes({ apariencia: { sombra: false }, espaciado: { margen: false } })
+        ],
+        render(nodo, ctx) {
+          const estilos = css(nodo, ctx, ["direccion", "gap", "alineacion", ...base.CLAVES_COMUNES]);
+          return `<div class="tiq-grupo" data-nodo="${ctx.escapar(nodo.id)}" style="${estilos}">${ctx.hijos(nodo)}</div>`;
+        }
+      };
+    }
+  });
+
+  // nucleo/tipos/comercio.js
+  var require_comercio = __commonJS({
+    "nucleo/tipos/comercio.js"(exports, module) {
+      "use strict";
+      var base = require_base();
+      function css(nodo, ctx, claves) {
+        return ctx.estilos(nodo, claves);
+      }
+      function envoltorio(nodo, ctx, clase, contenido, estilos = "") {
+        return `<section class="${clase}" data-nodo="${ctx.escapar(nodo.id)}" style="${estilos}">${contenido}</section>`;
+      }
+      function variantesDe(ctx) {
+        const producto = ctx.producto || {};
+        const lista = Array.isArray(producto.variantes) ? producto.variantes : producto.variants;
+        return (Array.isArray(lista) ? lista : []).filter((v) => v && (v.id || v.variant_id || v.variantId));
+      }
+      var selector = {
+        tipo: "selector_variantes",
+        nombre: "Selector de variantes",
+        categoria: "producto",
+        icono: "variantes",
+        admite_hijos: false,
+        limite_por_pagina: 1,
+        semilla: { etiqueta: "Eleg\xED una opci\xF3n", mostrar_si_unica: false },
+        grupos: [
+          { id: "contenido", nombre: "Contenido", responsive: false, campos: [
+            { clave: "etiqueta", tipo: "texto_plano", etiqueta: "Etiqueta", defecto: "Eleg\xED una opci\xF3n" },
+            { clave: "mostrar_si_unica", tipo: "booleano", etiqueta: "Mostrar si hay una sola variante", defecto: false }
+          ] },
+          { id: "tipografia", nombre: "Tipograf\xEDa", responsive: true, campos: [
+            { clave: "tamano", tipo: "medida", etiqueta: "Tama\xF1o", unidad: "px", defecto: 14, min: 11, max: 24, css: "font-size" }
+          ] },
+          ...base.gruposComunes()
+        ],
+        render(nodo, ctx) {
+          const v = ctx.valores(nodo);
+          const variantes = variantesDe(ctx);
+          const ocultar = variantes.length <= 1 && v.mostrar_si_unica !== true;
+          if (ocultar && ctx.modo !== "editor") return "";
+          const opciones = variantes.map((variante) => {
+            var _a, _b;
+            const id = variante.id || variante.variant_id || variante.variantId;
+            const titulo = variante.titulo || variante.title || "Variante";
+            const disponible = variante.disponible !== false && variante.available !== false;
+            const activo = String(id) === String(((_a = ctx.producto) == null ? void 0 : _a.variante_id) || ((_b = ctx.producto) == null ? void 0 : _b.variant_id) || "");
+            return `<option value="${ctx.escapar(String(id))}"${activo ? " selected" : ""}${disponible ? "" : " disabled"}>${ctx.escapar(String(titulo))}${disponible ? "" : " \u2014 Agotado"}</option>`;
+          }).join("");
+          const cuerpo = ocultar ? `<p class="tiq-selector-variantes__vacio">La variante se elige autom\xE1ticamente.</p>` : `<label><span>${ctx.sanear(v.etiqueta || "Eleg\xED una opci\xF3n")}</span><select name="id" data-tiq-variante aria-label="${ctx.escapar(v.etiqueta || "Variante")}">${opciones || `<option value="">No hay variantes disponibles</option>`}</select></label>`;
+          return envoltorio(nodo, ctx, "tiq-selector-variantes", cuerpo, css(nodo, ctx, ["tamano", ...base.CLAVES_COMUNES]));
+        }
+      };
+      var cantidad = {
+        tipo: "cantidad_producto",
+        nombre: "Cantidad",
+        categoria: "producto",
+        icono: "cantidad",
+        admite_hijos: false,
+        limite_por_pagina: 1,
+        semilla: { etiqueta: "Cantidad", valor: 1 },
+        grupos: [
+          { id: "contenido", nombre: "Contenido", responsive: false, campos: [
+            { clave: "etiqueta", tipo: "texto_plano", etiqueta: "Etiqueta", defecto: "Cantidad" },
+            { clave: "valor", tipo: "numero", etiqueta: "Valor inicial", defecto: 1, min: 1, max: 99 }
+          ] },
+          { id: "tipografia", nombre: "Tipograf\xEDa", responsive: true, campos: [
+            { clave: "tamano", tipo: "medida", etiqueta: "Tama\xF1o", unidad: "px", defecto: 14, min: 11, max: 24, css: "font-size" }
+          ] },
+          ...base.gruposComunes()
+        ],
+        render(nodo, ctx) {
+          const v = ctx.valores(nodo);
+          const valor = Math.max(1, Math.min(99, Math.floor(Number(v.valor) || 1)));
+          return envoltorio(nodo, ctx, "tiq-cantidad-producto", `<label><span>${ctx.sanear(v.etiqueta || "Cantidad")}</span><input type="number" data-tiq-cantidad min="1" max="99" step="1" value="${valor}" aria-label="${ctx.escapar(v.etiqueta || "Cantidad")}"></label>`, css(nodo, ctx, ["tamano", ...base.CLAVES_COMUNES]));
+        }
+      };
+      module.exports = [selector, cantidad];
+    }
+  });
+
   // nucleo/tipos/seccion.js
   var require_seccion = __commonJS({
     "nucleo/tipos/seccion.js"(exports, module) {
@@ -898,7 +1022,7 @@ var TiqRender = (() => {
           var _a, _b;
           const v = ctx.valores(nodo);
           const textoBoton = v.texto || "A\xF1adir al carrito";
-          return envoltorio(nodo, ctx, "tiq-boton-carrito", `<form action="${ctx.escapar(ctx.carritoUrl || "/cart/add")}" method="post"><input type="hidden" name="id" value="${ctx.escapar(((_a = ctx.producto) == null ? void 0 : _a.variante_id) || ((_b = ctx.producto) == null ? void 0 : _b.variant_id) || "")}"><button type="submit" style="${css(nodo, ctx, ["color_boton", "color_texto", "tamano_boton", "radio_boton"])}">${textoSeguro(ctx, textoBoton)}</button></form>`, css(nodo, ctx, base.CLAVES_COMUNES));
+          return envoltorio(nodo, ctx, "tiq-boton-carrito", `<form action="${ctx.escapar(ctx.carritoUrl || "/cart/add")}" method="post"><input type="hidden" name="id" value="${ctx.escapar(((_a = ctx.producto) == null ? void 0 : _a.variante_id) || ((_b = ctx.producto) == null ? void 0 : _b.variant_id) || "")}" data-tiq-variante-form><input type="hidden" name="quantity" value="1" data-tiq-cantidad-form><button type="submit" style="${css(nodo, ctx, ["color_boton", "color_texto", "tamano_boton", "radio_boton"])}">${textoSeguro(ctx, textoBoton)}</button></form>`, css(nodo, ctx, base.CLAVES_COMUNES));
         }
       };
       var rese\u00F1a = {
@@ -1008,6 +1132,8 @@ var TiqRender = (() => {
     "nucleo/tipos/indice.js"(exports, module) {
       "use strict";
       module.exports = [
+        require_grupo(),
+        ...require_comercio(),
         require_seccion(),
         require_texto(),
         require_imagen(),
@@ -1170,7 +1296,8 @@ var TiqRender = (() => {
           grupos,
           campos,
           porClave,
-          render: definicion2.render
+          render: definicion2.render,
+          visible_en_catalogo: definicion2.visible_en_catalogo !== false
         };
       }
       var errores = [];
@@ -1196,12 +1323,30 @@ var TiqRender = (() => {
         if (!encontrada) throw new Error(`tipo de bloque desconocido: "${tipo}"`);
         return encontrada;
       }
+      function definicionParaEditor(tipo) {
+        if (existe(tipo)) return definicion(tipo);
+        return {
+          tipo: String(tipo || "desconocido"),
+          nombre: "Bloque no disponible",
+          categoria: "layout",
+          icono: "error",
+          admite_hijos: false,
+          limite_por_pagina: null,
+          tipos_hijos: null,
+          semilla: {},
+          grupos: [],
+          campos: [],
+          porClave: /* @__PURE__ */ Object.create(null),
+          desconocido: true
+        };
+      }
       function tipos() {
         return [...PorTipo.keys()];
       }
       function catalogo() {
         const porCategoria = /* @__PURE__ */ new Map();
         for (const def of PorTipo.values()) {
+          if (def.visible_en_catalogo === false) continue;
           if (!porCategoria.has(def.categoria)) porCategoria.set(def.categoria, []);
           porCategoria.get(def.categoria).push({
             tipo: def.tipo,
@@ -1231,6 +1376,11 @@ var TiqRender = (() => {
           }))
         };
       }
+      function esquemaPanelParaEditor(tipo) {
+        const def = definicionParaEditor(tipo);
+        if (!def.desconocido) return esquemaPanel(tipo);
+        return { tipo: def.tipo, nombre: def.nombre, admite_hijos: false, desconocido: true, grupos: [] };
+      }
       function resumenParaIA() {
         return todos().map((def) => ({
           tipo: def.tipo,
@@ -1249,8 +1399,10 @@ var TiqRender = (() => {
         tipos,
         existe,
         definicion,
+        definicionParaEditor,
         catalogo,
         esquemaPanel,
+        esquemaPanelParaEditor,
         resumenParaIA,
         // expuesto solo para las pruebas del propio registro
         _normalizar: normalizar

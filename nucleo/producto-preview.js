@@ -51,7 +51,19 @@ function productoPreviewDePagina(pagina) {
   const unicas = [...new Set(referencias)];
   const titulo = texto(fuente.titulo_crudo || fuente.title || hero.titulo || pagina.titulo) || "Producto";
   const imagenes = unicas.map((id) => imagenDe(id, urls, titulo)).filter(Boolean);
-  const primeraVariante = lista(fuente.variantes).find((v) => v && (v.variant_id || v.id));
+  // Las páginas v1 nuevas guardan `source_fields.variants`; algunos datos
+  // históricos usaban `variantes`. Solo aceptamos entradas que realmente
+  // tengan id de variante: las opciones de producto (nombre/valores) no son
+  // seleccionables en un formulario de carrito.
+  const variantes = lista(fuente.variants).concat(lista(fuente.variantes))
+    .filter((v) => v && (v.variant_id || v.variantId || v.id))
+    .map((v) => ({
+      id: texto(v.variant_id || v.variantId || v.id),
+      titulo: texto(v.titulo || v.title) || "Variante",
+      disponible: v.disponible !== false && v.available !== false
+    }))
+    .filter((v, i, todas) => v.id && todas.findIndex((otra) => otra.id === v.id) === i);
+  const primeraVariante = variantes[0] || null;
   const packs = lista(data.content?.offer?.packs || piloto.content?.offer?.packs);
   const variante = packs.find((p) => p && (p.variant_id || p.variantId)) || primeraVariante || {};
   const precio = texto(fuente.precio || fuente.price);
@@ -70,6 +82,8 @@ function productoPreviewDePagina(pagina) {
     moneda,
     variante_id: texto(variante.variant_id || variante.variantId || variante.id) || null,
     variant_id: texto(variante.variant_id || variante.variantId || variante.id) || null,
+    variantes,
+    variants: variantes,
     resenas: []
   };
 }

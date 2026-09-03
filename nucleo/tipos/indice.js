@@ -14,6 +14,8 @@
 "use strict";
 
 module.exports = [
+  require("./grupo"),
+  ...require("./comercio"),
   require("./seccion"),
   require("./texto"),
   require("./imagen"),

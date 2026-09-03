@@ -19,7 +19,7 @@
 const { crearEstado } = require("./comandos");
 const { crearLienzo } = require("./lienzo");
 const { leerCampo } = require("./lector");
-const { htmlPanel, htmlPanelVacio, htmlToggleViewport } = require("./panel");
+const { htmlPanel, htmlPanelVacio, htmlPanelDesconocido, htmlToggleViewport } = require("./panel");
 const { htmlArbol, ancestrosDe } = require("./arbol");
 const { htmlLibreria } = require("./libreria");
 const { htmlMarca } = require("./marca");
@@ -114,7 +114,7 @@ function montarEditor(raiz, { documento: docInicial, producto = null, alGuardar 
   const colapsados = new Set();
   (function cerrarRamasIniciales(nodos) {
     for (const nodo of nodos || []) {
-      if (registro.definicion(nodo.tipo).admite_hijos) colapsados.add(nodo.id);
+      if (registro.existe(nodo.tipo) && registro.definicion(nodo.tipo).admite_hijos) colapsados.add(nodo.id);
       cerrarRamasIniciales(nodo.hijos);
     }
   }(estado.documento().arbol));
@@ -142,10 +142,15 @@ function montarEditor(raiz, { documento: docInicial, producto = null, alGuardar 
     const doc = estado.documento();
     const ctx = contexto(doc, { viewport: estado.viewport() });
     const seleccion = estado.seleccion();
+    const definirParaEditor = (tipo) => registro.definicionParaEditor(tipo);
+    const valoresParaEditor = (nodo) => {
+      if (!registro.existe(nodo.tipo)) return {};
+      try { return ctx.valores(nodo); } catch { return {}; }
+    };
 
     zonaArbol.innerHTML = htmlArbol(doc, {
-      definicion: (tipo) => registro.definicion(tipo),
-      valores: (nodo) => ctx.valores(nodo),
+      definicion: definirParaEditor,
+      valores: valoresParaEditor,
       seleccion,
       colapsados
     });
@@ -165,14 +170,14 @@ function montarEditor(raiz, { documento: docInicial, producto = null, alGuardar 
     if (!omitirPanel) {
       const nodo = estado.nodoSeleccionado();
       zonaPanel.innerHTML = nodo
-        ? htmlPanel({
-            esquema: registro.esquemaPanel(nodo.tipo),
+        ? (!registro.existe(nodo.tipo) ? htmlPanelDesconocido({ nodo }) : htmlPanel({
+            esquema: registro.esquemaPanelParaEditor(nodo.tipo),
             nodo,
-            valores: ctx.valores(nodo),
+            valores: valoresParaEditor(nodo),
             overrideado: (clave) => hayOverrideDe(nodo, clave),
             muestra: (clave) => ctx.comoCss(nodo, clave),
             viewport: estado.viewport()
-          })
+          }))
         : htmlPanelVacio();
     }
 
@@ -203,7 +208,8 @@ function montarEditor(raiz, { documento: docInicial, producto = null, alGuardar 
   }
 
   function hayOverrideDe(nodo, clave) {
-    const campo = registro.definicion(nodo.tipo).porClave[clave];
+    const campo = registro.definicionParaEditor(nodo.tipo).porClave[clave];
+    if (!campo) return false;
     const bolsa = estado.viewport() === "movil" && campo.responsive ? nodo.props_movil : nodo.props;
     return !!bolsa && Object.prototype.hasOwnProperty.call(bolsa, clave);
   }
@@ -220,7 +226,7 @@ function montarEditor(raiz, { documento: docInicial, producto = null, alGuardar 
     flota.style.top = `${posicion.top}px`;
     flota.style.left = `${posicion.left}px`;
     const nodo = estado.nodoSeleccionado();
-    flota.querySelector('[data-accion="agregar"]').hidden = !registro.definicion(nodo.tipo).admite_hijos;
+    flota.querySelector('[data-accion="agregar"]').hidden = !registro.definicionParaEditor(nodo.tipo).admite_hijos;
   }
 
   estado.suscribir(pedirRepintado);
@@ -228,7 +234,7 @@ function montarEditor(raiz, { documento: docInicial, producto = null, alGuardar 
   // ---------- panel: escribir un valor ----------
 
   function campoDe(elCampo, nodo) {
-    return registro.definicion(nodo.tipo).porClave[elCampo.dataset.clave];
+    return registro.definicionParaEditor(nodo.tipo).porClave[elCampo.dataset.clave];
   }
 
   function aplicarDesdePanel(elCampo) {
@@ -513,6 +519,7 @@ function montarEditor(raiz, { documento: docInicial, producto = null, alGuardar 
       case "agregar": return void abrirLibreria(nodo.id);
       case "ocultar": {
         const clave = estado.viewport() === "movil" ? "mostrar_movil" : "mostrar_escritorio";
+        if (!registro.existe(nodo.tipo)) return void estado.borrar(nodo.id);
         const valores = contexto(estado.documento(), { viewport: estado.viewport() }).valores(nodo);
         return void estado.fijarProp(nodo.id, clave, valores[clave] === false);
       }

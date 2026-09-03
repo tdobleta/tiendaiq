@@ -85,6 +85,8 @@ const CHEVRON = '<svg class="ed-arbol__chev" viewBox="0 0 12 12" width="12" heig
 // página del merchant. Las claves vienen del registro y el fallback mantiene
 // legible cualquier tipo nuevo mientras se le agrega su dibujo.
 const ICONOS_ARBOL = {
+  grupo: '<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2" width="5" height="5" rx="1" fill="none" stroke="currentColor" stroke-width="1.2"/><rect x="9" y="9" width="5" height="5" rx="1" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M7 4.5h2M11.5 7v2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>',
+  error: '<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M8 4.5v4M8 11.5v.1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>',
   seccion: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 4l6-2 6 2-6 2-6-2zm0 4l6 2 6-2M2 12l6 2 6-2" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>',
   texto: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 3h10M8 3v10M5 13h6" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>',
   imagen: '<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2.5" width="12" height="11" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.2"/><circle cx="5.5" cy="6" r="1" fill="currentColor"/><path d="M3.5 12l3.2-3 2.2 2 1.5-1.3 2.1 2.3" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>',

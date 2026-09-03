@@ -164,7 +164,7 @@ const boton = {
   ],
   render(nodo, ctx) {
     const v = ctx.valores(nodo); const textoBoton = v.texto || "Añadir al carrito";
-    return envoltorio(nodo, ctx, "tiq-boton-carrito", `<form action="${ctx.escapar(ctx.carritoUrl || "/cart/add")}" method="post"><input type="hidden" name="id" value="${ctx.escapar(ctx.producto?.variante_id || ctx.producto?.variant_id || "")}"><button type="submit" style="${css(nodo, ctx, ["color_boton", "color_texto", "tamano_boton", "radio_boton"])}">${textoSeguro(ctx, textoBoton)}</button></form>`, css(nodo, ctx, base.CLAVES_COMUNES));
+    return envoltorio(nodo, ctx, "tiq-boton-carrito", `<form action="${ctx.escapar(ctx.carritoUrl || "/cart/add")}" method="post"><input type="hidden" name="id" value="${ctx.escapar(ctx.producto?.variante_id || ctx.producto?.variant_id || "")}" data-tiq-variante-form><input type="hidden" name="quantity" value="1" data-tiq-cantidad-form><button type="submit" style="${css(nodo, ctx, ["color_boton", "color_texto", "tamano_boton", "radio_boton"])}">${textoSeguro(ctx, textoBoton)}</button></form>`, css(nodo, ctx, base.CLAVES_COMUNES));
   }
 };
 

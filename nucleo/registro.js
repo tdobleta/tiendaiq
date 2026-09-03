@@ -167,7 +167,8 @@ function normalizar(definicion, errores) {
     grupos,
     campos,
     porClave,
-    render: definicion.render
+    render: definicion.render,
+    visible_en_catalogo: definicion.visible_en_catalogo !== false
   };
 }
 
@@ -200,6 +201,28 @@ function definicion(tipo) {
   return encontrada;
 }
 
+// El backend sigue siendo estricto al validar y guardar documentos. El editor
+// necesita, sin embargo, abrir una página creada con una versión más nueva sin
+// congelarse entero: usa esta definición de presentación para dejar el nodo
+// visible y permitir que el merchant lo elimine o lo reemplace.
+function definicionParaEditor(tipo) {
+  if (existe(tipo)) return definicion(tipo);
+  return {
+    tipo: String(tipo || "desconocido"),
+    nombre: "Bloque no disponible",
+    categoria: "layout",
+    icono: "error",
+    admite_hijos: false,
+    limite_por_pagina: null,
+    tipos_hijos: null,
+    semilla: {},
+    grupos: [],
+    campos: [],
+    porClave: Object.create(null),
+    desconocido: true
+  };
+}
+
 function tipos() {
   return [...PorTipo.keys()];
 }
@@ -209,6 +232,7 @@ function tipos() {
 function catalogo() {
   const porCategoria = new Map();
   for (const def of PorTipo.values()) {
+    if (def.visible_en_catalogo === false) continue;
     if (!porCategoria.has(def.categoria)) porCategoria.set(def.categoria, []);
     porCategoria.get(def.categoria).push({
       tipo: def.tipo,
@@ -242,6 +266,12 @@ function esquemaPanel(tipo) {
   };
 }
 
+function esquemaPanelParaEditor(tipo) {
+  const def = definicionParaEditor(tipo);
+  if (!def.desconocido) return esquemaPanel(tipo);
+  return { tipo: def.tipo, nombre: def.nombre, admite_hijos: false, desconocido: true, grupos: [] };
+}
+
 // Descripción compacta para el prompt de la IA (Fase 6). Vive acá para que sea
 // imposible que la IA conozca un catálogo distinto del que valida el backend.
 function resumenParaIA() {
@@ -258,7 +288,7 @@ function resumenParaIA() {
 
 module.exports = {
   TIPOS_CAMPO, CATEGORIAS, NOMBRES_CATEGORIA, RegistroInvalido,
-  todos, tipos, existe, definicion, catalogo, esquemaPanel, resumenParaIA,
+  todos, tipos, existe, definicion, definicionParaEditor, catalogo, esquemaPanel, esquemaPanelParaEditor, resumenParaIA,
   // expuesto solo para las pruebas del propio registro
   _normalizar: normalizar
 };

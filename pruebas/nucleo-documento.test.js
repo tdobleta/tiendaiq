@@ -143,7 +143,7 @@ describe("límites por página", () => {
   test("los bloques estructurales únicos declaran su límite", () => {
     assert.deepEqual(
       registro.todos().filter((d) => d.limite_por_pagina !== null).map((d) => d.tipo).sort(),
-      ["boton_carrito", "contador_oferta", "carrusel_resenas", "galeria_producto", "garantia", "packs_compra", "precio_producto", "titulo_producto"].sort()
+      ["boton_carrito", "cantidad_producto", "contador_oferta", "carrusel_resenas", "galeria_producto", "garantia", "packs_compra", "precio_producto", "selector_variantes", "titulo_producto"].sort()
     );
   });
 

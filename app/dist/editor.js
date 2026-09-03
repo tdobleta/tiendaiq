@@ -122,6 +122,130 @@ var TiqEditor = (() => {
     }
   });
 
+  // nucleo/tipos/grupo.js
+  var require_grupo = __commonJS({
+    "nucleo/tipos/grupo.js"(exports, module) {
+      "use strict";
+      var base = require_base();
+      function css(nodo, ctx, claves) {
+        return ctx.estilos(nodo, claves);
+      }
+      module.exports = {
+        tipo: "grupo",
+        nombre: "Grupo",
+        categoria: "layout",
+        icono: "grupo",
+        visible_en_catalogo: false,
+        admite_hijos: true,
+        limite_por_pagina: null,
+        grupos: [
+          {
+            id: "disposicion",
+            nombre: "Disposici\xF3n",
+            responsive: true,
+            campos: [
+              {
+                clave: "direccion",
+                tipo: "segmentado",
+                etiqueta: "Direcci\xF3n",
+                opciones: [["vertical", "Vertical"], ["horizontal", "Horizontal"]],
+                defecto: "vertical",
+                css: "flex-direction",
+                mapa_css: { vertical: "column", horizontal: "row" }
+              },
+              { clave: "gap", tipo: "medida", etiqueta: "Separaci\xF3n", unidad: "px", defecto: 16, min: 0, max: 120, css: "gap" },
+              base.alineacion()
+            ]
+          },
+          ...base.gruposComunes({ apariencia: { sombra: false }, espaciado: { margen: false } })
+        ],
+        render(nodo, ctx) {
+          const estilos = css(nodo, ctx, ["direccion", "gap", "alineacion", ...base.CLAVES_COMUNES]);
+          return `<div class="tiq-grupo" data-nodo="${ctx.escapar(nodo.id)}" style="${estilos}">${ctx.hijos(nodo)}</div>`;
+        }
+      };
+    }
+  });
+
+  // nucleo/tipos/comercio.js
+  var require_comercio = __commonJS({
+    "nucleo/tipos/comercio.js"(exports, module) {
+      "use strict";
+      var base = require_base();
+      function css(nodo, ctx, claves) {
+        return ctx.estilos(nodo, claves);
+      }
+      function envoltorio(nodo, ctx, clase, contenido, estilos = "") {
+        return `<section class="${clase}" data-nodo="${ctx.escapar(nodo.id)}" style="${estilos}">${contenido}</section>`;
+      }
+      function variantesDe(ctx) {
+        const producto = ctx.producto || {};
+        const lista = Array.isArray(producto.variantes) ? producto.variantes : producto.variants;
+        return (Array.isArray(lista) ? lista : []).filter((v) => v && (v.id || v.variant_id || v.variantId));
+      }
+      var selector = {
+        tipo: "selector_variantes",
+        nombre: "Selector de variantes",
+        categoria: "producto",
+        icono: "variantes",
+        admite_hijos: false,
+        limite_por_pagina: 1,
+        semilla: { etiqueta: "Eleg\xED una opci\xF3n", mostrar_si_unica: false },
+        grupos: [
+          { id: "contenido", nombre: "Contenido", responsive: false, campos: [
+            { clave: "etiqueta", tipo: "texto_plano", etiqueta: "Etiqueta", defecto: "Eleg\xED una opci\xF3n" },
+            { clave: "mostrar_si_unica", tipo: "booleano", etiqueta: "Mostrar si hay una sola variante", defecto: false }
+          ] },
+          { id: "tipografia", nombre: "Tipograf\xEDa", responsive: true, campos: [
+            { clave: "tamano", tipo: "medida", etiqueta: "Tama\xF1o", unidad: "px", defecto: 14, min: 11, max: 24, css: "font-size" }
+          ] },
+          ...base.gruposComunes()
+        ],
+        render(nodo, ctx) {
+          const v = ctx.valores(nodo);
+          const variantes = variantesDe(ctx);
+          const ocultar = variantes.length <= 1 && v.mostrar_si_unica !== true;
+          if (ocultar && ctx.modo !== "editor") return "";
+          const opciones = variantes.map((variante) => {
+            var _a, _b;
+            const id = variante.id || variante.variant_id || variante.variantId;
+            const titulo = variante.titulo || variante.title || "Variante";
+            const disponible = variante.disponible !== false && variante.available !== false;
+            const activo = String(id) === String(((_a = ctx.producto) == null ? void 0 : _a.variante_id) || ((_b = ctx.producto) == null ? void 0 : _b.variant_id) || "");
+            return `<option value="${ctx.escapar(String(id))}"${activo ? " selected" : ""}${disponible ? "" : " disabled"}>${ctx.escapar(String(titulo))}${disponible ? "" : " \u2014 Agotado"}</option>`;
+          }).join("");
+          const cuerpo = ocultar ? `<p class="tiq-selector-variantes__vacio">La variante se elige autom\xE1ticamente.</p>` : `<label><span>${ctx.sanear(v.etiqueta || "Eleg\xED una opci\xF3n")}</span><select name="id" data-tiq-variante aria-label="${ctx.escapar(v.etiqueta || "Variante")}">${opciones || `<option value="">No hay variantes disponibles</option>`}</select></label>`;
+          return envoltorio(nodo, ctx, "tiq-selector-variantes", cuerpo, css(nodo, ctx, ["tamano", ...base.CLAVES_COMUNES]));
+        }
+      };
+      var cantidad = {
+        tipo: "cantidad_producto",
+        nombre: "Cantidad",
+        categoria: "producto",
+        icono: "cantidad",
+        admite_hijos: false,
+        limite_por_pagina: 1,
+        semilla: { etiqueta: "Cantidad", valor: 1 },
+        grupos: [
+          { id: "contenido", nombre: "Contenido", responsive: false, campos: [
+            { clave: "etiqueta", tipo: "texto_plano", etiqueta: "Etiqueta", defecto: "Cantidad" },
+            { clave: "valor", tipo: "numero", etiqueta: "Valor inicial", defecto: 1, min: 1, max: 99 }
+          ] },
+          { id: "tipografia", nombre: "Tipograf\xEDa", responsive: true, campos: [
+            { clave: "tamano", tipo: "medida", etiqueta: "Tama\xF1o", unidad: "px", defecto: 14, min: 11, max: 24, css: "font-size" }
+          ] },
+          ...base.gruposComunes()
+        ],
+        render(nodo, ctx) {
+          const v = ctx.valores(nodo);
+          const valor = Math.max(1, Math.min(99, Math.floor(Number(v.valor) || 1)));
+          return envoltorio(nodo, ctx, "tiq-cantidad-producto", `<label><span>${ctx.sanear(v.etiqueta || "Cantidad")}</span><input type="number" data-tiq-cantidad min="1" max="99" step="1" value="${valor}" aria-label="${ctx.escapar(v.etiqueta || "Cantidad")}"></label>`, css(nodo, ctx, ["tamano", ...base.CLAVES_COMUNES]));
+        }
+      };
+      module.exports = [selector, cantidad];
+    }
+  });
+
   // nucleo/tipos/seccion.js
   var require_seccion = __commonJS({
     "nucleo/tipos/seccion.js"(exports, module) {
@@ -698,7 +822,7 @@ var TiqEditor = (() => {
           var _a, _b;
           const v = ctx.valores(nodo);
           const textoBoton = v.texto || "A\xF1adir al carrito";
-          return envoltorio(nodo, ctx, "tiq-boton-carrito", `<form action="${ctx.escapar(ctx.carritoUrl || "/cart/add")}" method="post"><input type="hidden" name="id" value="${ctx.escapar(((_a = ctx.producto) == null ? void 0 : _a.variante_id) || ((_b = ctx.producto) == null ? void 0 : _b.variant_id) || "")}"><button type="submit" style="${css(nodo, ctx, ["color_boton", "color_texto", "tamano_boton", "radio_boton"])}">${textoSeguro(ctx, textoBoton)}</button></form>`, css(nodo, ctx, base.CLAVES_COMUNES));
+          return envoltorio(nodo, ctx, "tiq-boton-carrito", `<form action="${ctx.escapar(ctx.carritoUrl || "/cart/add")}" method="post"><input type="hidden" name="id" value="${ctx.escapar(((_a = ctx.producto) == null ? void 0 : _a.variante_id) || ((_b = ctx.producto) == null ? void 0 : _b.variant_id) || "")}" data-tiq-variante-form><input type="hidden" name="quantity" value="1" data-tiq-cantidad-form><button type="submit" style="${css(nodo, ctx, ["color_boton", "color_texto", "tamano_boton", "radio_boton"])}">${textoSeguro(ctx, textoBoton)}</button></form>`, css(nodo, ctx, base.CLAVES_COMUNES));
         }
       };
       var rese\u00F1a = {
@@ -808,6 +932,8 @@ var TiqEditor = (() => {
     "nucleo/tipos/indice.js"(exports, module) {
       "use strict";
       module.exports = [
+        require_grupo(),
+        ...require_comercio(),
         require_seccion(),
         require_texto(),
         require_imagen(),
@@ -970,7 +1096,8 @@ var TiqEditor = (() => {
           grupos,
           campos,
           porClave,
-          render: definicion2.render
+          render: definicion2.render,
+          visible_en_catalogo: definicion2.visible_en_catalogo !== false
         };
       }
       var errores = [];
@@ -996,12 +1123,30 @@ var TiqEditor = (() => {
         if (!encontrada) throw new Error(`tipo de bloque desconocido: "${tipo}"`);
         return encontrada;
       }
+      function definicionParaEditor(tipo) {
+        if (existe(tipo)) return definicion(tipo);
+        return {
+          tipo: String(tipo || "desconocido"),
+          nombre: "Bloque no disponible",
+          categoria: "layout",
+          icono: "error",
+          admite_hijos: false,
+          limite_por_pagina: null,
+          tipos_hijos: null,
+          semilla: {},
+          grupos: [],
+          campos: [],
+          porClave: /* @__PURE__ */ Object.create(null),
+          desconocido: true
+        };
+      }
       function tipos() {
         return [...PorTipo.keys()];
       }
       function catalogo() {
         const porCategoria = /* @__PURE__ */ new Map();
         for (const def of PorTipo.values()) {
+          if (def.visible_en_catalogo === false) continue;
           if (!porCategoria.has(def.categoria)) porCategoria.set(def.categoria, []);
           porCategoria.get(def.categoria).push({
             tipo: def.tipo,
@@ -1031,6 +1176,11 @@ var TiqEditor = (() => {
           }))
         };
       }
+      function esquemaPanelParaEditor(tipo) {
+        const def = definicionParaEditor(tipo);
+        if (!def.desconocido) return esquemaPanel(tipo);
+        return { tipo: def.tipo, nombre: def.nombre, admite_hijos: false, desconocido: true, grupos: [] };
+      }
       function resumenParaIA() {
         return todos().map((def) => ({
           tipo: def.tipo,
@@ -1049,8 +1199,10 @@ var TiqEditor = (() => {
         tipos,
         existe,
         definicion,
+        definicionParaEditor,
         catalogo,
         esquemaPanel,
+        esquemaPanelParaEditor,
         resumenParaIA,
         // expuesto solo para las pruebas del propio registro
         _normalizar: normalizar
@@ -1998,6 +2150,10 @@ var TiqEditor = (() => {
       function htmlPanelVacio() {
         return `<div class="ed-panel ed-panel--vacio"><p class="ed-panel__titulo">Inspector</p></div>`;
       }
+      function htmlPanelDesconocido({ nodo, tipo } = {}) {
+        const nombre = tipo || (nodo == null ? void 0 : nodo.tipo) || "desconocido";
+        return `<div class="ed-panel ed-panel--desconocido" data-nodo="${esc((nodo == null ? void 0 : nodo.id) || "")}"><header class="ed-panel__cabecera"><h2 class="ed-panel__titulo">Bloque no disponible</h2></header><div class="ed-panel__estado" role="status"><strong>${esc(nombre)}</strong><p>Este bloque fue creado con una versi\xF3n m\xE1s nueva. Pod\xE9s eliminarlo o actualizar la app para editarlo.</p></div><footer class="ed-panel__pie"><button type="button" class="ed-boton ed-boton--peligro" data-borrar-nodo>Eliminar bloque</button></footer></div>`;
+      }
       function htmlPanel({ esquema, nodo, valores, overrideado = () => false, muestra = () => null, viewport = "escritorio" }) {
         if (!esquema || !nodo) return htmlPanelVacio();
         const grupos = esquema.grupos.map((grupo) => {
@@ -2008,7 +2164,7 @@ var TiqEditor = (() => {
         }).join("");
         return `<div class="ed-panel" data-nodo="${esc(nodo.id)}" data-viewport="${esc(viewport)}"><header class="ed-panel__cabecera"><h2 class="ed-panel__titulo">${esc(esquema.nombre)}</h2></header>` + grupos + `<footer class="ed-panel__pie"><button type="button" class="ed-boton ed-boton--peligro" data-borrar-nodo>Eliminar bloque</button></footer></div>`;
       }
-      module.exports = { htmlPanel, htmlPanelVacio, htmlToggleViewport };
+      module.exports = { htmlPanel, htmlPanelVacio, htmlPanelDesconocido, htmlToggleViewport };
     }
   });
 
@@ -2063,6 +2219,8 @@ var TiqEditor = (() => {
       }
       var CHEVRON = '<svg class="ed-arbol__chev" viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="M4 2l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
       var ICONOS_ARBOL = {
+        grupo: '<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2" width="5" height="5" rx="1" fill="none" stroke="currentColor" stroke-width="1.2"/><rect x="9" y="9" width="5" height="5" rx="1" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M7 4.5h2M11.5 7v2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>',
+        error: '<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M8 4.5v4M8 11.5v.1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>',
         seccion: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 4l6-2 6 2-6 2-6-2zm0 4l6 2 6-2M2 12l6 2 6-2" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>',
         texto: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 3h10M8 3v10M5 13h6" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>',
         imagen: '<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2.5" width="12" height="11" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.2"/><circle cx="5.5" cy="6" r="1" fill="currentColor"/><path d="M3.5 12l3.2-3 2.2 2 1.5-1.3 2.1 2.3" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>',
@@ -2319,7 +2477,7 @@ var TiqEditor = (() => {
       var { crearEstado } = require_comandos();
       var { crearLienzo } = require_lienzo();
       var { leerCampo } = require_lector();
-      var { htmlPanel, htmlPanelVacio, htmlToggleViewport } = require_panel();
+      var { htmlPanel, htmlPanelVacio, htmlPanelDesconocido, htmlToggleViewport } = require_panel();
       var { htmlArbol, ancestrosDe } = require_arbol();
       var { htmlLibreria } = require_libreria();
       var { htmlMarca } = require_marca();
@@ -2401,7 +2559,7 @@ var TiqEditor = (() => {
         const colapsados = /* @__PURE__ */ new Set();
         (function cerrarRamasIniciales(nodos) {
           for (const nodo of nodos || []) {
-            if (registro.definicion(nodo.tipo).admite_hijos) colapsados.add(nodo.id);
+            if (registro.existe(nodo.tipo) && registro.definicion(nodo.tipo).admite_hijos) colapsados.add(nodo.id);
             cerrarRamasIniciales(nodo.hijos);
           }
         })(estado.documento().arbol);
@@ -2421,9 +2579,18 @@ var TiqEditor = (() => {
           const doc = estado.documento();
           const ctx = contexto(doc, { viewport: estado.viewport() });
           const seleccion = estado.seleccion();
+          const definirParaEditor = (tipo) => registro.definicionParaEditor(tipo);
+          const valoresParaEditor = (nodo) => {
+            if (!registro.existe(nodo.tipo)) return {};
+            try {
+              return ctx.valores(nodo);
+            } catch {
+              return {};
+            }
+          };
           zonaArbol.innerHTML = htmlArbol(doc, {
-            definicion: (tipo) => registro.definicion(tipo),
-            valores: (nodo) => ctx.valores(nodo),
+            definicion: definirParaEditor,
+            valores: valoresParaEditor,
             seleccion,
             colapsados
           });
@@ -2439,10 +2606,10 @@ var TiqEditor = (() => {
           lienzo.pintar({ html, css, seleccion });
           if (!omitirPanel) {
             const nodo = estado.nodoSeleccionado();
-            zonaPanel.innerHTML = nodo ? htmlPanel({
-              esquema: registro.esquemaPanel(nodo.tipo),
+            zonaPanel.innerHTML = nodo ? !registro.existe(nodo.tipo) ? htmlPanelDesconocido({ nodo }) : htmlPanel({
+              esquema: registro.esquemaPanelParaEditor(nodo.tipo),
               nodo,
-              valores: ctx.valores(nodo),
+              valores: valoresParaEditor(nodo),
               overrideado: (clave) => hayOverrideDe(nodo, clave),
               muestra: (clave) => ctx.comoCss(nodo, clave),
               viewport: estado.viewport()
@@ -2469,7 +2636,8 @@ var TiqEditor = (() => {
           });
         }
         function hayOverrideDe(nodo, clave) {
-          const campo = registro.definicion(nodo.tipo).porClave[clave];
+          const campo = registro.definicionParaEditor(nodo.tipo).porClave[clave];
+          if (!campo) return false;
           const bolsa = estado.viewport() === "movil" && campo.responsive ? nodo.props_movil : nodo.props;
           return !!bolsa && Object.prototype.hasOwnProperty.call(bolsa, clave);
         }
@@ -2488,11 +2656,11 @@ var TiqEditor = (() => {
           flota.style.top = `${posicion.top}px`;
           flota.style.left = `${posicion.left}px`;
           const nodo = estado.nodoSeleccionado();
-          flota.querySelector('[data-accion="agregar"]').hidden = !registro.definicion(nodo.tipo).admite_hijos;
+          flota.querySelector('[data-accion="agregar"]').hidden = !registro.definicionParaEditor(nodo.tipo).admite_hijos;
         }
         estado.suscribir(pedirRepintado);
         function campoDe(elCampo, nodo) {
-          return registro.definicion(nodo.tipo).porClave[elCampo.dataset.clave];
+          return registro.definicionParaEditor(nodo.tipo).porClave[elCampo.dataset.clave];
         }
         function aplicarDesdePanel(elCampo) {
           const nodo = estado.nodoSeleccionado();
@@ -2760,6 +2928,7 @@ var TiqEditor = (() => {
               return void abrirLibreria(nodo.id);
             case "ocultar": {
               const clave = estado.viewport() === "movil" ? "mostrar_movil" : "mostrar_escritorio";
+              if (!registro.existe(nodo.tipo)) return void estado.borrar(nodo.id);
               const valores = contexto(estado.documento(), { viewport: estado.viewport() }).valores(nodo);
               return void estado.fijarProp(nodo.id, clave, valores[clave] === false);
             }
