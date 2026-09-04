@@ -1,5 +1,8 @@
 # Runbook operativo - Ola 1
 
+Gobierno y autorizacion: [Plan ejecutivo de cierre y lanzamiento](plan-ejecutivo-cierre-y-lanzamiento.md).
+Este runbook ejecuta la Ola 1, pero no reemplaza sus gates ni su acta de GO.
+
 Objetivo: ejecutar el primer canary externo de TiendaIQ con evidencia y salida
 controlada. Este runbook no autoriza el lanzamiento por si solo; convierte los
 gates del plan de 1.000 tiendas en una operacion repetible.
