@@ -172,7 +172,10 @@
   /* Las composiciones guardan su dirección de escritorio como estilo inline.
      El breakpoint móvil debe ganar para que la galería y la información no
      conserven dos columnas estrechas ni creen scroll horizontal. */
-  .tiq-seccion--horizontal { flex-direction: column !important; }
+  /* Las secciones genéricas expresan la dirección resuelta en su estilo inline
+     y no siempre reciben una clase --horizontal. Cubrimos ambos contratos. */
+  .tiq-seccion--horizontal,
+  .tiq-seccion[style*="flex-direction:row"] { flex-direction: column !important; }
   .tiq-grupo[style*="flex-direction:row"] { flex-direction: column !important; }
   .tiq-imagen-texto { flex-direction: column !important; align-items: stretch; gap: 20px; }
   .tiq-carrusel-resenas__pista { grid-template-columns: 1fr; }

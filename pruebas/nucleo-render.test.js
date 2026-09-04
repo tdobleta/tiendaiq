@@ -159,7 +159,7 @@ describe("responsive: los valores de móvil viajan como CSS, no como otro HTML",
       .replace(/\/\*[^]*?\*\//g, "");
     assert.match(
       css,
-      /@media\s*\(max-width:\s*749px\)[^]*\.tiq-seccion--horizontal\s*\{\s*flex-direction:\s*column\s*!important/
+      /@media\s*\(max-width:\s*749px\)[^]*\.tiq-seccion--horizontal\s*,\s*\.tiq-seccion\[style\*=\"flex-direction:row\"\]\s*\{\s*flex-direction:\s*column\s*!important/
     );
   });
 
