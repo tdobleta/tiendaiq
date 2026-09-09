@@ -4,7 +4,8 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { createSectionDefinition } = require("./section-contract");
 
-const source = fs.readFileSync(path.join(__dirname, "sources", "product-information-v1", "section.liquid"), "utf8");
+const source = fs.readFileSync(path.join(__dirname, "sources", "product-information-v1", "section.liquid"), "utf8")
+  .replace(/\r\n?/g, "\n");
 
 function adapt({ seed }) {
   // La composición inicial es el preset de Shopify, sin reinterpretaciones.

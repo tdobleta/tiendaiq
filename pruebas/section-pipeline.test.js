@@ -8,9 +8,11 @@ const { renderSectionPage } = require("../src/section-pipeline/preview-renderer"
 const { validateResearch } = require("../src/section-pipeline/research-product");
 const { SectionContractError, sha256, validateInstance } = require("../src/section-pipeline/section-contract");
 const { build: buildStorefront } = require("../src/section-pipeline/compile-storefront");
+const fs = require("node:fs");
+const path = require("node:path");
 
 test("el código Shopify es la fuente inmutable del diseño y del editor", () => {
-  assert.equal(productInformation.sourceSha256, "3c27a767d7334ab06fd0b2c6291e773cd388b14515fd7656728f69e94e6e08e8");
+  assert.equal(productInformation.sourceSha256, "dd6d5436895178952bc78e0f439499c060b4913e57cb11388762116f336ee83f");
   assert.equal(sha256(productInformation.source), productInformation.sourceSha256);
   assert.equal(productInformation.schema.settings.length, 38);
   assert.equal(productInformation.schema.settings.filter((setting) => setting.id).length, 37);
@@ -93,6 +95,17 @@ test("la vista del editor ejecuta la misma fuente Liquid con datos Shopify", asy
   assert.match(html, /class="product-hero-section-product-information__cta"[\s\S]*href="#"/);
   assert.match(html, /Fast Shipping/);
   assert.match(html, /60-Day Guarantee/);
+  assert.doesNotMatch(html, /if\(!section\)return;event\.preventDefault\(\)/);
+  assert.match(html, /var interactive=event\.target\.closest\("button,input,select,textarea,label,a"\)/);
+  assert.match(html, /if\(interactive\)\{if\(interactive\.tagName==="A"\)event\.preventDefault\(\);return\}/);
+});
+
+test("seleccionar dentro del lienzo no destruye ni vuelve a cargar el iframe", () => {
+  const source = fs.readFileSync(path.join(__dirname, "../app/section-editor.js"), "utf8");
+  assert.match(source, /function selectItem\(sectionId,blockId\)\{if\(state\.selectedSection===sectionId&&state\.selectedBlock===\(blockId\|\|null\)\)return;/);
+  assert.match(source, /function renderSelection\(\)/);
+  assert.match(source, /selectItem\(event\.data\.sectionId,event\.data\.blockId\|\|null\)/);
+  assert.doesNotMatch(source, /event\.data\.sectionId;state\.selectedBlock=.*shell\(\)/);
 });
 
 test("la vista aislada reproduce la herencia tipográfica de Horizon", async () => {
