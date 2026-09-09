@@ -25,13 +25,14 @@ test("solo el valor 0 abre la admision y Retry-After queda acotado", () => {
   assert.equal(retryAfterSeconds("abc"), 60);
 });
 
-test("el endpoint de generacion revisa la pausa antes de consultar plan o reservar cupo", () => {
+test("la página por secciones nace antes de IA y la pausa evita reservar cupo", () => {
   const serverSource = fs.readFileSync(path.join(__dirname, "..", "server.js"), "utf8");
 
   const editRoute = serverSource.indexOf('ruta === "/api/texto/editar"');
   const generationRoute = serverSource.indexOf('// POST /api/paginas — el botón "Crear página con IA"');
   const pause = serverSource.indexOf("const admissionPause = generationAdmissionPause(env)", generationRoute);
-  const shell = serverSource.indexOf("const base = await crearPaginaBase", generationRoute);
+  const sectionSeed = serverSource.indexOf('requestedTemplate.rendererKey === "section-page-v1"', generationRoute);
+  const shell = serverSource.indexOf("const base = await crearPaginaBase", sectionSeed);
   const plan = serverSource.indexOf("const plan = await estadoPlan(sesion)", generationRoute);
   const enqueue = serverSource.indexOf("await encolarGeneracionDB", generationRoute);
 
@@ -39,8 +40,9 @@ test("el endpoint de generacion revisa la pausa antes de consultar plan o reserv
   assert.ok(editRoute > 0 && editRoute < generationRoute, "la edición asistida debe mantener su ruta separada");
   assert.match(serverSource.slice(editRoute, generationRoute), /return json\(res, 503, \{ error: admissionPause\.message/,
     "la IA de edición debe seguir cerrada si la compuerta está pausada");
-  assert.ok(pause > generationRoute, "la ruta de creación debe evaluar la pausa de admisión");
-  assert.ok(shell > pause, "con IA pausada la ruta de creación debe preparar la plantilla");
+  assert.ok(sectionSeed > generationRoute && shell > sectionSeed && shell < pause,
+    "el contrato nuevo debe persistir un borrador editable antes de depender de la IA");
+  assert.ok(pause > shell, "la ruta de creación debe evaluar la pausa después de asegurar el borrador nuevo");
   assert.ok(plan > pause, "la pausa debe ocurrir antes de consultar el plan");
   assert.ok(enqueue > pause, "la pausa debe ocurrir antes de encolar y reservar cupo");
 });
@@ -62,4 +64,6 @@ test("el frontend muestra progreso solo despues de que la cola acepta el trabajo
   assert.doesNotMatch(routingSource, /recuperarGeneracionPendiente/,
     "una generacion pendiente no puede tomar control de Inicio, Paginas ni Bundles");
   assert.doesNotMatch(appSource, /en segundos|~35 segundos/i);
+  assert.match(generationSource, /fallback\?\.data\?\.section_page/,
+    "un fallo de copy debe abrir el borrador por secciones y no el editor heredado");
 });

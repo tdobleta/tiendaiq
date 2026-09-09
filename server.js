@@ -1238,7 +1238,37 @@ async function api(req, res, url) {
 
     // Validar antes de cupo/encolado. El worker vuelve a resolverlo como
     // defensa de profundidad para jobs ya persistidos o reenviados.
-    resolveTemplateForCreation(estilo);
+    const requestedTemplate = resolveTemplateForCreation(estilo);
+
+    // La página por secciones nace antes de llamar a la IA. Así, una caída,
+    // un timeout o una respuesta inválida del proveedor nunca devuelve al
+    // merchant al editor heredado: queda un borrador nuevo, completo y
+    // editable, construido únicamente con datos vivos de Shopify.
+    const pageId = idDePagina(producto_id);
+    let existente = await leerPagina(sesion.tenant, pageId);
+    let sectionDraftCreated = false;
+    if (requestedTemplate.rendererKey === "section-page-v1" && !existente?.data?.section_page) {
+      try {
+        const base = await crearPaginaBase(producto_id, sesion, { idioma, angulo, estilo });
+        existente = {
+          id: pageId,
+          shopify_product_id: producto_id,
+          estado: "borrador",
+          data: base.data,
+          urls: base.urls,
+          avisos: base.avisos,
+          generacion: { status: "copy_pending", ai: false },
+          url_publica: null,
+          actualizado: new Date().toISOString(),
+          titulo: base.titulo
+        };
+        await guardarPagina(sesion.tenant, existente);
+        sectionDraftCreated = true;
+      } catch (error) {
+        const codigo = Number(error?.status) >= 400 && Number(error.status) < 500 ? Number(error.status) : 422;
+        return json(res, codigo, { error: error.message || "No se pudo preparar la página por secciones.", code: error.code || "SECTION_PAGE_CREATION_FAILED" });
+      }
+    }
 
     const admissionPause = generationAdmissionPause(env);
     if (admissionPause.paused) {
@@ -1248,10 +1278,8 @@ async function api(req, res, url) {
       // sus medios vivos, y marcamos con claridad que el copy asistido queda
       // pendiente. El merchant puede editarlo y publicarlo sin pagar uso de
       // IA ni inventar claims.
-      const pageId = idDePagina(producto_id);
-      const existente = await leerPagina(sesion.tenant, pageId);
       if (existente) {
-        return json(res, 200, {
+        return json(res, sectionDraftCreated ? 201 : 200, {
           page: existente,
           generation: { status: "paused", code: admissionPause.code, message: admissionPause.message, ai: false }
         });

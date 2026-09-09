@@ -924,7 +924,7 @@
           <span class="crear-prod__txt">
             <span class="crear-prod__label">Producto de Shopify</span>
             <strong>Elegí el producto que querés convertir en una página de venta</strong>
-            <span>Piloto toma sus fotos, precio, variantes y descripción como punto de partida.</span>
+            <span>TiendaIQ toma sus fotos, precio, variantes y descripción como punto de partida.</span>
           </span>
         </div>`;
 
@@ -940,7 +940,7 @@
           <aside class="piloto-create__rail" aria-label="Pasos para crear la página">
             <span class="piloto-create__eyebrow">Crear página con IA</span>
             <h1>Una mejor página empieza por una mejor elección.</h1>
-            <p>Elegí un producto real de tu catálogo. Piloto toma esa información como base del borrador.</p>
+            <p>Elegí un producto real de tu catálogo. TiendaIQ toma esa información como base del borrador.</p>
 
             <div class="piloto-create__steps">
               <div class="piloto-create__step is-active">
@@ -983,7 +983,7 @@
               <section class="piloto-create__card piloto-create__card--gallery" aria-label="Vista del catálogo conectado">
                 <header><div><span>VISTA PREVIA</span><h3>Tu catálogo</h3></div><small>Datos reales</small></header>
                 <div class="piloto-create__gallery">
-                  ${galeria || `<div class="piloto-create__empty">${ico("bolsa")}<strong>Las imágenes aparecen acá</strong><span>Cuando elijas un producto, Piloto leerá sus archivos al generar.</span></div>`}
+                  ${galeria || `<div class="piloto-create__empty">${ico("bolsa")}<strong>Las imágenes aparecen acá</strong><span>Cuando elijas un producto, TiendaIQ leerá sus archivos al generar.</span></div>`}
                 </div>
               </section>
             </div>
@@ -1502,6 +1502,21 @@
       abrirEditorV3(estado.pagina.id);
     } catch (e) {
       clearInterval(reloj);
+      // El contrato nuevo se prepara antes de la IA. Si el copy asistido
+      // falla, abrimos igualmente esa página editable; jamás hacemos fallback
+      // al documento o al editor anteriores.
+      if (body.estilo === "section-page-v1") {
+        try {
+          const pageId = String(body.producto_id).split("/").pop();
+          const fallback = await api(`/paginas/${pageId}`);
+          if (fallback?.data?.section_page) {
+            limpiarGeneracionPendiente();
+            estado.pagina = fallback;
+            abrirEditorV3(pageId);
+            return;
+          }
+        } catch {}
+      }
       if (e.terminal || e.actualizar || e.status === 404) limpiarGeneracionPendiente();
       estado.error = e.message;
       ir("plantillas");
