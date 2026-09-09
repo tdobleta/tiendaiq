@@ -53,6 +53,16 @@ const TEMPLATE_REGISTRY = Object.freeze([
     version: 1,
     legacyStyle: "piloto-pdp-01",
     rendererKey: "piloto-pdp-01",
+    status: "frozen"
+  }),
+  // Nueva función de páginas: una composición de secciones Shopify exactas.
+  // El schema de cada fuente gobierna el inspector y la IA sólo completa sus
+  // datos permitidos; nunca reescribe estructura, CSS, JS ni comercio.
+  Object.freeze({
+    id: "tiendaiq/section-page",
+    version: 1,
+    legacyStyle: "section-page-v1",
+    rendererKey: "section-page-v1",
     status: "active"
   }),
   Object.freeze({
@@ -109,8 +119,8 @@ function resolveStoredTemplate(global = {}) {
 // Las entradas nuevas no aceptan strings desconocidos. Antes este caso caía
 // silenciosamente a Clásico después de llamar al proveedor de IA, ocultando un
 // error de producto y pudiendo gastar una generación que no correspondía.
-function resolveTemplateForCreation(style = "piloto-pdp-01") {
-  const normalized = typeof style === "string" && style.trim() ? style.trim() : "piloto-pdp-01";
+function resolveTemplateForCreation(style = "section-page-v1") {
+  const normalized = typeof style === "string" && style.trim() ? style.trim() : "section-page-v1";
   const entry = byLegacyStyle(normalized);
   if (!entry) throw new TemplateContractError("La plantilla solicitada no está soportada");
   // "frozen" conserva compatibilidad de lectura para páginas históricas, pero

@@ -28,6 +28,8 @@ const {
   defaultPdp01Editor,
   validatePdp01Copy
 } = require("./src/piloto/pdp01-contract");
+const { createProductPage } = require("./src/section-pipeline/page-pipeline");
+const { researchProduct } = require("./src/section-pipeline/research-product");
 
 // El modelo y el esfuerzo salen de env para poder compararlos sobre los mismos
 // productos sin tocar código ni deployar.
@@ -826,7 +828,7 @@ async function listarProductos(sesion) {
 async function crearPagina(idProducto, sesion, {
   idioma = "es",
   angulo = "",
-  estilo = "piloto-pdp-01",
+  estilo = "section-page-v1",
   signal,
   beforeProviderCall
 } = {}) {
@@ -835,6 +837,23 @@ async function crearPagina(idProducto, sesion, {
   const template = resolveTemplateForCreation(estilo);
   const { fuente, medios, product } = await extraer(idProducto, sesion, { signal });
   if (typeof beforeProviderCall === "function") await beforeProviderCall();
+  if (template.rendererKey === "section-page-v1") {
+    const generated = await researchProduct(product, medios, { idioma, angulo });
+    const metadata = templateMetadata(template);
+    const urls = Object.fromEntries(medios.map((m) => [m.media_id, m.url]));
+    const sectionPage = createProductPage({ product, research: generated.research, urls });
+    return {
+      data: {
+        global: { estilo: metadata.legacyStyle, template: metadata.template, idioma, angulo, cta: "Agregar al carrito" },
+        fuente,
+        compliance: { claims_verified: generated.research.claims.length > 0 },
+        section_page: sectionPage
+      },
+      urls,
+      avisos: [],
+      uso: generated.uso
+    };
+  }
   if (template.rendererKey === "piloto-pdp-01") {
     const generated = await generatePdp01(product, medios, { idioma, angulo });
     const metadata = templateMetadata(template);
@@ -928,11 +947,28 @@ function copyPdp01Base() {
 async function crearPaginaBase(idProducto, sesion, {
   idioma = "es",
   angulo = "",
-  estilo = "piloto-pdp-01",
+  estilo = "section-page-v1",
   signal
 } = {}) {
   const template = resolveTemplateForCreation(estilo);
   const { fuente, medios, product } = await extraer(idProducto, sesion, { signal });
+  if (template.rendererKey === "section-page-v1") {
+    const metadata = templateMetadata(template);
+    const urls = Object.fromEntries(medios.map((m) => [m.media_id, m.url]));
+    return {
+      data: {
+        global: { estilo: metadata.legacyStyle, template: metadata.template, idioma, angulo, cta: "Agregar al carrito" },
+        fuente,
+        compliance: { claims_verified: false },
+        section_page: createProductPage({ product, research: {}, urls })
+      },
+      urls,
+      avisos: ["Sección creada con datos reales de Shopify. La investigación asistida queda pendiente."],
+      uso: null,
+      titulo: product.title,
+      producto: product
+    };
+  }
   if (template.rendererKey !== "piloto-pdp-01") {
     throw new Error(`La plantilla "${estilo}" no tiene una semilla de producto disponible.`);
   }

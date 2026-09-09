@@ -92,6 +92,32 @@ const documentoEditor = require("./nucleo/documento");
 const { documentoDePagina, guardarBorradorV1 } = require("./nucleo/migraciones/pagina");
 const { productoPreviewDePagina } = require("./nucleo/producto-preview");
 const { publicarDocumentoV1 } = require("./nucleo/publicar-v1");
+const { createProductPage, editorRegistry, validatePage: validateSectionPage } = require("./src/section-pipeline/page-pipeline");
+const { renderSectionPage } = require("./src/section-pipeline/preview-renderer");
+
+function sectionPageDemo() {
+  return createProductPage({
+    product: {
+      id: "gid://shopify/Product/demo",
+      title: "Voltra Blade Pro",
+      description: "Afeitadora eléctrica de doble hoja para una rutina práctica y precisa.",
+      media: [{
+        id: "gid://shopify/MediaImage/demo",
+        url: "https://emi7zn-jd.myshopify.com/cdn/shop/files/ChatGPTImage12jun2026_05_08_14p.m.webp?v=1788141636",
+        alt: "Voltra Blade Pro"
+      }],
+      variants: [
+        { id: "gid://shopify/ProductVariant/demo-1", title: "1 unidad", price: "122.00", available: true },
+        { id: "gid://shopify/ProductVariant/demo-2", title: "2 unidades", price: "219.00", available: true }
+      ]
+    },
+    research: {
+      summary: "Una afeitadora compacta diseñada para simplificar el cuidado diario.",
+      claims: [],
+      visualObservations: [{ text: "Cuerpo azul oscuro y cabezal de doble hoja visibles", mediaId: "gid://shopify/MediaImage/demo" }]
+    }
+  });
+}
 
 // Render (y cualquier host) fija el puerto por env; local usa 4321.
 const PUERTO = Number(env.PORT || process.env.PORT || 4321);
@@ -116,6 +142,7 @@ const VERSION_ASSETS = (() => {
     const archivos = [
       path.join(DIR_APP, "app.js"), path.join(DIR_APP, "app.css"), path.join(DIR_APP, "editor-pagepilot.css"),
       path.join(DIR_APP, "home-v2.js"), path.join(DIR_APP, "home-v2.css"),
+      path.join(DIR_APP, "section-editor.js"), path.join(DIR_APP, "section-editor.css"),
       path.join(dirWidgets, "tiendaiq.js"), path.join(dirWidgets, "tiendaiq.css"),
       path.join(dirWidgets, "piloto-pdp-01.js"), path.join(dirWidgets, "piloto-pdp-01.css")
     ];
@@ -629,6 +656,19 @@ function servirEditorProducto(res) {
   res.end(html);
 }
 
+function servirEditorSecciones(res) {
+  const html = fs
+    .readFileSync(path.join(DIR_APP, "editor-secciones.html"), "utf8")
+    .replace("{{SHOPIFY_CLIENT_ID}}", env.SHOPIFY_CLIENT_ID || "")
+    .replace(/section-editor\.(css|js)/g, (archivo) => `${archivo}?v=${VERSION_ASSETS}`);
+  res.writeHead(200, {
+    "Content-Type": "text/html; charset=utf-8",
+    "Cache-Control": "no-cache",
+    "Content-Security-Policy": "frame-ancestors https://admin.shopify.com https://*.myshopify.com"
+  });
+  res.end(html);
+}
+
 // ---------- legales ----------
 //
 // Los datos del titular no van escritos en el HTML: se completan desde el
@@ -989,6 +1029,25 @@ async function api(req, res, url) {
     });
   }
 
+  // Registro nuevo: cada inspector sale del schema de la misma sección Liquid
+  // que renderiza Shopify. No existe una segunda definición hardcodeada.
+  if (req.method === "GET" && ruta === "/api/section-registry") {
+    return json(res, 200, { version: 1, sections: editorRegistry() });
+  }
+
+  const mSectionPreview = ruta.match(/^\/api\/paginas\/([^/]+)\/section-preview$/);
+  if (req.method === "POST" && mSectionPreview) {
+    const existente = await leerPagina(sesion.tenant, mSectionPreview[1]);
+    if (!existente) return json(res, 404, { error: "No existe esa página" });
+    try {
+      const cuerpo = await leerCuerpo(req);
+      const candidate = validateSectionPage(cuerpo.section_page || existente.data?.section_page);
+      return json(res, 200, { html: await renderSectionPage(candidate) });
+    } catch (error) {
+      return json(res, 400, { error: error.message || "La vista previa no cumple el contrato de secciones." });
+    }
+  }
+
   // POST /api/texto/editar — registra una intención durable. Anthropic se llama
   // exclusivamente desde el worker y una intención ambigua nunca se repite.
   if (req.method === "POST" && ruta === "/api/texto/editar") {
@@ -1170,7 +1229,7 @@ async function api(req, res, url) {
 
   // POST /api/paginas — el botón "Crear página con IA"
   if (req.method === "POST" && ruta === "/api/paginas") {
-    const { producto_id, idioma = "es", angulo = "", estilo = "piloto-pdp-01", request_id } = await leerCuerpo(req);
+    const { producto_id, idioma = "es", angulo = "", estilo = "section-page-v1", request_id } = await leerCuerpo(req);
     if (!producto_id) return json(res, 400, { error: "Falta producto_id" });
     if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(request_id || "")) {
       return json(res, 400, { error: "Falta un request_id válido para generar de forma segura" });
@@ -1262,6 +1321,18 @@ async function api(req, res, url) {
         });
       } catch (error) {
         return json(res, 400, { error: error.message || "El documento no cumple el contrato del editor." });
+      }
+    }
+
+    if (Object.prototype.hasOwnProperty.call(cuerpo, "section_page")) {
+      try {
+        const sectionPage = validateSectionPage(cuerpo.section_page);
+        existente.data = { ...(existente.data || {}), section_page: sectionPage };
+        if (existente.estado === "publicada") existente.cambios_sin_publicar = true;
+        await guardarPagina(sesion.tenant, existente);
+        return json(res, 200, { ...existente, section_page: sectionPage });
+      } catch (error) {
+        return json(res, 400, { error: error.message || "La página no cumple el contrato de secciones." });
       }
     }
 
@@ -1480,6 +1551,20 @@ const servidor = http.createServer(async (req, res) => {
     // --- webhooks de Shopify (desinstalación + privacidad) ---
     if (req.method === "POST" && url.pathname === "/webhooks") return await webhooks(req, res);
 
+    // Demostración efímera del nuevo editor. Sólo existe en desarrollo: no
+    // lee tiendas, no persiste cambios y no puede aparecer en un deploy real.
+    if (env.DEV_MODE === "1" && req.method === "GET" && url.pathname === "/section-page-demo-data") {
+      return json(res, 200, { titulo: "Voltra Blade Pro", section_page: sectionPageDemo(), registry: editorRegistry() });
+    }
+    if (env.DEV_MODE === "1" && req.method === "POST" && url.pathname === "/section-page-demo-preview") {
+      try {
+        const body = await leerCuerpo(req);
+        return json(res, 200, { html: await renderSectionPage(validateSectionPage(body.section_page)) });
+      } catch (error) {
+        return json(res, 400, { error: error.message || "La demostración no cumple el contrato." });
+      }
+    }
+
     // --- config pública de bundles (la trae el app embed del storefront) ---
     if (url.pathname === "/publico/bundles") return await bundlesPublico(req, res, url);
 
@@ -1493,6 +1578,7 @@ const servidor = http.createServer(async (req, res) => {
     // Editor v3: entrada canónica para editar una página existente dentro del
     // admin de Shopify, con el mismo pase de App Bridge que el resto de la app.
     if (url.pathname === "/editor-v3") return servirEditorProducto(res);
+    if (url.pathname === "/editor-secciones") return servirEditorSecciones(res);
 
     // Código del storefront (widget de bundles). Lo usa el
     // preview del admin, y es EL MISMO archivo que publica el extension.

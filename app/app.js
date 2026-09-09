@@ -1311,12 +1311,12 @@
     // generación nueva: no deben volver a entrar al catálogo comercial.
     const plantillas = [
       {
-        id: "piloto-pdp-01",
-        nombre: "Piloto 01",
-        subtitulo: "La página de producto final: diseño fijo, catálogo real y copy generado para cada producto.",
-        tags: ["Galería", "Opciones", "Historia", "FAQ"],
+        id: "section-page-v1",
+        nombre: "Página por secciones",
+        subtitulo: "Cada sección conserva su diseño Shopify exacto y adapta sólo el contenido del producto.",
+        tags: ["Diseño exacto", "Editor sincronizado", "Producto real"],
         activa: true,
-        tipo: "piloto-pdp-01"
+        tipo: "section-page-v1"
       }
     ];
 
@@ -1469,7 +1469,7 @@
       producto_id: estado.producto.id,
       idioma,
       angulo,
-      estilo: estado.modeloPagina || "piloto-pdp-01"
+      estilo: estado.modeloPagina || "section-page-v1"
     };
     const tema = estado.temaElegido || "auto";
     const fingerprint = JSON.stringify({ ...body, tema });

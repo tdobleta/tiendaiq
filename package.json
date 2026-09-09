@@ -4,10 +4,11 @@
     "ajv": "^8.17.1",
     "cloudflared": "^0.7.1",
     "esbuild": "^0.28.1",
+    "liquidjs": "^10.29.0",
     "pg": "^8.22.0"
   },
   "optionalDependencies": {
-    "sharp": "^0.35.3"
+    "sharp": "^0.35.4"
   },
   "scripts": {
     "start": "node server.js",

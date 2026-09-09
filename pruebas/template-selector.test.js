@@ -12,7 +12,8 @@ const selectorSource = appSource.slice(selectorStart, selectorEnd);
 
 test("el selector sólo ofrece las plantillas activas para creación", () => {
   assert.ok(selectorStart >= 0 && selectorEnd > selectorStart, "selector de plantillas localizable");
-  assert.match(selectorSource, /id: "piloto-pdp-01"/);
+  assert.match(selectorSource, /id: "section-page-v1"/);
+  assert.doesNotMatch(selectorSource, /id: "piloto-pdp-01"/);
   assert.doesNotMatch(selectorSource, /id: "clasico"/);
   assert.doesNotMatch(selectorSource, /id: "premium"/);
   assert.doesNotMatch(selectorSource, /id: "pagepilot"/);

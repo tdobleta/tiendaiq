@@ -97,6 +97,12 @@
         if (!id) return avisar("Falta el id de la página. Abrí el editor desde una página existente.");
         try {
           const pagina = await api("/api/paginas/" + encodeURIComponent(id));
+          if (pagina.data && pagina.data.section_page) {
+            const destino = new URL("/editor-secciones", location.origin);
+            destino.search = location.search;
+            location.replace(destino.pathname + destino.search);
+            return;
+          }
           if (!pagina.documento) throw new Error(pagina.documento_error || "La página no pudo convertirse al documento v1.");
           estado.hidden = true;
           TiqEditor.montarEditor(raiz, {
