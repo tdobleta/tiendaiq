@@ -1,26 +1,5 @@
 {% liquid
   assign section_dom_id = 'product-hero-' | append: section.id | handleize
-  comment
-    The original instance was configured at 940px. Coerce Theme Editor range
-    values to numbers before comparing them so older saved values reliably
-    receive the reference desktop proportions.
-  endcomment
-  assign hero_max_width = section.settings.max_width | plus: 0
-  if hero_max_width < 1100
-    assign hero_max_width = 1200
-  endif
-  assign hero_column_gap = section.settings.column_gap | plus: 0
-  if hero_column_gap < 48
-    assign hero_column_gap = 50
-  endif
-  assign hero_desktop_top = section.settings.desktop_padding_top | plus: 0
-  if hero_desktop_top < 40
-    assign hero_desktop_top = 42
-  endif
-  assign hero_thumbnail_size = section.settings.thumbnail_size | plus: 0
-  if hero_thumbnail_size < 64
-    assign hero_thumbnail_size = 64
-  endif
   assign hero_content_max_width = 600
   assign main_image_class = section_dom_id | append: '__main-image'
   assign thumbnail_image_class = section_dom_id | append: '__thumbnail-image'
@@ -54,17 +33,7 @@
     assign cta_href = '#'
   endif
 
-  assign rating_text_display = section.settings.rating_text | replace: 'Rated 4.9', 'Calificación 4.9' | replace: '‘Excellent’', '«Excelente»'
-
-  assign reviews_label_display = '693+ Reseñas'
-
-  assign description_display = section.settings.description | replace: 'Advanced support for men 40+', 'Apoyo avanzado para hombres de más de 40 años' | replace: 'helping restore', 'ayuda a recuperar' | replace: 'cellular energy', 'energía celular' | replace: 'clarity, and overall vitality', 'la claridad y el bienestar general'
-
-  assign bundle_heading_display = section.settings.bundle_heading | replace: 'BUNDLE & SAVE', 'COMPRA Y AHORRA'
-
-  assign urgency_text_display = section.settings.urgency_text | replace: 'Order Now To Receive It By September 10', 'Haz tu pedido ahora y recíbelo antes del 10 de septiembre' | replace: 'Order Now To Receive It By September 9', 'Haz tu pedido ahora y recíbelo antes del 9 de septiembre'
-
-  assign button_label_display = section.settings.button_label | replace: 'ADD TO CART', 'AÑADIR AL CARRITO'
+  assign reviews_label_display = '693+ Reviews'
 
   assign cta_icon_display = section.settings.button_icon
   if cta_icon_display == '♧'
@@ -98,14 +67,14 @@
   id="{{ section_dom_id }}"
   class="{{ section_dom_id }}"
   style="
-    --hero-max-width: {{ hero_max_width }}px;
+    --hero-max-width: {{ section.settings.max_width }}px;
     --hero-content-max-width: {{ hero_content_max_width }}px;
     --hero-media-width: {{ section.settings.media_width }}%;
-    --hero-column-gap: {{ hero_column_gap }}px;
+    --hero-column-gap: {{ section.settings.column_gap }}px;
     --hero-card-gap: {{ section.settings.card_gap }}px;
     --hero-media-gap: 8px;
-    --hero-thumbnail-size: {{ hero_thumbnail_size }}px;
-    --hero-desktop-top: {{ hero_desktop_top }}px;
+    --hero-thumbnail-size: {{ section.settings.thumbnail_size }}px;
+    --hero-desktop-top: {{ section.settings.desktop_padding_top }}px;
     --hero-desktop-bottom: {{ section.settings.desktop_padding_bottom }}px;
     --hero-mobile-top: {{ section.settings.mobile_padding_top }}px;
     --hero-mobile-bottom: {{ section.settings.mobile_padding_bottom }}px;
@@ -204,7 +173,7 @@
       <div class="{{ section_dom_id }}__details">
         <div class="{{ section_dom_id }}__rating-row">
           <span class="{{ section_dom_id }}__stars" aria-label="5 de 5 estrellas">{{ section.settings.rating_stars }}</span>
-          <span>{{ rating_text_display | escape }}</span>
+          <span>{{ section.settings.rating_text | escape }}</span>
           {% if section.settings.reviews_link != blank %}
             <a href="{{ section.settings.reviews_link }}" class="{{ section_dom_id }}__reviews-link">{{ reviews_label_display }}</a>
           {% else %}
@@ -215,7 +184,7 @@
         <h1 class="{{ section_dom_id }}__title">{{ section.settings.heading | escape }}</h1>
 
         {% if section.settings.description != blank %}
-          <div class="{{ section_dom_id }}__description">{{ description_display }}</div>
+          <div class="{{ section_dom_id }}__description">{{ section.settings.description }}</div>
         {% endif %}
 
         {% assign benefit_count = 0 %}
@@ -228,10 +197,9 @@
           <div class="{{ section_dom_id }}__benefits" aria-label="Beneficios del producto">
             {% for block in section.blocks %}
               {% if block.type == 'benefit' %}
-                {% assign benefit_text_display = block.settings.text | replace: 'Helps Prostate', 'Ayuda a la próstata' | replace: 'Balances Hormones', 'Equilibra las hormonas' | replace: 'Increases Stamina', 'Aumenta la resistencia' | replace: 'Improves Blood Flow', 'Mejora el flujo sanguíneo' %}
                 <span class="{{ section_dom_id }}__benefit" {{ block.shopify_attributes }}>
                   <span class="{{ section_dom_id }}__benefit-icon" aria-hidden="true">{{ block.settings.icon_glyph }}</span>
-                  <span>{{ benefit_text_display | escape }}</span>
+                  <span>{{ block.settings.text | escape }}</span>
                 </span>
               {% endif %}
             {% endfor %}
@@ -247,7 +215,7 @@
         {% if bundle_count > 0 %}
           <div class="{{ section_dom_id }}__bundle-heading">
             <span></span>
-            <strong>{{ bundle_heading_display | escape }}</strong>
+            <strong>{{ section.settings.bundle_heading | escape }}</strong>
             <span></span>
           </div>
 
@@ -280,19 +248,12 @@
                     {% assign bundle_compare_display = bundle_compare_total | money %}
                     {% assign unit_savings = current_variant.compare_at_price | minus: current_variant.price %}
                     {% assign bundle_savings = unit_savings | times: bundle_units %}
-                    {% capture bundle_subtitle_display %}Ahorra {{ bundle_savings | money }}{% endcapture %}
+                    {% capture bundle_subtitle_display %}You save {{ bundle_savings | money }}{% endcapture %}
                   {% else %}
                     {% assign bundle_compare_display = blank %}
                     {% assign bundle_subtitle_display = blank %}
                   {% endif %}
                 {% endif %}
-                {% if bundle_subtitle_display contains 'You save' %}
-                  {% assign bundle_subtitle_display = bundle_subtitle_display | replace: 'You save', 'Ahorra' %}
-                {% endif %}
-
-                {% assign bundle_title_display = block.settings.title | replace: 'BUY 1', 'COMPRA 1' | replace: 'BUY 2 GET 1 FREE', 'COMPRA 2 Y LLEVA 1 GRATIS' | replace: 'BUY 3 GET 2 FREE', 'COMPRA 3 Y LLEVA 2 GRATIS' %}
-                {% assign bundle_badge_display = block.settings.badge | replace: 'Most Popular', 'MÁS POPULAR' | replace: 'Best Value', 'MEJOR VALOR' %}
-
                 <button
                   type="button"
                   class="{{ section_dom_id }}__bundle {% if bundle_selected %}{{ section_dom_id }}__bundle--selected{% endif %}"
@@ -311,7 +272,7 @@
                     <span class="{{ section_dom_id }}__bundle-image-placeholder" aria-hidden="true">{{ block.settings.image_placeholder }}</span>
                   {% endif %}
                   <span class="{{ section_dom_id }}__bundle-copy">
-                    <span class="{{ section_dom_id }}__bundle-title">{{ bundle_title_display | escape }}</span>
+                    <span class="{{ section_dom_id }}__bundle-title">{{ block.settings.title | escape }}</span>
                     {% if bundle_subtitle_display != blank %}
                       <span class="{{ section_dom_id }}__bundle-subtitle">{{ bundle_subtitle_display }}</span>
                     {% endif %}
@@ -322,8 +283,8 @@
                       <s>{{ bundle_compare_display }}</s>
                     {% endif %}
                   </span>
-                  {% if bundle_badge_display != blank %}
-                    <span class="{{ section_dom_id }}__bundle-badge">{{ bundle_badge_display | escape }}</span>
+                  {% if block.settings.badge != blank %}
+                    <span class="{{ section_dom_id }}__bundle-badge">{{ block.settings.badge | escape }}</span>
                   {% endif %}
                 </button>
               {% endif %}
@@ -334,14 +295,14 @@
         {% if section.settings.urgency_text != blank %}
           <div class="{{ section_dom_id }}__urgency">
             <span aria-hidden="true"></span>
-            <span>{{ urgency_text_display | escape }}</span>
+            <span>{{ section.settings.urgency_text | escape }}</span>
           </div>
         {% endif %}
 
         <a
           class="{{ section_dom_id }}__cta"
           href="{{ cta_href }}"
-          aria-label="{{ button_label_display | escape }}"
+          aria-label="{{ section.settings.button_label | escape }}"
           data-cta
           data-variant-id="{% if current_variant != blank %}{{ current_variant.id }}{% endif %}"
         >
@@ -352,7 +313,7 @@
               {{ cta_icon_display }}
             {% endif %}
           </span>
-          <span data-cta-label>{{ button_label_display | escape }}</span>
+          <span data-cta-label>{{ section.settings.button_label | escape }}</span>
           {% if cta_price_display != blank %}
             <span data-cta-price> - {{ cta_price_display }}</span>
           {% endif %}
@@ -369,18 +330,17 @@
           <div class="{{ section_dom_id }}__trust-row" aria-label="Beneficios de compra">
             {% for block in section.blocks %}
               {% if block.type == 'trust_item' %}
-                {% assign trust_text_display = block.settings.text | replace: 'Fast Shipping', 'Envío rápido' | replace: '60-Day Guarantee', 'Garantía de 60 días' %}
                 <span class="{{ section_dom_id }}__trust-item" {{ block.shopify_attributes }}>
                   <span class="{{ section_dom_id }}__trust-icon" aria-hidden="true">
-                    {% if block.settings.icon_glyph == '♢' and trust_text_display contains 'Envío' %}
+                    {% if block.settings.icon_glyph == '♢' and block.settings.text contains 'Shipping' %}
                       <svg viewBox="0 0 24 24" focusable="false"><path d="m3 7 9-4 9 4v10l-9 4-9-4V7Zm0 0 9 4 9-4M12 11v10" /></svg>
-                    {% elsif block.settings.icon_glyph == '♢' and trust_text_display contains 'Garantía' %}
+                    {% elsif block.settings.icon_glyph == '♢' and block.settings.text contains 'Guarantee' %}
                       <svg viewBox="0 0 24 24" focusable="false"><path d="M5 8h14l-1 12H6L5 8Zm3 0V6a4 4 0 0 1 8 0v2m-6 6 1.4 1.4L15 12" /></svg>
                     {% else %}
                       {{ block.settings.icon_glyph }}
                     {% endif %}
                   </span>
-                  <span>{{ trust_text_display | escape }}</span>
+                  <span>{{ block.settings.text | escape }}</span>
                 </span>
               {% endif %}
             {% endfor %}
@@ -428,7 +388,6 @@
                   {% assign tab_index = tab_index | plus: 1 %}
                   {% assign tab_id = section_dom_id | append: '-tab-' | append: tab_index %}
                   {% assign panel_id = section_dom_id | append: '-panel-' | append: tab_index %}
-                  {% assign tab_title_display = block.settings.title | replace: 'Reviews', 'Reseñas' | replace: 'Comparison', 'Comparación' | replace: 'Specifications', 'Especificaciones' %}
                   <button
                     type="button"
                     id="{{ tab_id }}"
@@ -442,7 +401,7 @@
                     data-active="{% if block.settings.active %}true{% else %}false{% endif %}"
                     {{ block.shopify_attributes }}
                   >
-                    {{ tab_title_display | escape }}
+                    {{ block.settings.title | escape }}
                   </button>
                 {% endif %}
               {% endfor %}
@@ -472,10 +431,8 @@
                 >
                   {% case tab_layout %}
                     {% when 'review' %}
-                      {% assign review_rating_label_display = block.settings.rating_label | replace: '5 de 5 estrellas', '5 de 5 estrellas' %}
-                      <div class="{{ section_dom_id }}__review-stars" aria-label="{{ review_rating_label_display | escape }}">{{ block.settings.rating_stars }}</div>
-                      {% assign review_content_display = block.settings.content | replace: 'Completely changed my life!', '¡Me cambió la vida por completo!' %}
-                      <div class="{{ section_dom_id }}__review-content">{{ review_content_display }}</div>
+                      <div class="{{ section_dom_id }}__review-stars" aria-label="{{ block.settings.rating_label | escape }}">{{ block.settings.rating_stars }}</div>
+                      <div class="{{ section_dom_id }}__review-content">{{ block.settings.content }}</div>
                       <div class="{{ section_dom_id }}__reviewer">
                         {% if block.settings.reviewer_image != blank %}
                           {{ block.settings.reviewer_image | image_url: width: 120 | image_tag: class: reviewer_image_class, loading: 'lazy', alt: block.settings.reviewer_image_alt }}
@@ -484,20 +441,16 @@
                         {% endif %}
                         <span class="{{ section_dom_id }}__reviewer-copy">
                           <strong>{{ block.settings.reviewer_name | escape }}</strong>
-                          {% assign reviewer_date_display = block.settings.reviewer_date | replace: 'January 23, 2026', '23 de enero de 2026' %}
-                          {% assign reviewer_role_display = block.settings.reviewer_role | replace: 'PhD In Science', 'Doctorado en Ciencias' %}
-                          <span>{{ reviewer_date_display | escape }}</span>
-                          <small>{{ reviewer_role_display | escape }}</small>
+                          <span>{{ block.settings.reviewer_date | escape }}</span>
+                          <small>{{ block.settings.reviewer_role | escape }}</small>
                         </span>
                       </div>
                     {% when 'comparison' %}
-                      {% assign comparison_us_display = block.settings.comparison_us_heading | replace: 'Us', 'Nosotros' %}
-                      {% assign comparison_other_display = block.settings.comparison_other_heading | replace: 'Others', 'Otros' %}
                       <div class="{{ section_dom_id }}__comparison" role="table" aria-label="Comparación de productos">
                         <div class="{{ section_dom_id }}__comparison-head" role="row">
                           <span role="columnheader"></span>
-                          <strong role="columnheader">{{ comparison_us_display | escape }}</strong>
-                          <strong role="columnheader">{{ comparison_other_display | escape }}</strong>
+                          <strong role="columnheader">{{ block.settings.comparison_us_heading | escape }}</strong>
+                          <strong role="columnheader">{{ block.settings.comparison_other_heading | escape }}</strong>
                         </div>
                         {% for comparison_item in (1..3) %}
                           {% case comparison_item %}
@@ -505,19 +458,15 @@
                             {% when 2 %}{% assign item_text = block.settings.comparison_item_2 %}
                             {% when 3 %}{% assign item_text = block.settings.comparison_item_3 %}
                           {% endcase %}
-                          {% assign item_text = item_text | replace: 'Studied', 'Estudiado' | replace: 'No Fillers', 'Sin rellenos' | replace: 'GMO-Compliant', 'Cumple con normas GMO' %}
-                          {% assign comparison_yes_display = block.settings.comparison_yes_label | replace: 'Included', 'Incluido' %}
-                          {% assign comparison_no_display = block.settings.comparison_no_label | replace: 'Not included', 'No incluido' %}
                           <div class="{{ section_dom_id }}__comparison-row" role="row">
                             <span role="rowheader">{{ item_text | escape }}</span>
-                            <span class="{{ section_dom_id }}__comparison-yes" role="cell" aria-label="{{ comparison_yes_display | escape }}">✓</span>
-                            <span class="{{ section_dom_id }}__comparison-no" role="cell" aria-label="{{ comparison_no_display | escape }}">×</span>
+                            <span class="{{ section_dom_id }}__comparison-yes" role="cell" aria-label="{{ block.settings.comparison_yes_label | escape }}">✓</span>
+                            <span class="{{ section_dom_id }}__comparison-no" role="cell" aria-label="{{ block.settings.comparison_no_label | escape }}">×</span>
                           </div>
                         {% endfor %}
                       </div>
                     {% else %}
-                      {% assign specification_display = block.settings.specification_text | replace: 'The most researched supplement in the world', 'El suplemento más investigado del mundo' %}
-                      <div class="{{ section_dom_id }}__specification">{{ specification_display | escape }}</div>
+                      <div class="{{ section_dom_id }}__specification">{{ block.settings.specification_text | escape }}</div>
                   {% endcase %}
                 </div>
               {% endif %}
@@ -1393,41 +1342,41 @@
   "class": "product-hero-information-section",
   "settings": [
     { "type": "header", "content": "Layout" },
-    { "type": "range", "id": "max_width", "label": "Section max width", "min": 900, "max": 1400, "step": 10, "unit": "px", "default": 1200 },
+    { "type": "range", "id": "max_width", "label": "Section max width", "min": 900, "max": 1400, "step": 10, "unit": "px", "default": 940 },
     { "type": "range", "id": "media_width", "label": "Media column width", "min": 38, "max": 54, "step": 1, "unit": "%", "default": 46 },
     { "type": "range", "id": "column_gap", "label": "Gap between columns", "min": 16, "max": 80, "step": 1, "unit": "px", "default": 40 },
-    { "type": "range", "id": "card_gap", "label": "Gap between cards", "min": 2, "max": 20, "step": 1, "unit": "px", "default": 6 },
-    { "type": "range", "id": "thumbnail_size", "label": "Thumbnail size", "min": 44, "max": 100, "step": 1, "unit": "px", "default": 64 },
-    { "type": "range", "id": "desktop_padding_top", "label": "Desktop top padding", "min": 0, "max": 100, "step": 1, "unit": "px", "default": 32 },
-    { "type": "range", "id": "desktop_padding_bottom", "label": "Desktop bottom padding", "min": 0, "max": 100, "step": 1, "unit": "px", "default": 36 },
-    { "type": "range", "id": "mobile_padding_top", "label": "Mobile top padding", "min": 0, "max": 80, "step": 1, "unit": "px", "default": 24 },
-    { "type": "range", "id": "mobile_padding_bottom", "label": "Mobile bottom padding", "min": 0, "max": 100, "step": 1, "unit": "px", "default": 28 },
+    { "type": "range", "id": "card_gap", "label": "Gap between cards", "min": 2, "max": 20, "step": 1, "unit": "px", "default": 5 },
+    { "type": "range", "id": "thumbnail_size", "label": "Thumbnail size", "min": 44, "max": 100, "step": 1, "unit": "px", "default": 60 },
+    { "type": "range", "id": "desktop_padding_top", "label": "Desktop top padding", "min": 0, "max": 100, "step": 1, "unit": "px", "default": 24 },
+    { "type": "range", "id": "desktop_padding_bottom", "label": "Desktop bottom padding", "min": 0, "max": 100, "step": 1, "unit": "px", "default": 28 },
+    { "type": "range", "id": "mobile_padding_top", "label": "Mobile top padding", "min": 0, "max": 80, "step": 1, "unit": "px", "default": 28 },
+    { "type": "range", "id": "mobile_padding_bottom", "label": "Mobile bottom padding", "min": 0, "max": 100, "step": 1, "unit": "px", "default": 48 },
     { "type": "range", "id": "desktop_side_padding", "label": "Desktop side padding", "min": 0, "max": 60, "step": 1, "unit": "px", "default": 24 },
     { "type": "range", "id": "mobile_side_padding", "label": "Mobile side padding", "min": 12, "max": 32, "step": 1, "unit": "px", "default": 16 },
-    { "type": "color", "id": "background_color", "label": "Background", "default": "#10151f" },
-    { "type": "color", "id": "media_background_color", "label": "Media background", "default": "#17243b" },
-    { "type": "color", "id": "text_color", "label": "Body text", "default": "#d9e2f0" },
+    { "type": "color", "id": "background_color", "label": "Background", "default": "#11151c" },
+    { "type": "color", "id": "media_background_color", "label": "Media background", "default": "#6e89a6" },
+    { "type": "color", "id": "text_color", "label": "Body text", "default": "#ffffff" },
     { "type": "color", "id": "heading_color", "label": "Heading text", "default": "#ffffff" },
-    { "type": "color", "id": "muted_color", "label": "Muted text", "default": "#8794a8" },
-    { "type": "color", "id": "accent_color", "label": "Accent", "default": "#2f86ff" },
-    { "type": "color", "id": "border_color", "label": "Divider", "default": "#2f86ff" },
-    { "type": "color", "id": "panel_color", "label": "Card background", "default": "#1c2432" },
-    { "type": "color", "id": "panel_alt_color", "label": "Selected and tab background", "default": "#102b59" },
-    { "type": "color", "id": "button_color", "label": "Button background", "default": "#c9d8ec" },
-    { "type": "color", "id": "button_text_color", "label": "Button text", "default": "#0a0f18" },
-    { "type": "color", "id": "success_color", "label": "Success", "default": "#24b657" },
-    { "type": "color", "id": "star_color", "label": "Stars", "default": "#ffc437" },
+    { "type": "color", "id": "muted_color", "label": "Muted text", "default": "#b8c1d1" },
+    { "type": "color", "id": "accent_color", "label": "Accent", "default": "#2e82ff" },
+    { "type": "color", "id": "border_color", "label": "Divider", "default": "#26354b" },
+    { "type": "color", "id": "panel_color", "label": "Card background", "default": "#0c2d5a" },
+    { "type": "color", "id": "panel_alt_color", "label": "Selected and tab background", "default": "#1d2531" },
+    { "type": "color", "id": "button_color", "label": "Button background", "default": "#cbd8ea" },
+    { "type": "color", "id": "button_text_color", "label": "Button text", "default": "#11151c" },
+    { "type": "color", "id": "success_color", "label": "Success", "default": "#39c54a" },
+    { "type": "color", "id": "star_color", "label": "Stars", "default": "#ffc42d" },
     { "type": "text", "id": "heading", "label": "Product heading", "default": "NAD PRO COMPLEX" },
-    { "type": "richtext", "id": "description", "label": "Product description", "default": "<p>Apoyo avanzado para hombres de más de 40 años: ayuda a recuperar la <a href=\"#\">energía celular</a>, la claridad y el bienestar general.</p>" },
+    { "type": "richtext", "id": "description", "label": "Product description", "default": "<p>Advanced support for men 40+, helping restore <a href=\"#\">cellular energy</a>, clarity, and overall vitality.</p>" },
     { "type": "text", "id": "rating_stars", "label": "Rating stars", "default": "★★★★★" },
-    { "type": "text", "id": "rating_text", "label": "Rating text", "default": "Calificación 4.9 «Excelente»" },
+    { "type": "text", "id": "rating_text", "label": "Rating text", "default": "Rated 4.9 ‘Excellent’" },
     { "type": "url", "id": "reviews_link", "label": "Reviews link" },
-    { "type": "text", "id": "bundle_heading", "label": "Bundle heading", "default": "COMPRA Y AHORRA" },
-    { "type": "text", "id": "urgency_text", "label": "Urgency message", "default": "Haz tu pedido ahora y recíbelo antes del 10 de septiembre" },
-    { "type": "text", "id": "button_label", "label": "Button label", "default": "AÑADIR AL CARRITO" },
+    { "type": "text", "id": "bundle_heading", "label": "Bundle heading", "default": "BUNDLE & SAVE" },
+    { "type": "text", "id": "urgency_text", "label": "Urgency message", "default": "Order Now To Receive It By September 9" },
+    { "type": "text", "id": "button_label", "label": "Button label", "default": "ADD TO CART" },
     { "type": "text", "id": "button_icon", "label": "Button icon", "default": "♧" },
     { "type": "url", "id": "button_link", "label": "Button link" },
-    { "type": "text", "id": "image_alt", "label": "Main image alt text", "default": "Imagen del producto" },
+    { "type": "text", "id": "image_alt", "label": "Main image alt text", "default": "Product image placeholder" },
     { "type": "image_picker", "id": "hero_image", "label": "Fallback hero image" },
     {
       "type": "select",
@@ -1446,8 +1395,8 @@
       "name": "Fallback gallery image",
       "settings": [
         { "type": "image_picker", "id": "image", "label": "Image" },
-        { "type": "text", "id": "alt", "label": "Alt text", "default": "Imagen de detalle del producto" },
-        { "type": "text", "id": "button_label", "label": "Accessible label", "default": "Ver imagen del producto" }
+        { "type": "text", "id": "alt", "label": "Alt text", "default": "Product detail image" },
+        { "type": "text", "id": "button_label", "label": "Accessible label", "default": "View product image" }
       ]
     },
     {
@@ -1455,7 +1404,7 @@
       "name": "Benefit",
       "settings": [
         { "type": "text", "id": "icon_glyph", "label": "Icon", "default": "✓" },
-        { "type": "text", "id": "text", "label": "Benefit text", "default": "Ayuda a la próstata" }
+        { "type": "text", "id": "text", "label": "Benefit text", "default": "Helps Prostate" }
       ]
     },
     {
@@ -1463,10 +1412,10 @@
       "name": "Bundle option",
       "settings": [
         { "type": "image_picker", "id": "image", "label": "Bundle image" },
-        { "type": "text", "id": "image_alt", "label": "Bundle image alt text", "default": "Imagen del paquete" },
+        { "type": "text", "id": "image_alt", "label": "Bundle image alt text", "default": "Bundle image" },
         { "type": "text", "id": "image_placeholder", "label": "Image placeholder", "default": "Pack" },
         { "type": "text", "id": "title", "label": "Bundle title", "default": "BUY 1" },
-        { "type": "text", "id": "subtitle", "label": "Bundle subtitle", "default": "Ahorra $12.00" },
+        { "type": "text", "id": "subtitle", "label": "Bundle subtitle", "default": "You save $12.00" },
         { "type": "text", "id": "price", "label": "Fallback price", "default": "$36.00" },
         { "type": "text", "id": "compare_at_price", "label": "Fallback compare-at price", "default": "$48.00" },
         { "type": "text", "id": "badge", "label": "Badge" },
@@ -1478,7 +1427,7 @@
       "name": "Trust item",
       "settings": [
         { "type": "text", "id": "icon_glyph", "label": "Icon", "default": "♢" },
-        { "type": "text", "id": "text", "label": "Trust text", "default": "Envío rápido" }
+        { "type": "text", "id": "text", "label": "Trust text", "default": "Fast Shipping" }
       ]
     },
     {
@@ -1487,7 +1436,7 @@
       "settings": [
         { "type": "image_picker", "id": "image", "label": "Payment logo image" },
         { "type": "text", "id": "label", "label": "Placeholder label", "default": "CARD" },
-        { "type": "text", "id": "alt", "label": "Image alt text", "default": "Método de pago" },
+        { "type": "text", "id": "alt", "label": "Image alt text", "default": "Payment method" },
         { "type": "range", "id": "width", "label": "Badge width", "min": 20, "max": 80, "step": 1, "unit": "px", "default": 32 },
         {
           "type": "select",
@@ -1507,7 +1456,7 @@
       "type": "tab",
       "name": "Information tab",
       "settings": [
-        { "type": "text", "id": "title", "label": "Tab title", "default": "Reseñas" },
+        { "type": "text", "id": "title", "label": "Tab title", "default": "Reviews" },
         {
           "type": "select",
           "id": "layout",
@@ -1521,22 +1470,22 @@
         },
         { "type": "checkbox", "id": "active", "label": "Active by default", "default": false },
         { "type": "text", "id": "rating_stars", "label": "Review stars", "default": "★★★★★" },
-        { "type": "text", "id": "rating_label", "label": "Review stars alt text", "default": "5 de 5 estrellas" },
-        { "type": "richtext", "id": "content", "label": "Review content", "default": "<p>¡Me cambió la vida por completo!</p>" },
+        { "type": "text", "id": "rating_label", "label": "Review stars alt text", "default": "5 out of 5 stars" },
+        { "type": "richtext", "id": "content", "label": "Review content", "default": "<p>Completely changed my life!</p>" },
         { "type": "image_picker", "id": "reviewer_image", "label": "Reviewer image" },
-        { "type": "text", "id": "reviewer_image_alt", "label": "Reviewer image alt text", "default": "Retrato del reseñador" },
+        { "type": "text", "id": "reviewer_image_alt", "label": "Reviewer image alt text", "default": "Reviewer portrait" },
         { "type": "text", "id": "reviewer_initials", "label": "Reviewer initials", "default": "JD" },
         { "type": "text", "id": "reviewer_name", "label": "Reviewer name", "default": "Dr. Jason Dominguez" },
-        { "type": "text", "id": "reviewer_date", "label": "Reviewer date", "default": "23 de enero de 2026" },
-        { "type": "text", "id": "reviewer_role", "label": "Reviewer role", "default": "Doctorado en Ciencias" },
-        { "type": "text", "id": "comparison_us_heading", "label": "Your product heading", "default": "Nosotros" },
-        { "type": "text", "id": "comparison_other_heading", "label": "Other products heading", "default": "Otros" },
-        { "type": "text", "id": "comparison_item_1", "label": "Comparison row 1", "default": "Estudiado" },
-        { "type": "text", "id": "comparison_item_2", "label": "Comparison row 2", "default": "Sin rellenos" },
-        { "type": "text", "id": "comparison_item_3", "label": "Comparison row 3", "default": "Cumple con normas GMO" },
-        { "type": "text", "id": "comparison_yes_label", "label": "Positive icon label", "default": "Incluido" },
-        { "type": "text", "id": "comparison_no_label", "label": "Negative icon label", "default": "No incluido" },
-        { "type": "text", "id": "specification_text", "label": "Specification text", "default": "El suplemento más investigado del mundo" }
+        { "type": "text", "id": "reviewer_date", "label": "Reviewer date", "default": "January 23, 2026" },
+        { "type": "text", "id": "reviewer_role", "label": "Reviewer role", "default": "PhD In Science" },
+        { "type": "text", "id": "comparison_us_heading", "label": "Your product heading", "default": "Us" },
+        { "type": "text", "id": "comparison_other_heading", "label": "Other products heading", "default": "Others" },
+        { "type": "text", "id": "comparison_item_1", "label": "Comparison row 1", "default": "Studied" },
+        { "type": "text", "id": "comparison_item_2", "label": "Comparison row 2", "default": "No Fillers" },
+        { "type": "text", "id": "comparison_item_3", "label": "Comparison row 3", "default": "GMO-Compliant" },
+        { "type": "text", "id": "comparison_yes_label", "label": "Positive icon label", "default": "Included" },
+        { "type": "text", "id": "comparison_no_label", "label": "Negative icon label", "default": "Not included" },
+        { "type": "text", "id": "specification_text", "label": "Specification text", "default": "The most researched supplement in the world" }
       ]
     }
   ],
@@ -1544,15 +1493,15 @@
     {
       "name": "Info principal producto",
       "blocks": [
-        { "type": "benefit", "settings": { "text": "Ayuda a la próstata" } },
-        { "type": "benefit", "settings": { "text": "Equilibra las hormonas" } },
-        { "type": "benefit", "settings": { "text": "Aumenta la resistencia" } },
-        { "type": "benefit", "settings": { "text": "Mejora el flujo sanguíneo" } },
-        { "type": "bundle", "settings": { "title": "COMPRA 1", "subtitle": "Ahorra $12.00", "price": "$36.00", "compare_at_price": "$48.00", "selected": true } },
-        { "type": "bundle", "settings": { "title": "COMPRA 2 Y LLEVA 1 GRATIS", "subtitle": "Ahorra $36.00", "price": "$108.00", "compare_at_price": "$144.00", "badge": "MÁS POPULAR" } },
-        { "type": "bundle", "settings": { "title": "COMPRA 3 Y LLEVA 2 GRATIS", "subtitle": "Ahorra $60.00", "price": "$180.00", "compare_at_price": "$240.00", "badge": "MEJOR VALOR" } },
-        { "type": "trust_item", "settings": { "text": "Envío rápido" } },
-        { "type": "trust_item", "settings": { "text": "Garantía de 60 días" } },
+        { "type": "benefit", "settings": { "text": "Helps Prostate" } },
+        { "type": "benefit", "settings": { "text": "Balances Hormones" } },
+        { "type": "benefit", "settings": { "text": "Increases Stamina" } },
+        { "type": "benefit", "settings": { "text": "Improves Blood Flow" } },
+        { "type": "bundle", "settings": { "title": "BUY 1", "subtitle": "You save $12.00", "price": "$36.00", "compare_at_price": "$48.00", "selected": true } },
+        { "type": "bundle", "settings": { "title": "BUY 2 GET 1 FREE", "subtitle": "You save $36.00", "price": "$108.00", "compare_at_price": "$144.00", "badge": "Most Popular" } },
+        { "type": "bundle", "settings": { "title": "BUY 3 GET 2 FREE", "subtitle": "You save $60.00", "price": "$180.00", "compare_at_price": "$240.00", "badge": "Best Value" } },
+        { "type": "trust_item", "settings": { "text": "Fast Shipping" } },
+        { "type": "trust_item", "settings": { "text": "60-Day Guarantee" } },
         { "type": "payment", "settings": { "label": "MC", "alt": "Mastercard", "width": 32 } },
         { "type": "payment", "settings": { "label": "AMEX", "alt": "American Express", "width": 32, "style": "blue" } },
         { "type": "payment", "settings": { "label": "Apple Pay", "alt": "Apple Pay", "width": 38 } },
@@ -1560,9 +1509,9 @@
         { "type": "payment", "settings": { "label": "shop", "alt": "Shop Pay", "width": 32, "style": "purple" } },
         { "type": "payment", "settings": { "label": "DISCOVER", "alt": "Discover", "width": 40 } },
         { "type": "payment", "settings": { "label": "VISA", "alt": "Visa", "width": 32 } },
-        { "type": "tab", "settings": { "title": "Reseñas", "layout": "review" } },
-        { "type": "tab", "settings": { "title": "Comparación", "layout": "comparison" } },
-        { "type": "tab", "settings": { "title": "Especificaciones", "layout": "specification", "active": true } }
+        { "type": "tab", "settings": { "title": "Reviews", "layout": "review", "active": true } },
+        { "type": "tab", "settings": { "title": "Comparison", "layout": "comparison" } },
+        { "type": "tab", "settings": { "title": "Specifications", "layout": "specification" } }
       ]
     }
   ]

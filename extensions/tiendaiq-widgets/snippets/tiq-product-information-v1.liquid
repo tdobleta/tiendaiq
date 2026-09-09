@@ -1,27 +1,6 @@
-{% comment %} GENERATED from product-information@1 · 770a33f8a4b5a642d37b2e4f30f5336df8c5b10b3e5a00800650e9243413f659. Do not edit. {% endcomment %}
+{% comment %} GENERATED from product-information@1 · 3c27a767d7334ab06fd0b2c6291e773cd388b14515fd7656728f69e94e6e08e8. Do not edit. {% endcomment %}
 {% liquid
   assign section_dom_id = 'product-hero-' | append: tiq_section.id | handleize
-  comment
-    The original instance was configured at 940px. Coerce Theme Editor range
-    values to numbers before comparing them so older saved values reliably
-    receive the reference desktop proportions.
-  endcomment
-  assign hero_max_width = tiq_section.instance.settings.max_width | plus: 0
-  if hero_max_width < 1100
-    assign hero_max_width = 1200
-  endif
-  assign hero_column_gap = tiq_section.instance.settings.column_gap | plus: 0
-  if hero_column_gap < 48
-    assign hero_column_gap = 50
-  endif
-  assign hero_desktop_top = tiq_section.instance.settings.desktop_padding_top | plus: 0
-  if hero_desktop_top < 40
-    assign hero_desktop_top = 42
-  endif
-  assign hero_thumbnail_size = tiq_section.instance.settings.thumbnail_size | plus: 0
-  if hero_thumbnail_size < 64
-    assign hero_thumbnail_size = 64
-  endif
   assign hero_content_max_width = 600
   assign main_image_class = section_dom_id | append: '__main-image'
   assign thumbnail_image_class = section_dom_id | append: '__thumbnail-image'
@@ -55,17 +34,7 @@
     assign cta_href = '#'
   endif
 
-  assign rating_text_display = tiq_section.instance.settings.rating_text | replace: 'Rated 4.9', 'Calificación 4.9' | replace: '‘Excellent’', '«Excelente»'
-
-  assign reviews_label_display = '693+ Reseñas'
-
-  assign description_display = tiq_section.instance.settings.description | replace: 'Advanced support for men 40+', 'Apoyo avanzado para hombres de más de 40 años' | replace: 'helping restore', 'ayuda a recuperar' | replace: 'cellular energy', 'energía celular' | replace: 'clarity, and overall vitality', 'la claridad y el bienestar general'
-
-  assign bundle_heading_display = tiq_section.instance.settings.bundle_heading | replace: 'BUNDLE & SAVE', 'COMPRA Y AHORRA'
-
-  assign urgency_text_display = tiq_section.instance.settings.urgency_text | replace: 'Order Now To Receive It By September 10', 'Haz tu pedido ahora y recíbelo antes del 10 de septiembre' | replace: 'Order Now To Receive It By September 9', 'Haz tu pedido ahora y recíbelo antes del 9 de septiembre'
-
-  assign button_label_display = tiq_section.instance.settings.button_label | replace: 'ADD TO CART', 'AÑADIR AL CARRITO'
+  assign reviews_label_display = '693+ Reviews'
 
   assign cta_icon_display = tiq_section.instance.settings.button_icon
   if cta_icon_display == '♧'
@@ -99,14 +68,14 @@
   id="{{ section_dom_id }}"
   class="{{ section_dom_id }}"
   style="
-    --hero-max-width: {{ hero_max_width }}px;
+    --hero-max-width: {{ tiq_section.instance.settings.max_width }}px;
     --hero-content-max-width: {{ hero_content_max_width }}px;
     --hero-media-width: {{ tiq_section.instance.settings.media_width }}%;
-    --hero-column-gap: {{ hero_column_gap }}px;
+    --hero-column-gap: {{ tiq_section.instance.settings.column_gap }}px;
     --hero-card-gap: {{ tiq_section.instance.settings.card_gap }}px;
     --hero-media-gap: 8px;
-    --hero-thumbnail-size: {{ hero_thumbnail_size }}px;
-    --hero-desktop-top: {{ hero_desktop_top }}px;
+    --hero-thumbnail-size: {{ tiq_section.instance.settings.thumbnail_size }}px;
+    --hero-desktop-top: {{ tiq_section.instance.settings.desktop_padding_top }}px;
     --hero-desktop-bottom: {{ tiq_section.instance.settings.desktop_padding_bottom }}px;
     --hero-mobile-top: {{ tiq_section.instance.settings.mobile_padding_top }}px;
     --hero-mobile-bottom: {{ tiq_section.instance.settings.mobile_padding_bottom }}px;
@@ -205,7 +174,7 @@
       <div class="{{ section_dom_id }}__details">
         <div class="{{ section_dom_id }}__rating-row">
           <span class="{{ section_dom_id }}__stars" aria-label="5 de 5 estrellas">{{ tiq_section.instance.settings.rating_stars }}</span>
-          <span>{{ rating_text_display | escape }}</span>
+          <span>{{ tiq_section.instance.settings.rating_text | escape }}</span>
           {% if tiq_section.instance.settings.reviews_link != blank %}
             <a href="{{ tiq_section.instance.settings.reviews_link }}" class="{{ section_dom_id }}__reviews-link">{{ reviews_label_display }}</a>
           {% else %}
@@ -216,7 +185,7 @@
         <h1 class="{{ section_dom_id }}__title">{{ tiq_section.instance.settings.heading | escape }}</h1>
 
         {% if tiq_section.instance.settings.description != blank %}
-          <div class="{{ section_dom_id }}__description">{{ description_display }}</div>
+          <div class="{{ section_dom_id }}__description">{{ tiq_section.instance.settings.description }}</div>
         {% endif %}
 
         {% assign benefit_count = 0 %}
@@ -229,10 +198,9 @@
           <div class="{{ section_dom_id }}__benefits" aria-label="Beneficios del producto">
             {% for block in tiq_section.instance.blocks %}
               {% if block.type == 'benefit' %}
-                {% assign benefit_text_display = block.settings.text | replace: 'Helps Prostate', 'Ayuda a la próstata' | replace: 'Balances Hormones', 'Equilibra las hormonas' | replace: 'Increases Stamina', 'Aumenta la resistencia' | replace: 'Improves Blood Flow', 'Mejora el flujo sanguíneo' %}
                 <span class="{{ section_dom_id }}__benefit" data-tiq-block-id="{{ block.id | escape }}">
                   <span class="{{ section_dom_id }}__benefit-icon" aria-hidden="true">{{ block.settings.icon_glyph }}</span>
-                  <span>{{ benefit_text_display | escape }}</span>
+                  <span>{{ block.settings.text | escape }}</span>
                 </span>
               {% endif %}
             {% endfor %}
@@ -248,7 +216,7 @@
         {% if bundle_count > 0 %}
           <div class="{{ section_dom_id }}__bundle-heading">
             <span></span>
-            <strong>{{ bundle_heading_display | escape }}</strong>
+            <strong>{{ tiq_section.instance.settings.bundle_heading | escape }}</strong>
             <span></span>
           </div>
 
@@ -281,19 +249,12 @@
                     {% assign bundle_compare_display = bundle_compare_total | money %}
                     {% assign unit_savings = current_variant.compare_at_price | minus: current_variant.price %}
                     {% assign bundle_savings = unit_savings | times: bundle_units %}
-                    {% capture bundle_subtitle_display %}Ahorra {{ bundle_savings | money }}{% endcapture %}
+                    {% capture bundle_subtitle_display %}You save {{ bundle_savings | money }}{% endcapture %}
                   {% else %}
                     {% assign bundle_compare_display = blank %}
                     {% assign bundle_subtitle_display = blank %}
                   {% endif %}
                 {% endif %}
-                {% if bundle_subtitle_display contains 'You save' %}
-                  {% assign bundle_subtitle_display = bundle_subtitle_display | replace: 'You save', 'Ahorra' %}
-                {% endif %}
-
-                {% assign bundle_title_display = block.settings.title | replace: 'BUY 1', 'COMPRA 1' | replace: 'BUY 2 GET 1 FREE', 'COMPRA 2 Y LLEVA 1 GRATIS' | replace: 'BUY 3 GET 2 FREE', 'COMPRA 3 Y LLEVA 2 GRATIS' %}
-                {% assign bundle_badge_display = block.settings.badge | replace: 'Most Popular', 'MÁS POPULAR' | replace: 'Best Value', 'MEJOR VALOR' %}
-
                 <button
                   type="button"
                   class="{{ section_dom_id }}__bundle {% if bundle_selected %}{{ section_dom_id }}__bundle--selected{% endif %}"
@@ -312,7 +273,7 @@
                     <span class="{{ section_dom_id }}__bundle-image-placeholder" aria-hidden="true">{{ block.settings.image_placeholder }}</span>
                   {% endif %}
                   <span class="{{ section_dom_id }}__bundle-copy">
-                    <span class="{{ section_dom_id }}__bundle-title">{{ bundle_title_display | escape }}</span>
+                    <span class="{{ section_dom_id }}__bundle-title">{{ block.settings.title | escape }}</span>
                     {% if bundle_subtitle_display != blank %}
                       <span class="{{ section_dom_id }}__bundle-subtitle">{{ bundle_subtitle_display }}</span>
                     {% endif %}
@@ -323,8 +284,8 @@
                       <s>{{ bundle_compare_display }}</s>
                     {% endif %}
                   </span>
-                  {% if bundle_badge_display != blank %}
-                    <span class="{{ section_dom_id }}__bundle-badge">{{ bundle_badge_display | escape }}</span>
+                  {% if block.settings.badge != blank %}
+                    <span class="{{ section_dom_id }}__bundle-badge">{{ block.settings.badge | escape }}</span>
                   {% endif %}
                 </button>
               {% endif %}
@@ -335,14 +296,14 @@
         {% if tiq_section.instance.settings.urgency_text != blank %}
           <div class="{{ section_dom_id }}__urgency">
             <span aria-hidden="true"></span>
-            <span>{{ urgency_text_display | escape }}</span>
+            <span>{{ tiq_section.instance.settings.urgency_text | escape }}</span>
           </div>
         {% endif %}
 
         <a
           class="{{ section_dom_id }}__cta"
           href="{{ cta_href }}"
-          aria-label="{{ button_label_display | escape }}"
+          aria-label="{{ tiq_section.instance.settings.button_label | escape }}"
           data-cta
           data-variant-id="{% if current_variant != blank %}{{ current_variant.id }}{% endif %}"
         >
@@ -353,7 +314,7 @@
               {{ cta_icon_display }}
             {% endif %}
           </span>
-          <span data-cta-label>{{ button_label_display | escape }}</span>
+          <span data-cta-label>{{ tiq_section.instance.settings.button_label | escape }}</span>
           {% if cta_price_display != blank %}
             <span data-cta-price> - {{ cta_price_display }}</span>
           {% endif %}
@@ -370,18 +331,17 @@
           <div class="{{ section_dom_id }}__trust-row" aria-label="Beneficios de compra">
             {% for block in tiq_section.instance.blocks %}
               {% if block.type == 'trust_item' %}
-                {% assign trust_text_display = block.settings.text | replace: 'Fast Shipping', 'Envío rápido' | replace: '60-Day Guarantee', 'Garantía de 60 días' %}
                 <span class="{{ section_dom_id }}__trust-item" data-tiq-block-id="{{ block.id | escape }}">
                   <span class="{{ section_dom_id }}__trust-icon" aria-hidden="true">
-                    {% if block.settings.icon_glyph == '♢' and trust_text_display contains 'Envío' %}
+                    {% if block.settings.icon_glyph == '♢' and block.settings.text contains 'Shipping' %}
                       <svg viewBox="0 0 24 24" focusable="false"><path d="m3 7 9-4 9 4v10l-9 4-9-4V7Zm0 0 9 4 9-4M12 11v10" /></svg>
-                    {% elsif block.settings.icon_glyph == '♢' and trust_text_display contains 'Garantía' %}
+                    {% elsif block.settings.icon_glyph == '♢' and block.settings.text contains 'Guarantee' %}
                       <svg viewBox="0 0 24 24" focusable="false"><path d="M5 8h14l-1 12H6L5 8Zm3 0V6a4 4 0 0 1 8 0v2m-6 6 1.4 1.4L15 12" /></svg>
                     {% else %}
                       {{ block.settings.icon_glyph }}
                     {% endif %}
                   </span>
-                  <span>{{ trust_text_display | escape }}</span>
+                  <span>{{ block.settings.text | escape }}</span>
                 </span>
               {% endif %}
             {% endfor %}
@@ -429,7 +389,6 @@
                   {% assign tab_index = tab_index | plus: 1 %}
                   {% assign tab_id = section_dom_id | append: '-tab-' | append: tab_index %}
                   {% assign panel_id = section_dom_id | append: '-panel-' | append: tab_index %}
-                  {% assign tab_title_display = block.settings.title | replace: 'Reviews', 'Reseñas' | replace: 'Comparison', 'Comparación' | replace: 'Specifications', 'Especificaciones' %}
                   <button
                     type="button"
                     id="{{ tab_id }}"
@@ -443,7 +402,7 @@
                     data-active="{% if block.settings.active %}true{% else %}false{% endif %}"
                     data-tiq-block-id="{{ block.id | escape }}"
                   >
-                    {{ tab_title_display | escape }}
+                    {{ block.settings.title | escape }}
                   </button>
                 {% endif %}
               {% endfor %}
@@ -473,10 +432,8 @@
                 >
                   {% case tab_layout %}
                     {% when 'review' %}
-                      {% assign review_rating_label_display = block.settings.rating_label | replace: '5 de 5 estrellas', '5 de 5 estrellas' %}
-                      <div class="{{ section_dom_id }}__review-stars" aria-label="{{ review_rating_label_display | escape }}">{{ block.settings.rating_stars }}</div>
-                      {% assign review_content_display = block.settings.content | replace: 'Completely changed my life!', '¡Me cambió la vida por completo!' %}
-                      <div class="{{ section_dom_id }}__review-content">{{ review_content_display }}</div>
+                      <div class="{{ section_dom_id }}__review-stars" aria-label="{{ block.settings.rating_label | escape }}">{{ block.settings.rating_stars }}</div>
+                      <div class="{{ section_dom_id }}__review-content">{{ block.settings.content }}</div>
                       <div class="{{ section_dom_id }}__reviewer">
                         {% if block.settings.reviewer_image != blank %}
                           {{ block.settings.reviewer_image | image_url: width: 120 | image_tag: class: reviewer_image_class, loading: 'lazy', alt: block.settings.reviewer_image_alt }}
@@ -485,20 +442,16 @@
                         {% endif %}
                         <span class="{{ section_dom_id }}__reviewer-copy">
                           <strong>{{ block.settings.reviewer_name | escape }}</strong>
-                          {% assign reviewer_date_display = block.settings.reviewer_date | replace: 'January 23, 2026', '23 de enero de 2026' %}
-                          {% assign reviewer_role_display = block.settings.reviewer_role | replace: 'PhD In Science', 'Doctorado en Ciencias' %}
-                          <span>{{ reviewer_date_display | escape }}</span>
-                          <small>{{ reviewer_role_display | escape }}</small>
+                          <span>{{ block.settings.reviewer_date | escape }}</span>
+                          <small>{{ block.settings.reviewer_role | escape }}</small>
                         </span>
                       </div>
                     {% when 'comparison' %}
-                      {% assign comparison_us_display = block.settings.comparison_us_heading | replace: 'Us', 'Nosotros' %}
-                      {% assign comparison_other_display = block.settings.comparison_other_heading | replace: 'Others', 'Otros' %}
                       <div class="{{ section_dom_id }}__comparison" role="table" aria-label="Comparación de productos">
                         <div class="{{ section_dom_id }}__comparison-head" role="row">
                           <span role="columnheader"></span>
-                          <strong role="columnheader">{{ comparison_us_display | escape }}</strong>
-                          <strong role="columnheader">{{ comparison_other_display | escape }}</strong>
+                          <strong role="columnheader">{{ block.settings.comparison_us_heading | escape }}</strong>
+                          <strong role="columnheader">{{ block.settings.comparison_other_heading | escape }}</strong>
                         </div>
                         {% for comparison_item in (1..3) %}
                           {% case comparison_item %}
@@ -506,19 +459,15 @@
                             {% when 2 %}{% assign item_text = block.settings.comparison_item_2 %}
                             {% when 3 %}{% assign item_text = block.settings.comparison_item_3 %}
                           {% endcase %}
-                          {% assign item_text = item_text | replace: 'Studied', 'Estudiado' | replace: 'No Fillers', 'Sin rellenos' | replace: 'GMO-Compliant', 'Cumple con normas GMO' %}
-                          {% assign comparison_yes_display = block.settings.comparison_yes_label | replace: 'Included', 'Incluido' %}
-                          {% assign comparison_no_display = block.settings.comparison_no_label | replace: 'Not included', 'No incluido' %}
                           <div class="{{ section_dom_id }}__comparison-row" role="row">
                             <span role="rowheader">{{ item_text | escape }}</span>
-                            <span class="{{ section_dom_id }}__comparison-yes" role="cell" aria-label="{{ comparison_yes_display | escape }}">✓</span>
-                            <span class="{{ section_dom_id }}__comparison-no" role="cell" aria-label="{{ comparison_no_display | escape }}">×</span>
+                            <span class="{{ section_dom_id }}__comparison-yes" role="cell" aria-label="{{ block.settings.comparison_yes_label | escape }}">✓</span>
+                            <span class="{{ section_dom_id }}__comparison-no" role="cell" aria-label="{{ block.settings.comparison_no_label | escape }}">×</span>
                           </div>
                         {% endfor %}
                       </div>
                     {% else %}
-                      {% assign specification_display = block.settings.specification_text | replace: 'The most researched supplement in the world', 'El suplemento más investigado del mundo' %}
-                      <div class="{{ section_dom_id }}__specification">{{ specification_display | escape }}</div>
+                      <div class="{{ section_dom_id }}__specification">{{ block.settings.specification_text | escape }}</div>
                   {% endcase %}
                 </div>
               {% endif %}

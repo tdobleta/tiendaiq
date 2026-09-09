@@ -10,7 +10,7 @@ const { SectionContractError, sha256, validateInstance } = require("../src/secti
 const { build: buildStorefront } = require("../src/section-pipeline/compile-storefront");
 
 test("el código Shopify es la fuente inmutable del diseño y del editor", () => {
-  assert.equal(productInformation.sourceSha256, "770a33f8a4b5a642d37b2e4f30f5336df8c5b10b3e5a00800650e9243413f659");
+  assert.equal(productInformation.sourceSha256, "3c27a767d7334ab06fd0b2c6291e773cd388b14515fd7656728f69e94e6e08e8");
   assert.equal(sha256(productInformation.source), productInformation.sourceSha256);
   assert.equal(productInformation.schema.settings.length, 38);
   assert.equal(productInformation.schema.settings.filter((setting) => setting.id).length, 37);
@@ -18,6 +18,8 @@ test("el código Shopify es la fuente inmutable del diseño y del editor", () =>
   assert.equal(productInformation.seed.blocks.length, 19);
   assert.equal(productInformation.editor.groups.length, 1);
   assert.equal(productInformation.editor.blocks.length, 6);
+  assert.doesNotMatch(productInformation.source, /if hero_(?:max_width|column_gap|desktop_top|thumbnail_size)/);
+  assert.doesNotMatch(productInformation.source, /\| replace:/);
 });
 
 test("crear una página conserva exactamente cada valor del preset Shopify", () => {
@@ -37,6 +39,11 @@ test("crear una página conserva exactamente cada valor del preset Shopify", () 
   assert.equal(page.tree[0].label, "Info principal producto");
   assert.deepEqual(page.sections[0].instance, productInformation.seed);
   assert.equal(page.sections[0].instance.settings.heading, "NAD PRO COMPLEX");
+  assert.equal(page.sections[0].instance.settings.max_width, 940);
+  assert.equal(page.sections[0].instance.settings.card_gap, 5);
+  assert.equal(page.sections[0].instance.settings.thumbnail_size, 60);
+  assert.equal(page.sections[0].instance.settings.background_color, "#11151c");
+  assert.equal(page.sections[0].instance.settings.bundle_heading, "BUNDLE & SAVE");
   assert.equal(page.sections[0].instance.settings.rating_stars, "★★★★★");
   assert.equal(page.productSnapshot.media.length, 1);
   assert.equal(page.sections[0].instance.blocks.some((block) => block.type === "media_thumb"), false);
@@ -84,7 +91,8 @@ test("la vista del editor ejecuta la misma fuente Liquid con datos Shopify", asy
   assert.match(html, /class="product-hero-section-product-information__thumbnail-image"/);
   assert.match(html, /data-variant-id="gid:\/\/shopify\/ProductVariant\/1"/);
   assert.match(html, /class="product-hero-section-product-information__cta"[\s\S]*href="#"/);
-  assert.match(html, /Garantía de 60 días/);
+  assert.match(html, /Fast Shipping/);
+  assert.match(html, /60-Day Guarantee/);
 });
 
 test("la vista aislada reproduce la herencia tipográfica de Horizon", async () => {
