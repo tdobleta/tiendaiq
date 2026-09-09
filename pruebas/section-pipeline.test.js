@@ -87,6 +87,16 @@ test("la vista del editor ejecuta la misma fuente Liquid con datos Shopify", asy
   assert.match(html, /Garantía de 60 días/);
 });
 
+test("la vista aislada reproduce la herencia tipográfica de Horizon", async () => {
+  const html = await renderSectionPage(createProductPage({
+    product: { id: "gid://shopify/Product/1", title: "Producto", variants: [] }
+  }));
+  assert.match(html, /family=Inter:wght@400;500;600;700;800;900/);
+  assert.match(html, /font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:14px;font-weight:400/);
+  assert.match(html, /button,input,select,textarea\{font:inherit\}/);
+  assert.match(html, /button,a\{color:inherit\}/);
+});
+
 test("la investigación visual conserva evidencia y descarta referencias inventadas", () => {
   const research = validateResearch({
     summary: "Bolso de líneas sobrias.",
