@@ -1247,19 +1247,11 @@ async function api(req, res, url) {
     const pageId = idDePagina(producto_id);
     let existente = await leerPagina(sesion.tenant, pageId);
     let sectionDraftCreated = false;
-    let currentSectionDraft = false;
-    if (existente?.data?.section_page) {
+    if (requestedTemplate.rendererKey === "section-page-v1") {
       try {
-        validateSectionPage(existente.data.section_page);
-        currentSectionDraft = true;
-      } catch {
-        // Una revisión visual anterior nunca se reutiliza como si fuera la
-        // sección actual. El siguiente intento vuelve a partir de la fuente
-        // Shopify canónica y de sus 19 bloques estructurales.
-      }
-    }
-    if (requestedTemplate.rendererKey === "section-page-v1" && !currentSectionDraft) {
-      try {
+        // Crear es una acción explícita: siempre empieza desde la composición
+        // canónica. No arrastra un borrador anterior ni sustituciones hechas
+        // por otra revisión del pipeline.
         const base = await crearPaginaBase(producto_id, sesion, { idioma, angulo, estilo });
         existente = {
           id: pageId,

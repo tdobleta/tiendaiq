@@ -20,7 +20,7 @@ test("el código Shopify es la fuente inmutable del diseño y del editor", () =>
   assert.equal(productInformation.editor.blocks.length, 6);
 });
 
-test("crear una página adapta datos pero conserva exactamente el diseño", () => {
+test("crear una página conserva exactamente cada valor del preset Shopify", () => {
   const before = productInformation.source;
   const page = createProductPage({
     product: {
@@ -35,18 +35,17 @@ test("crear una página adapta datos pero conserva exactamente el diseño", () =
   assert.equal(productInformation.source, before);
   assert.equal(page.sections.length, 1);
   assert.equal(page.tree[0].label, "Info principal producto");
-  assert.equal(page.sections[0].instance.settings.heading, "Bolso Atelier");
-  assert.equal(page.sections[0].instance.settings.rating_stars, "✦");
+  assert.deepEqual(page.sections[0].instance, productInformation.seed);
+  assert.equal(page.sections[0].instance.settings.heading, "NAD PRO COMPLEX");
+  assert.equal(page.sections[0].instance.settings.rating_stars, "★★★★★");
   assert.equal(page.productSnapshot.media.length, 1);
   assert.equal(page.sections[0].instance.blocks.some((block) => block.type === "media_thumb"), false);
   assert.equal(page.sections[0].instance.blocks.length, 19);
   assert.equal(page.sections[0].instance.blocks.filter((block) => block.type === "bundle").length, 3);
-  const bundle = page.sections[0].instance.blocks.find((block) => block.type === "bundle");
-  assert.ok(bundle);
-  assert.deepEqual(bundle.binding, { variantId: "gid://shopify/ProductVariant/2", quantity: 1 });
+  assert.equal(page.sections[0].instance.blocks.some((block) => block.binding), false);
 });
 
-test("la IA no puede inventar campos, reseñas ni claims sin evidencia", () => {
+test("producto e investigación no pueden alterar el preset inicial", () => {
   const page = createProductPage({
     product: { id: "gid://shopify/Product/1", title: "Producto", variants: [] },
     research: {
@@ -55,11 +54,11 @@ test("la IA no puede inventar campos, reseñas ni claims sin evidencia", () => {
     }
   });
   const instance = page.sections[0].instance;
-  assert.equal(instance.settings.rating_text, "Producto conectado a Shopify");
+  assert.deepEqual(instance, productInformation.seed);
   assert.equal(instance.blocks.filter((block) => block.type === "benefit").length, 4);
   assert.equal(instance.blocks.length, 19);
   assert.equal(instance.blocks.some((block) => block.settings?.text === "Resultado garantizado"), false);
-  assert.equal(instance.blocks.some((block) => block.settings?.reviewer_name === "Dr. Jason Dominguez"), false);
+  assert.equal(instance.blocks.some((block) => block.settings?.text === "Resultado garantizado"), false);
   assert.throws(() => validateInstance({
     definition: productInformation,
     instance: { settings: { css_inventado: "display:none" }, blocks: [] }
@@ -77,7 +76,7 @@ test("la vista del editor ejecuta la misma fuente Liquid con datos Shopify", asy
     }
   });
   const html = await renderSectionPage(page);
-  assert.match(html, /Bolso Atelier/);
+  assert.match(html, /NAD PRO COMPLEX/);
   assert.match(html, /https:\/\/cdn\.shopify\.com\/bolso\.jpg/);
   assert.match(html, /data-tiq-section-id="section-product-information"/);
   assert.match(html, /data-tiq-block-id=/);
@@ -85,7 +84,7 @@ test("la vista del editor ejecuta la misma fuente Liquid con datos Shopify", asy
   assert.match(html, /class="product-hero-section-product-information__thumbnail-image"/);
   assert.match(html, /data-variant-id="gid:\/\/shopify\/ProductVariant\/1"/);
   assert.match(html, /class="product-hero-section-product-information__cta"[\s\S]*href="#"/);
-  assert.doesNotMatch(html, /Garantía de 60 días/);
+  assert.match(html, /Garantía de 60 días/);
 });
 
 test("la investigación visual conserva evidencia y descarta referencias inventadas", () => {

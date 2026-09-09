@@ -183,6 +183,10 @@ describe("saneado de HTML", () => {
     assert.match(salida, /^<a href="https:\/\/ejemplo\.com" rel="noopener nofollow" target="_blank">ir<\/a>$/);
   });
 
+  test("conserva enlaces internos usados por presets Shopify", () => {
+    assert.equal(sanear('<a href="#">energía celular</a>'), '<a href="#">energía celular</a>');
+  });
+
   test("un '<' suelto se escapa en vez de romper el HTML", () => {
     assert.equal(sanear("2 < 3 & 4"), "2 &lt; 3 &amp; 4");
   });

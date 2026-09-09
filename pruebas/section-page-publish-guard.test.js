@@ -33,8 +33,12 @@ test("rechaza referencias cruzadas y variantes eliminadas", async () => {
   const crossed = data();
   crossed.fuente.shopify_product_id = "gid://shopify/Product/99";
   assert.throws(() => sectionPageProjection(crossed), SectionPagePublishError);
+
+  const staleVariant = JSON.parse(JSON.stringify(data()));
+  const bundle = staleVariant.section_page.sections[0].instance.blocks.find((block) => block.type === "bundle");
+  bundle.binding = { variantId: "gid://shopify/ProductVariant/7", quantity: 1 };
   await assert.rejects(
-    assertSectionPagePublishable(data(), {}, {
+    assertSectionPagePublishable(staleVariant, {}, {
       async query() {
         return { product: { id: "gid://shopify/Product/42", variants: { nodes: [{ id: "gid://shopify/ProductVariant/8" }] } } };
       }

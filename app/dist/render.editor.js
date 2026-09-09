@@ -1656,6 +1656,7 @@ var TiqRender = (() => {
         if (nombre === "a") {
           const href = /href\s*=\s*("([^"]*)"|'([^']*)')/i.exec(apertura[2]);
           const url = (href && ((_a = href[2]) != null ? _a : href[3]) || "").trim();
+          if (url.startsWith("#")) return `<a href="${escapar(url)}">`;
           if (!PROTOCOLOS.test(url)) return "<a>";
           return `<a href="${escapar(url)}" rel="noopener nofollow" target="_blank">`;
         }
