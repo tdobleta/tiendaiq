@@ -42,7 +42,7 @@ const outline = [
         label: "Título del producto",
         icon: "heading",
         fields: ["heading"],
-        previewSuffixes: ["__heading"]
+        previewSuffixes: ["__title"]
       },
       {
         id: "value-proposition",

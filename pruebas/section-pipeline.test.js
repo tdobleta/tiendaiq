@@ -112,10 +112,13 @@ test("cada control visual declara un destino semántico para hover y clic", () =
     sectionId: "section-product-information",
     outlineId: "product-title",
     label: "Título del producto",
-    suffix: "__heading"
+    suffix: "__title"
   });
   assert.ok(targets.some((target) => target.outlineId === "product-gallery" && target.suffix === "__media-column"));
   assert.ok(targets.some((target) => target.outlineId === "buy-buttons" && target.suffix === "__cta"));
+  for (const target of targets) {
+    assert.match(productInformation.source, new RegExp(`class="[^"]*\\{\\{ section_dom_id \\}\\}${target.suffix}`));
+  }
 });
 
 test("seleccionar dentro del lienzo no destruye ni vuelve a cargar el iframe", () => {
