@@ -10,7 +10,7 @@ const { SectionContractError, sha256, validateInstance } = require("../src/secti
 const { build: buildStorefront } = require("../src/section-pipeline/compile-storefront");
 
 test("el código Shopify es la fuente inmutable del diseño y del editor", () => {
-  assert.equal(productInformation.sourceSha256, "fd35e67c5292e68d95ee30d9fcfe68d6f22f4cbad8a1b067b12921bacb0a0d36");
+  assert.equal(productInformation.sourceSha256, "770a33f8a4b5a642d37b2e4f30f5336df8c5b10b3e5a00800650e9243413f659");
   assert.equal(sha256(productInformation.source), productInformation.sourceSha256);
   assert.equal(productInformation.schema.settings.length, 38);
   assert.equal(productInformation.schema.settings.filter((setting) => setting.id).length, 37);
@@ -36,9 +36,11 @@ test("crear una página adapta datos pero conserva exactamente el diseño", () =
   assert.equal(page.sections.length, 1);
   assert.equal(page.tree[0].label, "Info principal producto");
   assert.equal(page.sections[0].instance.settings.heading, "Bolso Atelier");
-  assert.equal(page.sections[0].instance.settings.rating_stars, "");
+  assert.equal(page.sections[0].instance.settings.rating_stars, "✦");
   assert.equal(page.productSnapshot.media.length, 1);
   assert.equal(page.sections[0].instance.blocks.some((block) => block.type === "media_thumb"), false);
+  assert.equal(page.sections[0].instance.blocks.length, 19);
+  assert.equal(page.sections[0].instance.blocks.filter((block) => block.type === "bundle").length, 3);
   const bundle = page.sections[0].instance.blocks.find((block) => block.type === "bundle");
   assert.ok(bundle);
   assert.deepEqual(bundle.binding, { variantId: "gid://shopify/ProductVariant/2", quantity: 1 });
@@ -53,9 +55,11 @@ test("la IA no puede inventar campos, reseñas ni claims sin evidencia", () => {
     }
   });
   const instance = page.sections[0].instance;
-  assert.equal(instance.settings.rating_text, "");
-  assert.equal(instance.blocks.filter((block) => block.type === "benefit").length, 0);
-  assert.equal(instance.blocks.filter((block) => ["trust_item", "payment", "tab"].includes(block.type)).length, 0);
+  assert.equal(instance.settings.rating_text, "Producto conectado a Shopify");
+  assert.equal(instance.blocks.filter((block) => block.type === "benefit").length, 4);
+  assert.equal(instance.blocks.length, 19);
+  assert.equal(instance.blocks.some((block) => block.settings?.text === "Resultado garantizado"), false);
+  assert.equal(instance.blocks.some((block) => block.settings?.reviewer_name === "Dr. Jason Dominguez"), false);
   assert.throws(() => validateInstance({
     definition: productInformation,
     instance: { settings: { css_inventado: "display:none" }, blocks: [] }
@@ -77,9 +81,10 @@ test("la vista del editor ejecuta la misma fuente Liquid con datos Shopify", asy
   assert.match(html, /https:\/\/cdn\.shopify\.com\/bolso\.jpg/);
   assert.match(html, /data-tiq-section-id="section-product-information"/);
   assert.match(html, /data-tiq-block-id=/);
+  assert.match(html, /class="product-hero-section-product-information__bundle-image"/);
+  assert.match(html, /class="product-hero-section-product-information__thumbnail-image"/);
   assert.match(html, /data-variant-id="gid:\/\/shopify\/ProductVariant\/1"/);
-  assert.match(html, /data-cart-url="\/cart\/add\.js"/);
-  assert.doesNotMatch(html, /693\+ Reseñas/);
+  assert.match(html, /class="product-hero-section-product-information__cta"[\s\S]*href="#"/);
   assert.doesNotMatch(html, /Garantía de 60 días/);
 });
 

@@ -202,13 +202,15 @@
 
       <!-- Product information and conversion panel. -->
       <div class="{{ section_dom_id }}__details">
-        {% if section.settings.rating_stars != blank or section.settings.rating_text != blank %}
-          <div class="{{ section_dom_id }}__rating-row">
-            {% if section.settings.rating_stars != blank %}<span class="{{ section_dom_id }}__stars" aria-label="5 de 5 estrellas">{{ section.settings.rating_stars }}</span>{% endif %}
-            {% if section.settings.rating_text != blank %}<span>{{ rating_text_display | escape }}</span>{% endif %}
-            {% if section.settings.reviews_link != blank %}<a href="{{ section.settings.reviews_link }}" class="{{ section_dom_id }}__reviews-link">{{ reviews_label_display }}</a>{% endif %}
-          </div>
-        {% endif %}
+        <div class="{{ section_dom_id }}__rating-row">
+          <span class="{{ section_dom_id }}__stars" aria-label="5 de 5 estrellas">{{ section.settings.rating_stars }}</span>
+          <span>{{ rating_text_display | escape }}</span>
+          {% if section.settings.reviews_link != blank %}
+            <a href="{{ section.settings.reviews_link }}" class="{{ section_dom_id }}__reviews-link">{{ reviews_label_display }}</a>
+          {% else %}
+            <span class="{{ section_dom_id }}__reviews-link">{{ reviews_label_display }}</span>
+          {% endif %}
+        </div>
 
         <h1 class="{{ section_dom_id }}__title">{{ section.settings.heading | escape }}</h1>
 
@@ -270,7 +272,7 @@
                 {% assign bundle_price_display = block.settings.price %}
                 {% assign bundle_compare_display = block.settings.compare_at_price %}
                 {% assign bundle_subtitle_display = block.settings.subtitle %}
-                {% if current_variant != blank and block.binding.variantId == blank %}
+                {% if current_variant != blank %}
                   {% assign bundle_price_total = current_variant.price | times: bundle_units %}
                   {% assign bundle_price_display = bundle_price_total | money %}
                   {% if current_variant.compare_at_price > current_variant.price %}
@@ -298,8 +300,6 @@
                   data-selected="{% if bundle_selected %}true{% else %}false{% endif %}"
                   data-price="{{ bundle_price_display | escape }}"
                   data-compare="{{ bundle_compare_display | escape }}"
-                  data-variant-id="{{ block.binding.variantId | default: current_variant.id }}"
-                  data-quantity="{{ block.binding.quantity | default: 1 }}"
                   aria-pressed="{% if bundle_selected %}true{% else %}false{% endif %}"
                   {{ block.shopify_attributes }}
                 >
@@ -338,13 +338,12 @@
           </div>
         {% endif %}
 
-        <button
-          type="button"
+        <a
           class="{{ section_dom_id }}__cta"
+          href="{{ cta_href }}"
           aria-label="{{ button_label_display | escape }}"
           data-cta
           data-variant-id="{% if current_variant != blank %}{{ current_variant.id }}{% endif %}"
-          data-cart-url="{{ routes.cart_add_url }}.js"
         >
           <span class="{{ section_dom_id }}__cta-icon" aria-hidden="true">
             {% if cta_icon_display == 'cart' %}
@@ -358,7 +357,7 @@
             <span data-cta-price> - {{ cta_price_display }}</span>
           {% endif %}
           <s data-cta-compare{% if cta_compare_display == blank %} hidden{% endif %}>{% if cta_compare_display != blank %}{{ cta_compare_display }}{% endif %}</s>
-        </button>
+        </a>
 
         {% assign trust_count = 0 %}
         {% for block in section.blocks %}
@@ -1287,7 +1286,6 @@
     const mainImage = root.querySelector('.{{ section_dom_id }}__main-image');
     const thumbnails = Array.from(root.querySelectorAll('[data-thumb]'));
     const bundleOptions = Array.from(root.querySelectorAll('[data-bundle]'));
-    const cta = root.querySelector('[data-cta]');
     const ctaPrice = root.querySelector('[data-cta-price]');
     const ctaCompare = root.querySelector('[data-cta-compare]');
     const tabButtons = Array.from(root.querySelectorAll('[data-tab-button]'));
@@ -1335,8 +1333,6 @@
         ctaCompare.textContent = compare;
         ctaCompare.hidden = !compare;
       }
-      if (cta && option.dataset.variantId) cta.dataset.variantId = option.dataset.variantId;
-      if (cta) cta.dataset.quantity = option.dataset.quantity || '1';
     };
 
     bundleOptions.forEach((option) => {
@@ -1344,26 +1340,6 @@
     });
 
     setBundle(bundleOptions.find((option) => option.dataset.selected === 'true') || bundleOptions[0]);
-
-    if (cta) cta.addEventListener('click', async () => {
-      if (window.parent !== window) return;
-      const variantId = String(cta.dataset.variantId || '').split('/').pop();
-      if (!variantId || !cta.dataset.cartUrl) return;
-      cta.disabled = true;
-      try {
-        const response = await fetch(cta.dataset.cartUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-          body: JSON.stringify({ id: variantId, quantity: Number(cta.dataset.quantity || 1) })
-        });
-        if (!response.ok) throw new Error('cart');
-        document.documentElement.dispatchEvent(new CustomEvent('cart:refresh', { bubbles: true }));
-      } catch {
-        window.location.href = '/cart';
-      } finally {
-        cta.disabled = false;
-      }
-    });
 
     const activateTab = (button, shouldFocus) => {
       if (!button) return;

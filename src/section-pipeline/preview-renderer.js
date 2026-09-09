@@ -14,7 +14,20 @@ function imageUrl(value) {
   return value?.url || value?.src || value?.image?.url || value?.preview_image?.url || "";
 }
 
-function imageTag(value, options = {}) {
+function liquidNamedArguments(args) {
+  const options = {};
+  for (const argument of args) {
+    if (Array.isArray(argument) && argument.length === 2) {
+      options[argument[0]] = argument[1];
+    } else if (argument && typeof argument === "object") {
+      Object.assign(options, argument);
+    }
+  }
+  return options;
+}
+
+function imageTag(value, ...args) {
+  const options = liquidNamedArguments(args);
   const src = imageUrl(value);
   if (!src) return "";
   const attributes = {
