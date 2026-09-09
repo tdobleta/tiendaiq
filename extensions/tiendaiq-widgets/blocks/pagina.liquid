@@ -26,7 +26,15 @@
     un hint: si la URL no resuelve, el navegador lo ignora (no rompe nada).
   {%- endcomment -%}
   {%- assign tq_pagina = product.metafields.tiendaiq.pagina.value -%}
-  {%- if tq_pagina.version == 1 and tq_pagina.arbol -%}
+  {%- if tq_pagina.section_page.contractVersion == 1 -%}
+    <div id="tiq-section-page" data-tiendaiq-section-page="1">
+      {%- for tq_section in tq_pagina.section_page.sections -%}
+        {%- if tq_section.definition.id == 'product-information' and tq_section.definition.version == 1 -%}
+          {% render 'tiq-product-information-v1', tiq_section: tq_section, product: product %}
+        {%- endif -%}
+      {%- endfor -%}
+    </div>
+  {%- elsif tq_pagina.version == 1 and tq_pagina.arbol -%}
     {{ 'tiq-render.css' | asset_url | stylesheet_tag }}
     <div id="tiq-documento" aria-live="polite" style="min-height:70vh"></div>
     <script>

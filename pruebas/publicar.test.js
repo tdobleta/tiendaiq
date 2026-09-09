@@ -39,3 +39,23 @@ test("Piloto 01 publica sólo su proyección segura, sin fuente interna", () => 
   assert.equal(published.piloto_pdp_01.source_fields, undefined);
   assert.equal(published.piloto_pdp_01.source_hash, undefined);
 });
+
+test("la página por secciones publica sólo el contrato necesario para storefront", () => {
+  const { createProductPage } = require("../src/section-pipeline/page-pipeline");
+  const productId = "gid://shopify/Product/42";
+  const original = {
+    fuente: { shopify_product_id: productId, descripcion_cruda: "privada" },
+    section_page: createProductPage({
+      product: {
+        id: productId,
+        title: "Camisa",
+        variants: [{ id: "gid://shopify/ProductVariant/7", title: "Única", price: "20.00" }]
+      }
+    })
+  };
+  const published = prepararDatosPublicacion(original);
+  assert.equal(published.section_page.productSnapshot, undefined);
+  assert.equal(published.section_page.evidence, undefined);
+  assert.equal(published.section_page.tree, undefined);
+  assert.equal(published.section_page.sections.length, 1);
+});

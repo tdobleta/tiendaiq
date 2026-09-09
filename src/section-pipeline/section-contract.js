@@ -1,6 +1,7 @@
 "use strict";
 
 const crypto = require("node:crypto");
+const { sanear, urlSegura } = require("../../nucleo/resolver");
 
 class SectionContractError extends Error {
   constructor(message) {
@@ -118,19 +119,72 @@ function createSectionDefinition({ id, version, source, adaptation }) {
   });
 }
 
-function validateInstance({ definition, instance }) {
-  const allowedSettings = new Set((definition.schema.settings || []).map((setting) => setting.id).filter(Boolean));
-  for (const key of Object.keys(instance?.settings || {})) {
-    if (!allowedSettings.has(key)) throw new SectionContractError(`Setting no autorizado: ${key}`);
+function normalizeValue(setting, value, where) {
+  if (value == null) return value;
+  switch (setting.type) {
+    case "checkbox":
+      if (typeof value !== "boolean") throw new SectionContractError(`${where}: debe ser verdadero o falso`);
+      return value;
+    case "range": {
+      const number = Number(value);
+      if (!Number.isFinite(number) || number < setting.min || number > setting.max) {
+        throw new SectionContractError(`${where}: número fuera del rango permitido`);
+      }
+      return number;
+    }
+    case "select":
+      if (!(setting.options || []).some((option) => option.value === value)) {
+        throw new SectionContractError(`${where}: opción no permitida`);
+      }
+      return value;
+    case "color":
+      if (typeof value !== "string" || !/^#[0-9a-f]{6}(?:[0-9a-f]{2})?$/i.test(value)) {
+        throw new SectionContractError(`${where}: color inválido`);
+      }
+      return value;
+    case "url": {
+      if (typeof value !== "string" || value.length > 2048) throw new SectionContractError(`${where}: enlace inválido`);
+      if (value && !value.startsWith("#") && !value.startsWith("shopify://") && !urlSegura(value)) {
+        throw new SectionContractError(`${where}: enlace no permitido`);
+      }
+      return value;
+    }
+    case "image_picker":
+      if (value === "" || value === null) return value;
+      if (typeof value !== "string" || value.length > 2048 || (!value.startsWith("shopify://") && !urlSegura(value, { media: true }))) {
+        throw new SectionContractError(`${where}: imagen no permitida`);
+      }
+      return value;
+    case "richtext":
+      if (typeof value !== "string" || value.length > 40000) throw new SectionContractError(`${where}: texto enriquecido inválido`);
+      return sanear(value);
+    case "textarea":
+      if (typeof value !== "string" || value.length > 20000) throw new SectionContractError(`${where}: texto inválido`);
+      return value;
+    default:
+      if (typeof value !== "string" || value.length > 5000) throw new SectionContractError(`${where}: texto inválido`);
+      return value;
   }
+}
+
+function normalizeSettings(definitions, values, where) {
+  const definitionMap = new Map((definitions || []).filter((item) => item.id).map((item) => [item.id, item]));
+  const normalized = {};
+  for (const [key, value] of Object.entries(values || {})) {
+    const setting = definitionMap.get(key);
+    if (!setting) throw new SectionContractError(`Setting no autorizado: ${key}`);
+    normalized[key] = normalizeValue(setting, value, `${where}.${key}`);
+  }
+  return normalized;
+}
+
+function validateInstance({ definition, instance }) {
+  const settings = normalizeSettings(definition.schema.settings, instance?.settings, "section");
   const blockMap = new Map((definition.schema.blocks || []).map((block) => [block.type, block]));
-  for (const block of instance?.blocks || []) {
+  const blocks = (instance?.blocks || []).map((block) => {
     const blockDefinition = blockMap.get(block.type);
     if (!blockDefinition) throw new SectionContractError(`Bloque no autorizado: ${block.type}`);
-    const allowed = new Set((blockDefinition.settings || []).map((setting) => setting.id).filter(Boolean));
-    for (const key of Object.keys(block.settings || {})) {
-      if (!allowed.has(key)) throw new SectionContractError(`${block.type}: setting no autorizado ${key}`);
-    }
+    const normalizedBlock = { ...block, settings: normalizeSettings(blockDefinition.settings, block.settings, block.type) };
     if (block.binding != null) {
       const keys = Object.keys(block.binding);
       if (keys.some((key) => !["variantId", "quantity"].includes(key))) {
@@ -143,8 +197,9 @@ function validateInstance({ definition, instance }) {
         throw new SectionContractError(`${block.type}: cantidad inválida`);
       }
     }
-  }
-  return Object.freeze(clone(instance));
+    return normalizedBlock;
+  });
+  return Object.freeze(clone({ settings, blocks }));
 }
 
 module.exports = Object.freeze({

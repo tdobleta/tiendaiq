@@ -29,10 +29,12 @@
     "ops:readiness": "node scripts/probar-readiness-operativa.js",
     "ops:requeue-compensation": "node scripts/reencolar-compensacion.js",
     "audit:legacy-review-avatars": "node scripts/inventariar-avatares-publicados.js",
-    "probar": "npm run verificar && npm run coherencia && node scripts/construir-render.js --verificar && node scripts/construir-editor.js --verificar && npm run unidad && npm run humo",
+    "probar": "npm run verificar && npm run coherencia && npm run verificar:secciones && node scripts/construir-render.js --verificar && node scripts/construir-editor.js --verificar && npm run unidad && npm run humo",
+    "verificar:secciones": "node src/section-pipeline/compile-storefront.js --verify",
     "construir:render": "node scripts/construir-render.js",
     "construir:editor": "node scripts/construir-editor.js",
-    "construir": "node scripts/construir-render.js && node scripts/construir-editor.js"
+    "construir:secciones": "node src/section-pipeline/compile-storefront.js",
+    "construir": "node scripts/construir-render.js && node scripts/construir-editor.js && npm run construir:secciones"
   },
   "engines": {
     "node": ">=20"

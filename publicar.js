@@ -24,6 +24,10 @@ const path = require("path");
 const { gql, sesionDeEnv } = require("./shopify");
 const { assertFixedTemplatePublishable } = require("./src/shopify/fixed-template-publish-guard");
 const { storefrontProjection } = require("./src/piloto/pdp01-contract");
+const {
+  assertSectionPagePublishable,
+  sectionPageProjection
+} = require("./src/shopify/section-page-publish-guard");
 
 const RUTA_JSON = path.join(__dirname, "ultima-pagina.json");
 
@@ -33,6 +37,9 @@ const RUTA_JSON = path.join(__dirname, "ultima-pagina.json");
 // la limpieza de Files se hace aparte, desde un inventario revisado por tienda.
 function prepararDatosPublicacion(data) {
   const dataTienda = JSON.parse(JSON.stringify(data));
+  if (dataTienda?.section_page) {
+    dataTienda.section_page = sectionPageProjection(dataTienda);
+  }
   // Piloto 01 keeps the full source snapshot only in our private page record.
   // The storefront gets an intentional projection: dynamic catalog information
   // comes from Liquid/Shopify, never from an old generated document.
@@ -71,7 +78,8 @@ async function publicarPagina(data, sesion, log = () => {}, { signal } = {}) {
   // This runs in the worker immediately before any remote mutation. It is the
   // authoritative guard even if a queued job was created before the catalog
   // changed or another API caller bypassed the web preflight.
-  await assertFixedTemplatePublishable(data, sesion, { signal });
+  if (data?.section_page) await assertSectionPagePublishable(data, sesion, { signal });
+  else await assertFixedTemplatePublishable(data, sesion, { signal });
 
   const dataTienda = prepararDatosPublicacion(data);
 

@@ -7,6 +7,7 @@ const { createProductPage } = require("../src/section-pipeline/page-pipeline");
 const { renderSectionPage } = require("../src/section-pipeline/preview-renderer");
 const { validateResearch } = require("../src/section-pipeline/research-product");
 const { SectionContractError, sha256, validateInstance } = require("../src/section-pipeline/section-contract");
+const { build: buildStorefront } = require("../src/section-pipeline/compile-storefront");
 
 test("el código Shopify es la fuente inmutable del diseño y del editor", () => {
   assert.equal(productInformation.sourceSha256, "fd35e67c5292e68d95ee30d9fcfe68d6f22f4cbad8a1b067b12921bacb0a0d36");
@@ -93,4 +94,23 @@ test("la investigación visual conserva evidencia y descarta referencias inventa
   }, ["media-1"]);
   assert.equal(research.claims.length, 1);
   assert.deepEqual(research.visualObservations, [{ text: "Color marrón", mediaId: "media-1" }]);
+});
+
+test("el snippet de Shopify se compila desde la misma fuente visual", () => {
+  const { output } = buildStorefront({ write: false });
+  assert.match(output, new RegExp(productInformation.sourceSha256));
+  assert.match(output, /tiq_section\.instance\.settings/);
+  assert.match(output, /tiq_section\.instance\.blocks/);
+  assert.doesNotMatch(output, /{%\s*schema\s*%}/);
+  assert.doesNotMatch(output, /section\.settings|section\.blocks|block\.shopify_attributes/);
+});
+
+test("el contrato sanea richtext y rechaza enlaces o rangos peligrosos", () => {
+  const instance = JSON.parse(JSON.stringify(productInformation.seed));
+  instance.settings.description = '<p onclick="alert(1)">Seguro<script>alert(1)</script></p>';
+  instance.settings.max_width = 99999;
+  assert.throws(() => validateInstance({ definition: productInformation, instance }), SectionContractError);
+  instance.settings.max_width = 1200;
+  const valid = validateInstance({ definition: productInformation, instance });
+  assert.doesNotMatch(valid.settings.description, /onclick|<script>/);
 });

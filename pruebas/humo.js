@@ -72,6 +72,21 @@ const CASOS = [
     revisar: (cuerpo) => cuerpo.includes(".ed") ? null : "faltan los estilos del shell del editor"
   },
   {
+    nombre: "/editor-secciones sirve el editor del pipeline nuevo",
+    ruta: "/editor-secciones?demo=1",
+    espera: 200,
+    revisar: (cuerpo) =>
+      !cuerpo.includes("section-editor-root") || !cuerpo.includes("/section-editor.js")
+        ? "la entrada no contiene el editor por secciones"
+        : null
+  },
+  {
+    nombre: "el editor por secciones se sirve desde la app",
+    ruta: "/section-editor.js",
+    espera: 200,
+    revisar: (cuerpo) => cuerpo.includes("section-preview") ? null : "falta la vista sincronizada de secciones"
+  },
+  {
     nombre: "/ready falla cerrado sin PostgreSQL fuera de desarrollo",
     ruta: "/ready",
     espera: 503
