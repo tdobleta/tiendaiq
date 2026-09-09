@@ -102,10 +102,19 @@ test("la vista del editor ejecuta la misma fuente Liquid con datos Shopify", asy
 
 test("seleccionar dentro del lienzo no destruye ni vuelve a cargar el iframe", () => {
   const source = fs.readFileSync(path.join(__dirname, "../app/section-editor.js"), "utf8");
-  assert.match(source, /function selectItem\(sectionId,blockId\)\{if\(state\.selectedSection===sectionId&&state\.selectedBlock===\(blockId\|\|null\)\)return;/);
+  assert.match(source, /function selectItem\(sectionId,blockId\)\{if\(blockId\)state\.expandedSections\.add\(sectionId\);if\(state\.selectedSection===sectionId&&state\.selectedBlock===\(blockId\|\|null\)\)return;/);
   assert.match(source, /function renderSelection\(\)/);
   assert.match(source, /selectItem\(event\.data\.sectionId,event\.data\.blockId\|\|null\)/);
   assert.doesNotMatch(source, /event\.data\.sectionId;state\.selectedBlock=.*shell\(\)/);
+});
+
+test("el navegador lateral conserva la jerarquía sección a bloques", () => {
+  const source = fs.readFileSync(path.join(__dirname, "../app/section-editor.js"), "utf8");
+  assert.match(source, /expandedSections:new Set\(\)/);
+  assert.match(source, /data-expand-section=/);
+  assert.match(source, /class="se__tree-blocks"[^>]*\$\{expanded\?"":"hidden"\}/);
+  assert.match(source, /if\(blockId\)state\.expandedSections\.add\(sectionId\)/);
+  assert.doesNotMatch(source, /<i>▫<\/i>/);
 });
 
 test("la vista aislada reproduce la herencia tipográfica de Horizon", async () => {

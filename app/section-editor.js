@@ -6,7 +6,7 @@
   const params=new URLSearchParams(location.search);
   const pageId=params.get("id");
   const demo=params.get("demo")==="1";
-  const state={page:null,registry:[],selectedSection:null,selectedBlock:null,mobile:false,dirty:false,previewTimer:null};
+  const state={page:null,registry:[],selectedSection:null,selectedBlock:null,expandedSections:new Set(),mobile:false,dirty:false,previewTimer:null};
   const esc=(value)=>String(value??"").replace(/[&<>"']/g,(c)=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c]);
   const clone=(value)=>JSON.parse(JSON.stringify(value));
 
@@ -39,11 +39,17 @@
     return `<input ${attr} type="${field.type==="url"?"url":"text"}" value="${esc(value)}" placeholder="${field.type==="url"?"Pega un enlace o busca":""}">`;
   }
   function fieldsHtml(fields,settings,scope){return(fields||[]).map((field)=>{const stacked=["text","textarea","richtext","url"].includes(field.type);const sourced=stacked||field.type==="image_picker";return `<div class="se__field ${stacked?"se__field--stacked":""} ${field.type==="image_picker"?"se__field--picker":""}"><label>${esc(field.label||field.id)}${sourced?sourceIcon():""}</label>${fieldHtml(field,settings,scope)}</div>`}).join("")}
+  function treeIcon(type){
+    if(type==="chevron")return `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="m6 3.5 4.5 4.5L6 12.5"/></svg>`;
+    if(type==="block")return `<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="3" width="10" height="10" rx="2"/><path d="M6 6h4M6 8h4M6 10h2"/></svg>`;
+    return `<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="2.5" y="3" width="11" height="10" rx="2"/><path d="M2.5 6h11M5.5 3v3"/></svg>`;
+  }
   function treeHtml(){
     return state.page.sections.map((section)=>{
       const active=section.id===state.selectedSection&&!state.selectedBlock;
-      const blocks=section.instance.blocks.map((block)=>`<button class="se__tree-row se__tree-row--block ${section.id===state.selectedSection&&block.id===state.selectedBlock?"is-active":""}" data-section="${esc(section.id)}" data-block="${esc(block.id)}"><i>▫</i><span>${esc(definition(section)?.editor.blocks.find((item)=>item.type===block.type)?.name||block.type)}</span></button>`).join("");
-      return `<button class="se__tree-row ${active?"is-active":""}" data-section="${esc(section.id)}"><i>▣</i><span>${esc(section.label)}</span><small>${section.instance.blocks.length}</small></button>${blocks}`;
+      const expanded=state.expandedSections.has(section.id);
+      const blocks=section.instance.blocks.map((block)=>`<button class="se__tree-block ${section.id===state.selectedSection&&block.id===state.selectedBlock?"is-active":""}" data-section="${esc(section.id)}" data-block="${esc(block.id)}">${treeIcon("block")}<span>${esc(definition(section)?.editor.blocks.find((item)=>item.type===block.type)?.name||block.type)}</span></button>`).join("");
+      return `<div class="se__tree-section"><div class="se__tree-main ${active?"is-active":""}"><button class="se__tree-toggle ${expanded?"is-expanded":""}" type="button" data-expand-section="${esc(section.id)}" aria-expanded="${expanded}" aria-label="${expanded?"Contraer":"Expandir"} ${esc(section.label)}">${treeIcon("chevron")}</button><button class="se__tree-select" type="button" data-section="${esc(section.id)}">${treeIcon("section")}<span>${esc(section.label)}</span><small>(${section.instance.blocks.length})</small></button></div><div class="se__tree-blocks" ${expanded?"":"hidden"}>${blocks}</div></div>`;
     }).join("");
   }
   function inspectorHtml(){
@@ -63,12 +69,16 @@
   function renderSelection(){
     const tree=root.querySelector(".se__tree");const inspector=root.querySelector(".se__inspector");if(tree)tree.innerHTML=treeHtml();if(inspector)inspector.innerHTML=inspectorHtml();
     root.querySelector(".se__panel--right")?.classList.remove("is-closed");
-    root.querySelectorAll("[data-section]").forEach((button)=>button.onclick=()=>selectItem(button.dataset.section,button.dataset.block||null));
+    bindTree();
     bindInspector();
   }
-  function selectItem(sectionId,blockId){if(state.selectedSection===sectionId&&state.selectedBlock===(blockId||null))return;state.selectedSection=sectionId;state.selectedBlock=blockId||null;renderSelection()}
+  function bindTree(){
+    root.querySelectorAll("[data-section]").forEach((button)=>button.onclick=()=>selectItem(button.dataset.section,button.dataset.block||null));
+    root.querySelectorAll("[data-expand-section]").forEach((button)=>button.onclick=()=>{const id=button.dataset.expandSection;if(state.expandedSections.has(id))state.expandedSections.delete(id);else state.expandedSections.add(id);renderSelection()});
+  }
+  function selectItem(sectionId,blockId){if(blockId)state.expandedSections.add(sectionId);if(state.selectedSection===sectionId&&state.selectedBlock===(blockId||null))return;state.selectedSection=sectionId;state.selectedBlock=blockId||null;renderSelection()}
   function shell(){
-    root.innerHTML=`<div class="se"><header class="se__top"><div class="se__identity"><button class="se__back" id="se-back" aria-label="Volver">←</button><div class="se__title"><b>${esc(state.pageTitle)}</b><small>Editor por secciones</small></div></div><div class="se__viewport"><button id="se-desktop" aria-label="Vista de escritorio" aria-pressed="${!state.mobile}">▣</button><button id="se-mobile" aria-label="Vista móvil" aria-pressed="${state.mobile}">▯</button></div><div class="se__actions"><button class="se__button" id="se-save" ${state.dirty?"":"disabled"}>Guardar</button><button class="se__button se__button--primary" id="se-publish" ${demo?"disabled":""}>Publicar</button></div></header><div class="se__body"><aside class="se__panel se__panel--left"><div class="se__panel-head"><b>Página de producto</b><small>${state.page.sections.length} ${state.page.sections.length===1?"sección":"secciones"}</small></div><nav class="se__tree">${treeHtml()}</nav><button class="se__add" id="se-add" ${state.registry.length<=state.page.sections.length?"disabled":""}>＋ Añadir sección</button></aside><section class="se__canvas"><div class="se__frame-shell ${state.mobile?"is-mobile":""}"><iframe class="se__frame" id="se-frame" title="Vista previa de la página"></iframe></div></section><aside class="se__panel se__panel--right"><div class="se__inspector">${inspectorHtml()}</div></aside></div></div>`;
+    root.innerHTML=`<div class="se"><header class="se__top"><div class="se__identity"><button class="se__back" id="se-back" aria-label="Volver">←</button><div class="se__title"><b>${esc(state.pageTitle)}</b><small>Editor por secciones</small></div></div><div class="se__viewport"><button id="se-desktop" aria-label="Vista de escritorio" aria-pressed="${!state.mobile}">▣</button><button id="se-mobile" aria-label="Vista móvil" aria-pressed="${state.mobile}">▯</button></div><div class="se__actions"><button class="se__button" id="se-save" ${state.dirty?"":"disabled"}>Guardar</button><button class="se__button se__button--primary" id="se-publish" ${demo?"disabled":""}>Publicar</button></div></header><div class="se__body"><aside class="se__panel se__panel--left"><div class="se__panel-head"><b>Página de producto</b></div><nav class="se__tree" aria-label="Secciones de la página">${treeHtml()}</nav><button class="se__add" id="se-add" ${state.registry.length<=state.page.sections.length?"disabled":""}><span aria-hidden="true">⊕</span>Añadir sección</button></aside><section class="se__canvas"><div class="se__frame-shell ${state.mobile?"is-mobile":""}"><iframe class="se__frame" id="se-frame" title="Vista previa de la página"></iframe></div></section><aside class="se__panel se__panel--right"><div class="se__inspector">${inspectorHtml()}</div></aside></div></div>`;
     bind();refreshPreview();
   }
   function bind(){
@@ -76,7 +86,7 @@
     root.querySelector("#se-desktop").onclick=()=>{state.mobile=false;shell()};root.querySelector("#se-mobile").onclick=()=>{state.mobile=true;shell()};
     root.querySelector("#se-save").onclick=save;
     root.querySelector("#se-publish").onclick=publish;
-    root.querySelectorAll("[data-section]").forEach((button)=>button.onclick=()=>selectItem(button.dataset.section,button.dataset.block||null));
+    bindTree();
     bindInspector();
   }
   function update(control){const {section,block}=selected();const target=control.dataset.scope==="block"?block.settings:section.instance.settings;let value=control.type==="checkbox"?control.checked:control.value;if(control.type==="range"){value=Number(value);const number=root.querySelector(`[data-number-for="${CSS.escape(control.dataset.field)}"]`);if(number)number.value=control.value}target[control.dataset.field]=value;state.dirty=true;const saveButton=root.querySelector("#se-save");if(saveButton)saveButton.disabled=false;clearTimeout(state.previewTimer);state.previewTimer=setTimeout(refreshPreview,160)}
