@@ -51,7 +51,41 @@ function validateSchema(schema) {
   return schema;
 }
 
-function editorContract(schema) {
+function validateOutline(schema, outline) {
+  const settingIds = new Set((schema.settings || []).filter((item) => item.id).map((item) => item.id));
+  const blockTypes = new Set((schema.blocks || []).map((item) => item.type));
+  const usedIds = new Set();
+  const usedBlockTypes = new Set();
+
+  function visit(nodes, where = "editor.outline") {
+    if (!Array.isArray(nodes)) throw new SectionContractError(`${where}: debe ser una lista`);
+    for (const node of nodes) {
+      if (!node || typeof node !== "object" || !/^[a-z0-9][a-z0-9-]*$/.test(node.id || "") || !node.label) {
+        throw new SectionContractError(`${where}: nodo editorial inválido`);
+      }
+      if (usedIds.has(node.id)) throw new SectionContractError(`${where}: id duplicado ${node.id}`);
+      usedIds.add(node.id);
+      const modes = [Array.isArray(node.children), Array.isArray(node.fields), Boolean(node.blockType)].filter(Boolean).length;
+      if (modes !== 1) throw new SectionContractError(`${where}.${node.id}: debe declarar children, fields o blockType`);
+      if (Array.isArray(node.fields)) {
+        for (const fieldId of node.fields) {
+          if (!settingIds.has(fieldId)) throw new SectionContractError(`${where}.${node.id}: setting desconocido ${fieldId}`);
+        }
+      }
+      if (node.blockType) {
+        if (!blockTypes.has(node.blockType)) throw new SectionContractError(`${where}.${node.id}: bloque desconocido ${node.blockType}`);
+        if (usedBlockTypes.has(node.blockType)) throw new SectionContractError(`${where}: bloque repetido ${node.blockType}`);
+        usedBlockTypes.add(node.blockType);
+      }
+      if (Array.isArray(node.children)) visit(node.children, `${where}.${node.id}.children`);
+    }
+  }
+
+  visit(outline || []);
+  return clone(outline || []);
+}
+
+function editorContract(schema, outline = []) {
   const groups = [];
   let current = { id: "general", label: "General", fields: [] };
   for (const setting of schema.settings || []) {
@@ -74,7 +108,8 @@ function editorContract(schema) {
       name: block.name,
       limit: block.limit ?? null,
       fields: Object.freeze(clone(block.settings || []))
-    })))
+    }))),
+    outline: Object.freeze(validateOutline(schema, outline))
   });
 }
 
@@ -100,13 +135,13 @@ function defaultInstance(schema) {
   };
 }
 
-function createSectionDefinition({ id, version, source, adaptation }) {
+function createSectionDefinition({ id, version, source, adaptation, outline = [] }) {
   if (!/^[a-z0-9][a-z0-9-]*$/.test(id) || !Number.isInteger(version) || version < 1) {
     throw new SectionContractError("La identidad de la sección es inválida");
   }
   const schema = validateSchema(schemaFromLiquid(source));
   const sourceSha256 = sha256(source);
-  const editor = editorContract(schema);
+  const editor = editorContract(schema, outline);
   const seed = defaultInstance(schema);
   return Object.freeze({
     id, version, source, sourceSha256, schema: Object.freeze(schema), editor, seed: Object.freeze(seed),

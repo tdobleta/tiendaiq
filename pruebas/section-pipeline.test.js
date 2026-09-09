@@ -20,6 +20,9 @@ test("el código Shopify es la fuente inmutable del diseño y del editor", () =>
   assert.equal(productInformation.seed.blocks.length, 19);
   assert.equal(productInformation.editor.groups.length, 1);
   assert.equal(productInformation.editor.blocks.length, 6);
+  assert.equal(productInformation.editor.outline.length, 2);
+  assert.equal(productInformation.editor.outline[0].id, "product-gallery");
+  assert.equal(productInformation.editor.outline[1].children.find((node) => node.id === "payment-icons").blockType, "payment");
   assert.doesNotMatch(productInformation.source, /if hero_(?:max_width|column_gap|desktop_top|thumbnail_size)/);
   assert.doesNotMatch(productInformation.source, /\| replace:/);
 });
@@ -102,18 +105,22 @@ test("la vista del editor ejecuta la misma fuente Liquid con datos Shopify", asy
 
 test("seleccionar dentro del lienzo no destruye ni vuelve a cargar el iframe", () => {
   const source = fs.readFileSync(path.join(__dirname, "../app/section-editor.js"), "utf8");
-  assert.match(source, /function selectItem\(sectionId,blockId\)\{if\(blockId\)state\.expandedSections\.add\(sectionId\);if\(state\.selectedSection===sectionId&&state\.selectedBlock===\(blockId\|\|null\)\)return;/);
+  assert.match(source, /function selectItem\(sectionId,blockId,outlineId\)/);
+  assert.match(source, /state\.selectedOutline=outlineId\|\|null;renderSelection\(\)/);
   assert.match(source, /function renderSelection\(\)/);
-  assert.match(source, /selectItem\(event\.data\.sectionId,event\.data\.blockId\|\|null\)/);
+  assert.match(source, /selectItem\(event\.data\.sectionId,event\.data\.blockId\|\|null,null\)/);
   assert.doesNotMatch(source, /event\.data\.sectionId;state\.selectedBlock=.*shell\(\)/);
 });
 
-test("el navegador lateral conserva la jerarquía sección a bloques", () => {
+test("el navegador lateral usa la jerarquía semántica y sincroniza cada selección", () => {
   const source = fs.readFileSync(path.join(__dirname, "../app/section-editor.js"), "utf8");
   assert.match(source, /expandedSections:new Set\(\)/);
+  assert.match(source, /expandedOutline:new Set\(\)/);
   assert.match(source, /data-expand-section=/);
-  assert.match(source, /class="se__tree-blocks"[^>]*\$\{expanded\?"":"hidden"\}/);
-  assert.match(source, /if\(blockId\)state\.expandedSections\.add\(sectionId\)/);
+  assert.match(source, /data-expand-outline=/);
+  assert.match(source, /data-outline=/);
+  assert.match(source, /outlineFields=outline\?\.fields\?sectionFields\.filter/);
+  assert.match(source, /findBlockOutline/);
   assert.doesNotMatch(source, /<i>▫<\/i>/);
 });
 
