@@ -71,6 +71,13 @@ function validateOutline(schema, outline) {
         for (const fieldId of node.fields) {
           if (!settingIds.has(fieldId)) throw new SectionContractError(`${where}.${node.id}: setting desconocido ${fieldId}`);
         }
+        if (node.previewSuffixes != null && (!Array.isArray(node.previewSuffixes)
+          || !node.previewSuffixes.length
+          || node.previewSuffixes.some((suffix) => !/^__[a-z0-9-]{1,80}$/.test(suffix)))) {
+          throw new SectionContractError(`${where}.${node.id}: selector de vista previa inválido`);
+        }
+      } else if (node.previewSuffixes != null) {
+        throw new SectionContractError(`${where}.${node.id}: sólo un control editable puede señalar la vista previa`);
       }
       if (node.blockType) {
         if (!blockTypes.has(node.blockType)) throw new SectionContractError(`${where}.${node.id}: bloque desconocido ${node.blockType}`);

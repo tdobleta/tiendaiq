@@ -22,7 +22,8 @@ const outline = [
     id: "product-gallery",
     label: "Galería del producto",
     icon: "gallery",
-    fields: ["image_alt", "hero_image", "image_fit"]
+    fields: ["image_alt", "hero_image", "image_fit"],
+    previewSuffixes: ["__media-column"]
   },
   {
     id: "product-details",
@@ -33,19 +34,22 @@ const outline = [
         id: "reviews-number",
         label: "Calificación y reseñas",
         icon: "star",
-        fields: ["rating_stars", "rating_text", "reviews_link"]
+        fields: ["rating_stars", "rating_text", "reviews_link"],
+        previewSuffixes: ["__rating-row"]
       },
       {
         id: "product-title",
         label: "Título del producto",
         icon: "heading",
-        fields: ["heading"]
+        fields: ["heading"],
+        previewSuffixes: ["__heading"]
       },
       {
         id: "value-proposition",
         label: "Propuesta de valor",
         icon: "text",
-        fields: ["description"]
+        fields: ["description"],
+        previewSuffixes: ["__description"]
       },
       {
         id: "benefits",
@@ -62,7 +66,8 @@ const outline = [
             id: "bundle-heading",
             label: "Encabezado de packs",
             icon: "heading",
-            fields: ["bundle_heading"]
+            fields: ["bundle_heading"],
+            previewSuffixes: ["__bundle-heading"]
           },
           {
             id: "bundle-options",
@@ -74,7 +79,8 @@ const outline = [
             id: "buy-buttons",
             label: "Añadir al carrito / Comprar",
             icon: "cart",
-            fields: ["urgency_text", "button_label", "button_icon", "button_link"]
+            fields: ["urgency_text", "button_label", "button_icon", "button_link"],
+            previewSuffixes: ["__urgency", "__cta"]
           }
         ]
       },

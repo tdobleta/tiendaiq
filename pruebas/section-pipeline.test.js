@@ -4,7 +4,7 @@ const assert = require("node:assert/strict");
 const test = require("node:test");
 const productInformation = require("../src/section-pipeline/product-information-v1");
 const { createProductPage } = require("../src/section-pipeline/page-pipeline");
-const { renderSectionPage } = require("../src/section-pipeline/preview-renderer");
+const { outlineTargets, renderSectionPage } = require("../src/section-pipeline/preview-renderer");
 const { validateResearch } = require("../src/section-pipeline/research-product");
 const { SectionContractError, sha256, validateInstance } = require("../src/section-pipeline/section-contract");
 const { build: buildStorefront } = require("../src/section-pipeline/compile-storefront");
@@ -22,6 +22,7 @@ test("el código Shopify es la fuente inmutable del diseño y del editor", () =>
   assert.equal(productInformation.editor.blocks.length, 6);
   assert.equal(productInformation.editor.outline.length, 2);
   assert.equal(productInformation.editor.outline[0].id, "product-gallery");
+  assert.deepEqual(productInformation.editor.outline[0].previewSuffixes, ["__media-column"]);
   assert.equal(productInformation.editor.outline[1].children.find((node) => node.id === "payment-icons").blockType, "payment");
   assert.doesNotMatch(productInformation.source, /if hero_(?:max_width|column_gap|desktop_top|thumbnail_size)/);
   assert.doesNotMatch(productInformation.source, /\| replace:/);
@@ -100,7 +101,21 @@ test("la vista del editor ejecuta la misma fuente Liquid con datos Shopify", asy
   assert.match(html, /60-Day Guarantee/);
   assert.doesNotMatch(html, /if\(!section\)return;event\.preventDefault\(\)/);
   assert.match(html, /var interactive=event\.target\.closest\("button,input,select,textarea,label,a"\)/);
-  assert.match(html, /if\(interactive\)\{if\(interactive\.tagName==="A"\)event\.preventDefault\(\);return\}/);
+  assert.match(html, /class="tiq-editor-highlight"/);
+  assert.match(html, /outlineId:editable\.dataset\.tiqOutlineId\|\|null/);
+  assert.match(html, /if\(interactive&&interactive\.tagName==="A"\)event\.preventDefault\(\)/);
+});
+
+test("cada control visual declara un destino semántico para hover y clic", () => {
+  const targets = outlineTargets(productInformation.editor.outline, "section-product-information");
+  assert.deepEqual(targets.find((target) => target.outlineId === "product-title"), {
+    sectionId: "section-product-information",
+    outlineId: "product-title",
+    label: "Título del producto",
+    suffix: "__heading"
+  });
+  assert.ok(targets.some((target) => target.outlineId === "product-gallery" && target.suffix === "__media-column"));
+  assert.ok(targets.some((target) => target.outlineId === "buy-buttons" && target.suffix === "__cta"));
 });
 
 test("seleccionar dentro del lienzo no destruye ni vuelve a cargar el iframe", () => {
@@ -108,7 +123,8 @@ test("seleccionar dentro del lienzo no destruye ni vuelve a cargar el iframe", (
   assert.match(source, /function selectItem\(sectionId,blockId,outlineId\)/);
   assert.match(source, /state\.selectedOutline=outlineId\|\|null;renderSelection\(\)/);
   assert.match(source, /function renderSelection\(\)/);
-  assert.match(source, /selectItem\(event\.data\.sectionId,event\.data\.blockId\|\|null,null\)/);
+  assert.match(source, /event\.source!==frame\?\.contentWindow/);
+  assert.match(source, /selectItem\(event\.data\.sectionId,event\.data\.blockId\|\|null,event\.data\.outlineId\|\|null\)/);
   assert.doesNotMatch(source, /event\.data\.sectionId;state\.selectedBlock=.*shell\(\)/);
 });
 
@@ -124,14 +140,25 @@ test("el navegador lateral usa la jerarquía semántica y sincroniza cada selecc
   assert.doesNotMatch(source, /<i>▫<\/i>/);
 });
 
-test("la vista aislada reproduce la herencia tipográfica de Horizon", async () => {
+test("la vista aislada usa la pila tipográfica nativa de Shopify sin fuentes externas", async () => {
   const html = await renderSectionPage(createProductPage({
     product: { id: "gid://shopify/Product/1", title: "Producto", variants: [] }
   }));
-  assert.match(html, /family=Inter:wght@400;500;600;700;800;900/);
-  assert.match(html, /font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:14px;font-weight:400/);
+  assert.doesNotMatch(html, /fonts\.googleapis|family=Inter/);
+  assert.match(html, /font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;font-size:14px;font-weight:400/);
   assert.match(html, /button,input,select,textarea\{font:inherit\}/);
   assert.match(html, /button,a\{color:inherit\}/);
+});
+
+test("el selector de imágenes ofrece carga real y galería de Shopify", () => {
+  const source = fs.readFileSync(path.join(__dirname, "../app/section-editor.js"), "utf8");
+  assert.match(source, /data-media-drop/);
+  assert.match(source, /Arrastra y suelta o haz clic para seleccionar/);
+  assert.match(source, /Subir imagen/);
+  assert.match(source, /Seleccionar de la galería/);
+  assert.match(source, /\/api\/paginas\/\$\{encodeURIComponent\(pageId\)\}\/imagenes/);
+  assert.match(source, /<s-button variant="primary" id="se-publish"/);
+  assert.doesNotMatch(source, /if\(field\.type==="image_picker"\)[^\n]+Pega una URL/);
 });
 
 test("la investigación visual conserva evidencia y descarta referencias inventadas", () => {

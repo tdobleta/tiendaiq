@@ -1406,6 +1406,12 @@ async function api(req, res, url) {
   if (req.method === "POST" && mImg) {
     const registro = await leerPagina(sesion.tenant, mImg[1]);
     if (!registro) return json(res, 404, { error: "No existe esa página" });
+    if (registro.active_job_id) {
+      const active = await leerJobDB(sesion.tenant, registro.active_job_id);
+      if (active && ["queued", "running"].includes(active.status)) {
+        return json(res, 409, { error: "La página se está publicando. Esperá a que termine antes de subir una imagen." });
+      }
+    }
     const { nombre, mime, base64 } = await leerCuerpo(req, 15_000_000);
     if (!base64) return json(res, 400, { error: "Falta la imagen" });
 
@@ -1414,9 +1420,21 @@ async function api(req, res, url) {
       sesion, registro.shopify_product_id, nombre, mime || "image/jpeg", base64
     );
 
-    registro.data = attachPdp01MerchantMedia({ persistedData: registro.data, mediaId: media_id });
-    registro.data.pool_imagenes = registro.data.pool_imagenes || [];
-    registro.data.pool_imagenes.push({ media_id, tipo: "producto_limpio" });
+    if (registro.data?.section_page) {
+      const sectionPage = validateSectionPage(registro.data.section_page);
+      const media = Array.isArray(sectionPage.productSnapshot?.media) ? sectionPage.productSnapshot.media : [];
+      registro.data.section_page = validateSectionPage({
+        ...sectionPage,
+        productSnapshot: {
+          ...(sectionPage.productSnapshot || {}),
+          media: [...media.filter((item) => item.id !== media_id), { id: media_id, url, alt: String(nombre || "Imagen del producto").slice(0, 180) }]
+        }
+      });
+    } else {
+      registro.data = attachPdp01MerchantMedia({ persistedData: registro.data, mediaId: media_id });
+      registro.data.pool_imagenes = registro.data.pool_imagenes || [];
+      registro.data.pool_imagenes.push({ media_id, tipo: "producto_limpio" });
+    }
     registro.urls = { ...(registro.urls || {}), [media_id]: url };
     await guardarPagina(sesion.tenant, registro);
     return json(res, 200, { media_id, url });
