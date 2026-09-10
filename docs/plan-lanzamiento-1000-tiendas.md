@@ -1,5 +1,9 @@
 # Plan de lanzamiento para 1.000 tiendas
 
+Gobierno y secuencia ejecutiva: [Plan ejecutivo de cierre y lanzamiento](plan-ejecutivo-cierre-y-lanzamiento.md).
+Este documento conserva el detalle de capacidad; ante una diferencia de
+prioridad o estado, manda el plan ejecutivo.
+
 ## Supuesto de capacidad
 
 El objetivo operativo es admitir hasta 1.000 instalaciones durante las primeras
