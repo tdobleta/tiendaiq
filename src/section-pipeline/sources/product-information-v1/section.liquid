@@ -1258,6 +1258,24 @@
     if (cartVariant && cta?.dataset.variantId) cartVariant.value = cta.dataset.variantId;
     if (cartQuantity && !cartQuantity.value) cartQuantity.value = '1';
 
+    // The section router may hydrate the cart form after this script runs.
+    // Populate the native Shopify payload at the last safe moment as well.
+    root.addEventListener('submit', (event) => {
+      const form = event.target.closest('[data-cart-form]');
+      if (!form) return;
+
+      const variantInput = form.querySelector('[data-cart-variant]');
+      const quantityInput = form.querySelector('[data-cart-quantity]');
+      const submitter = event.submitter && event.submitter.matches('[data-cta]')
+        ? event.submitter
+        : form.querySelector('[data-cta]');
+      const selectedBundle = root.querySelector('[data-bundle][aria-pressed="true"]')
+        || root.querySelector('[data-bundle][data-selected="true"]');
+
+      if (variantInput && submitter?.dataset.variantId) variantInput.value = submitter.dataset.variantId;
+      if (quantityInput && !quantityInput.value) quantityInput.value = selectedBundle?.dataset.quantity || '1';
+    });
+
     const selectThumbnail = (thumbnail) => {
       if (!thumbnail || !mainImage) return;
       const imageUrl = thumbnail.getAttribute('data-image');

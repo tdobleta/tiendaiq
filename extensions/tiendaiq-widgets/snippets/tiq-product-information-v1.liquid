@@ -1,4 +1,4 @@
-{% comment %} GENERATED from product-information@1 · c74bb5dead61731ae65007d76554b4bd020f595992f6c316cdb5872502245632. Do not edit. {% endcomment %}
+{% comment %} GENERATED from product-information@1 · 1aaaf42071da82ccb1f5e0468f4e90c8652abcf5a5db557cc542da65f9a12586. Do not edit. {% endcomment %}
 {% liquid
 assign section_dom_id = 'product-hero-' | append: tiq_section.id | handleize
 assign hero_content_max_width = 600
@@ -1127,6 +1127,19 @@ const tabButtons = Array.from(root.querySelectorAll('[data-tab-button]'));
 const tabPanels = Array.from(root.querySelectorAll('[data-tab-panel]'));
 if (cartVariant && cta?.dataset.variantId) cartVariant.value = cta.dataset.variantId;
 if (cartQuantity && !cartQuantity.value) cartQuantity.value = '1';
+root.addEventListener('submit', (event) => {
+const form = event.target.closest('[data-cart-form]');
+if (!form) return;
+const variantInput = form.querySelector('[data-cart-variant]');
+const quantityInput = form.querySelector('[data-cart-quantity]');
+const submitter = event.submitter && event.submitter.matches('[data-cta]')
+? event.submitter
+: form.querySelector('[data-cta]');
+const selectedBundle = root.querySelector('[data-bundle][aria-pressed="true"]')
+|| root.querySelector('[data-bundle][data-selected="true"]');
+if (variantInput && submitter?.dataset.variantId) variantInput.value = submitter.dataset.variantId;
+if (quantityInput && !quantityInput.value) quantityInput.value = selectedBundle?.dataset.quantity || '1';
+});
 const selectThumbnail = (thumbnail) => {
 if (!thumbnail || !mainImage) return;
 const imageUrl = thumbnail.getAttribute('data-image');
