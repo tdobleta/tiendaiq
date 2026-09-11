@@ -1158,6 +1158,22 @@ test("los workflows que operan staging fijan las acciones que ejecutan", () => {
   }
 });
 
+test("cada release ejecuta la verificación completa antes de migrar o desplegar", () => {
+  const workflows = [
+    ["release-staging.yml", "Migrate staging with the owner credential"],
+    ["release-partner-staging.yml", "Migrate Partner Staging with the owner credential"],
+    ["release-production.yml", "Migrate production with the owner credential"]
+  ];
+
+  for (const [name, migrationStep] of workflows) {
+    const workflow = fs.readFileSync(path.join(__dirname, "..", ".github", "workflows", name), "utf8");
+    const verification = workflow.indexOf("run: npm run probar");
+    const migration = workflow.indexOf(migrationStep);
+    assert.ok(verification >= 0 && verification < migration, `${name}: verifica antes de migrar`);
+    assert.match(workflow, /Verify the reviewed release before any external mutation/, name);
+  }
+});
+
 test("la evidencia Shopify de staging usa solo el token operativo y un SHA revisado", () => {
   const workflow = fs.readFileSync(
     path.join(__dirname, "..", ".github", "workflows", "shopify-e2e-staging.yml"),

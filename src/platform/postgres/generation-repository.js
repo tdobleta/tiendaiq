@@ -166,9 +166,12 @@ function createGenerationRepository(pool) {
       });
     },
 
-    async finalize(context, { reservationId, pageId, page }) {
+    async finalize(context, { reservationId, pageId, page, expectedPageRevision = null }) {
       const tenant = requireTenantContext(context);
       const normalizedPage = normalizePageRecord(page, { expectedId: pageId });
+      if (expectedPageRevision !== null && (!Number.isInteger(expectedPageRevision) || expectedPageRevision < 0)) {
+        throw new TypeError("La revisión esperada de generación debe ser un entero no negativo");
+      }
       return withTenantTransaction(pool, tenant, async (client) => {
         const result = await client.query(
           "SELECT * FROM control_plane.usage_reservations WHERE tenant_id = $1 AND id = $2 FOR UPDATE",
@@ -182,6 +185,21 @@ function createGenerationRepository(pool) {
           throw error;
         }
         if (reservation.status === "committed") return reservation;
+
+        if (expectedPageRevision !== null) {
+          const currentPage = await client.query(
+            "SELECT datos FROM public.paginas WHERE tienda = $1 AND id = $2 FOR UPDATE",
+            [tenant.tenantId, pageId]
+          );
+          const current = currentPage.rows[0]?.datos;
+          const currentRevision = Number(current?.data?.section_page?.revision);
+          if (!current || currentRevision !== expectedPageRevision) {
+            const error = new Error("La página cambió mientras se generaba el contenido; no se reemplazaron tus cambios");
+            error.code = "GENERATION_PAGE_CHANGED";
+            error.nonRetryable = true;
+            throw error;
+          }
+        }
 
         await client.query(
           `INSERT INTO public.paginas (tienda, id, datos, actualizada) VALUES ($1, $2, $3, now())

@@ -1,0 +1,12 @@
+{% comment %} GENERATED section router. Do not edit. {% endcomment %}
+  {%- if tiq_section.definition.id == 'product-information' and tiq_section.definition.version == 1 -%}
+    {% render 'tiq-product-information-v1', tiq_section: tiq_section, product: product %}
+  {%- elsif tiq_section.definition.id == 'image-with-text' and tiq_section.definition.version == 1 -%}
+    {% render 'tiq-image-with-text-v1', tiq_section: tiq_section, product: product %}
+  {%- elsif tiq_section.definition.id == 'image-with-timeline' and tiq_section.definition.version == 1 -%}
+    {% render 'tiq-image-with-timeline-v1', tiq_section: tiq_section, product: product %}
+  {%- elsif tiq_section.definition.id == 'image-with-benefits' and tiq_section.definition.version == 1 -%}
+    {% render 'tiq-image-with-benefits-v1', tiq_section: tiq_section, product: product %}
+  {%- elsif tiq_section.definition.id == 'testimonios-con-imagenes' and tiq_section.definition.version == 1 -%}
+    {% render 'tiq-testimonios-con-imagenes-v1', tiq_section: tiq_section, product: product %}
+  {%- endif -%}

@@ -205,6 +205,38 @@ const Q_FILE = `query($id: ID!) {
   }
 }`;
 
+const Q_FILES = `query TiendaIqImageLibrary($after: String) {
+  files(first: 60, after: $after, query: "media_type:IMAGE", sortKey: UPDATED_AT, reverse: true) {
+    nodes {
+      id
+      alt
+      fileStatus
+      ... on MediaImage { image { url width height } }
+    }
+    pageInfo { hasNextPage endCursor }
+  }
+}`;
+
+async function listarImagenesTienda(sesion, { after = null, signal } = {}) {
+  const result = await gql(Q_FILES, { after: after || null }, sesion, { signal: mediaSignal(signal) });
+  const connection = result.files || {};
+  return {
+    items: (connection.nodes || [])
+      .filter((item) => item?.fileStatus === "READY" && item.image?.url)
+      .map((item) => ({
+        id: item.id,
+        url: item.image.url,
+        alt: String(item.alt || "").slice(0, 180),
+        width: item.image.width || null,
+        height: item.image.height || null
+      })),
+    pageInfo: {
+      hasNextPage: connection.pageInfo?.hasNextPage === true,
+      endCursor: connection.pageInfo?.endCursor || null
+    }
+  };
+}
+
 async function subirImagenTienda(sesion, nombre, mime, base64, { signal } = {}) {
   const operationSignal = mediaSignal(signal);
   if (!/^image\//.test(mime)) throw permanentMediaError("Solo se pueden subir imágenes.", 400);
@@ -348,6 +380,7 @@ module.exports = {
   bucketUploadError,
   crearDestinoArchivo,
   finalizarArchivo,
+  listarImagenesTienda,
   pollCreatedEffect,
   rethrowCreatedEffect,
   permanentMediaError,

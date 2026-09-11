@@ -51,7 +51,9 @@ test("la extensión reconoce el contrato nuevo antes de los renderers heredados"
   const fs = require("node:fs");
   const path = require("node:path");
   const liquid = fs.readFileSync(path.join(__dirname, "..", "extensions", "tiendaiq-widgets", "blocks", "pagina.liquid"), "utf8");
+  const router = fs.readFileSync(path.join(__dirname, "..", "extensions", "tiendaiq-widgets", "snippets", "tiq-section-router.liquid"), "utf8");
   assert.match(liquid, /tq_pagina\.section_page\.contractVersion == 1/);
-  assert.match(liquid, /render 'tiq-product-information-v1'/);
+  assert.match(liquid, /render 'tiq-section-router'/);
+  assert.match(router, /render 'tiq-product-information-v1'/);
   assert.ok(liquid.indexOf("section_page.contractVersion") < liquid.indexOf("tq_pagina.version == 1"));
 });

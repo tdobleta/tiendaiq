@@ -456,6 +456,59 @@ async function guardarPaginaDB(context, id, datos) {
   }
 }
 
+// Inserción de una página nueva sin permitir que una repetición de la misma
+// acción sobrescriba un borrador existente. En producción la unicidad la
+// garantiza la clave primaria de Postgres; el fallback local usa creación
+// exclusiva del archivo para conservar la misma semántica.
+async function crearPaginaSiNoExisteDB(context, id, datos) {
+  const tenant = requireTenantContext(context);
+  const page = normalizeStoredPageRecord(datos, { expectedId: id });
+  if (USA_PG) {
+    const p = await pg();
+    pageRepository ||= createPageRepository(p);
+    const result = await pageRepository.createIfAbsent(tenant, id, page);
+    return {
+      created: result.created,
+      page: result.page ? normalizeStoredPageRecord(result.page, { expectedId: id }) : null
+    };
+  }
+
+  const dir = path.join(DIR_PAGINAS, seguro(tenant.tenantId));
+  fs.mkdirSync(dir, { recursive: true });
+  const filename = path.join(dir, seguro(id) + ".json");
+  let descriptor;
+  try {
+    descriptor = fs.openSync(filename, "wx");
+    fs.writeFileSync(descriptor, JSON.stringify(page, null, 2));
+    return { created: true, page };
+  } catch (error) {
+    if (error.code !== "EEXIST") throw error;
+    const existing = fileLeer(dir, id);
+    return { created: false, page: existing ? normalizeStoredPageRecord(existing, { expectedId: id }) : null };
+  } finally {
+    if (descriptor !== undefined) fs.closeSync(descriptor);
+  }
+}
+
+async function guardarPaginaSiRevisionDB(context, id, datos, expectedRevision) {
+  const tenant = requireTenantContext(context);
+  const page = normalizeStoredPageRecord(datos, { expectedId: id });
+  if (!Number.isInteger(expectedRevision) || expectedRevision < 0) {
+    throw new TypeError("La revisión esperada debe ser un entero no negativo");
+  }
+  if (USA_PG) {
+    const p = await pg();
+    pageRepository ||= createPageRepository(p);
+    return pageRepository.saveSectionPageIfRevision(tenant, id, page, expectedRevision);
+  }
+  const current = await leerPaginaDB(tenant, id);
+  if (!current) return false;
+  const currentRevision = Number(current.data?.section_page?.revision ?? 0);
+  if (currentRevision !== expectedRevision) return false;
+  await guardarPaginaDB(tenant, id, page);
+  return true;
+}
+
 async function leerPaginaDB(context, id) {
   const tenant = requireTenantContext(context);
   if (USA_PG) {
@@ -1368,12 +1421,12 @@ async function reconciliarGeneracionAmbiguaDB(context, reservationId, { action, 
   throw new TypeError("La reconciliación requiere action 'release' o 'retry'");
 }
 
-async function finalizarGeneracionDB(context, { reservationId, pageId, page }) {
+async function finalizarGeneracionDB(context, { reservationId, pageId, page, expectedPageRevision = null }) {
   const tenant = requireTenantContext(context);
   if (USA_PG) {
     const p = await pg();
     generationRepository ||= createGenerationRepository(p);
-    return generationRepository.finalize(tenant, { reservationId, pageId, page });
+    return generationRepository.finalize(tenant, { reservationId, pageId, page, expectedPageRevision });
   }
   const reservation = await leerReservaGeneracionDB(tenant, reservationId);
   if (!reservation) throw new Error("La reserva de generación no existe");
@@ -1383,6 +1436,16 @@ async function finalizarGeneracionDB(context, { reservationId, pageId, page }) {
     throw error;
   }
   if (reservation.status === "committed") return reservation;
+  if (expectedPageRevision !== null) {
+    const current = await leerPaginaDB(tenant, pageId);
+    const currentRevision = Number(current?.data?.section_page?.revision);
+    if (!current || !Number.isInteger(expectedPageRevision) || currentRevision !== expectedPageRevision) {
+      const error = new Error("La página cambió mientras se generaba el contenido; no se reemplazaron tus cambios");
+      error.code = "GENERATION_PAGE_CHANGED";
+      error.nonRetryable = true;
+      throw error;
+    }
+  }
   await guardarPaginaDB(tenant, pageId, page);
   reservation.status = "committed";
   reservation.lastError = null;
@@ -1752,7 +1815,7 @@ module.exports = {
   guardarCredencialShopifyDB, guardarInstalacionExpiringDB, leerCredencialShopifyDB,
   adquirirLeaseRefreshShopifyDB, completarRefreshShopifyDB, fallarRefreshShopifyDB,
   incrementarUsoDB, decrementarUsoDB, actualizarCamposTiendaDB,
-  guardarPaginaDB, leerPaginaDB, marcarPublicacionFallidaDB,
+  guardarPaginaDB, crearPaginaSiNoExisteDB, guardarPaginaSiRevisionDB, leerPaginaDB, marcarPublicacionFallidaDB,
   encolarPublicacionDB, encolarDespublicacionDB,
   completarPublicacionPaginaDB, completarDespublicacionPaginaDB,
   listarPaginasDB,

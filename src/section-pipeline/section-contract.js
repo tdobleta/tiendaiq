@@ -142,7 +142,52 @@ function defaultInstance(schema) {
   };
 }
 
-function createSectionDefinition({ id, version, source, adaptation, outline = [] }) {
+function normalizeCopySlots(schema, copySlots = {}) {
+  const settings = new Set((schema.settings || []).filter((item) => item.id).map((item) => item.id));
+  const blockSettings = new Map((schema.blocks || []).map((block) => [block.type, new Set((block.settings || []).filter((item) => item.id).map((item) => item.id))]));
+  const normalizeFields = (fields, where, allowed) => {
+    if (!Array.isArray(fields) || new Set(fields).size !== fields.length || fields.some((field) => !allowed.has(field))) {
+      throw new SectionContractError(`${where}: slot de copy desconocido o duplicado`);
+    }
+    return Object.freeze([...fields]);
+  };
+  const blocks = Object.fromEntries(Object.entries(copySlots.blocks || {}).map(([type, fields]) => {
+    const allowed = blockSettings.get(type);
+    if (!allowed) throw new SectionContractError(`copySlots.blocks.${type}: bloque desconocido`);
+    return [type, normalizeFields(fields, `copySlots.blocks.${type}`, allowed)];
+  }));
+  return Object.freeze({
+    section: normalizeFields(copySlots.section || [], "copySlots.section", settings),
+    blocks: Object.freeze(blocks)
+  });
+}
+
+function normalizeContentSources(schema, contentSources = {}) {
+  const settings = new Set((schema.settings || []).filter((item) => item.id).map((item) => item.id));
+  const blockSettings = new Map((schema.blocks || []).map((block) => [block.type, new Set((block.settings || []).filter((item) => item.id).map((item) => item.id))]));
+  const allowedSources = new Set(["shopify", "template"]);
+  const normalizeFields = (fields, where, allowed) => {
+    if (!fields || typeof fields !== "object" || Array.isArray(fields)) {
+      throw new SectionContractError(`${where}: mapa de origen inválido`);
+    }
+    const entries = Object.entries(fields);
+    if (entries.some(([field, source]) => !allowed.has(field) || !allowedSources.has(source))) {
+      throw new SectionContractError(`${where}: campo u origen desconocido`);
+    }
+    return Object.freeze(Object.fromEntries(entries));
+  };
+  const blocks = Object.fromEntries(Object.entries(contentSources.blocks || {}).map(([type, fields]) => {
+    const allowed = blockSettings.get(type);
+    if (!allowed) throw new SectionContractError(`contentSources.blocks.${type}: bloque desconocido`);
+    return [type, normalizeFields(fields, `contentSources.blocks.${type}`, allowed)];
+  }));
+  return Object.freeze({
+    section: normalizeFields(contentSources.section || {}, "contentSources.section", settings),
+    blocks: Object.freeze(blocks)
+  });
+}
+
+function createSectionDefinition({ id, version, source, adaptation, outline = [], catalog = {}, capabilities = {}, copySlots = {}, contentSources = {} }) {
   if (!/^[a-z0-9][a-z0-9-]*$/.test(id) || !Number.isInteger(version) || version < 1) {
     throw new SectionContractError("La identidad de la sección es inválida");
   }
@@ -150,8 +195,31 @@ function createSectionDefinition({ id, version, source, adaptation, outline = []
   const sourceSha256 = sha256(source);
   const editor = editorContract(schema, outline);
   const seed = defaultInstance(schema);
+  const normalizedCopySlots = normalizeCopySlots(schema, copySlots);
+  const normalizedContentSources = normalizeContentSources(schema, contentSources);
+  const normalizedCatalog = Object.freeze({
+    scale: catalog.scale === "block" ? "block" : "section",
+    category: String(catalog.category || "Contenido"),
+    description: String(catalog.description || ""),
+    thumbnail: String(catalog.thumbnail || "generic")
+  });
+  const normalizedCapabilities = Object.freeze({
+    editableContent: capabilities.editableContent !== false,
+    editableStyles: capabilities.editableStyles !== false,
+    editableStructure: capabilities.editableStructure === true,
+    duplicable: capabilities.duplicable !== false,
+    deletable: capabilities.deletable !== false,
+    reorderable: capabilities.reorderable !== false,
+    protected: capabilities.protected === true,
+    allowMultipleInstances: capabilities.allowMultipleInstances !== false,
+    responsive: Object.freeze([...(capabilities.responsive || [])])
+  });
   return Object.freeze({
     id, version, source, sourceSha256, schema: Object.freeze(schema), editor, seed: Object.freeze(seed),
+    copySlots: normalizedCopySlots,
+    contentSources: normalizedContentSources,
+    catalog: normalizedCatalog,
+    capabilities: normalizedCapabilities,
     adapt(product, research = {}) {
       const before = sourceSha256;
       const result = adaptation({ product: clone(product || {}), research: clone(research || {}), seed: clone(seed) });
@@ -223,9 +291,27 @@ function normalizeSettings(definitions, values, where) {
 function validateInstance({ definition, instance }) {
   const settings = normalizeSettings(definition.schema.settings, instance?.settings, "section");
   const blockMap = new Map((definition.schema.blocks || []).map((block) => [block.type, block]));
+  if (!Array.isArray(instance?.blocks)) throw new SectionContractError("La instancia necesita una lista de bloques");
+  const schemaMaximum = Number.isInteger(definition.schema.max_blocks) ? definition.schema.max_blocks : 50;
+  const maximum = Math.min(50, schemaMaximum);
+  if (instance.blocks.length > maximum) {
+    throw new SectionContractError(`La sección admite como máximo ${maximum} bloques`);
+  }
+  const blockIds = new Set();
+  const blockCounts = new Map();
   const blocks = (instance?.blocks || []).map((block) => {
+    if (!/^[A-Za-z0-9][A-Za-z0-9_-]{0,99}$/.test(String(block?.id || ""))) {
+      throw new SectionContractError("Cada bloque necesita un identificador válido");
+    }
+    if (blockIds.has(block.id)) throw new SectionContractError(`Identificador de bloque duplicado: ${block.id}`);
+    blockIds.add(block.id);
     const blockDefinition = blockMap.get(block.type);
     if (!blockDefinition) throw new SectionContractError(`Bloque no autorizado: ${block.type}`);
+    const count = (blockCounts.get(block.type) || 0) + 1;
+    blockCounts.set(block.type, count);
+    if (Number.isInteger(blockDefinition.limit) && count > blockDefinition.limit) {
+      throw new SectionContractError(`${blockDefinition.name || block.type}: supera el límite de ${blockDefinition.limit}`);
+    }
     const normalizedBlock = { ...block, settings: normalizeSettings(blockDefinition.settings, block.settings, block.type) };
     if (block.binding != null) {
       const keys = Object.keys(block.binding);

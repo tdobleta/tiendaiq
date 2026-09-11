@@ -58,6 +58,11 @@ jobs:
 
       - run: npm ci --no-audit --no-fund
 
+      # El release es manual, pero no puede saltarse la verificación del SHA
+      # exacto que se va a desplegar si el workflow de push está fallando.
+      - name: Verify the reviewed release before any external mutation
+        run: npm run probar
+
       # GitHub-hosted runners do not provide Shopify CLI. Pin it so this
       # isolated release publishes the reviewed Partner Staging components
       # reproducibly instead of depending on an ambient runner tool.

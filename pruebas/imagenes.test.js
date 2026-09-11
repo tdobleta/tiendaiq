@@ -6,10 +6,34 @@ const assert = require("node:assert/strict");
 const {
   ambiguousMediaError,
   bucketUploadError,
+  listarImagenesTienda,
   permanentMediaError,
   pollCreatedEffect,
   rethrowCreatedEffect
 } = require("../imagenes");
+
+test("la biblioteca normaliza únicamente imágenes READY de Shopify Files", async () => {
+  const previousFetch = global.fetch;
+  global.fetch = async (_url, options) => {
+    const request = JSON.parse(options.body);
+    assert.match(request.query, /files\(first: 60/);
+    return { ok: true, json: async () => ({ data: { files: {
+      nodes: [
+        { id: "gid://shopify/MediaImage/1", alt: "Lista", fileStatus: "READY", image: { url: "https://cdn.shopify.com/lista.jpg", width: 100, height: 80 } },
+        { id: "gid://shopify/MediaImage/2", alt: "Pendiente", fileStatus: "UPLOADED", image: null }
+      ],
+      pageInfo: { hasNextPage: true, endCursor: "cursor-1" }
+    } } }) };
+  };
+  try {
+    const result = await listarImagenesTienda({ tienda: "demo.myshopify.com", token: "token" });
+    assert.equal(result.items.length, 1);
+    assert.equal(result.items[0].url, "https://cdn.shopify.com/lista.jpg");
+    assert.deepEqual(result.pageInfo, { hasNextPage: true, endCursor: "cursor-1" });
+  } finally {
+    global.fetch = previousFetch;
+  }
+});
 
 test("los errores de validacion de media son terminales y permiten degradacion visual", () => {
   const error = permanentMediaError("imagen invalida", 422);

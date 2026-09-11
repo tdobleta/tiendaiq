@@ -135,6 +135,32 @@ function createPageRepository(pool) {
   }
 
   return Object.freeze({
+    // Create a page exactly once. The conflict path reads the already
+    // committed row in a new statement, so two concurrent requests cannot
+    // replace a draft that the other request just created.
+    async createIfAbsent(context, id, data) {
+      const tenant = requireTenantContext(context);
+      const shape = hasCurrentPageContract(data) ? "current" : "legacy";
+      const page = serializeStoredPage(normalizeStoredPageRecord(data, { expectedId: id }), shape, id);
+      return withTenantTransaction(pool, tenant, async (client) => {
+        const inserted = await client.query(
+          `INSERT INTO public.paginas (tienda, id, datos, actualizada)
+           VALUES ($1, $2, $3, now())
+           ON CONFLICT (tienda, id) DO NOTHING
+           RETURNING datos`,
+          [tenant.tenantId, id, page]
+        );
+        if (inserted.rows.length === 1) {
+          return { created: true, page: inserted.rows[0].datos };
+        }
+        const existing = await client.query(
+          "SELECT datos FROM public.paginas WHERE tienda = $1 AND id = $2",
+          [tenant.tenantId, id]
+        );
+        return { created: false, page: existing.rows[0]?.datos ?? null };
+      });
+    },
+
     async save(context, id, data) {
       const tenant = requireTenantContext(context);
       // The application boundary requires the current contract. The storage
@@ -147,6 +173,24 @@ function createPageRepository(pool) {
          ON CONFLICT (tienda, id) DO UPDATE SET datos = $3, actualizada = now()`,
         [tenant.tenantId, id, page]
       ));
+    },
+
+    async saveSectionPageIfRevision(context, id, data, expectedRevision) {
+      const tenant = requireTenantContext(context);
+      if (!Number.isInteger(expectedRevision) || expectedRevision < 0) {
+        throw new TypeError("La revisión esperada debe ser un entero no negativo");
+      }
+      const shape = hasCurrentPageContract(data) ? "current" : "legacy";
+      const page = serializeStoredPage(normalizeStoredPageRecord(data, { expectedId: id }), shape, id);
+      const result = await withTenantTransaction(pool, tenant, (client) => client.query(
+        `UPDATE public.paginas AS page
+            SET datos = $3, actualizada = now()
+          WHERE page.tienda = $1 AND page.id = $2
+            AND COALESCE(page.datos #> '{data,section_page,revision}', '0'::jsonb) = to_jsonb($4::integer)
+          RETURNING 1 AS saved`,
+        [tenant.tenantId, id, page, expectedRevision]
+      ));
+      return result.rows.length === 1;
     },
 
     async findById(context, id) {
