@@ -3,6 +3,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const { createSectionDefinition } = require("./section-contract");
+const { readCopySlot } = require("./copy-slots");
 
 const source = fs.readFileSync(path.join(__dirname, "sources", "product-information-v1", "section.liquid"), "utf8")
   .replace(/\r\n?/g, "\n");
@@ -41,7 +42,8 @@ function adapt({ product, research, seed }) {
     : [];
   if (benefits.length) {
     instance.blocks.filter((block) => block.type === "benefit").forEach((block, index) => {
-      if (benefits[index]) block.settings.text = String(benefits[index]).slice(0, 180);
+      const generatedText = readCopySlot(research, { section_id: "product-information", occurrence: 1, block_type: "benefit", block_index: index, field: "text" });
+      if (generatedText || benefits[index]) block.settings.text = String(generatedText || benefits[index]).slice(0, 180);
     });
   }
   return instance;

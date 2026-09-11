@@ -7,7 +7,7 @@ const imageWithText = require("../src/section-pipeline/image-with-text-v1");
 const { createProductPage, editorRegistry, instantiateSection, validatePage } = require("../src/section-pipeline/page-pipeline");
 const { outlineTargets, renderSectionPage } = require("../src/section-pipeline/preview-renderer");
 const { validateResearch } = require("../src/section-pipeline/research-product");
-const { SectionContractError, sha256, validateInstance } = require("../src/section-pipeline/section-contract");
+const { SectionContractError, createSectionDefinition, sha256, validateInstance } = require("../src/section-pipeline/section-contract");
 const { build: buildStorefront } = require("../src/section-pipeline/compile-storefront");
 const fs = require("node:fs");
 const path = require("node:path");
@@ -50,6 +50,55 @@ test("el registro distingue definiciones, catálogo y capacidades", () => {
   assert.deepEqual(registry[4].copySlots, { section: [], blocks: {} });
   assert.equal(registry[3].capabilities.editableStructure, true);
   assert.equal(registry[3].capabilities.allowMultipleInstances, true);
+});
+
+test("copy_slots_v1 aplica primero los slots autorizados y conserva el formato legado", () => {
+  const research = validateResearch({
+    summary: "Resumen",
+    claims: [],
+    visualObservations: [],
+    sectionCopy: { imageWithTextBody: "Texto legado" },
+    copy_slots_v1: {
+      version: 1,
+      slots: [{
+        target: { section_id: "image-with-text", occurrence: 1, field: "body" },
+        value: "Texto por slot",
+        evidence: [{ kind: "shopify_description", reference: "product.description" }]
+      }]
+    }
+  }, []);
+  const instance = imageWithText.adapt({ title: "Producto" }, research);
+  assert.match(instance.settings.body, /Texto por slot/);
+  assert.equal(research.sectionCopy.imageWithTextBody, "Texto legado");
+  assert.equal(research.copy_slots_v1.slots[0].target.field, "body");
+});
+
+test("copy_slots_v1 registra targets desconocidos sin permitir que entren a una sección", () => {
+  const research = validateResearch({
+    summary: "Resumen",
+    claims: [],
+    visualObservations: [],
+    copy_slots_v1: {
+      version: 1,
+      slots: [{
+        target: { section_id: "image-with-text", occurrence: 1, field: "background_color" },
+        value: "#000000",
+        evidence: []
+      }]
+    }
+  }, []);
+  assert.equal(research.copy_slots_v1.slots.length, 0);
+  assert.equal(research.copy_slots_v1.skipped[0].reason, "target_no_autorizado");
+});
+
+test("la adaptación rechaza cambios fuera de copySlots y de datos derivados declarados", () => {
+  const unsafe = createSectionDefinition({
+    id: "scope-check",
+    version: 1,
+    source: imageWithText.source,
+    adaptation: ({ seed }) => ({ ...seed, settings: { ...seed.settings, background_color: "#000000" } })
+  });
+  assert.throws(() => unsafe.adapt({}), /campo de sección no autorizado/);
 });
 
 test("Imagen con beneficios mantiene diseño, imagen vinculada y bloques repetibles", async () => {

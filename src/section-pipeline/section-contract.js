@@ -210,6 +210,50 @@ function normalizeLockedFields(schema, lockedFields = {}) {
   });
 }
 
+function sameValue(left, right) {
+  return JSON.stringify(left ?? null) === JSON.stringify(right ?? null);
+}
+
+function assertAdaptationScope(seed, result, copySlots, contentSources) {
+  const allowedSectionFields = new Set([
+    ...(copySlots.section || []),
+    ...Object.keys(contentSources.section || {})
+  ]);
+  for (const key of new Set([
+    ...Object.keys(seed?.settings || {}),
+    ...Object.keys(result?.settings || {})
+  ])) {
+    if (!sameValue(seed?.settings?.[key], result?.settings?.[key]) && !allowedSectionFields.has(key)) {
+      throw new SectionContractError(`La adaptación modificó un campo de sección no autorizado: ${key}`);
+    }
+  }
+
+  const seedBlocks = seed?.blocks || [];
+  const resultBlocks = result?.blocks || [];
+  if (seedBlocks.length !== resultBlocks.length) {
+    throw new SectionContractError("La adaptación no puede cambiar la cantidad de bloques");
+  }
+  for (let index = 0; index < seedBlocks.length; index += 1) {
+    const before = seedBlocks[index];
+    const after = resultBlocks[index];
+    if (before.id !== after?.id || before.type !== after?.type) {
+      throw new SectionContractError("La adaptación no puede cambiar la estructura de bloques");
+    }
+    const allowedBlockFields = new Set([
+      ...(copySlots.blocks?.[before.type] || []),
+      ...Object.keys(contentSources.blocks?.[before.type] || {})
+    ]);
+    for (const key of new Set([
+      ...Object.keys(before.settings || {}),
+      ...Object.keys(after?.settings || {})
+    ])) {
+      if (!sameValue(before.settings?.[key], after?.settings?.[key]) && !allowedBlockFields.has(key)) {
+        throw new SectionContractError(`La adaptación modificó un campo de bloque no autorizado: ${before.type}.${key}`);
+      }
+    }
+  }
+}
+
 function createSectionDefinition({ id, version, source, adaptation, outline = [], catalog = {}, capabilities = {}, copySlots = {}, contentSources = {}, lockedFields = {} }) {
   if (!/^[a-z0-9][a-z0-9-]*$/.test(id) || !Number.isInteger(version) || version < 1) {
     throw new SectionContractError("La identidad de la sección es inválida");
@@ -249,6 +293,7 @@ function createSectionDefinition({ id, version, source, adaptation, outline = []
       const before = sourceSha256;
       const result = adaptation({ product: clone(product || {}), research: clone(research || {}), seed: clone(seed) });
       if (sha256(source) !== before) throw new SectionContractError("La adaptación intentó modificar el diseño de la sección");
+      assertAdaptationScope(seed, result, normalizedCopySlots, normalizedContentSources);
       return validateInstance({ definition: this, instance: result });
     }
   });
