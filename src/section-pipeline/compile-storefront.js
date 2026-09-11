@@ -11,13 +11,29 @@ function targetFor(definition) {
   return path.join(__dirname, "..", "..", "extensions", "tiendaiq-widgets", "snippets", `tiq-${definition.id}-v${definition.version}.liquid`);
 }
 
+// Shopify aplica el límite de 100 KB al contenido Liquid agregado de la
+// extensión. Compactamos únicamente los artefactos generados (no la fuente
+// canónica) para conservar su hash y, a la vez, publicar sin comentarios ni
+// sangrías innecesarias. No se alteran valores ni delimitadores Liquid.
+function compactLiquid(source) {
+  return String(source)
+    .replace(/{%-?\s*comment\s*-?%}[\s\S]*?{%-?\s*endcomment\s*-?%}/g, "")
+    .replace(/<!--[\s\S]*?-->/g, "")
+    .replace(/^\s*\/\/.*(?:\r?\n|$)/gm, "")
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/^[ \t]+/gm, "")
+    .replace(/[ \t]+$/gm, "")
+    .replace(/\n{2,}/g, "\n")
+    .trim();
+}
+
 function compileSection(source, sourceSha256, descriptor = "product-information@1") {
   const withoutSchema = String(source).replace(/{%\s*schema\s*%}[\s\S]*?{%\s*endschema\s*%}\s*$/, "");
-  const compiled = withoutSchema
+  const compiled = compactLiquid(withoutSchema
     .replace(/section\.settings/g, "tiq_section.instance.settings")
     .replace(/section\.blocks/g, "tiq_section.instance.blocks")
     .replace(/section\.id/g, "tiq_section.id")
-    .replace(/{{\s*block\.shopify_attributes\s*}}/g, 'data-tiq-block-id="{{ block.id | escape }}"');
+    .replace(/{{\s*block\.shopify_attributes\s*}}/g, 'data-tiq-block-id="{{ block.id | escape }}"'));
   return `{% comment %} GENERATED from ${descriptor} · ${sourceSha256}. Do not edit. {% endcomment %}\n${compiled.trimEnd()}\n`;
 }
 

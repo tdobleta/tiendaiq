@@ -1,185 +1,164 @@
 {% comment %} GENERATED from image-with-text@1 · db26edc50420358faa15b1cef970166a61a77101c394315864c69e5026022a98. Do not edit. {% endcomment %}
 {% liquid
-  assign section_dom_id = 'tiq-image-text-' | append: tiq_section.id | handleize
-  assign media_src = tiq_section.instance.settings.image
-  assign placeholder_class = section_dom_id | append: '__placeholder'
+assign section_dom_id = 'tiq-image-text-' | append: tiq_section.id | handleize
+assign media_src = tiq_section.instance.settings.image
+assign placeholder_class = section_dom_id | append: '__placeholder'
 %}
-
 <section
-  id="{{ section_dom_id }}"
-  class="{{ section_dom_id }} {{ section_dom_id }}--mobile-{{ tiq_section.instance.settings.mobile_media_position }}{% if tiq_section.instance.settings.reverse_desktop %} {{ section_dom_id }}--reverse{% endif %}"
-  aria-labelledby="{{ section_dom_id }}-heading"
+id="{{ section_dom_id }}"
+class="{{ section_dom_id }} {{ section_dom_id }}--mobile-{{ tiq_section.instance.settings.mobile_media_position }}{% if tiq_section.instance.settings.reverse_desktop %} {{ section_dom_id }}--reverse{% endif %}"
+aria-labelledby="{{ section_dom_id }}-heading"
 >
-  <div class="{{ section_dom_id }}__inner">
-    <div class="{{ section_dom_id }}__content">
-      {% if tiq_section.instance.settings.eyebrow != blank %}
-        <p class="{{ section_dom_id }}__eyebrow">{{ tiq_section.instance.settings.eyebrow | escape }}</p>
-      {% endif %}
-
-      {% if tiq_section.instance.settings.heading != blank %}
-        <h2 id="{{ section_dom_id }}-heading" class="{{ section_dom_id }}__heading">{{ tiq_section.instance.settings.heading | escape }}</h2>
-      {% endif %}
-
-      {% if tiq_section.instance.settings.body != blank %}
-        <div class="{{ section_dom_id }}__body rte">{{ tiq_section.instance.settings.body }}</div>
-      {% endif %}
-
-      {% if tiq_section.instance.settings.button_label != blank %}
-        <a
-          class="{{ section_dom_id }}__button {{ section_dom_id }}__button--{{ tiq_section.instance.settings.button_style }}"
-          href="{{ tiq_section.instance.settings.button_link | default: '#' }}"
-        >
-          <span>{{ tiq_section.instance.settings.button_label | escape }}</span>
-          <svg aria-hidden="true" viewBox="0 0 20 20" focusable="false"><path d="M4 10h11m-4-4 4 4-4 4"/></svg>
-        </a>
-      {% endif %}
-    </div>
-
-    <div class="{{ section_dom_id }}__media">
-      {% if media_src != blank %}
-        <img
-          src="{{ media_src | escape }}"
-          alt="{{ tiq_section.instance.settings.image_alt | escape }}"
-          loading="lazy"
-          width="1200"
-          height="1200"
-        >
-      {% else %}
-        {{ 'image' | placeholder_svg_tag: placeholder_class }}
-      {% endif %}
-    </div>
-  </div>
+<div class="{{ section_dom_id }}__inner">
+<div class="{{ section_dom_id }}__content">
+{% if tiq_section.instance.settings.eyebrow != blank %}
+<p class="{{ section_dom_id }}__eyebrow">{{ tiq_section.instance.settings.eyebrow | escape }}</p>
+{% endif %}
+{% if tiq_section.instance.settings.heading != blank %}
+<h2 id="{{ section_dom_id }}-heading" class="{{ section_dom_id }}__heading">{{ tiq_section.instance.settings.heading | escape }}</h2>
+{% endif %}
+{% if tiq_section.instance.settings.body != blank %}
+<div class="{{ section_dom_id }}__body rte">{{ tiq_section.instance.settings.body }}</div>
+{% endif %}
+{% if tiq_section.instance.settings.button_label != blank %}
+<a
+class="{{ section_dom_id }}__button {{ section_dom_id }}__button--{{ tiq_section.instance.settings.button_style }}"
+href="{{ tiq_section.instance.settings.button_link | default: '#' }}"
+>
+<span>{{ tiq_section.instance.settings.button_label | escape }}</span>
+<svg aria-hidden="true" viewBox="0 0 20 20" focusable="false"><path d="M4 10h11m-4-4 4 4-4 4"/></svg>
+</a>
+{% endif %}
+</div>
+<div class="{{ section_dom_id }}__media">
+{% if media_src != blank %}
+<img
+src="{{ media_src | escape }}"
+alt="{{ tiq_section.instance.settings.image_alt | escape }}"
+loading="lazy"
+width="1200"
+height="1200"
+>
+{% else %}
+{{ 'image' | placeholder_svg_tag: placeholder_class }}
+{% endif %}
+</div>
+</div>
 </section>
-
 <style>
-  #{{ section_dom_id }} {
-    --tiq-iwt-max-width: {{ tiq_section.instance.settings.max_width }}px;
-    --tiq-iwt-media-width: {{ tiq_section.instance.settings.media_width }}%;
-    --tiq-iwt-gap: {{ tiq_section.instance.settings.column_gap }}px;
-    --tiq-iwt-radius: {{ tiq_section.instance.settings.media_radius }}px;
-    --tiq-iwt-bg: {{ tiq_section.instance.settings.background_color }};
-    --tiq-iwt-heading: {{ tiq_section.instance.settings.heading_color }};
-    --tiq-iwt-text: {{ tiq_section.instance.settings.text_color }};
-    --tiq-iwt-muted: {{ tiq_section.instance.settings.muted_color }};
-    --tiq-iwt-accent: {{ tiq_section.instance.settings.accent_color }};
-    --tiq-iwt-button-text: {{ tiq_section.instance.settings.button_text_color }};
-    width: 100%;
-    background: var(--tiq-iwt-bg);
-    color: var(--tiq-iwt-text);
-  }
-
-  #{{ section_dom_id }} * { box-sizing: border-box; }
-
-  #{{ section_dom_id }} .{{ section_dom_id }}__inner {
-    width: min(100%, var(--tiq-iwt-max-width));
-    margin: 0 auto;
-    display: grid;
-    grid-template-columns: minmax(0, calc(100% - var(--tiq-iwt-media-width) - var(--tiq-iwt-gap))) minmax(0, var(--tiq-iwt-media-width));
-    align-items: center;
-    gap: var(--tiq-iwt-gap);
-    padding: {{ tiq_section.instance.settings.padding_top }}px {{ tiq_section.instance.settings.side_padding }}px {{ tiq_section.instance.settings.padding_bottom }}px;
-  }
-
-  #{{ section_dom_id }}.{{ section_dom_id }}--reverse .{{ section_dom_id }}__content { order: 2; }
-  #{{ section_dom_id }}.{{ section_dom_id }}--reverse .{{ section_dom_id }}__media { order: 1; }
-
-  #{{ section_dom_id }} .{{ section_dom_id }}__content {
-    min-width: 0;
-    max-width: 640px;
-  }
-
-  #{{ section_dom_id }} .{{ section_dom_id }}__eyebrow {
-    margin: 0 0 12px;
-    color: var(--tiq-iwt-accent);
-    font-size: 12px;
-    font-weight: 700;
-    line-height: 1.3;
-    letter-spacing: .12em;
-    text-transform: uppercase;
-  }
-
-  #{{ section_dom_id }} .{{ section_dom_id }}__heading {
-    margin: 0;
-    color: var(--tiq-iwt-heading);
-    font-family: inherit;
-    font-size: clamp(32px, 4.2vw, 58px);
-    font-weight: 650;
-    line-height: 1.04;
-    letter-spacing: -.035em;
-  }
-
-  #{{ section_dom_id }} .{{ section_dom_id }}__body {
-    max-width: 58ch;
-    margin-top: 20px;
-    color: var(--tiq-iwt-text);
-    font-size: 17px;
-    line-height: 1.65;
-  }
-
-  #{{ section_dom_id }} .{{ section_dom_id }}__body p { margin: 0 0 12px; }
-  #{{ section_dom_id }} .{{ section_dom_id }}__body p:last-child { margin-bottom: 0; }
-
-  #{{ section_dom_id }} .{{ section_dom_id }}__button {
-    width: fit-content;
-    min-height: 48px;
-    margin-top: 28px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    padding: 12px 20px;
-    border: 1px solid var(--tiq-iwt-accent);
-    border-radius: 9px;
-    color: var(--tiq-iwt-button-text);
-    font-size: 15px;
-    font-weight: 650;
-    line-height: 1;
-    text-decoration: none;
-    transition: transform .18s ease, box-shadow .18s ease, background .18s ease, color .18s ease;
-  }
-
-  #{{ section_dom_id }} .{{ section_dom_id }}__button--solid { background: var(--tiq-iwt-accent); }
-  #{{ section_dom_id }} .{{ section_dom_id }}__button--outline { background: transparent; color: var(--tiq-iwt-accent); }
-  #{{ section_dom_id }} .{{ section_dom_id }}__button:hover { transform: translateY(-1px); box-shadow: 0 8px 22px rgba(0, 0, 0, .12); }
-  #{{ section_dom_id }} .{{ section_dom_id }}__button:focus-visible { outline: 3px solid color-mix(in srgb, var(--tiq-iwt-accent) 32%, transparent); outline-offset: 3px; }
-  #{{ section_dom_id }} .{{ section_dom_id }}__button svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
-
-  #{{ section_dom_id }} .{{ section_dom_id }}__media {
-    width: 100%;
-    overflow: hidden;
-    aspect-ratio: {{ tiq_section.instance.settings.media_aspect }};
-    border-radius: var(--tiq-iwt-radius);
-    background: {{ tiq_section.instance.settings.media_background }};
-  }
-
-  #{{ section_dom_id }} .{{ section_dom_id }}__media img,
-  #{{ section_dom_id }} .{{ section_dom_id }}__media svg {
-    display: block;
-    width: 100%;
-    height: 100%;
-    object-fit: {{ tiq_section.instance.settings.image_fit }};
-    object-position: {{ tiq_section.instance.settings.image_position }};
-  }
-
-  @media (max-width: 749px) {
-    #{{ section_dom_id }} .{{ section_dom_id }}__inner {
-      grid-template-columns: minmax(0, 1fr);
-      gap: {{ tiq_section.instance.settings.mobile_gap }}px;
-      padding: {{ tiq_section.instance.settings.mobile_padding_top }}px {{ tiq_section.instance.settings.mobile_side_padding }}px {{ tiq_section.instance.settings.mobile_padding_bottom }}px;
-    }
-
-    #{{ section_dom_id }} .{{ section_dom_id }}__content,
-    #{{ section_dom_id }}.{{ section_dom_id }}--reverse .{{ section_dom_id }}__content { order: 1; }
-    #{{ section_dom_id }} .{{ section_dom_id }}__media,
-    #{{ section_dom_id }}.{{ section_dom_id }}--reverse .{{ section_dom_id }}__media { order: 2; }
-    #{{ section_dom_id }}.{{ section_dom_id }}--mobile-before .{{ section_dom_id }}__media { order: 1; }
-    #{{ section_dom_id }}.{{ section_dom_id }}--mobile-before .{{ section_dom_id }}__content { order: 2; }
-    #{{ section_dom_id }} .{{ section_dom_id }}__heading { font-size: clamp(30px, 10vw, 44px); }
-    #{{ section_dom_id }} .{{ section_dom_id }}__body { margin-top: 16px; font-size: 16px; }
-    #{{ section_dom_id }} .{{ section_dom_id }}__button { width: 100%; margin-top: 22px; }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    #{{ section_dom_id }} .{{ section_dom_id }}__button { transition: none; }
-  }
+#{{ section_dom_id }} {
+--tiq-iwt-max-width: {{ tiq_section.instance.settings.max_width }}px;
+--tiq-iwt-media-width: {{ tiq_section.instance.settings.media_width }}%;
+--tiq-iwt-gap: {{ tiq_section.instance.settings.column_gap }}px;
+--tiq-iwt-radius: {{ tiq_section.instance.settings.media_radius }}px;
+--tiq-iwt-bg: {{ tiq_section.instance.settings.background_color }};
+--tiq-iwt-heading: {{ tiq_section.instance.settings.heading_color }};
+--tiq-iwt-text: {{ tiq_section.instance.settings.text_color }};
+--tiq-iwt-muted: {{ tiq_section.instance.settings.muted_color }};
+--tiq-iwt-accent: {{ tiq_section.instance.settings.accent_color }};
+--tiq-iwt-button-text: {{ tiq_section.instance.settings.button_text_color }};
+width: 100%;
+background: var(--tiq-iwt-bg);
+color: var(--tiq-iwt-text);
+}
+#{{ section_dom_id }} * { box-sizing: border-box; }
+#{{ section_dom_id }} .{{ section_dom_id }}__inner {
+width: min(100%, var(--tiq-iwt-max-width));
+margin: 0 auto;
+display: grid;
+grid-template-columns: minmax(0, calc(100% - var(--tiq-iwt-media-width) - var(--tiq-iwt-gap))) minmax(0, var(--tiq-iwt-media-width));
+align-items: center;
+gap: var(--tiq-iwt-gap);
+padding: {{ tiq_section.instance.settings.padding_top }}px {{ tiq_section.instance.settings.side_padding }}px {{ tiq_section.instance.settings.padding_bottom }}px;
+}
+#{{ section_dom_id }}.{{ section_dom_id }}--reverse .{{ section_dom_id }}__content { order: 2; }
+#{{ section_dom_id }}.{{ section_dom_id }}--reverse .{{ section_dom_id }}__media { order: 1; }
+#{{ section_dom_id }} .{{ section_dom_id }}__content {
+min-width: 0;
+max-width: 640px;
+}
+#{{ section_dom_id }} .{{ section_dom_id }}__eyebrow {
+margin: 0 0 12px;
+color: var(--tiq-iwt-accent);
+font-size: 12px;
+font-weight: 700;
+line-height: 1.3;
+letter-spacing: .12em;
+text-transform: uppercase;
+}
+#{{ section_dom_id }} .{{ section_dom_id }}__heading {
+margin: 0;
+color: var(--tiq-iwt-heading);
+font-family: inherit;
+font-size: clamp(32px, 4.2vw, 58px);
+font-weight: 650;
+line-height: 1.04;
+letter-spacing: -.035em;
+}
+#{{ section_dom_id }} .{{ section_dom_id }}__body {
+max-width: 58ch;
+margin-top: 20px;
+color: var(--tiq-iwt-text);
+font-size: 17px;
+line-height: 1.65;
+}
+#{{ section_dom_id }} .{{ section_dom_id }}__body p { margin: 0 0 12px; }
+#{{ section_dom_id }} .{{ section_dom_id }}__body p:last-child { margin-bottom: 0; }
+#{{ section_dom_id }} .{{ section_dom_id }}__button {
+width: fit-content;
+min-height: 48px;
+margin-top: 28px;
+display: inline-flex;
+align-items: center;
+justify-content: center;
+gap: 10px;
+padding: 12px 20px;
+border: 1px solid var(--tiq-iwt-accent);
+border-radius: 9px;
+color: var(--tiq-iwt-button-text);
+font-size: 15px;
+font-weight: 650;
+line-height: 1;
+text-decoration: none;
+transition: transform .18s ease, box-shadow .18s ease, background .18s ease, color .18s ease;
+}
+#{{ section_dom_id }} .{{ section_dom_id }}__button--solid { background: var(--tiq-iwt-accent); }
+#{{ section_dom_id }} .{{ section_dom_id }}__button--outline { background: transparent; color: var(--tiq-iwt-accent); }
+#{{ section_dom_id }} .{{ section_dom_id }}__button:hover { transform: translateY(-1px); box-shadow: 0 8px 22px rgba(0, 0, 0, .12); }
+#{{ section_dom_id }} .{{ section_dom_id }}__button:focus-visible { outline: 3px solid color-mix(in srgb, var(--tiq-iwt-accent) 32%, transparent); outline-offset: 3px; }
+#{{ section_dom_id }} .{{ section_dom_id }}__button svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+#{{ section_dom_id }} .{{ section_dom_id }}__media {
+width: 100%;
+overflow: hidden;
+aspect-ratio: {{ tiq_section.instance.settings.media_aspect }};
+border-radius: var(--tiq-iwt-radius);
+background: {{ tiq_section.instance.settings.media_background }};
+}
+#{{ section_dom_id }} .{{ section_dom_id }}__media img,
+#{{ section_dom_id }} .{{ section_dom_id }}__media svg {
+display: block;
+width: 100%;
+height: 100%;
+object-fit: {{ tiq_section.instance.settings.image_fit }};
+object-position: {{ tiq_section.instance.settings.image_position }};
+}
+@media (max-width: 749px) {
+#{{ section_dom_id }} .{{ section_dom_id }}__inner {
+grid-template-columns: minmax(0, 1fr);
+gap: {{ tiq_section.instance.settings.mobile_gap }}px;
+padding: {{ tiq_section.instance.settings.mobile_padding_top }}px {{ tiq_section.instance.settings.mobile_side_padding }}px {{ tiq_section.instance.settings.mobile_padding_bottom }}px;
+}
+#{{ section_dom_id }} .{{ section_dom_id }}__content,
+#{{ section_dom_id }}.{{ section_dom_id }}--reverse .{{ section_dom_id }}__content { order: 1; }
+#{{ section_dom_id }} .{{ section_dom_id }}__media,
+#{{ section_dom_id }}.{{ section_dom_id }}--reverse .{{ section_dom_id }}__media { order: 2; }
+#{{ section_dom_id }}.{{ section_dom_id }}--mobile-before .{{ section_dom_id }}__media { order: 1; }
+#{{ section_dom_id }}.{{ section_dom_id }}--mobile-before .{{ section_dom_id }}__content { order: 2; }
+#{{ section_dom_id }} .{{ section_dom_id }}__heading { font-size: clamp(30px, 10vw, 44px); }
+#{{ section_dom_id }} .{{ section_dom_id }}__body { margin-top: 16px; font-size: 16px; }
+#{{ section_dom_id }} .{{ section_dom_id }}__button { width: 100%; margin-top: 22px; }
+}
+@media (prefers-reduced-motion: reduce) {
+#{{ section_dom_id }} .{{ section_dom_id }}__button { transition: none; }
+}
 </style>
