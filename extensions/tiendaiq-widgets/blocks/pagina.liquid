@@ -3,9 +3,59 @@
 {%- if tq_pagina.section_page.contractVersion == 1 -%}
 <div id="tiq-section-page" data-tiendaiq-section-page="1">
 {%- for tq_section in tq_pagina.section_page.sections -%}
+{%- if forloop.first -%}
+<div class="tiq-section-page__primary">
 {% render 'tiq-section-router', tiq_section: tq_section, product: product %}
+</div>
+{%- endif -%}
+{%- endfor -%}
+{%- assign tq_has_additional_sections = false -%}
+{%- for tq_section in tq_pagina.section_page.sections -%}
+{%- unless forloop.first -%}{%- assign tq_has_additional_sections = true -%}{%- endunless -%}
+{%- endfor -%}
+{%- if tq_has_additional_sections -%}
+<div class="tiq-section-page__additional" data-tiq-section-page-additional>
+{%- for tq_section in tq_pagina.section_page.sections -%}
+{%- unless forloop.first -%}
+{% render 'tiq-section-router', tiq_section: tq_section, product: product %}
+{%- endunless -%}
 {%- endfor -%}
 </div>
+{%- endif -%}
+</div>
+<script>
+(function () {
+  "use strict";
+
+  // The app block is mounted by Dawn inside the product-details column. The
+  // product-information section belongs there, but the reusable sections that
+  // follow it are page-level siblings in the PagePilot-style composition.
+  // Move only that second host beside the product component; no theme files or
+  // section_page data are rewritten.
+  function mountAdditionalSections() {
+    var host = document.querySelector("[data-tiq-section-page-additional]");
+    if (!host || host.dataset.tiqSectionPageMounted === "true") return;
+
+    var productComponent = host.closest("product-component");
+    var destination = productComponent && productComponent.parentElement;
+    if (!destination) destination = document.querySelector("main");
+    if (!destination) return;
+
+    if (productComponent && productComponent.nextSibling) {
+      destination.insertBefore(host, productComponent.nextSibling);
+    } else {
+      destination.appendChild(host);
+    }
+    host.dataset.tiqSectionPageMounted = "true";
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", mountAdditionalSections, { once: true });
+  } else {
+    mountAdditionalSections();
+  }
+}());
+</script>
 {%- elsif tq_pagina.version == 1 and tq_pagina.arbol -%}
 {{ 'tiq-render.css' | asset_url | stylesheet_tag }}
 <div id="tiq-documento" aria-live="polite" style="min-height:70vh"></div>

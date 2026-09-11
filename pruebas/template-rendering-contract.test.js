@@ -55,6 +55,13 @@ test("el SSR Liquid resuelve el mismo descriptor antes del alias legacy", () => 
   assert.match(liquid, /tq_renderer == 'piloto-pinza'/);
 });
 
+test("las composiciones posteriores salen del bloque de detalles de Dawn", () => {
+  assert.match(liquid, /data-tiq-section-page-additional/);
+  assert.match(liquid, /host\.closest\("product-component"\)/);
+  assert.match(liquid, /destination\.insertBefore\(host, productComponent\.nextSibling\)/);
+  assert.match(liquid, /dataset\.tiqSectionPageMounted/);
+});
+
 test("Performance Story usa sólo datos del producto y no siembra claims comerciales", () => {
   const start = widget.indexOf("function renderPerformanceStory");
   const end = widget.indexOf("function iniciarTimers", start);
