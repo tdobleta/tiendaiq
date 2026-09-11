@@ -29,6 +29,8 @@ const { parseCleanupCommand, ensureSyntheticCleanupAnchor } = require("./src/cap
 const { verifyRefreshRequest, parseRefreshRequest } = require("./src/shopify/token-refresh-broker");
 const {
   guardarPaginaDB,
+  crearPaginaSiNoExisteDB,
+  guardarPaginaSiRevisionDB,
   leerPaginaDB,
   listarPaginasDB,
   encolarJobDB,
@@ -69,7 +71,7 @@ const { TenantContext } = require("./src/tenancy/tenant-context");
 const { verifyAndNormalizeWebhook } = require("./src/webhooks/verify-and-normalize");
 const { generationAdmissionPause } = require("./src/generation/admission-control");
 const { resolveTemplateForCreation } = require("./src/domain/template-registry");
-const { applyTemplateBoundEdit, applyPdp01Evidence, attachPdp01MerchantMedia } = require("./src/domain/fixed-template-edit-policy");
+const { applyTemplateBoundEdit, applyPdp01Evidence } = require("./src/domain/fixed-template-edit-policy");
 const { assertFixedTemplatePublishable } = require("./src/shopify/fixed-template-publish-guard");
 const { assertSectionPagePublishable } = require("./src/shopify/section-page-publish-guard");
 const {
@@ -93,11 +95,15 @@ const documentoEditor = require("./nucleo/documento");
 const { documentoDePagina, guardarBorradorV1 } = require("./nucleo/migraciones/pagina");
 const { productoPreviewDePagina } = require("./nucleo/producto-preview");
 const { publicarDocumentoV1 } = require("./nucleo/publicar-v1");
-const { createProductPage, editorRegistry, validatePage: validateSectionPage } = require("./src/section-pipeline/page-pipeline");
+const { createProductPage, editorRegistry, instantiateSection, validatePage: validateSectionPage } = require("./src/section-pipeline/page-pipeline");
+const { DEMO_SECTION_PAGE_COMPOSITION_V1 } = require("./src/section-pipeline/page-compositions");
+const { applyPageTransition } = require("./src/section-pipeline/page-transition");
 const { renderSectionPage } = require("./src/section-pipeline/preview-renderer");
+const { assertCompatiblePageWrite } = require("./src/section-pipeline/page-write-policy");
 
 function sectionPageDemo() {
   return createProductPage({
+    composition: DEMO_SECTION_PAGE_COMPOSITION_V1,
     product: {
       id: "gid://shopify/Product/demo",
       title: "Voltra Blade Pro",
@@ -1036,6 +1042,24 @@ async function api(req, res, url) {
     return json(res, 200, { version: 1, sections: editorRegistry() });
   }
 
+  const mInstantiateSection = ruta.match(/^\/api\/paginas\/([^/]+)\/sections\/instantiate$/);
+  if (req.method === "POST" && mInstantiateSection) {
+    const existente = await leerPagina(sesion.tenant, mInstantiateSection[1]);
+    if (!existente) return json(res, 404, { error: "No existe esa página" });
+    try {
+      const sectionPage = validateSectionPage(existente.data?.section_page);
+      const body = await leerCuerpo(req);
+      return json(res, 200, {
+        instance: instantiateSection(body.definition, sectionPage.productSnapshot, {
+          claims: sectionPage.evidence?.verifiedClaims || [],
+          visualObservations: sectionPage.evidence?.visualObservations || []
+        })
+      });
+    } catch (error) {
+      return json(res, 400, { error: error.message || "No se pudo preparar la sección." });
+    }
+  }
+
   const mSectionPreview = ruta.match(/^\/api\/paginas\/([^/]+)\/section-preview$/);
   if (req.method === "POST" && mSectionPreview) {
     const existente = await leerPagina(sesion.tenant, mSectionPreview[1]);
@@ -1248,25 +1272,41 @@ async function api(req, res, url) {
     let existente = await leerPagina(sesion.tenant, pageId);
     let sectionDraftCreated = false;
     if (requestedTemplate.rendererKey === "section-page-v1") {
+      // Crear una página es idempotente por request_id. Una solicitud nueva
+      // nunca reemplaza silenciosamente una página/draft existente.
+      if (existente && existente.generacion?.request_id !== request_id) {
+        return json(res, 409, {
+          error: "Ya existe una página para este producto. Editá la existente o iniciá una sustitución explícita.",
+          code: "PAGE_ALREADY_EXISTS"
+        });
+      }
       try {
-        // Crear es una acción explícita: siempre empieza desde la composición
-        // canónica. No arrastra un borrador anterior ni sustituciones hechas
-        // por otra revisión del pipeline.
-        const base = await crearPaginaBase(producto_id, sesion, { idioma, angulo, estilo });
-        existente = {
-          id: pageId,
-          shopify_product_id: producto_id,
-          estado: "borrador",
-          data: base.data,
-          urls: base.urls,
-          avisos: base.avisos,
-          generacion: { status: "copy_pending", ai: false },
-          url_publica: null,
-          actualizado: new Date().toISOString(),
-          titulo: base.titulo
-        };
-        await guardarPagina(sesion.tenant, existente);
-        sectionDraftCreated = true;
+        if (!existente) {
+          // La composición canónica se materializa una sola vez. El insert
+          // condicional resuelve la carrera entre dos pestañas/requests.
+          const base = await crearPaginaBase(producto_id, sesion, { idioma, angulo, estilo });
+          const candidato = {
+            id: pageId,
+            shopify_product_id: producto_id,
+            estado: "borrador",
+            data: base.data,
+            urls: base.urls,
+            avisos: base.avisos,
+            generacion: { status: "copy_pending", ai: false, request_id },
+            url_publica: null,
+            actualizado: new Date().toISOString(),
+            titulo: base.titulo
+          };
+          const result = await crearPaginaSiNoExisteDB(sesion.tenant, pageId, candidato);
+          existente = result.page;
+          sectionDraftCreated = result.created;
+          if (existente && existente.generacion?.request_id !== request_id) {
+            return json(res, 409, {
+              error: "Ya existe una página para este producto. Editá la existente o iniciá una sustitución explícita.",
+              code: "PAGE_ALREADY_EXISTS"
+            });
+          }
+        }
       } catch (error) {
         const codigo = Number(error?.status) >= 400 && Number(error.status) < 500 ? Number(error.status) : 422;
         return json(res, codigo, { error: error.message || "No se pudo preparar la página por secciones.", code: error.code || "SECTION_PAGE_CREATION_FAILED" });
@@ -1314,7 +1354,7 @@ async function api(req, res, url) {
 
     const plan = await estadoPlan(sesion);
     const { job } = await encolarGeneracionDB(sesion.tenant, {
-      payload: { productId: producto_id, idioma, angulo, estilo },
+      payload: { productId: producto_id, idioma, angulo, estilo, requestId: request_id },
       idempotencyKey: `generate:${request_id}`,
       period: mesActual(),
       limit: plan.limite,
@@ -1336,6 +1376,11 @@ async function api(req, res, url) {
       }
     }
     const cuerpo = await leerCuerpo(req);
+    try {
+      assertCompatiblePageWrite({ persistedData: existente.data, body: cuerpo });
+    } catch (error) {
+      return json(res, error.status || 409, { error: error.message });
+    }
     // Camino canónico: el inspector v3 envía el documento completo y el mismo
     // núcleo que renderiza lo valida antes de persistirlo.
     if (Object.prototype.hasOwnProperty.call(cuerpo, "documento")) {
@@ -1358,13 +1403,23 @@ async function api(req, res, url) {
 
     if (Object.prototype.hasOwnProperty.call(cuerpo, "section_page")) {
       try {
-        const sectionPage = validateSectionPage(cuerpo.section_page);
+        if (!Number.isInteger(cuerpo.expected_revision) || cuerpo.expected_revision < 0) {
+          return json(res, 400, { error: "Falta expected_revision para guardar sin sobrescribir cambios recientes." });
+        }
+        const sectionPage = applyPageTransition({
+          persisted: existente.data?.section_page,
+          candidate: cuerpo.section_page,
+          expectedRevision: cuerpo.expected_revision
+        });
         existente.data = { ...(existente.data || {}), section_page: sectionPage };
         if (existente.estado === "publicada") existente.cambios_sin_publicar = true;
-        await guardarPagina(sesion.tenant, existente);
+        existente.actualizado = new Date().toISOString();
+        const saved = await guardarPaginaSiRevisionDB(sesion.tenant, existente.id, existente, cuerpo.expected_revision);
+        if (!saved) return json(res, 409, { error: "La página cambió en otra sesión. Recargá antes de guardar para no perder cambios." });
         return json(res, 200, { ...existente, section_page: sectionPage });
       } catch (error) {
-        return json(res, 400, { error: error.message || "La página no cumple el contrato de secciones." });
+        const status = error.code === "SECTION_PAGE_REVISION_CONFLICT" ? 409 : 400;
+        return json(res, status, { error: error.message || "La página no cumple el contrato de secciones." });
       }
     }
 
@@ -1399,10 +1454,15 @@ async function api(req, res, url) {
     return json(res, 200, existente);
   }
 
-  // POST /api/paginas/:id/imagenes — subir una foto de la compu al producto.
-  // Entra al pool de la página y a Shopify como media del producto, así el
-  // Liquid publicado la resuelve igual que a cualquier otra foto.
+  // Galería editorial de Shopify Files. Elegir una imagen para una sección no
+  // modifica silenciosamente product.media ni el snapshot del producto.
   const mImg = ruta.match(/^\/api\/paginas\/([^/]+)\/imagenes$/);
+  if (req.method === "GET" && mImg) {
+    const registro = await leerPagina(sesion.tenant, mImg[1]);
+    if (!registro) return json(res, 404, { error: "No existe esa página" });
+    const { listarImagenesTienda } = require("./imagenes");
+    return json(res, 200, await listarImagenesTienda(sesion, { after: url.searchParams.get("after") }));
+  }
   if (req.method === "POST" && mImg) {
     const registro = await leerPagina(sesion.tenant, mImg[1]);
     if (!registro) return json(res, 404, { error: "No existe esa página" });
@@ -1415,29 +1475,9 @@ async function api(req, res, url) {
     const { nombre, mime, base64 } = await leerCuerpo(req, 15_000_000);
     if (!base64) return json(res, 400, { error: "Falta la imagen" });
 
-    const { subirImagenProducto } = require("./imagenes");
-    const { media_id, url } = await subirImagenProducto(
-      sesion, registro.shopify_product_id, nombre, mime || "image/jpeg", base64
-    );
-
-    if (registro.data?.section_page) {
-      const sectionPage = validateSectionPage(registro.data.section_page);
-      const media = Array.isArray(sectionPage.productSnapshot?.media) ? sectionPage.productSnapshot.media : [];
-      registro.data.section_page = validateSectionPage({
-        ...sectionPage,
-        productSnapshot: {
-          ...(sectionPage.productSnapshot || {}),
-          media: [...media.filter((item) => item.id !== media_id), { id: media_id, url, alt: String(nombre || "Imagen del producto").slice(0, 180) }]
-        }
-      });
-    } else {
-      registro.data = attachPdp01MerchantMedia({ persistedData: registro.data, mediaId: media_id });
-      registro.data.pool_imagenes = registro.data.pool_imagenes || [];
-      registro.data.pool_imagenes.push({ media_id, tipo: "producto_limpio" });
-    }
-    registro.urls = { ...(registro.urls || {}), [media_id]: url };
-    await guardarPagina(sesion.tenant, registro);
-    return json(res, 200, { media_id, url });
+    const { subirImagenTienda } = require("./imagenes");
+    const uploaded = await subirImagenTienda(sesion, nombre, mime || "image/jpeg", base64);
+    return json(res, 200, { ...uploaded, alt: String(nombre || "Imagen").slice(0, 180) });
   }
 
   // Subida directa de video (2 pasos, el binario no pasa por acá):
@@ -1613,6 +1653,20 @@ const servidor = http.createServer(async (req, res) => {
         return json(res, 200, { html: await renderSectionPage(validateSectionPage(body.section_page)) });
       } catch (error) {
         return json(res, 400, { error: error.message || "La demostración no cumple el contrato." });
+      }
+    }
+    if (env.DEV_MODE === "1" && req.method === "POST" && url.pathname === "/section-page-demo-section-instance") {
+      try {
+        const body = await leerCuerpo(req);
+        const page = sectionPageDemo();
+        return json(res, 200, {
+          instance: instantiateSection(body.definition, page.productSnapshot, {
+            claims: page.evidence.verifiedClaims,
+            visualObservations: page.evidence.visualObservations
+          })
+        });
+      } catch (error) {
+        return json(res, 400, { error: error.message || "No se pudo preparar la sección de demostración." });
       }
     }
 

@@ -83,8 +83,23 @@ function rlsPool() {
       }
       if (normalized.startsWith("INSERT INTO public.paginas")) {
         assert.equal(values[0], activeTenant, "la escritura salió del tenant fijado por RLS");
-        rows.set(`${activeTenant}:${values[1]}`, values[2]);
+        const key = `${activeTenant}:${values[1]}`;
+        if (normalized.includes("ON CONFLICT (tienda, id) DO NOTHING")) {
+          if (rows.has(key)) return { rows: [] };
+          rows.set(key, values[2]);
+          return { rows: [{ datos: values[2] }] };
+        }
+        rows.set(key, values[2]);
         return { rows: [] };
+      }
+      if (normalized.startsWith("UPDATE public.paginas AS page")) {
+        assert.equal(values[0], activeTenant, "la escritura condicional salió del tenant fijado por RLS");
+        const key = `${activeTenant}:${values[1]}`;
+        const current = rows.get(key);
+        const revision = Number(current?.data?.section_page?.revision ?? 0);
+        if (!current || revision !== values[3]) return { rows: [] };
+        rows.set(key, values[2]);
+        return { rows: [{ saved: 1 }] };
       }
       if (normalized.startsWith("SELECT datos FROM public.paginas")) {
         assert.equal(values[0], activeTenant, "la lectura salió del tenant fijado por RLS");
@@ -153,6 +168,22 @@ describe("PageRepository protegido por TenantContext", () => {
     assert.deepEqual(await repository.findById(tenantA, "p1"), { secreto: "solo-a" });
   });
 
+  test("crearSiNoExiste conserva el primer borrador y devuelve el existente", async () => {
+    const pool = rlsPool();
+    const repository = createPageRepository(pool);
+    const tenant = TenantContext.fromShopDomain("a.myshopify.com");
+    const first = { id: "p1", data: { section_page: { revision: 0 }, source: "first" } };
+    const second = { id: "p1", data: { section_page: { revision: 0 }, source: "second" } };
+
+    const created = await repository.createIfAbsent(tenant, "p1", first);
+    const reused = await repository.createIfAbsent(tenant, "p1", second);
+
+    assert.equal(created.created, true);
+    assert.equal(reused.created, false);
+    assert.equal(reused.page.data.source, "first");
+    assert.equal((await repository.findById(tenant, "p1")).data.source, "first");
+  });
+
   test("rechaza un objeto fabricado antes de pedir una conexión", async () => {
     const pool = rlsPool();
     const repository = createPageRepository(pool);
@@ -176,6 +207,22 @@ describe("PageRepository protegido por TenantContext", () => {
       "COMMIT",
       "RELEASE"
     ]);
+  });
+
+  test("el guardado de secciones compara la revisión dentro de la escritura", async () => {
+    const pool = rlsPool();
+    const repository = createPageRepository(pool);
+    const tenant = TenantContext.fromShopDomain("a.myshopify.com");
+    const base = { id: "p1", data: { section_page: { revision: 0 } } };
+    await repository.save(tenant, "p1", base);
+
+    assert.equal(await repository.saveSectionPageIfRevision(tenant, "p1", {
+      id: "p1", data: { section_page: { revision: 1 } }
+    }, 0), true);
+    assert.equal(await repository.saveSectionPageIfRevision(tenant, "p1", {
+      id: "p1", data: { section_page: { revision: 2 } }
+    }, 0), false);
+    assert.equal((await repository.findById(tenant, "p1")).data.section_page.revision, 1);
   });
 
   test("una compensacion tardia no pisa el job activo de publicacion", async () => {

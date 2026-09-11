@@ -34,6 +34,43 @@ const OUTPUT_SCHEMA = Object.freeze({
           mediaId: { type: "string", maxLength: 200 }
         }
       }
+    },
+    sectionCopy: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        productBenefits: {
+          type: "array", maxItems: 4,
+          items: { type: "string", maxLength: 180 }
+        },
+        imageWithTextBody: { type: "string", maxLength: 1200 },
+        timelineIntro: { type: "string", maxLength: 700 },
+        timelineSteps: {
+          type: "array", maxItems: 4,
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: ["heading", "body"],
+            properties: {
+              heading: { type: "string", maxLength: 180 },
+              body: { type: "string", maxLength: 700 }
+            }
+          }
+        },
+        benefitsIntro: { type: "string", maxLength: 700 },
+        benefitItems: {
+          type: "array", maxItems: 6,
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: ["heading", "body"],
+            properties: {
+              heading: { type: "string", maxLength: 180 },
+              body: { type: "string", maxLength: 700 }
+            }
+          }
+        }
+      }
     }
   }
 });
@@ -64,7 +101,42 @@ function validateResearch(value, mediaIds) {
     .filter((item) => item?.text && allowedMedia.has(item.mediaId))
     .slice(0, 8)
     .map((item) => ({ text: String(item.text).trim().slice(0, 180), mediaId: item.mediaId }));
-  return Object.freeze({ summary, claims: Object.freeze(claims), visualObservations: Object.freeze(visualObservations) });
+  const copyText = (text, max) => String(text || "").trim().slice(0, max);
+  const copyItems = (items, maxItems) => (Array.isArray(items) ? items : [])
+    .slice(0, maxItems)
+    .map((item) => ({
+      heading: copyText(item?.heading, 180),
+      body: copyText(item?.body, 700)
+    }))
+    .filter((item) => item.heading || item.body);
+  const sectionCopy = {
+    productBenefits: (Array.isArray(value?.sectionCopy?.productBenefits) ? value.sectionCopy.productBenefits : [])
+      .slice(0, 4).map((item) => copyText(item, 180)).filter(Boolean),
+    imageWithTextBody: copyText(value?.sectionCopy?.imageWithTextBody, 1200),
+    timelineIntro: copyText(value?.sectionCopy?.timelineIntro, 700),
+    timelineSteps: copyItems(value?.sectionCopy?.timelineSteps, 4),
+    benefitsIntro: copyText(value?.sectionCopy?.benefitsIntro, 700),
+    benefitItems: copyItems(value?.sectionCopy?.benefitItems, 6)
+  };
+  const hasSectionCopy = sectionCopy.productBenefits.length
+    || sectionCopy.imageWithTextBody
+    || sectionCopy.timelineIntro
+    || sectionCopy.timelineSteps.length
+    || sectionCopy.benefitsIntro
+    || sectionCopy.benefitItems.length;
+  return Object.freeze({
+    summary,
+    claims: Object.freeze(claims),
+    visualObservations: Object.freeze(visualObservations),
+    sectionCopy: Object.freeze(hasSectionCopy ? {
+      productBenefits: Object.freeze(sectionCopy.productBenefits),
+      imageWithTextBody: sectionCopy.imageWithTextBody,
+      timelineIntro: sectionCopy.timelineIntro,
+      timelineSteps: Object.freeze(sectionCopy.timelineSteps),
+      benefitsIntro: sectionCopy.benefitsIntro,
+      benefitItems: Object.freeze(sectionCopy.benefitItems)
+    } : {})
+  });
 }
 
 async function researchProduct(product, media, { idioma = "es", angulo = "" } = {}) {
@@ -82,6 +154,9 @@ async function researchProduct(product, media, { idioma = "es", angulo = "" } = 
     "Analizás un producto para completar únicamente el contenido editable de una sección de producto ya diseñada.",
     "El Liquid, el CSS, el JavaScript, la estructura, los precios, las variantes y el carrito están fuera de tu alcance.",
     "summary debe ser copy comercial sobrio basado en la descripción de Shopify y en observaciones visuales conservadoras.",
+    "sectionCopy contiene únicamente palabras para slots editoriales permitidos: beneficios, cuerpo de Imagen con texto, introducción y etapas de Timeline, e introducción y tarjetas de Beneficios.",
+    "No cambies el título real del producto, imágenes, precio, variantes, estructura, nombres de bloques, reseñas, ratings, descuentos, envío, garantía ni métodos de pago.",
+    "Si un slot no puede escribirse con respaldo suficiente, dejalo vacío u omitilo. No rellenes con frases genéricas que parezcan hechos del producto.",
     "Un claim sólo puede entrar en claims si está expresamente respaldado por la descripción de Shopify; source debe ser shopify_description.",
     "Las imágenes sólo permiten describir color, forma, piezas visibles, acabado y contexto. Nunca prueban materiales, resultados, certificaciones, salud, rendimiento, popularidad ni calidad.",
     "No inventes reseñas, estrellas, clientes, descuentos, escasez, entrega, garantía o métodos de pago.",

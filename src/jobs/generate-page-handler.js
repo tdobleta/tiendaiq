@@ -18,7 +18,8 @@ async function finalizeWithRetry(generations, tenant, value, { signal, retryMs =
       return await generations.finalize(tenant, value);
     } catch (error) {
       lastError = error;
-      if (error?.nonRetryable || attempt === 3 || signal?.aborted) break;
+      if (error?.nonRetryable) throw error;
+      if (attempt === 3 || signal?.aborted) break;
       await sleep(retryMs * attempt, signal);
     }
   }
@@ -65,7 +66,7 @@ function createGeneratePageHandler({ sessions, generations, pages, generate, met
     },
 
     async run(job, { signal } = {}) {
-      const { reservationId, productId, idioma = "es", angulo = "", estilo = "section-page-v1" } = job.payload || {};
+      const { reservationId, productId, idioma = "es", angulo = "", estilo = "section-page-v1", requestId = null } = job.payload || {};
       const pageId = pageIdFromProduct(productId);
       if (!reservationId || !pageId) {
         const error = new Error("El job de generación está incompleto");
@@ -93,6 +94,14 @@ function createGeneratePageHandler({ sessions, generations, pages, generate, met
         error.nonRetryable = true;
         throw error;
       }
+
+      // A generation result must not overwrite an editor change made while
+      // Anthropic was running. Section pages expose a durable revision; legacy
+      // pages keep the previous behavior until their own CAS contract exists.
+      const pageAtStart = await pages.get(job.tenant, pageId);
+      const expectedPageRevision = Number.isInteger(pageAtStart?.data?.section_page?.revision)
+        ? pageAtStart.data.section_page.revision
+        : null;
 
       if (["provider_in_flight", "ambiguous"].includes(reservation.providerState?.state)) {
         await transitionProvider(generations, job.tenant, reservationId, {
@@ -124,20 +133,31 @@ function createGeneratePageHandler({ sessions, generations, pages, generate, met
         if (!providerAttempt?.started) {
           throw ambiguousProviderStateError("El adaptador no confirmó el estado durable antes de llamar al proveedor");
         }
+        const generatedData = data?.section_page && expectedPageRevision !== null
+          ? {
+            ...data,
+            section_page: { ...data.section_page, revision: expectedPageRevision + 1 }
+          }
+          : data;
         const page = {
           id: pageId,
           shopify_product_id: productId,
           estado: "borrador",
-          data,
+          data: generatedData,
           urls,
           avisos,
+          generacion: {
+            status: "completed",
+            ai: true,
+            ...(requestId ? { request_id: String(requestId) } : {})
+          },
           url_publica: null,
           actualizado: new Date().toISOString()
         };
         await finalizeWithRetry(
           generations,
           job.tenant,
-          { reservationId, pageId, page },
+          { reservationId, pageId, page, expectedPageRevision },
           { signal, retryMs: finalizeRetryMs }
         );
         metrics("pagina_generada", { tienda: job.tenantId, job_id: job.id, segundos: (Date.now() - startedAt) / 1000 });

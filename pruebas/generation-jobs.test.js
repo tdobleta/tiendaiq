@@ -76,6 +76,10 @@ function generationPool(initialUsage = 2, { globalPending = 0, tenantPending = 0
       if (q.includes("usage_reservations") && q.includes("id = $2 FOR UPDATE")) {
         return { rows: state.reservations.filter((r) => r.tenant_id === values[0] && r.id === values[1]) };
       }
+      if (q.startsWith("SELECT datos FROM public.paginas")) {
+        const page = state.pages.get(`${values[0]}:${values[1]}`);
+        return { rows: page ? [{ datos: structuredClone(page) }] : [] };
+      }
       if (q.startsWith("INSERT INTO public.paginas")) {
         state.pages.set(`${values[0]}:${values[1]}`, structuredClone(values[2]));
         return { rows: [] };
@@ -186,6 +190,34 @@ describe("GenerationRepository", () => {
     assert.equal(pool.state.pages.size, 0);
   });
 
+  test("confirmar no pisa una edición hecha durante la generación", async () => {
+    const pool = generationPool(1);
+    const repository = createGenerationRepository(pool);
+    const queued = await repository.enqueue(tenant, {
+      payload: { productId: "gid://shopify/Product/42" },
+      idempotencyKey: "generate:req-page-cas",
+      period,
+      limit: 3
+    });
+    pool.state.pages.set(`${tenant.tenantId}:42`, {
+      id: "42",
+      data: { section_page: { revision: 2, merchantEdit: true } }
+    });
+
+    await assert.rejects(
+      repository.finalize(tenant, {
+        reservationId: queued.reservation.id,
+        pageId: "42",
+        expectedPageRevision: 1,
+        page: { id: "42", data: { section_page: { revision: 2, ai: true } } }
+      }),
+      (error) => error.code === "GENERATION_PAGE_CHANGED" && error.nonRetryable === true
+    );
+
+    assert.equal(pool.state.reservations[0].status, "reserved");
+    assert.equal(pool.state.pages.get(`${tenant.tenantId}:42`).data.section_page.merchantEdit, true);
+  });
+
   test("liberar dos veces descuenta exactamente una", async () => {
     const pool = generationPool(1);
     const repository = createGenerationRepository(pool);
@@ -276,6 +308,70 @@ describe("GeneratePageHandler", () => {
     assert.equal(result.pageId, "42");
     assert.equal(finalized.page.data.titulo, "IA");
     assert.equal(finalized.reservationId, "reservation-1");
+  });
+
+  test("captura la revisión de la página y la incrementa al confirmar una generación", async () => {
+    let finalized;
+    const handler = createGeneratePageHandler({
+      sessions: { async get() { return { tienda: tenant.tenantId, token: "token" }; } },
+      generations: {
+        async getReservation() { return { status: "reserved" }; },
+        async transitionProvider() { return { started: true, state: "provider_in_flight", attemptId: "attempt-section" }; },
+        async finalize(context, value) { finalized = value; },
+        async release() {}
+      },
+      pages: { async get() { return { data: { section_page: { revision: 4 } } }; } },
+      async generate(productId, session, options) {
+        await options.beforeProviderCall();
+        return { data: { section_page: { revision: 0 } }, urls: {}, avisos: [], uso: {} };
+      },
+      metrics() {}
+    });
+
+    await handler.run({
+      ...baseJob,
+      payload: { ...baseJob.payload, requestId: "request-1" }
+    });
+
+    assert.equal(finalized.expectedPageRevision, 4);
+    assert.equal(finalized.page.data.section_page.revision, 5);
+    assert.deepEqual(finalized.page.generacion, { status: "completed", ai: true, request_id: "request-1" });
+  });
+
+  test("un conflicto de edición no se convierte en estado ambiguo ni retiene el cupo", async () => {
+    let released;
+    const handler = createGeneratePageHandler({
+      sessions: { async get() { return { tienda: tenant.tenantId, token: "token" }; } },
+      generations: {
+        async getReservation() { return { status: "reserved" }; },
+        async transitionProvider() { return { started: true, state: "provider_in_flight", attemptId: "attempt-conflict" }; },
+        async finalize() {
+          const error = new Error("La página cambió mientras se generaba el contenido");
+          error.code = "GENERATION_PAGE_CHANGED";
+          error.nonRetryable = true;
+          throw error;
+        },
+        async release(context, id, error) { released = { id, error }; }
+      },
+      pages: { async get() { return { data: { section_page: { revision: 1 } } }; } },
+      async generate(productId, session, options) {
+        await options.beforeProviderCall();
+        return { data: { section_page: { revision: 0 } }, urls: {}, avisos: [], uso: {} };
+      },
+      metrics() {}
+    });
+
+    let conflict;
+    await assert.rejects(
+      handler.run(baseJob),
+      (error) => {
+        conflict = error;
+        return error.code === "GENERATION_PAGE_CHANGED" && error.nonRetryable === true;
+      }
+    );
+    await handler.onTerminalFailure(baseJob, conflict);
+    assert.equal(released.id, "reservation-1");
+    assert.match(released.error.message, /página cambió/);
   });
 
   test("un retry confirmado recupera la página sin volver a llamar a IA", async () => {

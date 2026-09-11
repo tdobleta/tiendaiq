@@ -33,7 +33,7 @@
     assign cta_href = '#'
   endif
 
-  assign reviews_label_display = '693+ Reviews'
+  assign reviews_label_display = '693+ reseñas'
 
   assign cta_icon_display = section.settings.button_icon
   if cta_icon_display == '♧'
@@ -172,7 +172,7 @@
       <!-- Product information and conversion panel. -->
       <div class="{{ section_dom_id }}__details">
         <div class="{{ section_dom_id }}__rating-row">
-          <span class="{{ section_dom_id }}__stars" aria-label="5 de 5 estrellas">{{ section.settings.rating_stars }}</span>
+          <span class="{{ section_dom_id }}__stars" aria-label="5 de 5 estrellas">{{ section.settings.rating_stars | escape }}</span>
           <span>{{ section.settings.rating_text | escape }}</span>
           {% if section.settings.reviews_link != blank %}
             <a href="{{ section.settings.reviews_link }}" class="{{ section_dom_id }}__reviews-link">{{ reviews_label_display }}</a>
@@ -248,7 +248,7 @@
                     {% assign bundle_compare_display = bundle_compare_total | money %}
                     {% assign unit_savings = current_variant.compare_at_price | minus: current_variant.price %}
                     {% assign bundle_savings = unit_savings | times: bundle_units %}
-                    {% capture bundle_subtitle_display %}You save {{ bundle_savings | money }}{% endcapture %}
+                    {% capture bundle_subtitle_display %}Ahorras {{ bundle_savings | money }}{% endcapture %}
                   {% else %}
                     {% assign bundle_compare_display = blank %}
                     {% assign bundle_subtitle_display = blank %}
@@ -332,9 +332,9 @@
               {% if block.type == 'trust_item' %}
                 <span class="{{ section_dom_id }}__trust-item" {{ block.shopify_attributes }}>
                   <span class="{{ section_dom_id }}__trust-icon" aria-hidden="true">
-                    {% if block.settings.icon_glyph == '♢' and block.settings.text contains 'Shipping' %}
+                    {% if block.settings.icon_glyph == '♢' and block.settings.text contains 'Shipping' or block.settings.icon_glyph == '♢' and block.settings.text contains 'Envío' %}
                       <svg viewBox="0 0 24 24" focusable="false"><path d="m3 7 9-4 9 4v10l-9 4-9-4V7Zm0 0 9 4 9-4M12 11v10" /></svg>
-                    {% elsif block.settings.icon_glyph == '♢' and block.settings.text contains 'Guarantee' %}
+                    {% elsif block.settings.icon_glyph == '♢' and block.settings.text contains 'Guarantee' or block.settings.icon_glyph == '♢' and block.settings.text contains 'Garantía' %}
                       <svg viewBox="0 0 24 24" focusable="false"><path d="M5 8h14l-1 12H6L5 8Zm3 0V6a4 4 0 0 1 8 0v2m-6 6 1.4 1.4L15 12" /></svg>
                     {% else %}
                       {{ block.settings.icon_glyph }}
@@ -431,7 +431,7 @@
                 >
                   {% case tab_layout %}
                     {% when 'review' %}
-                      <div class="{{ section_dom_id }}__review-stars" aria-label="{{ block.settings.rating_label | escape }}">{{ block.settings.rating_stars }}</div>
+                      <div class="{{ section_dom_id }}__review-stars" aria-label="{{ block.settings.rating_label | escape }}">{{ block.settings.rating_stars | escape }}</div>
                       <div class="{{ section_dom_id }}__review-content">{{ block.settings.content }}</div>
                       <div class="{{ section_dom_id }}__reviewer">
                         {% if block.settings.reviewer_image != blank %}
@@ -1341,50 +1341,50 @@
   "tag": "section",
   "class": "product-hero-information-section",
   "settings": [
-    { "type": "header", "content": "Layout" },
-    { "type": "range", "id": "max_width", "label": "Section max width", "min": 900, "max": 1400, "step": 10, "unit": "px", "default": 940 },
-    { "type": "range", "id": "media_width", "label": "Media column width", "min": 38, "max": 54, "step": 1, "unit": "%", "default": 46 },
-    { "type": "range", "id": "column_gap", "label": "Gap between columns", "min": 16, "max": 80, "step": 1, "unit": "px", "default": 40 },
-    { "type": "range", "id": "card_gap", "label": "Gap between cards", "min": 2, "max": 20, "step": 1, "unit": "px", "default": 5 },
-    { "type": "range", "id": "thumbnail_size", "label": "Thumbnail size", "min": 44, "max": 100, "step": 1, "unit": "px", "default": 60 },
-    { "type": "range", "id": "desktop_padding_top", "label": "Desktop top padding", "min": 0, "max": 100, "step": 1, "unit": "px", "default": 24 },
-    { "type": "range", "id": "desktop_padding_bottom", "label": "Desktop bottom padding", "min": 0, "max": 100, "step": 1, "unit": "px", "default": 28 },
-    { "type": "range", "id": "mobile_padding_top", "label": "Mobile top padding", "min": 0, "max": 80, "step": 1, "unit": "px", "default": 28 },
-    { "type": "range", "id": "mobile_padding_bottom", "label": "Mobile bottom padding", "min": 0, "max": 100, "step": 1, "unit": "px", "default": 48 },
-    { "type": "range", "id": "desktop_side_padding", "label": "Desktop side padding", "min": 0, "max": 60, "step": 1, "unit": "px", "default": 24 },
-    { "type": "range", "id": "mobile_side_padding", "label": "Mobile side padding", "min": 12, "max": 32, "step": 1, "unit": "px", "default": 16 },
-    { "type": "color", "id": "background_color", "label": "Background", "default": "#11151c" },
-    { "type": "color", "id": "media_background_color", "label": "Media background", "default": "#6e89a6" },
-    { "type": "color", "id": "text_color", "label": "Body text", "default": "#ffffff" },
-    { "type": "color", "id": "heading_color", "label": "Heading text", "default": "#ffffff" },
-    { "type": "color", "id": "muted_color", "label": "Muted text", "default": "#b8c1d1" },
-    { "type": "color", "id": "accent_color", "label": "Accent", "default": "#2e82ff" },
-    { "type": "color", "id": "border_color", "label": "Divider", "default": "#26354b" },
-    { "type": "color", "id": "panel_color", "label": "Card background", "default": "#0c2d5a" },
-    { "type": "color", "id": "panel_alt_color", "label": "Selected and tab background", "default": "#1d2531" },
-    { "type": "color", "id": "button_color", "label": "Button background", "default": "#cbd8ea" },
-    { "type": "color", "id": "button_text_color", "label": "Button text", "default": "#11151c" },
-    { "type": "color", "id": "success_color", "label": "Success", "default": "#39c54a" },
-    { "type": "color", "id": "star_color", "label": "Stars", "default": "#ffc42d" },
-    { "type": "text", "id": "heading", "label": "Product heading", "default": "NAD PRO COMPLEX" },
-    { "type": "richtext", "id": "description", "label": "Product description", "default": "<p>Advanced support for men 40+, helping restore <a href=\"#\">cellular energy</a>, clarity, and overall vitality.</p>" },
-    { "type": "text", "id": "rating_stars", "label": "Rating stars", "default": "★★★★★" },
-    { "type": "text", "id": "rating_text", "label": "Rating text", "default": "Rated 4.9 ‘Excellent’" },
-    { "type": "url", "id": "reviews_link", "label": "Reviews link" },
-    { "type": "text", "id": "bundle_heading", "label": "Bundle heading", "default": "BUNDLE & SAVE" },
-    { "type": "text", "id": "urgency_text", "label": "Urgency message", "default": "Order Now To Receive It By September 9" },
-    { "type": "text", "id": "button_label", "label": "Button label", "default": "ADD TO CART" },
-    { "type": "text", "id": "button_icon", "label": "Button icon", "default": "♧" },
-    { "type": "url", "id": "button_link", "label": "Button link" },
-    { "type": "text", "id": "image_alt", "label": "Main image alt text", "default": "Product image placeholder" },
-    { "type": "image_picker", "id": "hero_image", "label": "Fallback hero image" },
+    { "type": "header", "content": "Diseño" },
+    { "type": "range", "id": "max_width", "label": "Ancho máximo de la sección", "min": 900, "max": 1400, "step": 10, "unit": "px", "default": 940 },
+    { "type": "range", "id": "media_width", "label": "Ancho de la columna multimedia", "min": 38, "max": 54, "step": 1, "unit": "%", "default": 46 },
+    { "type": "range", "id": "column_gap", "label": "Separación entre columnas", "min": 16, "max": 80, "step": 1, "unit": "px", "default": 40 },
+    { "type": "range", "id": "card_gap", "label": "Separación entre tarjetas", "min": 2, "max": 20, "step": 1, "unit": "px", "default": 5 },
+    { "type": "range", "id": "thumbnail_size", "label": "Tamaño de miniaturas", "min": 44, "max": 100, "step": 1, "unit": "px", "default": 60 },
+    { "type": "range", "id": "desktop_padding_top", "label": "Relleno superior en escritorio", "min": 0, "max": 100, "step": 1, "unit": "px", "default": 24 },
+    { "type": "range", "id": "desktop_padding_bottom", "label": "Relleno inferior en escritorio", "min": 0, "max": 100, "step": 1, "unit": "px", "default": 28 },
+    { "type": "range", "id": "mobile_padding_top", "label": "Relleno superior en móvil", "min": 0, "max": 80, "step": 1, "unit": "px", "default": 28 },
+    { "type": "range", "id": "mobile_padding_bottom", "label": "Relleno inferior en móvil", "min": 0, "max": 100, "step": 1, "unit": "px", "default": 48 },
+    { "type": "range", "id": "desktop_side_padding", "label": "Relleno lateral en escritorio", "min": 0, "max": 60, "step": 1, "unit": "px", "default": 24 },
+    { "type": "range", "id": "mobile_side_padding", "label": "Relleno lateral en móvil", "min": 12, "max": 32, "step": 1, "unit": "px", "default": 16 },
+    { "type": "color", "id": "background_color", "label": "Fondo", "default": "#11151c" },
+    { "type": "color", "id": "media_background_color", "label": "Fondo multimedia", "default": "#6e89a6" },
+    { "type": "color", "id": "text_color", "label": "Texto principal", "default": "#ffffff" },
+    { "type": "color", "id": "heading_color", "label": "Texto de encabezado", "default": "#ffffff" },
+    { "type": "color", "id": "muted_color", "label": "Texto atenuado", "default": "#b8c1d1" },
+    { "type": "color", "id": "accent_color", "label": "Color de acento", "default": "#2e82ff" },
+    { "type": "color", "id": "border_color", "label": "Separadores", "default": "#26354b" },
+    { "type": "color", "id": "panel_color", "label": "Fondo de tarjetas", "default": "#0c2d5a" },
+    { "type": "color", "id": "panel_alt_color", "label": "Fondo seleccionado y de pestañas", "default": "#1d2531" },
+    { "type": "color", "id": "button_color", "label": "Fondo del botón", "default": "#cbd8ea" },
+    { "type": "color", "id": "button_text_color", "label": "Texto del botón", "default": "#11151c" },
+    { "type": "color", "id": "success_color", "label": "Éxito", "default": "#39c54a" },
+    { "type": "color", "id": "star_color", "label": "Estrellas", "default": "#ffc42d" },
+    { "type": "text", "id": "heading", "label": "Título del producto", "default": "NAD PRO COMPLEX" },
+    { "type": "richtext", "id": "description", "label": "Descripción del producto", "default": "<p>Apoyo avanzado para hombres mayores de 40 años que ayuda a recuperar la <a href=\"#\">energía celular</a>, la claridad y la vitalidad general.</p>" },
+    { "type": "text", "id": "rating_stars", "label": "Estrellas de valoración", "default": "★★★★★" },
+    { "type": "text", "id": "rating_text", "label": "Texto de valoración", "default": "Valorado con 4,9: excelente" },
+    { "type": "url", "id": "reviews_link", "label": "Enlace de reseñas" },
+    { "type": "text", "id": "bundle_heading", "label": "Título de los paquetes", "default": "COMBOS Y AHORRA" },
+    { "type": "text", "id": "urgency_text", "label": "Mensaje de urgencia", "default": "Haz tu pedido ahora y recíbelo antes del 9 de septiembre" },
+    { "type": "text", "id": "button_label", "label": "Texto del botón", "default": "AÑADIR AL CARRITO" },
+    { "type": "text", "id": "button_icon", "label": "Icono del botón", "default": "♧" },
+    { "type": "url", "id": "button_link", "label": "Enlace del botón" },
+    { "type": "text", "id": "image_alt", "label": "Texto alternativo de la imagen principal", "default": "Imagen del producto" },
+    { "type": "image_picker", "id": "hero_image", "label": "Imagen principal alternativa" },
     {
       "type": "select",
       "id": "image_fit",
-      "label": "Image fit",
+      "label": "Ajuste de imagen",
       "options": [
-        { "value": "cover", "label": "Fill area" },
-        { "value": "contain", "label": "Show full image" }
+        { "value": "cover", "label": "Rellenar el área" },
+        { "value": "contain", "label": "Mostrar imagen completa" }
       ],
       "default": "cover"
     }
@@ -1392,61 +1392,61 @@
   "blocks": [
     {
       "type": "media_thumb",
-      "name": "Fallback gallery image",
+      "name": "Imagen adicional de galería",
       "settings": [
-        { "type": "image_picker", "id": "image", "label": "Image" },
-        { "type": "text", "id": "alt", "label": "Alt text", "default": "Product detail image" },
-        { "type": "text", "id": "button_label", "label": "Accessible label", "default": "View product image" }
+        { "type": "image_picker", "id": "image", "label": "Imagen" },
+        { "type": "text", "id": "alt", "label": "Texto alternativo", "default": "Imagen de detalle del producto" },
+        { "type": "text", "id": "button_label", "label": "Etiqueta accesible", "default": "Ver imagen del producto" }
       ]
     },
     {
       "type": "benefit",
-      "name": "Benefit",
+      "name": "Beneficio",
       "settings": [
-        { "type": "text", "id": "icon_glyph", "label": "Icon", "default": "✓" },
-        { "type": "text", "id": "text", "label": "Benefit text", "default": "Helps Prostate" }
+        { "type": "text", "id": "icon_glyph", "label": "Icono", "default": "✓" },
+        { "type": "text", "id": "text", "label": "Texto del beneficio", "default": "Ayuda a la próstata" }
       ]
     },
     {
       "type": "bundle",
-      "name": "Bundle option",
+      "name": "Opción de paquete",
       "settings": [
-        { "type": "image_picker", "id": "image", "label": "Bundle image" },
-        { "type": "text", "id": "image_alt", "label": "Bundle image alt text", "default": "Bundle image" },
-        { "type": "text", "id": "image_placeholder", "label": "Image placeholder", "default": "Pack" },
-        { "type": "text", "id": "title", "label": "Bundle title", "default": "BUY 1" },
-        { "type": "text", "id": "subtitle", "label": "Bundle subtitle", "default": "You save $12.00" },
-        { "type": "text", "id": "price", "label": "Fallback price", "default": "$36.00" },
-        { "type": "text", "id": "compare_at_price", "label": "Fallback compare-at price", "default": "$48.00" },
-        { "type": "text", "id": "badge", "label": "Badge" },
-        { "type": "checkbox", "id": "selected", "label": "Selected by default", "default": false }
+        { "type": "image_picker", "id": "image", "label": "Imagen del paquete" },
+        { "type": "text", "id": "image_alt", "label": "Texto alternativo de la imagen del paquete", "default": "Imagen del paquete" },
+        { "type": "text", "id": "image_placeholder", "label": "Marcador de imagen", "default": "Paquete" },
+        { "type": "text", "id": "title", "label": "Título del paquete", "default": "COMPRA 1" },
+        { "type": "text", "id": "subtitle", "label": "Subtítulo del paquete", "default": "Ahorras $12.00" },
+        { "type": "text", "id": "price", "label": "Precio alternativo", "default": "$36.00" },
+        { "type": "text", "id": "compare_at_price", "label": "Precio tachado alternativo", "default": "$48.00" },
+        { "type": "text", "id": "badge", "label": "Insignia" },
+        { "type": "checkbox", "id": "selected", "label": "Seleccionado por defecto", "default": false }
       ]
     },
     {
       "type": "trust_item",
-      "name": "Trust item",
+      "name": "Elemento de confianza",
       "settings": [
-        { "type": "text", "id": "icon_glyph", "label": "Icon", "default": "♢" },
-        { "type": "text", "id": "text", "label": "Trust text", "default": "Fast Shipping" }
+        { "type": "text", "id": "icon_glyph", "label": "Icono", "default": "♢" },
+        { "type": "text", "id": "text", "label": "Texto de confianza", "default": "Envío rápido" }
       ]
     },
     {
       "type": "payment",
-      "name": "Payment badge",
+      "name": "Insignia de pago",
       "settings": [
-        { "type": "image_picker", "id": "image", "label": "Payment logo image" },
-        { "type": "text", "id": "label", "label": "Placeholder label", "default": "CARD" },
-        { "type": "text", "id": "alt", "label": "Image alt text", "default": "Payment method" },
-        { "type": "range", "id": "width", "label": "Badge width", "min": 20, "max": 80, "step": 1, "unit": "px", "default": 32 },
+        { "type": "image_picker", "id": "image", "label": "Imagen del logo de pago" },
+        { "type": "text", "id": "label", "label": "Etiqueta del marcador", "default": "TARJETA" },
+        { "type": "text", "id": "alt", "label": "Texto alternativo de la imagen", "default": "Método de pago" },
+        { "type": "range", "id": "width", "label": "Ancho de la insignia", "min": 20, "max": 80, "step": 1, "unit": "px", "default": 32 },
         {
           "type": "select",
           "id": "style",
-          "label": "Placeholder style",
+          "label": "Estilo del marcador",
           "options": [
-            { "value": "light", "label": "Light" },
-            { "value": "dark", "label": "Dark" },
-            { "value": "blue", "label": "Blue" },
-            { "value": "purple", "label": "Purple" }
+            { "value": "light", "label": "Claro" },
+            { "value": "dark", "label": "Oscuro" },
+            { "value": "blue", "label": "Azul" },
+            { "value": "purple", "label": "Morado" }
           ],
           "default": "light"
         }
@@ -1454,38 +1454,38 @@
     },
     {
       "type": "tab",
-      "name": "Information tab",
+      "name": "Pestaña de información",
       "settings": [
-        { "type": "text", "id": "title", "label": "Tab title", "default": "Reviews" },
+        { "type": "text", "id": "title", "label": "Título de pestaña", "default": "Reseñas" },
         {
           "type": "select",
           "id": "layout",
-          "label": "Tab layout",
+          "label": "Diseño de pestaña",
           "options": [
-            { "value": "review", "label": "Review" },
-            { "value": "comparison", "label": "Comparison" },
-            { "value": "specification", "label": "Specification" }
+            { "value": "review", "label": "Reseña" },
+            { "value": "comparison", "label": "Comparación" },
+            { "value": "specification", "label": "Especificación" }
           ],
           "default": "review"
         },
-        { "type": "checkbox", "id": "active", "label": "Active by default", "default": false },
-        { "type": "text", "id": "rating_stars", "label": "Review stars", "default": "★★★★★" },
-        { "type": "text", "id": "rating_label", "label": "Review stars alt text", "default": "5 out of 5 stars" },
-        { "type": "richtext", "id": "content", "label": "Review content", "default": "<p>Completely changed my life!</p>" },
-        { "type": "image_picker", "id": "reviewer_image", "label": "Reviewer image" },
-        { "type": "text", "id": "reviewer_image_alt", "label": "Reviewer image alt text", "default": "Reviewer portrait" },
-        { "type": "text", "id": "reviewer_initials", "label": "Reviewer initials", "default": "JD" },
-        { "type": "text", "id": "reviewer_name", "label": "Reviewer name", "default": "Dr. Jason Dominguez" },
-        { "type": "text", "id": "reviewer_date", "label": "Reviewer date", "default": "January 23, 2026" },
-        { "type": "text", "id": "reviewer_role", "label": "Reviewer role", "default": "PhD In Science" },
-        { "type": "text", "id": "comparison_us_heading", "label": "Your product heading", "default": "Us" },
-        { "type": "text", "id": "comparison_other_heading", "label": "Other products heading", "default": "Others" },
-        { "type": "text", "id": "comparison_item_1", "label": "Comparison row 1", "default": "Studied" },
-        { "type": "text", "id": "comparison_item_2", "label": "Comparison row 2", "default": "No Fillers" },
-        { "type": "text", "id": "comparison_item_3", "label": "Comparison row 3", "default": "GMO-Compliant" },
-        { "type": "text", "id": "comparison_yes_label", "label": "Positive icon label", "default": "Included" },
-        { "type": "text", "id": "comparison_no_label", "label": "Negative icon label", "default": "Not included" },
-        { "type": "text", "id": "specification_text", "label": "Specification text", "default": "The most researched supplement in the world" }
+        { "type": "checkbox", "id": "active", "label": "Activa por defecto", "default": false },
+        { "type": "text", "id": "rating_stars", "label": "Estrellas de la reseña", "default": "★★★★★" },
+        { "type": "text", "id": "rating_label", "label": "Texto alternativo de las estrellas", "default": "5 de 5 estrellas" },
+        { "type": "richtext", "id": "content", "label": "Contenido de la reseña", "default": "<p>¡Me cambió la vida por completo!</p>" },
+        { "type": "image_picker", "id": "reviewer_image", "label": "Imagen del reseñador" },
+        { "type": "text", "id": "reviewer_image_alt", "label": "Texto alternativo de la imagen del reseñador", "default": "Retrato del reseñador" },
+        { "type": "text", "id": "reviewer_initials", "label": "Iniciales del reseñador", "default": "JD" },
+        { "type": "text", "id": "reviewer_name", "label": "Nombre del reseñador", "default": "Dr. Jason Domínguez" },
+        { "type": "text", "id": "reviewer_date", "label": "Fecha del reseñador", "default": "23 de enero de 2026" },
+        { "type": "text", "id": "reviewer_role", "label": "Rol del reseñador", "default": "Doctorado en ciencias" },
+        { "type": "text", "id": "comparison_us_heading", "label": "Título de tu producto", "default": "Nuestro producto" },
+        { "type": "text", "id": "comparison_other_heading", "label": "Título de otros productos", "default": "Otros" },
+        { "type": "text", "id": "comparison_item_1", "label": "Fila de comparación 1", "default": "Estudiado" },
+        { "type": "text", "id": "comparison_item_2", "label": "Fila de comparación 2", "default": "Sin rellenos" },
+        { "type": "text", "id": "comparison_item_3", "label": "Fila de comparación 3", "default": "Compatible con OGM" },
+        { "type": "text", "id": "comparison_yes_label", "label": "Etiqueta del icono positivo", "default": "Incluido" },
+        { "type": "text", "id": "comparison_no_label", "label": "Etiqueta del icono negativo", "default": "No incluido" },
+        { "type": "text", "id": "specification_text", "label": "Texto de especificaciones", "default": "El suplemento más investigado del mundo" }
       ]
     }
   ],
@@ -1493,15 +1493,15 @@
     {
       "name": "Info principal producto",
       "blocks": [
-        { "type": "benefit", "settings": { "text": "Helps Prostate" } },
-        { "type": "benefit", "settings": { "text": "Balances Hormones" } },
-        { "type": "benefit", "settings": { "text": "Increases Stamina" } },
-        { "type": "benefit", "settings": { "text": "Improves Blood Flow" } },
-        { "type": "bundle", "settings": { "title": "BUY 1", "subtitle": "You save $12.00", "price": "$36.00", "compare_at_price": "$48.00", "selected": true } },
-        { "type": "bundle", "settings": { "title": "BUY 2 GET 1 FREE", "subtitle": "You save $36.00", "price": "$108.00", "compare_at_price": "$144.00", "badge": "Most Popular" } },
-        { "type": "bundle", "settings": { "title": "BUY 3 GET 2 FREE", "subtitle": "You save $60.00", "price": "$180.00", "compare_at_price": "$240.00", "badge": "Best Value" } },
-        { "type": "trust_item", "settings": { "text": "Fast Shipping" } },
-        { "type": "trust_item", "settings": { "text": "60-Day Guarantee" } },
+        { "type": "benefit", "settings": { "text": "Ayuda a la próstata" } },
+        { "type": "benefit", "settings": { "text": "Equilibra las hormonas" } },
+        { "type": "benefit", "settings": { "text": "Aumenta la resistencia" } },
+        { "type": "benefit", "settings": { "text": "Mejora el flujo sanguíneo" } },
+        { "type": "bundle", "settings": { "title": "COMPRA 1", "subtitle": "Ahorras $12.00", "price": "$36.00", "compare_at_price": "$48.00", "selected": true } },
+        { "type": "bundle", "settings": { "title": "COMPRA 2 Y LLEVA 1 GRATIS", "subtitle": "Ahorras $36.00", "price": "$108.00", "compare_at_price": "$144.00", "badge": "Más popular" } },
+        { "type": "bundle", "settings": { "title": "COMPRA 3 Y LLEVA 2 GRATIS", "subtitle": "Ahorras $60.00", "price": "$180.00", "compare_at_price": "$240.00", "badge": "Mejor valor" } },
+        { "type": "trust_item", "settings": { "text": "Envío rápido" } },
+        { "type": "trust_item", "settings": { "text": "Garantía de 60 días" } },
         { "type": "payment", "settings": { "label": "MC", "alt": "Mastercard", "width": 32 } },
         { "type": "payment", "settings": { "label": "AMEX", "alt": "American Express", "width": 32, "style": "blue" } },
         { "type": "payment", "settings": { "label": "Apple Pay", "alt": "Apple Pay", "width": 38 } },
@@ -1509,9 +1509,9 @@
         { "type": "payment", "settings": { "label": "shop", "alt": "Shop Pay", "width": 32, "style": "purple" } },
         { "type": "payment", "settings": { "label": "DISCOVER", "alt": "Discover", "width": 40 } },
         { "type": "payment", "settings": { "label": "VISA", "alt": "Visa", "width": 32 } },
-        { "type": "tab", "settings": { "title": "Reviews", "layout": "review", "active": true } },
-        { "type": "tab", "settings": { "title": "Comparison", "layout": "comparison" } },
-        { "type": "tab", "settings": { "title": "Specifications", "layout": "specification" } }
+        { "type": "tab", "settings": { "title": "Reseñas", "layout": "review", "active": true } },
+        { "type": "tab", "settings": { "title": "Comparación", "layout": "comparison" } },
+        { "type": "tab", "settings": { "title": "Especificaciones", "layout": "specification" } }
       ]
     }
   ]

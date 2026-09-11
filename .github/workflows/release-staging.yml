@@ -54,6 +54,11 @@ jobs:
 
       - run: npm ci --no-audit --no-fund
 
+      # El release es manual, pero no puede saltarse la verificación del SHA
+      # exacto que se va a desplegar si el workflow de push está fallando.
+      - name: Verify the reviewed release before any external mutation
+        run: npm run probar
+
       # Shopify versiona la configuracion y los theme app extensions fuera de
       # Render. Pinneamos la CLI para que el release de storefront sea
       # reproducible y no cambie por una actualizacion transitoria del runner.

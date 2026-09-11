@@ -841,7 +841,7 @@ async function crearPagina(idProducto, sesion, {
     const generated = await researchProduct(product, medios, { idioma, angulo });
     const metadata = templateMetadata(template);
     const urls = Object.fromEntries(medios.map((m) => [m.media_id, m.url]));
-    const sectionPage = createProductPage({ product, research: generated.research, urls });
+    const sectionPage = createProductPage({ product, research: generated.research, urls, composition: "section-page-v1" });
     return {
       data: {
         global: { estilo: metadata.legacyStyle, template: metadata.template, idioma, angulo, cta: "Agregar al carrito" },
@@ -960,7 +960,7 @@ async function crearPaginaBase(idProducto, sesion, {
         global: { estilo: metadata.legacyStyle, template: metadata.template, idioma, angulo, cta: "Agregar al carrito" },
         fuente,
         compliance: { claims_verified: false },
-        section_page: createProductPage({ product, research: {}, urls })
+        section_page: createProductPage({ product, research: {}, urls, composition: "section-page-v1" })
       },
       urls,
       avisos: ["Sección creada con datos reales de Shopify. La investigación asistida queda pendiente."],

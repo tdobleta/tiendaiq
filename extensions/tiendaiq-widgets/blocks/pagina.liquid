@@ -29,9 +29,7 @@
   {%- if tq_pagina.section_page.contractVersion == 1 -%}
     <div id="tiq-section-page" data-tiendaiq-section-page="1">
       {%- for tq_section in tq_pagina.section_page.sections -%}
-        {%- if tq_section.definition.id == 'product-information' and tq_section.definition.version == 1 -%}
-          {% render 'tiq-product-information-v1', tiq_section: tq_section, product: product %}
-        {%- endif -%}
+        {% render 'tiq-section-router', tiq_section: tq_section, product: product %}
       {%- endfor -%}
     </div>
   {%- elsif tq_pagina.version == 1 and tq_pagina.arbol -%}

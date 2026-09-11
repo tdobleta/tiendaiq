@@ -1,0 +1,172 @@
+{% liquid
+  assign section_dom_id = 'tiq-image-timeline-' | append: section.id | handleize
+  assign placeholder_class = section_dom_id | append: '__placeholder'
+%}
+
+<section
+  id="{{ section_dom_id }}"
+  class="{{ section_dom_id }}"
+  aria-labelledby="{{ section_dom_id }}-heading"
+>
+  <div class="{{ section_dom_id }}__inner">
+    <div class="{{ section_dom_id }}__media" data-tiq-outline-id="{{ section_dom_id }}__media">
+      {% if section.settings.image != blank %}
+        <img
+          src="{{ section.settings.image | escape }}"
+          alt="{{ section.settings.image_alt | escape }}"
+          loading="lazy"
+          width="1200"
+          height="1500"
+        >
+      {% else %}
+        {{ 'image' | placeholder_svg_tag: placeholder_class }}
+      {% endif %}
+    </div>
+
+    <div class="{{ section_dom_id }}__content">
+      {% if section.settings.eyebrow != blank %}
+        <p class="{{ section_dom_id }}__eyebrow" data-tiq-outline-id="{{ section_dom_id }}__eyebrow">{{ section.settings.eyebrow | escape }}</p>
+      {% endif %}
+
+      {% if section.settings.heading != blank %}
+        <h2 id="{{ section_dom_id }}-heading" class="{{ section_dom_id }}__heading" data-tiq-outline-id="{{ section_dom_id }}__heading">{{ section.settings.heading | escape }}</h2>
+      {% endif %}
+
+      {% if section.settings.intro != blank %}
+        <div class="{{ section_dom_id }}__intro rte" data-tiq-outline-id="{{ section_dom_id }}__intro">{{ section.settings.intro }}</div>
+      {% endif %}
+
+      {% if section.blocks.size > 0 %}
+        <ol class="{{ section_dom_id }}__timeline" aria-label="{{ section.settings.timeline_label | escape }}" data-tiq-outline-id="{{ section_dom_id }}__timeline">
+          {% for block in section.blocks %}
+            <li class="{{ section_dom_id }}__step" {{ block.shopify_attributes }}>
+              <span class="{{ section_dom_id }}__marker" aria-hidden="true">{{ block.settings.icon | escape }}</span>
+              <div class="{{ section_dom_id }}__step-copy">
+                {% if block.settings.label != blank %}
+                  <p class="{{ section_dom_id }}__step-label">{{ block.settings.label | escape }}</p>
+                {% endif %}
+                {% if block.settings.heading != blank %}
+                  <h3>{{ block.settings.heading | escape }}</h3>
+                {% endif %}
+                {% if block.settings.body != blank %}
+                  <div class="{{ section_dom_id }}__step-body rte">{{ block.settings.body }}</div>
+                {% endif %}
+              </div>
+            </li>
+          {% endfor %}
+        </ol>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+<style>
+  #{{ section_dom_id }} {
+    --tiq-timeline-bg: {{ section.settings.background_color }};
+    --tiq-timeline-heading: {{ section.settings.heading_color }};
+    --tiq-timeline-text: {{ section.settings.text_color }};
+    --tiq-timeline-muted: {{ section.settings.muted_color }};
+    --tiq-timeline-accent: {{ section.settings.accent_color }};
+    --tiq-timeline-line: {{ section.settings.line_color }};
+    --tiq-timeline-card: {{ section.settings.card_background }};
+    --tiq-timeline-media-bg: {{ section.settings.media_background }};
+    --tiq-timeline-radius: {{ section.settings.card_radius }}px;
+    --tiq-timeline-gap: {{ section.settings.column_gap }}px;
+    --tiq-timeline-media-width: {{ section.settings.media_width }}%;
+    width: 100%;
+    background: var(--tiq-timeline-bg);
+    color: var(--tiq-timeline-text);
+  }
+
+  #{{ section_dom_id }} * { box-sizing: border-box; }
+  #{{ section_dom_id }} .{{ section_dom_id }}__inner { width: min(100%, {{ section.settings.max_width }}px); margin: 0 auto; display: grid; grid-template-columns: minmax(0, calc(100% - var(--tiq-timeline-media-width) - var(--tiq-timeline-gap))) minmax(0, var(--tiq-timeline-media-width)); align-items: center; gap: var(--tiq-timeline-gap); padding: {{ section.settings.padding_top }}px {{ section.settings.side_padding }}px {{ section.settings.padding_bottom }}px; }
+  #{{ section_dom_id }} .{{ section_dom_id }}__media { min-width: 0; overflow: hidden; border-radius: var(--tiq-timeline-radius); background: var(--tiq-timeline-media-bg); }
+  #{{ section_dom_id }} .{{ section_dom_id }}__media img,
+  #{{ section_dom_id }} .{{ section_dom_id }}__media svg { display: block; width: 100%; aspect-ratio: 4 / 5; height: auto; object-fit: {{ section.settings.image_fit }}; }
+  #{{ section_dom_id }} .{{ section_dom_id }}__content { min-width: 0; max-width: 640px; }
+  #{{ section_dom_id }} .{{ section_dom_id }}__eyebrow { margin: 0 0 10px; color: var(--tiq-timeline-accent); font-size: 12px; font-weight: 700; letter-spacing: .13em; line-height: 1.3; text-transform: uppercase; }
+  #{{ section_dom_id }} .{{ section_dom_id }}__heading { margin: 0; color: var(--tiq-timeline-heading); font-size: clamp(30px, 4.2vw, 54px); font-weight: 700; letter-spacing: -.04em; line-height: 1.02; }
+  #{{ section_dom_id }} .{{ section_dom_id }}__intro { margin-top: 16px; color: var(--tiq-timeline-muted); font-size: 16px; line-height: 1.55; }
+  #{{ section_dom_id }} .{{ section_dom_id }}__intro p { margin: 0; }
+  #{{ section_dom_id }} .{{ section_dom_id }}__timeline { position: relative; display: grid; gap: {{ section.settings.step_gap }}px; margin: 32px 0 0; padding: 0; list-style: none; }
+  #{{ section_dom_id }} .{{ section_dom_id }}__timeline::before { content: ""; position: absolute; top: 21px; bottom: 21px; left: 21px; width: 1px; background: var(--tiq-timeline-line); }
+  #{{ section_dom_id }} .{{ section_dom_id }}__step { position: relative; display: grid; grid-template-columns: 43px minmax(0, 1fr); gap: 14px; align-items: start; }
+  #{{ section_dom_id }} .{{ section_dom_id }}__marker { position: relative; z-index: 1; display: grid; width: 43px; height: 43px; place-items: center; border: 1px solid var(--tiq-timeline-accent); border-radius: 50%; background: var(--tiq-timeline-card); color: var(--tiq-timeline-accent); font-size: 12px; font-weight: 800; }
+  #{{ section_dom_id }} .{{ section_dom_id }}__step-copy { min-width: 0; padding: 4px 0 8px; }
+  #{{ section_dom_id }} .{{ section_dom_id }}__step-label { margin: 0 0 4px; color: var(--tiq-timeline-accent); font-size: 11px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
+  #{{ section_dom_id }} .{{ section_dom_id }}__step h3 { margin: 0; color: var(--tiq-timeline-heading); font-size: 20px; font-weight: 700; line-height: 1.2; }
+  #{{ section_dom_id }} .{{ section_dom_id }}__step-body { margin-top: 6px; color: var(--tiq-timeline-muted); font-size: 14px; line-height: 1.5; }
+  #{{ section_dom_id }} .{{ section_dom_id }}__step-body p { margin: 0; }
+
+  @media (max-width: 749px) {
+    #{{ section_dom_id }} .{{ section_dom_id }}__inner { grid-template-columns: 1fr; gap: {{ section.settings.mobile_gap }}px; padding: {{ section.settings.mobile_padding_top }}px {{ section.settings.mobile_side_padding }}px {{ section.settings.mobile_padding_bottom }}px; }
+    #{{ section_dom_id }} .{{ section_dom_id }}__content { max-width: none; }
+    #{{ section_dom_id }} .{{ section_dom_id }}__heading { font-size: clamp(30px, 10vw, 42px); }
+    #{{ section_dom_id }} .{{ section_dom_id }}__intro { font-size: 15px; }
+    #{{ section_dom_id }} .{{ section_dom_id }}__media { order: {% if section.settings.mobile_media_position == 'last' %}2{% else %}1{% endif %}; }
+    #{{ section_dom_id }} .{{ section_dom_id }}__content { order: {% if section.settings.mobile_media_position == 'last' %}1{% else %}2{% endif %}; }
+  }
+</style>
+
+{% schema %}
+{
+  "name": "Imagen con línea de tiempo",
+  "max_blocks": 4,
+  "settings": [
+    { "type": "header", "content": "Contenido" },
+    { "type": "text", "id": "eyebrow", "label": "Texto superior", "default": "TU RECORRIDO" },
+    { "type": "text", "id": "heading", "label": "Título", "default": "Tu camino hacia una rutina mejor" },
+    { "type": "richtext", "id": "intro", "label": "Introducción", "default": "<p>Un progreso gradual que podés sentir de verdad.</p>" },
+    { "type": "text", "id": "timeline_label", "label": "Etiqueta accesible de la línea de tiempo", "default": "Etapas del recorrido" },
+    { "type": "image_picker", "id": "image", "label": "Imagen" },
+    { "type": "text", "id": "image_alt", "label": "Texto alternativo de la imagen", "default": "Imagen del producto" },
+    { "type": "header", "content": "Layout" },
+    { "type": "range", "id": "max_width", "label": "Ancho máximo", "min": 800, "max": 1600, "step": 20, "unit": "px", "default": 1160 },
+    { "type": "range", "id": "media_width", "label": "Ancho de imagen", "min": 30, "max": 55, "step": 1, "unit": "%", "default": 42 },
+    { "type": "range", "id": "column_gap", "label": "Separación entre columnas", "min": 16, "max": 80, "step": 4, "unit": "px", "default": 52 },
+    { "type": "range", "id": "step_gap", "label": "Separación entre etapas", "min": 8, "max": 40, "step": 2, "unit": "px", "default": 16 },
+    { "type": "select", "id": "image_fit", "label": "Ajuste de imagen", "options": [{ "value": "cover", "label": "Llenar área" }, { "value": "contain", "label": "Mostrar imagen completa" }], "default": "cover" },
+    { "type": "select", "id": "mobile_media_position", "label": "Imagen en móvil", "options": [{ "value": "first", "label": "Antes del contenido" }, { "value": "last", "label": "Después del contenido" }], "default": "first" },
+    { "type": "range", "id": "padding_top", "label": "Padding superior escritorio", "min": 0, "max": 160, "step": 4, "unit": "px", "default": 72 },
+    { "type": "range", "id": "padding_bottom", "label": "Padding inferior escritorio", "min": 0, "max": 160, "step": 4, "unit": "px", "default": 72 },
+    { "type": "range", "id": "side_padding", "label": "Padding lateral escritorio", "min": 12, "max": 80, "step": 2, "unit": "px", "default": 24 },
+    { "type": "range", "id": "mobile_gap", "label": "Separación móvil", "min": 12, "max": 48, "step": 4, "unit": "px", "default": 24 },
+    { "type": "range", "id": "mobile_padding_top", "label": "Padding superior móvil", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 44 },
+    { "type": "range", "id": "mobile_padding_bottom", "label": "Padding inferior móvil", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 44 },
+    { "type": "range", "id": "mobile_side_padding", "label": "Padding lateral móvil", "min": 12, "max": 40, "step": 2, "unit": "px", "default": 18 },
+    { "type": "header", "content": "Apariencia" },
+    { "type": "color", "id": "background_color", "label": "Fondo", "default": "#1B385D" },
+    { "type": "color", "id": "media_background", "label": "Fondo de imagen", "default": "#6E89A6" },
+    { "type": "color", "id": "card_background", "label": "Fondo de marcadores", "default": "#173252" },
+    { "type": "color", "id": "heading_color", "label": "Título", "default": "#FFFFFF" },
+    { "type": "color", "id": "text_color", "label": "Texto", "default": "#FFFFFF" },
+    { "type": "color", "id": "muted_color", "label": "Texto secundario", "default": "#D4E1EF" },
+    { "type": "color", "id": "accent_color", "label": "Acento", "default": "#2E82FF" },
+    { "type": "color", "id": "line_color", "label": "Línea", "default": "#6B91BD" },
+    { "type": "range", "id": "card_radius", "label": "Radio de imagen", "min": 0, "max": 32, "step": 2, "unit": "px", "default": 12 }
+  ],
+  "blocks": [
+    {
+      "type": "timeline_step",
+      "name": "Etapa",
+      "limit": 4,
+      "settings": [
+        { "type": "text", "id": "label", "label": "Etiqueta", "default": "SEMANA 1" },
+        { "type": "text", "id": "heading", "label": "Título", "default": "Primeros cambios" },
+        { "type": "richtext", "id": "body", "label": "Descripción", "default": "<p>Incorporá el producto a tu rutina de forma simple.</p>" },
+        { "type": "text", "id": "icon", "label": "Marcador", "default": "1" }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Imagen con línea de tiempo",
+      "blocks": [
+        { "type": "timeline_step", "settings": { "label": "SEMANA 1", "heading": "Primeros cambios", "icon": "1" } },
+        { "type": "timeline_step", "settings": { "label": "SEMANA 2", "heading": "Rutina más simple", "icon": "2" } },
+        { "type": "timeline_step", "settings": { "label": "UN MES", "heading": "Progreso constante", "icon": "3" } }
+      ]
+    }
+  ]
+}
+{% endschema %}

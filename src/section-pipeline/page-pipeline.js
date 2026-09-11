@@ -1,9 +1,15 @@
 "use strict";
 
 const productInformation = require("./product-information-v1");
+const imageWithText = require("./image-with-text-v1");
+const imageWithTimeline = require("./image-with-timeline-v1");
+const imageWithBenefits = require("./image-with-benefits-v1");
+const testimonialsWithImages = require("./testimonials-with-images-v1");
+const { resolvePageComposition } = require("./page-compositions");
 const { SectionContractError, validateInstance } = require("./section-contract");
 
-const REGISTRY = new Map([[`${productInformation.id}@${productInformation.version}`, productInformation]]);
+const DEFINITIONS = Object.freeze([productInformation, imageWithText, imageWithTimeline, imageWithBenefits, testimonialsWithImages]);
+const REGISTRY = new Map(DEFINITIONS.map((definition) => [`${definition.id}@${definition.version}`, definition]));
 
 function connection(value) {
   if (Array.isArray(value)) return value;
@@ -46,23 +52,47 @@ function sectionTree(page) {
   }));
 }
 
-function createProductPage({ product, research = {}, urls = {} }) {
-  const definition = productInformation;
-  const instance = definition.adapt(product, research);
+function sectionDescriptor(definition) {
+  return {
+    id: definition.id,
+    version: definition.version,
+    sourceSha256: definition.sourceSha256
+  };
+}
+
+function uniqueSectionId(definition, index) {
+  return index === 0 ? "section-product-information" : `section-${definition.id}-${index}`;
+}
+
+function createProductPage({ product, research = {}, urls = {}, composition = null }) {
+  const selectedComposition = composition == null
+    ? [{ id: productInformation.id, version: productInformation.version, required: true }]
+    : (Array.isArray(composition) ? composition : resolvePageComposition(composition));
+  if (!selectedComposition.length) throw new SectionContractError("La composición necesita al menos una sección");
+
+  const sections = selectedComposition.map((descriptor, index) => {
+    const definition = resolveSection(descriptor);
+    if (!definition) throw new SectionContractError(`La sección ${descriptor?.id || "solicitada"} no existe en el registro`);
+    if (index === 0 && definition.id !== productInformation.id) {
+      throw new SectionContractError("La composición debe comenzar con Información del producto");
+    }
+    return {
+      id: uniqueSectionId(definition, index),
+      label: definition.schema.name,
+      definition: sectionDescriptor(definition),
+      instance: definition.adapt(product, research)
+    };
+  });
   const page = {
     contractVersion: 1,
+    revision: 0,
     productId: String(product?.id || product?.productId || ""),
     productSnapshot: productSnapshot(product, urls),
     evidence: {
       visualObservations: Array.isArray(research.visualObservations) ? research.visualObservations : [],
       verifiedClaims: Array.isArray(research.claims) ? research.claims.filter((claim) => claim?.verified === true) : []
     },
-    sections: [{
-      id: "section-product-information",
-      label: definition.schema.name,
-      definition: { id: definition.id, version: definition.version, sourceSha256: definition.sourceSha256 },
-      instance
-    }]
+    sections
   };
   return Object.freeze({ ...page, tree: sectionTree(page) });
 }
@@ -96,8 +126,18 @@ function editorRegistry() {
     name: definition.schema.name,
     sourceSha256: definition.sourceSha256,
     editor: definition.editor,
-    seed: definition.seed
+    copySlots: definition.copySlots,
+    contentSources: definition.contentSources,
+    seed: definition.seed,
+    catalog: definition.catalog,
+    capabilities: definition.capabilities
   }));
 }
 
-module.exports = Object.freeze({ createProductPage, editorRegistry, productSnapshot, resolveSection, sectionTree, validatePage });
+function instantiateSection(descriptor, product = {}, research = {}) {
+  const definition = resolveSection(descriptor);
+  if (!definition) throw new SectionContractError("La sección solicitada no existe en el registro");
+  return definition.adapt(product, research);
+}
+
+module.exports = Object.freeze({ DEFINITIONS, createProductPage, editorRegistry, instantiateSection, productSnapshot, resolveSection, sectionTree, validatePage });

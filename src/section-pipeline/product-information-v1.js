@@ -7,12 +7,44 @@ const { createSectionDefinition } = require("./section-contract");
 const source = fs.readFileSync(path.join(__dirname, "sources", "product-information-v1", "section.liquid"), "utf8")
   .replace(/\r\n?/g, "\n");
 
-function adapt({ seed }) {
-  // La composición inicial es el preset de Shopify, sin reinterpretaciones.
-  // Los datos vivos que el Liquid conecta por sí mismo (medios, variante y
-  // precio) llegan por `product`; el copywriting tendrá una operación separada
-  // y explícita sobre campos autorizados.
-  return seed;
+function escapeHtml(value) {
+  return String(value || "").replace(/[&<>"']/g, (character) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  })[character]);
+}
+
+function plainText(value) {
+  return String(value || "")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function adapt({ product, research, seed }) {
+  // La fuente Liquid y todos sus valores visuales permanecen inmutables. La
+  // adaptación sólo escribe campos de contenido autorizados y respaldados por
+  // el producto o por la investigación validada.
+  const instance = structuredClone(seed);
+  const title = plainText(product?.title || product?.titulo).slice(0, 180);
+  const description = plainText(research?.summary || product?.description || product?.descripcion).slice(0, 1200);
+  if (title) {
+    instance.settings.heading = title;
+    instance.settings.image_alt = title;
+  }
+  if (description) instance.settings.description = `<p>${escapeHtml(description)}</p>`;
+  const benefits = Array.isArray(research?.sectionCopy?.productBenefits)
+    ? research.sectionCopy.productBenefits.filter(Boolean).slice(0, 4)
+    : [];
+  if (benefits.length) {
+    instance.blocks.filter((block) => block.type === "benefit").forEach((block, index) => {
+      if (benefits[index]) block.settings.text = String(benefits[index]).slice(0, 180);
+    });
+  }
+  return instance;
 }
 
 // Jerarquía semántica del editor. Describe la composición real de esta versión
@@ -111,5 +143,27 @@ module.exports = createSectionDefinition({
   version: 1,
   source,
   outline,
-  adaptation: adapt
+  copySlots: { section: ["description"], blocks: { benefit: ["text"] } },
+  contentSources: {
+    section: { heading: "shopify", image_alt: "shopify" },
+    blocks: { media_thumb: { image: "shopify", alt: "shopify" } }
+  },
+  adaptation: adapt,
+  catalog: {
+    scale: "section",
+    category: "Producto",
+    description: "Galería, información comercial, opciones de compra y confianza.",
+    thumbnail: "product-information"
+  },
+  capabilities: {
+    editableContent: true,
+    editableStyles: true,
+    editableStructure: false,
+    duplicable: false,
+    deletable: false,
+    reorderable: false,
+    protected: true,
+    allowMultipleInstances: false,
+    responsive: ["mobile_top", "mobile_bottom", "mobile_side"]
+  }
 });
