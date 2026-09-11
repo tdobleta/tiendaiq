@@ -26,10 +26,12 @@
   endif
 
   assign cta_href = section.settings.button_link
-  if cta_href == blank and product != blank
+  assign cta_is_cart = true
+  if cta_href != blank
+    assign cta_is_cart = false
+  elsif product != blank
     assign cta_href = product.url
-  endif
-  if cta_href == blank
+  else
     assign cta_href = '#'
   endif
 
@@ -259,6 +261,7 @@
                   class="{{ section_dom_id }}__bundle {% if bundle_selected %}{{ section_dom_id }}__bundle--selected{% endif %}"
                   data-bundle
                   data-selected="{% if bundle_selected %}true{% else %}false{% endif %}"
+                  data-quantity="{{ bundle_units }}"
                   data-price="{{ bundle_price_display | escape }}"
                   data-compare="{{ bundle_compare_display | escape }}"
                   aria-pressed="{% if bundle_selected %}true{% else %}false{% endif %}"
@@ -299,9 +302,13 @@
           </div>
         {% endif %}
 
-        <a
+        {% if cta_is_cart and current_variant != blank %}
+          <form class="{{ section_dom_id }}__cta-form" action="{{ routes.cart_add_url }}" method="post" data-cart-form>
+            <input type="hidden" name="id" value="{{ current_variant.id }}" data-cart-variant>
+            <input type="hidden" name="quantity" value="1" data-cart-quantity>
+        {% endif %}
+        <{% if cta_is_cart and current_variant != blank %}button type="submit"{% else %}a href="{{ cta_href }}"{% endif %}
           class="{{ section_dom_id }}__cta"
-          href="{{ cta_href }}"
           aria-label="{{ section.settings.button_label | escape }}"
           data-cta
           data-variant-id="{% if current_variant != blank %}{{ current_variant.id }}{% endif %}"
@@ -318,7 +325,10 @@
             <span data-cta-price> - {{ cta_price_display }}</span>
           {% endif %}
           <s data-cta-compare{% if cta_compare_display == blank %} hidden{% endif %}>{% if cta_compare_display != blank %}{{ cta_compare_display }}{% endif %}</s>
-        </a>
+        </{% if cta_is_cart and current_variant != blank %}button{% else %}a{% endif %}>
+        {% if cta_is_cart and current_variant != blank %}
+          </form>
+        {% endif %}
 
         {% assign trust_count = 0 %}
         {% for block in section.blocks %}
@@ -1237,6 +1247,7 @@
     const bundleOptions = Array.from(root.querySelectorAll('[data-bundle]'));
     const ctaPrice = root.querySelector('[data-cta-price]');
     const ctaCompare = root.querySelector('[data-cta-compare]');
+    const cartQuantity = root.querySelector('[data-cart-quantity]');
     const tabButtons = Array.from(root.querySelectorAll('[data-tab-button]'));
     const tabPanels = Array.from(root.querySelectorAll('[data-tab-panel]'));
 
@@ -1282,6 +1293,7 @@
         ctaCompare.textContent = compare;
         ctaCompare.hidden = !compare;
       }
+      if (cartQuantity) cartQuantity.value = option.dataset.quantity || '1';
     };
 
     bundleOptions.forEach((option) => {

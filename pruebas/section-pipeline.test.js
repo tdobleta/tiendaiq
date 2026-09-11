@@ -13,7 +13,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 test("el código Shopify es la fuente inmutable del diseño y del editor", () => {
-  assert.equal(productInformation.sourceSha256, "e83983df67324428fd6c9b0455afd4ef32194d9bd4e8424f3c21f4199c3482f8");
+  assert.equal(productInformation.sourceSha256, "f8b7689d35380420f4450e526c0240c928cd5c815c3481e439f00d5d8d770c0d");
   assert.equal(sha256(productInformation.source), productInformation.sourceSha256);
   assert.equal(productInformation.schema.settings.length, 38);
   assert.equal(productInformation.schema.settings.filter((setting) => setting.id).length, 37);
@@ -187,7 +187,10 @@ test("la vista del editor ejecuta la misma fuente Liquid con datos Shopify", asy
   assert.match(html, /class="product-hero-section-product-information__bundle-image"/);
   assert.match(html, /class="product-hero-section-product-information__thumbnail-image"/);
   assert.match(html, /data-variant-id="gid:\/\/shopify\/ProductVariant\/1"/);
-  assert.match(html, /class="product-hero-section-product-information__cta"[\s\S]*href="#"/);
+  assert.match(html, /class="product-hero-section-product-information__cta-form"[\s\S]*action="\/cart\/add"/);
+  assert.match(html, /name="id" value="gid:\/\/shopify\/ProductVariant\/1"/);
+  assert.match(html, /name="quantity" value="1" data-cart-quantity/);
+  assert.match(html, /<button type="submit"[\s\S]*class="product-hero-section-product-information__cta"/);
   assert.match(html, /Envío rápido/);
   assert.match(html, /Garantía de 60 días/);
   assert.doesNotMatch(html, /if\(!section\)return;event\.preventDefault\(\)/);
