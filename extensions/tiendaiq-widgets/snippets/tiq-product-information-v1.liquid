@@ -1,4 +1,4 @@
-{% comment %} GENERATED from product-information@1 · e83983df67324428fd6c9b0455afd4ef32194d9bd4e8424f3c21f4199c3482f8. Do not edit. {% endcomment %}
+{% comment %} GENERATED from product-information@1 · f8b7689d35380420f4450e526c0240c928cd5c815c3481e439f00d5d8d770c0d. Do not edit. {% endcomment %}
 {% liquid
 assign section_dom_id = 'product-hero-' | append: tiq_section.id | handleize
 assign hero_content_max_width = 600
@@ -23,10 +23,12 @@ elsif product != blank and product.title != blank
 assign featured_alt = product.title
 endif
 assign cta_href = tiq_section.instance.settings.button_link
-if cta_href == blank and product != blank
+assign cta_is_cart = true
+if cta_href != blank
+assign cta_is_cart = false
+elsif product != blank
 assign cta_href = product.url
-endif
-if cta_href == blank
+else
 assign cta_href = '#'
 endif
 assign reviews_label_display = '693+ reseñas'
@@ -239,6 +241,7 @@ type="button"
 class="{{ section_dom_id }}__bundle {% if bundle_selected %}{{ section_dom_id }}__bundle--selected{% endif %}"
 data-bundle
 data-selected="{% if bundle_selected %}true{% else %}false{% endif %}"
+data-quantity="{{ bundle_units }}"
 data-price="{{ bundle_price_display | escape }}"
 data-compare="{{ bundle_compare_display | escape }}"
 aria-pressed="{% if bundle_selected %}true{% else %}false{% endif %}"
@@ -277,9 +280,13 @@ data-tiq-block-id="{{ block.id | escape }}"
 <span>{{ tiq_section.instance.settings.urgency_text | escape }}</span>
 </div>
 {% endif %}
-<a
+{% if cta_is_cart and current_variant != blank %}
+<form class="{{ section_dom_id }}__cta-form" action="{{ routes.cart_add_url }}" method="post" data-cart-form>
+<input type="hidden" name="id" value="{{ current_variant.id }}" data-cart-variant>
+<input type="hidden" name="quantity" value="1" data-cart-quantity>
+{% endif %}
+<{% if cta_is_cart and current_variant != blank %}button type="submit"{% else %}a href="{{ cta_href }}"{% endif %}
 class="{{ section_dom_id }}__cta"
-href="{{ cta_href }}"
 aria-label="{{ tiq_section.instance.settings.button_label | escape }}"
 data-cta
 data-variant-id="{% if current_variant != blank %}{{ current_variant.id }}{% endif %}"
@@ -296,7 +303,10 @@ data-variant-id="{% if current_variant != blank %}{{ current_variant.id }}{% end
 <span data-cta-price> - {{ cta_price_display }}</span>
 {% endif %}
 <s data-cta-compare{% if cta_compare_display == blank %} hidden{% endif %}>{% if cta_compare_display != blank %}{{ cta_compare_display }}{% endif %}</s>
-</a>
+</{% if cta_is_cart and current_variant != blank %}button{% else %}a{% endif %}>
+{% if cta_is_cart and current_variant != blank %}
+</form>
+{% endif %}
 {% assign trust_count = 0 %}
 {% for block in tiq_section.instance.blocks %}
 {% if block.type == 'trust_item' %}
@@ -1110,6 +1120,7 @@ const thumbnails = Array.from(root.querySelectorAll('[data-thumb]'));
 const bundleOptions = Array.from(root.querySelectorAll('[data-bundle]'));
 const ctaPrice = root.querySelector('[data-cta-price]');
 const ctaCompare = root.querySelector('[data-cta-compare]');
+const cartQuantity = root.querySelector('[data-cart-quantity]');
 const tabButtons = Array.from(root.querySelectorAll('[data-tab-button]'));
 const tabPanels = Array.from(root.querySelectorAll('[data-tab-panel]'));
 const selectThumbnail = (thumbnail) => {
@@ -1147,6 +1158,7 @@ const compare = option.dataset.compare || '';
 ctaCompare.textContent = compare;
 ctaCompare.hidden = !compare;
 }
+if (cartQuantity) cartQuantity.value = option.dataset.quantity || '1';
 };
 bundleOptions.forEach((option) => {
 option.addEventListener('click', () => setBundle(option));
