@@ -126,6 +126,40 @@ function sectionPageDemo() {
   });
 }
 
+// La edición asistida sólo puede apuntar a un copy slot declarado por la
+// definición vigente. El navegador lo refleja en el inspector, pero el
+// servidor vuelve a comprobarlo antes de crear el job para mantener la regla
+// aun frente a un cliente modificado.
+function assertEditableSectionCopySlot(sectionPage, sectionId, blockId, fieldId) {
+  const section = sectionPage.sections.find((item) => item.id === String(sectionId || ""));
+  if (!section) {
+    const error = new Error("La sección indicada no existe en esta página.");
+    error.status = 400;
+    throw error;
+  }
+  const entry = editorRegistry().find((item) => item.id === section.definition.id && item.version === section.definition.version);
+  if (!entry) {
+    const error = new Error("La definición de la sección ya no está disponible.");
+    error.status = 400;
+    throw error;
+  }
+  if (blockId) {
+    const block = section.instance.blocks.find((item) => item.id === String(blockId));
+    const allowed = block && entry.copySlots?.blocks?.[block.type]?.includes(String(fieldId || ""));
+    if (!allowed) {
+      const error = new Error("Ese campo no admite edición asistida en esta sección.");
+      error.status = 400;
+      throw error;
+    }
+    return;
+  }
+  if (!entry.copySlots?.section?.includes(String(fieldId || ""))) {
+    const error = new Error("Ese campo no admite edición asistida en esta sección.");
+    error.status = 400;
+    throw error;
+  }
+}
+
 // Render (y cualquier host) fija el puerto por env; local usa 4321.
 const PUERTO = Number(env.PORT || process.env.PORT || 4321);
 const DIR_APP = path.join(__dirname, "app");
@@ -1082,6 +1116,10 @@ async function api(req, res, url) {
       modo = "rewrite",
       idioma = "es",
       contexto = "",
+      page_id = "",
+      section_id = "",
+      block_id = null,
+      field_id = "",
       request_id
     } = await leerCuerpo(req, 40_000);
     if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(request_id || "")) {
@@ -1095,6 +1133,19 @@ async function api(req, res, url) {
     }
     if (!/^[a-z]{2,3}(?:-[a-z0-9]{2,8})?$/i.test(String(idioma))) {
       return json(res, 400, { error: "El idioma de edición no es válido" });
+    }
+    const hasSectionTarget = [page_id, section_id, field_id].some((value) => String(value || "").trim()) || block_id != null;
+    if (hasSectionTarget) {
+      if (!page_id || !section_id || !field_id) {
+        return json(res, 400, { error: "Falta el destino editorial de la edición asistida" });
+      }
+      const page = await leerPagina(sesion.tenant, String(page_id));
+      if (!page?.data?.section_page) return json(res, 404, { error: "No existe una página por secciones para editar" });
+      try {
+        assertEditableSectionCopySlot(validateSectionPage(page.data.section_page), section_id, block_id, field_id);
+      } catch (error) {
+        return json(res, error.status || 400, { error: error.message });
+      }
     }
     const admissionPause = generationAdmissionPause(env);
     if (admissionPause.paused) {
