@@ -1,0 +1,71 @@
+{
+  "id": "15018479518063",
+  "tienda": "fixture.myshopify.com",
+  "shopify_product_id": "gid://shopify/Product/15018479518063",
+  "urls": {
+    "gid://shopify/MediaImage/1": "https://cdn.shopify.com/s/files/1/fixture/product-1.webp",
+    "gid://shopify/MediaImage/2": "https://cdn.shopify.com/s/files/1/fixture/product-2.webp",
+    "gid://shopify/MediaImage/3": "https://cdn.shopify.com/s/files/1/fixture/product-3.webp",
+    "gid://shopify/MediaImage/4": "https://cdn.shopify.com/s/files/1/fixture/product-4.webp",
+    "gid://shopify/MediaImage/5": "https://cdn.shopify.com/s/files/1/fixture/product-5.webp"
+  },
+  "data": {
+    "fuente": {
+      "shopify_product_id": "gid://shopify/Product/15018479518063",
+      "titulo_crudo": "Blackhead Buster Peel Strips",
+      "precio": "19.95",
+      "moneda": "ARS",
+      "variantes": [{ "nombre": "Title", "valores": ["Default Title"] }]
+    },
+    "global": { "cta": "Comprar ahora" },
+    "facetas": {
+      "hero": {
+        "titulo": "Tiras Nariz Carbón Activado",
+        "subtitulo": "Carbón que absorbe grasa e impurezas del poro.",
+        "bullets": ["Sacá puntos negros en 15 minutos", "Destapá poros tapados"],
+        "galeria": [
+          "gid://shopify/MediaImage/1",
+          "gid://shopify/MediaImage/2",
+          "gid://shopify/MediaImage/3",
+          "gid://shopify/MediaImage/4",
+          "gid://shopify/MediaImage/5"
+        ],
+        "acordeones": [{ "titulo": "Información de envío", "contenido": "Envío rastreado." }]
+      },
+      "texto_img_1": {
+        "titular": "Nariz limpia al primer uso",
+        "parrafo": "Las tiras se adhieren y retiran impurezas.",
+        "imagen": "gid://shopify/MediaImage/1"
+      },
+      "iconos": {
+        "titular": "Por qué funcionan",
+        "items": [{ "emoji": "✓", "titulo": "Poro limpio", "frase": "Absorbe impurezas." }],
+        "imagen_central": "gid://shopify/MediaImage/2"
+      },
+      "tabla": {
+        "titular": "Contra una tira común",
+        "parrafo": "Comparación clara.",
+        "filas": ["Absorción", "Limpieza"],
+        "col_otros": "Otros"
+      },
+      "stats": {
+        "titular": "Lo que notaron",
+        "imagen": "gid://shopify/MediaImage/3",
+        "items": [{ "pct": 97, "frase": "Vieron menos puntos negros." }]
+      },
+      "texto_img_2": {
+        "titular": "Fáciles de usar",
+        "parrafo": "Humedecé la nariz y aplicá la tira.",
+        "imagen": "gid://shopify/MediaImage/4"
+      },
+      "faq": {
+        "titular": "Preguntas frecuentes",
+        "items": [{ "pregunta": "¿Cuántas trae?", "respuesta": "Diez tiras." }]
+      },
+      "garantia": {
+        "titular": "Compra tranquila",
+        "parrafo": "Te ayudamos si algo llega mal."
+      }
+    }
+  }
+}

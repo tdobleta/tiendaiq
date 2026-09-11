@@ -189,7 +189,10 @@ describe("frontera de migración de páginas", () => {
   });
 
   test("la página real de producto entra al catálogo atómico sin inventar reseñas", () => {
-    const archivo = path.join(__dirname, "..", "paginas", "emfgq0-he.myshopify.com", "15018479518063.json");
+    // El registro que vive en `paginas/` es un dato local ignorado por git.
+    // El CI debe probar la misma frontera con un fixture pequeño y trazable,
+    // no depender de una exportación privada que sólo existe en un checkout.
+    const archivo = path.join(__dirname, "fixtures", "pagina-real-producto.json");
     const pagina = JSON.parse(fs.readFileSync(archivo, "utf8"));
     const doc = documentoDePagina(pagina);
     const recolectar = (nodos) => (nodos || []).flatMap((nodo) => [nodo, ...recolectar(nodo.hijos)]);
