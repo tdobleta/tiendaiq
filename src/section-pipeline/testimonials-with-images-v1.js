@@ -62,5 +62,10 @@ module.exports = createSectionDefinition({
     reorderable: true,
     allowMultipleInstances: true,
     responsive: ["desktop_columns", "mobile_columns", "card_gap", "mobile_padding_top", "mobile_padding_bottom", "mobile_side_padding"]
+  },
+  contentSources: {
+    blocks: {
+      testimonial: { image: "shopify" }
+    }
   }
 });

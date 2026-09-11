@@ -841,7 +841,13 @@ async function crearPagina(idProducto, sesion, {
     const generated = await researchProduct(product, medios, { idioma, angulo });
     const metadata = templateMetadata(template);
     const urls = Object.fromEntries(medios.map((m) => [m.media_id, m.url]));
-    const sectionPage = createProductPage({ product, research: generated.research, urls, composition: "section-page-v1" });
+    const sectionPage = createProductPage({
+      product,
+      research: generated.research,
+      urls,
+      composition: "section-page-v1",
+      generatedAt: new Date().toISOString()
+    });
     return {
       data: {
         global: { estilo: metadata.legacyStyle, template: metadata.template, idioma, angulo, cta: "Agregar al carrito" },

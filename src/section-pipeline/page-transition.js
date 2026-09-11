@@ -28,9 +28,34 @@ function blockStructure(section) {
 }
 
 function assertServerOwnedFields(persisted, candidate) {
-  for (const field of ["productId", "productSnapshot", "evidence"]) {
+  for (const field of ["productId", "productSnapshot", "evidence", "copy_slots_v1"]) {
     if (!sameValue(persisted[field], candidate[field])) {
       throw new SectionContractError(`El editor no puede modificar ${field}`);
+    }
+  }
+}
+
+function assertLockedFields(persisted, candidate) {
+  const previousById = new Map(persisted.sections.map((section) => [section.id, section]));
+  for (const next of candidate.sections) {
+    const previous = previousById.get(next.id);
+    if (!previous) continue;
+    const definition = resolveSection(previous.definition);
+    const locked = definition?.lockedFields || {};
+    for (const field of locked.section || []) {
+      if (!sameValue(previous.instance.settings?.[field], next.instance.settings?.[field])) {
+        throw new SectionContractError(`${previous.label} controla el campo ${field} desde Shopify`);
+      }
+    }
+    const previousBlocks = new Map((previous.instance.blocks || []).map((block) => [block.id, block]));
+    for (const nextBlock of next.instance.blocks || []) {
+      const previousBlock = previousBlocks.get(nextBlock.id);
+      if (!previousBlock) continue;
+      for (const field of locked.blocks?.[previousBlock.type] || []) {
+        if (!sameValue(previousBlock.settings?.[field], nextBlock.settings?.[field])) {
+          throw new SectionContractError(`${previous.label} controla el campo ${field} desde Shopify`);
+        }
+      }
     }
   }
 }
@@ -89,6 +114,7 @@ function applyPageTransition({ persisted, candidate, expectedRevision }) {
   }
 
   assertServerOwnedFields(current, submitted);
+  assertLockedFields(current, submitted);
   assertCapabilities(current, submitted);
 
   const { tree: _derivedTree, ...document } = clone(submitted);

@@ -33,10 +33,10 @@ function imageSection(id = "section-image") {
 test("guardar exige la revisión abierta e incrementa exactamente una vez", () => {
   const persisted = page();
   const candidate = clone(persisted);
-  candidate.sections[0].instance.settings.heading = "Título editado";
+  candidate.sections[0].instance.settings.description = "<p>Descripción editada</p>";
   const saved = applyPageTransition({ persisted, candidate, expectedRevision: 0 });
   assert.equal(saved.revision, 1);
-  assert.equal(saved.sections[0].instance.settings.heading, "Título editado");
+  assert.equal(saved.sections[0].instance.settings.description, "<p>Descripción editada</p>");
   assert.throws(
     () => applyPageTransition({ persisted: saved, candidate, expectedRevision: 0 }),
     (error) => error.code === "SECTION_PAGE_REVISION_CONFLICT"
@@ -54,6 +54,35 @@ test("producto, evidencia e identidad comercial permanecen bajo control del serv
     mutate(candidate);
     assert.throws(() => applyPageTransition({ persisted, candidate, expectedRevision: 0 }), /editor no puede modificar/);
   }
+});
+
+test("la procedencia de los slots de IA es propiedad del servidor", () => {
+  const persisted = createProductPage({
+    product: { id: "gid://shopify/Product/123", title: "Bolso Atelier" },
+    research: {
+      copy_slots_v1: {
+        version: 1,
+        slots: [{
+          target: { section_id: "product-information", occurrence: 1, field: "description" },
+          value: "Descripción generada.",
+          evidence: [{ kind: "shopify_description", reference: "product.description" }]
+        }]
+      }
+    }
+  });
+  const candidate = clone(persisted);
+  candidate.copy_slots_v1.slots[0].provenance.source = "manual";
+  assert.throws(
+    () => applyPageTransition({ persisted, candidate, expectedRevision: 0 }),
+    /editor no puede modificar copy_slots_v1/
+  );
+});
+
+test("los campos Shopify protegidos no pueden reemplazarse desde el editor", () => {
+  const persisted = page();
+  const candidate = clone(persisted);
+  candidate.sections[0].instance.settings.heading = "Título inventado";
+  assert.throws(() => applyPageTransition({ persisted, candidate, expectedRevision: 0 }), /controla el campo heading/);
 });
 
 test("el servidor impide borrar o duplicar la sección obligatoria", () => {

@@ -3,6 +3,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const { createSectionDefinition } = require("./section-contract");
+const { readCopySlot } = require("./copy-slots");
 
 const source = fs.readFileSync(path.join(__dirname, "sources", "image-with-timeline-v1", "section.liquid"), "utf8")
   .replace(/\r\n?/g, "\n");
@@ -16,13 +17,16 @@ function adapt({ product, research, seed }) {
   if (url) instance.settings.image = url;
   if (product?.title) instance.settings.image_alt = String(product.title).slice(0, 180);
   const timelineCopy = Array.isArray(research?.sectionCopy?.timelineSteps) ? research.sectionCopy.timelineSteps : [];
-  if (research?.sectionCopy?.timelineIntro) instance.settings.intro = rich(research.sectionCopy.timelineIntro);
+  const generatedIntro = readCopySlot(research, { section_id: "image-with-timeline", occurrence: 1, field: "intro" });
+  if (generatedIntro || research?.sectionCopy?.timelineIntro) instance.settings.intro = rich(generatedIntro || research.sectionCopy.timelineIntro);
   else if (research?.summary) instance.settings.intro = rich(research.summary);
   instance.blocks.filter((block) => block.type === "timeline_step").forEach((block, index) => {
-    const copy = timelineCopy[index];
-    if (!copy) return;
-    if (copy.heading) block.settings.heading = String(copy.heading).slice(0, 180);
-    if (copy.body) block.settings.body = rich(copy.body);
+    const copy = timelineCopy[index] || {};
+    const generatedHeading = readCopySlot(research, { section_id: "image-with-timeline", occurrence: 1, block_type: "timeline_step", block_index: index, field: "heading" });
+    const generatedBody = readCopySlot(research, { section_id: "image-with-timeline", occurrence: 1, block_type: "timeline_step", block_index: index, field: "body" });
+    if (!generatedHeading && !generatedBody && !copy.heading && !copy.body) return;
+    if (generatedHeading || copy.heading) block.settings.heading = String(generatedHeading || copy.heading).slice(0, 180);
+    if (generatedBody || copy.body) block.settings.body = rich(generatedBody || copy.body);
   });
   return instance;
 }

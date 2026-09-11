@@ -3,6 +3,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const { createSectionDefinition } = require("./section-contract");
+const { readCopySlot } = require("./copy-slots");
 
 const source = fs.readFileSync(path.join(__dirname, "sources", "image-with-benefits-v1", "section.liquid"), "utf8").replace(/\r\n?/g, "\n");
 
@@ -16,14 +17,16 @@ function adapt({ product, research, seed }) {
   const url = first?.image?.url || first?.preview?.image?.url || first?.url || first?.src || "";
   if (url) instance.settings.image = url;
   if (product?.title) instance.settings.image_alt = String(product.title).slice(0, 180);
-  if (research?.sectionCopy?.benefitsIntro) instance.settings.intro = rich(research.sectionCopy.benefitsIntro);
+  const generatedIntro = readCopySlot(research, { section_id: "image-with-benefits", occurrence: 1, field: "intro" });
+  if (generatedIntro || research?.sectionCopy?.benefitsIntro) instance.settings.intro = rich(generatedIntro || research.sectionCopy.benefitsIntro);
   else if (research?.summary) instance.settings.intro = rich(research.summary);
   const benefitCopy = Array.isArray(research?.sectionCopy?.benefitItems) ? research.sectionCopy.benefitItems : [];
   instance.blocks.filter((block) => block.type === "benefit").forEach((block, index) => {
-    const copy = benefitCopy[index];
-    if (!copy) return;
-    if (copy.heading) block.settings.heading = String(copy.heading).slice(0, 180);
-    if (copy.body) block.settings.body = rich(copy.body);
+    const copy = benefitCopy[index] || {};
+    const generatedHeading = readCopySlot(research, { section_id: "image-with-benefits", occurrence: 1, block_type: "benefit", block_index: index, field: "heading" });
+    const generatedBody = readCopySlot(research, { section_id: "image-with-benefits", occurrence: 1, block_type: "benefit", block_index: index, field: "body" });
+    if (generatedHeading || copy.heading) block.settings.heading = String(generatedHeading || copy.heading).slice(0, 180);
+    if (generatedBody || copy.body) block.settings.body = rich(generatedBody || copy.body);
   });
   return instance;
 }
