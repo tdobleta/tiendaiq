@@ -7,6 +7,7 @@ const imageWithBenefits = require("./image-with-benefits-v1");
 const testimonialsWithImages = require("./testimonials-with-images-v1");
 const { resolvePageComposition } = require("./page-compositions");
 const { SectionContractError, validateInstance } = require("./section-contract");
+const { normalizePersistedCopySlots, persistCopySlots } = require("./copy-slots");
 
 const DEFINITIONS = Object.freeze([productInformation, imageWithText, imageWithTimeline, imageWithBenefits, testimonialsWithImages]);
 const REGISTRY = new Map(DEFINITIONS.map((definition) => [`${definition.id}@${definition.version}`, definition]));
@@ -64,7 +65,7 @@ function uniqueSectionId(definition, index) {
   return index === 0 ? "section-product-information" : `section-${definition.id}-${index}`;
 }
 
-function createProductPage({ product, research = {}, urls = {}, composition = null }) {
+function createProductPage({ product, research = {}, urls = {}, composition = null, generatedAt = null }) {
   const selectedComposition = composition == null
     ? [{ id: productInformation.id, version: productInformation.version, required: true }]
     : (Array.isArray(composition) ? composition : resolvePageComposition(composition));
@@ -83,6 +84,9 @@ function createProductPage({ product, research = {}, urls = {}, composition = nu
       instance: definition.adapt(product, research)
     };
   });
+  const persistedCopySlots = Object.hasOwn(research, "copy_slots_v1")
+    ? persistCopySlots(research.copy_slots_v1, { generatedAt })
+    : null;
   const page = {
     contractVersion: 1,
     revision: 0,
@@ -92,7 +96,8 @@ function createProductPage({ product, research = {}, urls = {}, composition = nu
       visualObservations: Array.isArray(research.visualObservations) ? research.visualObservations : [],
       verifiedClaims: Array.isArray(research.claims) ? research.claims.filter((claim) => claim?.verified === true) : []
     },
-    sections
+    sections,
+    ...(persistedCopySlots ? { copy_slots_v1: persistedCopySlots } : {})
   };
   return Object.freeze({ ...page, tree: sectionTree(page) });
 }
@@ -125,7 +130,13 @@ function validatePage(candidate) {
       instance
     };
   });
-  const page = { ...candidate, sections };
+  const page = {
+    ...candidate,
+    ...(Object.hasOwn(candidate, "copy_slots_v1")
+      ? { copy_slots_v1: normalizePersistedCopySlots(candidate.copy_slots_v1) }
+      : {}),
+    sections
+  };
   return Object.freeze({ ...page, tree: sectionTree(page) });
 }
 

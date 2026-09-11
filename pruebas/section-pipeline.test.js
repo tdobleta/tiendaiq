@@ -91,6 +91,32 @@ test("copy_slots_v1 registra targets desconocidos sin permitir que entren a una 
   assert.equal(research.copy_slots_v1.skipped[0].reason, "target_no_autorizado");
 });
 
+test("una página conserva la procedencia durable de cada slot generado", () => {
+  const page = createProductPage({
+    product: { id: "gid://shopify/Product/1", title: "Producto" },
+    generatedAt: "2026-09-11T12:00:00.000Z",
+    research: {
+      copy_slots_v1: {
+        version: 1,
+        slots: [{
+          target: { section_id: "product-information", occurrence: 1, field: "description" },
+          value: "Una descripción basada en Shopify.",
+          evidence: [{ kind: "shopify_description", reference: "product.description" }]
+        }]
+      }
+    }
+  });
+  const slot = validatePage(page).copy_slots_v1.slots[0];
+  assert.equal(slot.value, "Una descripción basada en Shopify.");
+  assert.deepEqual(slot.evidence, [{ kind: "shopify_description", reference: "product.description" }]);
+  assert.deepEqual(slot.provenance, {
+    source: "ai",
+    contract: "copy_slots_v1",
+    prompt_version: "copy-slots-v1",
+    generated_at: "2026-09-11T12:00:00.000Z"
+  });
+});
+
 test("la adaptación rechaza cambios fuera de copySlots y de datos derivados declarados", () => {
   const unsafe = createSectionDefinition({
     id: "scope-check",

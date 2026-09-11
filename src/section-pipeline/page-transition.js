@@ -28,7 +28,7 @@ function blockStructure(section) {
 }
 
 function assertServerOwnedFields(persisted, candidate) {
-  for (const field of ["productId", "productSnapshot", "evidence"]) {
+  for (const field of ["productId", "productSnapshot", "evidence", "copy_slots_v1"]) {
     if (!sameValue(persisted[field], candidate[field])) {
       throw new SectionContractError(`El editor no puede modificar ${field}`);
     }
