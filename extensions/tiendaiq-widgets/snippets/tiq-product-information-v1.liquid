@@ -1,4 +1,4 @@
-{% comment %} GENERATED from product-information@1 · f8b7689d35380420f4450e526c0240c928cd5c815c3481e439f00d5d8d770c0d. Do not edit. {% endcomment %}
+{% comment %} GENERATED from product-information@1 · c74bb5dead61731ae65007d76554b4bd020f595992f6c316cdb5872502245632. Do not edit. {% endcomment %}
 {% liquid
 assign section_dom_id = 'product-hero-' | append: tiq_section.id | handleize
 assign hero_content_max_width = 600
@@ -1120,9 +1120,13 @@ const thumbnails = Array.from(root.querySelectorAll('[data-thumb]'));
 const bundleOptions = Array.from(root.querySelectorAll('[data-bundle]'));
 const ctaPrice = root.querySelector('[data-cta-price]');
 const ctaCompare = root.querySelector('[data-cta-compare]');
+const cta = root.querySelector('[data-cta]');
+const cartVariant = root.querySelector('[data-cart-variant]');
 const cartQuantity = root.querySelector('[data-cart-quantity]');
 const tabButtons = Array.from(root.querySelectorAll('[data-tab-button]'));
 const tabPanels = Array.from(root.querySelectorAll('[data-tab-panel]'));
+if (cartVariant && cta?.dataset.variantId) cartVariant.value = cta.dataset.variantId;
+if (cartQuantity && !cartQuantity.value) cartQuantity.value = '1';
 const selectThumbnail = (thumbnail) => {
 if (!thumbnail || !mainImage) return;
 const imageUrl = thumbnail.getAttribute('data-image');
