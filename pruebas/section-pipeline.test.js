@@ -137,6 +137,17 @@ test("crear una página conserva el diseño Shopify y adapta sólo contenido aut
   assert.equal(page.sections[0].instance.blocks.some((block) => block.binding), false);
 });
 
+test("una página persistida con la huella anterior se migra al registro vigente", () => {
+  const page = JSON.parse(JSON.stringify(createProductPage({
+    product: { id: "gid://shopify/Product/123", title: "Producto migrable" }
+  })));
+  page.sections[0].definition.sourceSha256 = "huella-liquid-anterior";
+
+  const migrated = validatePage(page);
+  assert.equal(migrated.sections[0].definition.sourceSha256, productInformation.sourceSha256);
+  assert.equal(migrated.sections[0].instance.settings.heading, "Producto migrable");
+});
+
 test("producto e investigación no pueden alterar estructura ni insertar claims sin evidencia", () => {
   const page = createProductPage({
     product: { id: "gid://shopify/Product/1", title: "Producto", variants: [] },

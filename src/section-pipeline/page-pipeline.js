@@ -110,10 +110,20 @@ function validatePage(candidate) {
     if (!section?.id || ids.has(section.id)) throw new SectionContractError("La página contiene secciones sin identidad única");
     ids.add(section.id);
     const definition = resolveSection(section.definition);
-    if (!definition || section.definition.sourceSha256 !== definition.sourceSha256) {
+    if (!definition) {
       throw new SectionContractError(`La versión visual de ${section.label || section.id} no coincide con el registro`);
     }
-    return { ...section, instance: validateInstance({ definition, instance: section.instance }) };
+    // Las páginas persistidas sobreviven a despliegues. Si una corrección de
+    // Liquid conserva el mismo id/version y la instancia sigue siendo válida,
+    // actualizamos la huella al registro vigente para que un borrador anterior
+    // no quede inutilizable en preview, guardado o publicación. Los cambios de
+    // contrato real siguen exigiendo una nueva version y nunca llegan aquí.
+    const instance = validateInstance({ definition, instance: section.instance });
+    return {
+      ...section,
+      definition: { ...section.definition, sourceSha256: definition.sourceSha256 },
+      instance
+    };
   });
   const page = { ...candidate, sections };
   return Object.freeze({ ...page, tree: sectionTree(page) });
