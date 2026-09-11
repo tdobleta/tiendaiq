@@ -1,163 +1,150 @@
 {% comment %} GENERATED from testimonios-con-imagenes@1 · 10f26d1da4b2ac274fe992472691ec2af1ea65fae0b0de47217a1aadfab0d588. Do not edit. {% endcomment %}
 {% liquid
-  assign section_dom_id = 'tiq-testimonials-' | append: tiq_section.id | handleize
-  assign placeholder_class = section_dom_id | append: '__placeholder'
+assign section_dom_id = 'tiq-testimonials-' | append: tiq_section.id | handleize
+assign placeholder_class = section_dom_id | append: '__placeholder'
 %}
-
 <section
-  id="{{ section_dom_id }}"
-  class="{{ section_dom_id }}"
-  aria-labelledby="{{ section_dom_id }}-heading"
-  style="--tiq-testimonials-columns: {{ tiq_section.instance.settings.desktop_columns }}; --tiq-testimonials-mobile-columns: {{ tiq_section.instance.settings.mobile_columns }};"
+id="{{ section_dom_id }}"
+class="{{ section_dom_id }}"
+aria-labelledby="{{ section_dom_id }}-heading"
+style="--tiq-testimonials-columns: {{ tiq_section.instance.settings.desktop_columns }}; --tiq-testimonials-mobile-columns: {{ tiq_section.instance.settings.mobile_columns }};"
 >
-  <div class="{{ section_dom_id }}__inner">
-    {% if tiq_section.instance.settings.eyebrow != blank %}
-      <p class="{{ section_dom_id }}__eyebrow">{{ tiq_section.instance.settings.eyebrow | escape }}</p>
-    {% endif %}
-
-    {% if tiq_section.instance.settings.heading != blank %}
-      <h2 id="{{ section_dom_id }}-heading" class="{{ section_dom_id }}__heading">{{ tiq_section.instance.settings.heading | escape }}</h2>
-    {% endif %}
-
-    {% if tiq_section.instance.settings.intro != blank %}
-      <div class="{{ section_dom_id }}__intro rte">{{ tiq_section.instance.settings.intro }}</div>
-    {% endif %}
-
-    <div class="{{ section_dom_id }}__carousel-wrap">
-      <div class="{{ section_dom_id }}__carousel" data-tiq-testimonials-track tabindex="0" aria-label="Testimonios de clientes">
-        {% for block in tiq_section.instance.blocks %}
-          <article class="{{ section_dom_id }}__card" data-tiq-block-id="{{ block.id | escape }}">
-            <div class="{{ section_dom_id }}__image">
-              {% if block.settings.image != blank %}
-                <img
-                  src="{{ block.settings.image | escape }}"
-                  alt="{{ block.settings.image_alt | default: block.settings.author | escape }}"
-                  loading="lazy"
-                  width="900"
-                  height="900"
-                >
-              {% else %}
-                {{ 'image' | placeholder_svg_tag: placeholder_class }}
-              {% endif %}
-            </div>
-
-            <div class="{{ section_dom_id }}__content">
-              <div class="{{ section_dom_id }}__meta">
-                <span class="{{ section_dom_id }}__stars" aria-label="{{ block.settings.rating }} de 5 estrellas">{{ block.settings.rating_stars | escape }}</span>
-                {% if block.settings.verified %}
-                  <span class="{{ section_dom_id }}__verified">{{ block.settings.verified_label | escape }}</span>
-                {% endif %}
-              </div>
-
-              {% if block.settings.review != blank %}
-                <p class="{{ section_dom_id }}__review">“{{ block.settings.review | escape }}”</p>
-              {% endif %}
-
-              {% if block.settings.author != blank %}
-                <p class="{{ section_dom_id }}__author">{{ block.settings.author | escape }}</p>
-              {% endif %}
-            </div>
-          </article>
-        {% endfor %}
-      </div>
-
-      {% if tiq_section.instance.blocks.size > tiq_section.instance.settings.desktop_columns %}
-        <div class="{{ section_dom_id }}__controls">
-          <button type="button" data-tiq-testimonials-prev aria-label="Testimonios anteriores">
-            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m12.5 4-6 6 6 6"/></svg>
-          </button>
-          <button type="button" data-tiq-testimonials-next aria-label="Siguientes testimonios">
-            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m7.5 4 6 6-6 6"/></svg>
-          </button>
-        </div>
-      {% endif %}
-    </div>
-  </div>
+<div class="{{ section_dom_id }}__inner">
+{% if tiq_section.instance.settings.eyebrow != blank %}
+<p class="{{ section_dom_id }}__eyebrow">{{ tiq_section.instance.settings.eyebrow | escape }}</p>
+{% endif %}
+{% if tiq_section.instance.settings.heading != blank %}
+<h2 id="{{ section_dom_id }}-heading" class="{{ section_dom_id }}__heading">{{ tiq_section.instance.settings.heading | escape }}</h2>
+{% endif %}
+{% if tiq_section.instance.settings.intro != blank %}
+<div class="{{ section_dom_id }}__intro rte">{{ tiq_section.instance.settings.intro }}</div>
+{% endif %}
+<div class="{{ section_dom_id }}__carousel-wrap">
+<div class="{{ section_dom_id }}__carousel" data-tiq-testimonials-track tabindex="0" aria-label="Testimonios de clientes">
+{% for block in tiq_section.instance.blocks %}
+<article class="{{ section_dom_id }}__card" data-tiq-block-id="{{ block.id | escape }}">
+<div class="{{ section_dom_id }}__image">
+{% if block.settings.image != blank %}
+<img
+src="{{ block.settings.image | escape }}"
+alt="{{ block.settings.image_alt | default: block.settings.author | escape }}"
+loading="lazy"
+width="900"
+height="900"
+>
+{% else %}
+{{ 'image' | placeholder_svg_tag: placeholder_class }}
+{% endif %}
+</div>
+<div class="{{ section_dom_id }}__content">
+<div class="{{ section_dom_id }}__meta">
+<span class="{{ section_dom_id }}__stars" aria-label="{{ block.settings.rating }} de 5 estrellas">{{ block.settings.rating_stars | escape }}</span>
+{% if block.settings.verified %}
+<span class="{{ section_dom_id }}__verified">{{ block.settings.verified_label | escape }}</span>
+{% endif %}
+</div>
+{% if block.settings.review != blank %}
+<p class="{{ section_dom_id }}__review">“{{ block.settings.review | escape }}”</p>
+{% endif %}
+{% if block.settings.author != blank %}
+<p class="{{ section_dom_id }}__author">{{ block.settings.author | escape }}</p>
+{% endif %}
+</div>
+</article>
+{% endfor %}
+</div>
+{% if tiq_section.instance.blocks.size > tiq_section.instance.settings.desktop_columns %}
+<div class="{{ section_dom_id }}__controls">
+<button type="button" data-tiq-testimonials-prev aria-label="Testimonios anteriores">
+<svg viewBox="0 0 20 20" aria-hidden="true"><path d="m12.5 4-6 6 6 6"/></svg>
+</button>
+<button type="button" data-tiq-testimonials-next aria-label="Siguientes testimonios">
+<svg viewBox="0 0 20 20" aria-hidden="true"><path d="m7.5 4 6 6-6 6"/></svg>
+</button>
+</div>
+{% endif %}
+</div>
+</div>
 </section>
-
 <style>
-  #{{ section_dom_id }} {
-    --tiq-testimonials-bg: {{ tiq_section.instance.settings.background_color }};
-    --tiq-testimonials-card: {{ tiq_section.instance.settings.card_background }};
-    --tiq-testimonials-heading: {{ tiq_section.instance.settings.heading_color }};
-    --tiq-testimonials-text: {{ tiq_section.instance.settings.text_color }};
-    --tiq-testimonials-muted: {{ tiq_section.instance.settings.muted_color }};
-    --tiq-testimonials-accent: {{ tiq_section.instance.settings.accent_color }};
-    --tiq-testimonials-border: {{ tiq_section.instance.settings.border_color }};
-    --tiq-testimonials-radius: {{ tiq_section.instance.settings.card_radius }}px;
-    --tiq-testimonials-gap: {{ tiq_section.instance.settings.card_gap }}px;
-    width: 100%;
-    background: var(--tiq-testimonials-bg);
-    color: var(--tiq-testimonials-text);
-  }
-
-  #{{ section_dom_id }} * { box-sizing: border-box; }
-  #{{ section_dom_id }} .{{ section_dom_id }}__inner { width: min(100%, {{ tiq_section.instance.settings.max_width }}px); margin: 0 auto; padding: {{ tiq_section.instance.settings.padding_top }}px {{ tiq_section.instance.settings.side_padding }}px {{ tiq_section.instance.settings.padding_bottom }}px; }
-  #{{ section_dom_id }} .{{ section_dom_id }}__eyebrow { margin: 0 0 10px; color: var(--tiq-testimonials-accent); font-size: 12px; font-weight: 700; letter-spacing: .12em; line-height: 1.3; text-align: center; text-transform: uppercase; }
-  #{{ section_dom_id }} .{{ section_dom_id }}__heading { margin: 0; color: var(--tiq-testimonials-heading); font-size: clamp(28px, 4vw, 48px); font-weight: 700; letter-spacing: -.035em; line-height: 1.05; text-align: center; }
-  #{{ section_dom_id }} .{{ section_dom_id }}__intro { max-width: 650px; margin: 14px auto 0; color: var(--tiq-testimonials-muted); font-size: 16px; line-height: 1.55; text-align: center; }
-  #{{ section_dom_id }} .{{ section_dom_id }}__intro p { margin: 0; }
-  #{{ section_dom_id }} .{{ section_dom_id }}__carousel-wrap { position: relative; margin-top: 36px; }
-  #{{ section_dom_id }} .{{ section_dom_id }}__carousel { display: grid; grid-auto-flow: column; gap: var(--tiq-testimonials-gap); overflow-x: auto; padding: 2px 1px 8px; scroll-behavior: smooth; scroll-snap-type: x mandatory; scrollbar-width: none;
-    {% case tiq_section.instance.settings.desktop_columns %}
-      {% when 2 %} grid-auto-columns: calc((100% - var(--tiq-testimonials-gap)) / 2);
-      {% when 3 %} grid-auto-columns: calc((100% - var(--tiq-testimonials-gap) - var(--tiq-testimonials-gap)) / 3);
-      {% when 5 %} grid-auto-columns: calc((100% - var(--tiq-testimonials-gap) - var(--tiq-testimonials-gap) - var(--tiq-testimonials-gap) - var(--tiq-testimonials-gap)) / 5);
-      {% else %} grid-auto-columns: calc((100% - var(--tiq-testimonials-gap) - var(--tiq-testimonials-gap) - var(--tiq-testimonials-gap)) / 4);
-    {% endcase %}
-  }
-  #{{ section_dom_id }} .{{ section_dom_id }}__carousel::-webkit-scrollbar { display: none; }
-  #{{ section_dom_id }} .{{ section_dom_id }}__card { min-width: 0; overflow: hidden; border: 1px solid var(--tiq-testimonials-border); border-radius: var(--tiq-testimonials-radius); background: var(--tiq-testimonials-card); scroll-snap-align: start; }
-  #{{ section_dom_id }} .{{ section_dom_id }}__image { aspect-ratio: 1 / 1; overflow: hidden; background: color-mix(in srgb, var(--tiq-testimonials-card) 84%, var(--tiq-testimonials-border)); }
-  #{{ section_dom_id }} .{{ section_dom_id }}__image img,
-  #{{ section_dom_id }} .{{ section_dom_id }}__image svg { display: block; width: 100%; height: 100%; object-fit: cover; }
-  #{{ section_dom_id }} .{{ section_dom_id }}__content { padding: 18px 18px 20px; }
-  #{{ section_dom_id }} .{{ section_dom_id }}__meta { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-  #{{ section_dom_id }} .{{ section_dom_id }}__stars { color: var(--tiq-testimonials-accent); font-size: 15px; letter-spacing: .08em; line-height: 1; }
-  #{{ section_dom_id }} .{{ section_dom_id }}__verified { color: var(--tiq-testimonials-muted); font-size: 11px; font-weight: 650; }
-  #{{ section_dom_id }} .{{ section_dom_id }}__review { margin: 16px 0 14px; color: var(--tiq-testimonials-text); font-size: 15px; line-height: 1.55; }
-  #{{ section_dom_id }} .{{ section_dom_id }}__author { margin: 0; color: var(--tiq-testimonials-heading); font-size: 13px; font-weight: 700; }
-  #{{ section_dom_id }} .{{ section_dom_id }}__controls { display: flex; justify-content: center; gap: 10px; margin-top: 22px; }
-  #{{ section_dom_id }} .{{ section_dom_id }}__controls button { display: grid; width: 40px; height: 40px; padding: 0; place-items: center; border: 1px solid var(--tiq-testimonials-accent); border-radius: 50%; background: transparent; color: var(--tiq-testimonials-accent); cursor: pointer; transition: background .18s ease, color .18s ease, transform .18s ease; }
-  #{{ section_dom_id }} .{{ section_dom_id }}__controls button:hover { background: var(--tiq-testimonials-accent); color: var(--tiq-testimonials-card); transform: translateY(-1px); }
-  #{{ section_dom_id }} .{{ section_dom_id }}__controls button:focus-visible { outline: 3px solid color-mix(in srgb, var(--tiq-testimonials-accent) 35%, transparent); outline-offset: 3px; }
-  #{{ section_dom_id }} .{{ section_dom_id }}__controls svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.7; }
-
-  @media (max-width: 749px) {
-    #{{ section_dom_id }} .{{ section_dom_id }}__inner { padding: {{ tiq_section.instance.settings.mobile_padding_top }}px {{ tiq_section.instance.settings.mobile_side_padding }}px {{ tiq_section.instance.settings.mobile_padding_bottom }}px; }
-    #{{ section_dom_id }} .{{ section_dom_id }}__heading { font-size: clamp(28px, 9vw, 40px); }
-    #{{ section_dom_id }} .{{ section_dom_id }}__intro { font-size: 15px; }
-    #{{ section_dom_id }} .{{ section_dom_id }}__carousel {
-      {% if tiq_section.instance.settings.mobile_columns == 2 %}
-        grid-auto-columns: calc((100% - var(--tiq-testimonials-gap)) / 2);
-      {% else %}
-        grid-auto-columns: 100%;
-      {% endif %}
-    }
-    #{{ section_dom_id }} .{{ section_dom_id }}__content { padding: 14px; }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    #{{ section_dom_id }} .{{ section_dom_id }}__carousel { scroll-behavior: auto; }
-    #{{ section_dom_id }} .{{ section_dom_id }}__controls button { transition: none; }
-  }
+#{{ section_dom_id }} {
+--tiq-testimonials-bg: {{ tiq_section.instance.settings.background_color }};
+--tiq-testimonials-card: {{ tiq_section.instance.settings.card_background }};
+--tiq-testimonials-heading: {{ tiq_section.instance.settings.heading_color }};
+--tiq-testimonials-text: {{ tiq_section.instance.settings.text_color }};
+--tiq-testimonials-muted: {{ tiq_section.instance.settings.muted_color }};
+--tiq-testimonials-accent: {{ tiq_section.instance.settings.accent_color }};
+--tiq-testimonials-border: {{ tiq_section.instance.settings.border_color }};
+--tiq-testimonials-radius: {{ tiq_section.instance.settings.card_radius }}px;
+--tiq-testimonials-gap: {{ tiq_section.instance.settings.card_gap }}px;
+width: 100%;
+background: var(--tiq-testimonials-bg);
+color: var(--tiq-testimonials-text);
+}
+#{{ section_dom_id }} * { box-sizing: border-box; }
+#{{ section_dom_id }} .{{ section_dom_id }}__inner { width: min(100%, {{ tiq_section.instance.settings.max_width }}px); margin: 0 auto; padding: {{ tiq_section.instance.settings.padding_top }}px {{ tiq_section.instance.settings.side_padding }}px {{ tiq_section.instance.settings.padding_bottom }}px; }
+#{{ section_dom_id }} .{{ section_dom_id }}__eyebrow { margin: 0 0 10px; color: var(--tiq-testimonials-accent); font-size: 12px; font-weight: 700; letter-spacing: .12em; line-height: 1.3; text-align: center; text-transform: uppercase; }
+#{{ section_dom_id }} .{{ section_dom_id }}__heading { margin: 0; color: var(--tiq-testimonials-heading); font-size: clamp(28px, 4vw, 48px); font-weight: 700; letter-spacing: -.035em; line-height: 1.05; text-align: center; }
+#{{ section_dom_id }} .{{ section_dom_id }}__intro { max-width: 650px; margin: 14px auto 0; color: var(--tiq-testimonials-muted); font-size: 16px; line-height: 1.55; text-align: center; }
+#{{ section_dom_id }} .{{ section_dom_id }}__intro p { margin: 0; }
+#{{ section_dom_id }} .{{ section_dom_id }}__carousel-wrap { position: relative; margin-top: 36px; }
+#{{ section_dom_id }} .{{ section_dom_id }}__carousel { display: grid; grid-auto-flow: column; gap: var(--tiq-testimonials-gap); overflow-x: auto; padding: 2px 1px 8px; scroll-behavior: smooth; scroll-snap-type: x mandatory; scrollbar-width: none;
+{% case tiq_section.instance.settings.desktop_columns %}
+{% when 2 %} grid-auto-columns: calc((100% - var(--tiq-testimonials-gap)) / 2);
+{% when 3 %} grid-auto-columns: calc((100% - var(--tiq-testimonials-gap) - var(--tiq-testimonials-gap)) / 3);
+{% when 5 %} grid-auto-columns: calc((100% - var(--tiq-testimonials-gap) - var(--tiq-testimonials-gap) - var(--tiq-testimonials-gap) - var(--tiq-testimonials-gap)) / 5);
+{% else %} grid-auto-columns: calc((100% - var(--tiq-testimonials-gap) - var(--tiq-testimonials-gap) - var(--tiq-testimonials-gap)) / 4);
+{% endcase %}
+}
+#{{ section_dom_id }} .{{ section_dom_id }}__carousel::-webkit-scrollbar { display: none; }
+#{{ section_dom_id }} .{{ section_dom_id }}__card { min-width: 0; overflow: hidden; border: 1px solid var(--tiq-testimonials-border); border-radius: var(--tiq-testimonials-radius); background: var(--tiq-testimonials-card); scroll-snap-align: start; }
+#{{ section_dom_id }} .{{ section_dom_id }}__image { aspect-ratio: 1 / 1; overflow: hidden; background: color-mix(in srgb, var(--tiq-testimonials-card) 84%, var(--tiq-testimonials-border)); }
+#{{ section_dom_id }} .{{ section_dom_id }}__image img,
+#{{ section_dom_id }} .{{ section_dom_id }}__image svg { display: block; width: 100%; height: 100%; object-fit: cover; }
+#{{ section_dom_id }} .{{ section_dom_id }}__content { padding: 18px 18px 20px; }
+#{{ section_dom_id }} .{{ section_dom_id }}__meta { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+#{{ section_dom_id }} .{{ section_dom_id }}__stars { color: var(--tiq-testimonials-accent); font-size: 15px; letter-spacing: .08em; line-height: 1; }
+#{{ section_dom_id }} .{{ section_dom_id }}__verified { color: var(--tiq-testimonials-muted); font-size: 11px; font-weight: 650; }
+#{{ section_dom_id }} .{{ section_dom_id }}__review { margin: 16px 0 14px; color: var(--tiq-testimonials-text); font-size: 15px; line-height: 1.55; }
+#{{ section_dom_id }} .{{ section_dom_id }}__author { margin: 0; color: var(--tiq-testimonials-heading); font-size: 13px; font-weight: 700; }
+#{{ section_dom_id }} .{{ section_dom_id }}__controls { display: flex; justify-content: center; gap: 10px; margin-top: 22px; }
+#{{ section_dom_id }} .{{ section_dom_id }}__controls button { display: grid; width: 40px; height: 40px; padding: 0; place-items: center; border: 1px solid var(--tiq-testimonials-accent); border-radius: 50%; background: transparent; color: var(--tiq-testimonials-accent); cursor: pointer; transition: background .18s ease, color .18s ease, transform .18s ease; }
+#{{ section_dom_id }} .{{ section_dom_id }}__controls button:hover { background: var(--tiq-testimonials-accent); color: var(--tiq-testimonials-card); transform: translateY(-1px); }
+#{{ section_dom_id }} .{{ section_dom_id }}__controls button:focus-visible { outline: 3px solid color-mix(in srgb, var(--tiq-testimonials-accent) 35%, transparent); outline-offset: 3px; }
+#{{ section_dom_id }} .{{ section_dom_id }}__controls svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.7; }
+@media (max-width: 749px) {
+#{{ section_dom_id }} .{{ section_dom_id }}__inner { padding: {{ tiq_section.instance.settings.mobile_padding_top }}px {{ tiq_section.instance.settings.mobile_side_padding }}px {{ tiq_section.instance.settings.mobile_padding_bottom }}px; }
+#{{ section_dom_id }} .{{ section_dom_id }}__heading { font-size: clamp(28px, 9vw, 40px); }
+#{{ section_dom_id }} .{{ section_dom_id }}__intro { font-size: 15px; }
+#{{ section_dom_id }} .{{ section_dom_id }}__carousel {
+{% if tiq_section.instance.settings.mobile_columns == 2 %}
+grid-auto-columns: calc((100% - var(--tiq-testimonials-gap)) / 2);
+{% else %}
+grid-auto-columns: 100%;
+{% endif %}
+}
+#{{ section_dom_id }} .{{ section_dom_id }}__content { padding: 14px; }
+}
+@media (prefers-reduced-motion: reduce) {
+#{{ section_dom_id }} .{{ section_dom_id }}__carousel { scroll-behavior: auto; }
+#{{ section_dom_id }} .{{ section_dom_id }}__controls button { transition: none; }
+}
 </style>
-
 <script>
-  (function () {
-    var root = document.getElementById({{ section_dom_id | json }});
-    if (!root) return;
-    var track = root.querySelector('[data-tiq-testimonials-track]');
-    var previous = root.querySelector('[data-tiq-testimonials-prev]');
-    var next = root.querySelector('[data-tiq-testimonials-next]');
-    if (!track) return;
-    function move(direction) {
-      var card = track.querySelector('article');
-      if (!card) return;
-      var distance = card.getBoundingClientRect().width + {{ tiq_section.instance.settings.card_gap }};
-      track.scrollBy({ left: distance * direction, behavior: 'smooth' });
-    }
-    if (previous) previous.addEventListener('click', function () { move(-1); });
-    if (next) next.addEventListener('click', function () { move(1); });
-  }());
+(function () {
+var root = document.getElementById({{ section_dom_id | json }});
+if (!root) return;
+var track = root.querySelector('[data-tiq-testimonials-track]');
+var previous = root.querySelector('[data-tiq-testimonials-prev]');
+var next = root.querySelector('[data-tiq-testimonials-next]');
+if (!track) return;
+function move(direction) {
+var card = track.querySelector('article');
+if (!card) return;
+var distance = card.getBoundingClientRect().width + {{ tiq_section.instance.settings.card_gap }};
+track.scrollBy({ left: distance * direction, behavior: 'smooth' });
+}
+if (previous) previous.addEventListener('click', function () { move(-1); });
+if (next) next.addEventListener('click', function () { move(1); });
+}());
 </script>

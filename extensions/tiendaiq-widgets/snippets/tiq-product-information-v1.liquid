@@ -1,1337 +1,1193 @@
 {% comment %} GENERATED from product-information@1 · e83983df67324428fd6c9b0455afd4ef32194d9bd4e8424f3c21f4199c3482f8. Do not edit. {% endcomment %}
 {% liquid
-  assign section_dom_id = 'product-hero-' | append: tiq_section.id | handleize
-  assign hero_content_max_width = 600
-  assign main_image_class = section_dom_id | append: '__main-image'
-  assign thumbnail_image_class = section_dom_id | append: '__thumbnail-image'
-  assign bundle_image_class = section_dom_id | append: '__bundle-image'
-  assign reviewer_image_class = section_dom_id | append: '__reviewer-image'
-  assign placeholder_svg_class = section_dom_id | append: '__placeholder-svg'
-  assign thumbnail_placeholder_class = section_dom_id | append: '__thumbnail-placeholder'
-  assign current_variant = product.selected_or_first_available_variant
-  assign featured_media = blank
-
-  if current_variant != blank
-    assign featured_media = current_variant.featured_media
-  endif
-
-  if featured_media == blank and product != blank
-    assign featured_media = product.featured_media
-  endif
-
-  assign featured_alt = tiq_section.instance.settings.image_alt
-  if featured_media != blank and featured_media.alt != blank
-    assign featured_alt = featured_media.alt
-  elsif product != blank and product.title != blank
-    assign featured_alt = product.title
-  endif
-
-  assign cta_href = tiq_section.instance.settings.button_link
-  if cta_href == blank and product != blank
-    assign cta_href = product.url
-  endif
-  if cta_href == blank
-    assign cta_href = '#'
-  endif
-
-  assign reviews_label_display = '693+ reseñas'
-
-  assign cta_icon_display = tiq_section.instance.settings.button_icon
-  if cta_icon_display == '♧'
-    assign cta_icon_display = 'cart'
-  endif
-
-  assign first_bundle_price = blank
-  assign first_bundle_compare = blank
-  for block in tiq_section.instance.blocks
-    if block.type == 'bundle' and first_bundle_price == blank
-      assign first_bundle_price = block.settings.price
-      assign first_bundle_compare = block.settings.compare_at_price
-    endif
-  endfor
-
-  assign cta_price_display = blank
-  assign cta_compare_display = blank
-  if current_variant != blank
-    assign cta_price_display = current_variant.price | money
-    if current_variant.compare_at_price > current_variant.price
-      assign cta_compare_display = current_variant.compare_at_price | money
-    endif
-  elsif first_bundle_price != blank
-    assign cta_price_display = first_bundle_price
-    assign cta_compare_display = first_bundle_compare
-  endif
+assign section_dom_id = 'product-hero-' | append: tiq_section.id | handleize
+assign hero_content_max_width = 600
+assign main_image_class = section_dom_id | append: '__main-image'
+assign thumbnail_image_class = section_dom_id | append: '__thumbnail-image'
+assign bundle_image_class = section_dom_id | append: '__bundle-image'
+assign reviewer_image_class = section_dom_id | append: '__reviewer-image'
+assign placeholder_svg_class = section_dom_id | append: '__placeholder-svg'
+assign thumbnail_placeholder_class = section_dom_id | append: '__thumbnail-placeholder'
+assign current_variant = product.selected_or_first_available_variant
+assign featured_media = blank
+if current_variant != blank
+assign featured_media = current_variant.featured_media
+endif
+if featured_media == blank and product != blank
+assign featured_media = product.featured_media
+endif
+assign featured_alt = tiq_section.instance.settings.image_alt
+if featured_media != blank and featured_media.alt != blank
+assign featured_alt = featured_media.alt
+elsif product != blank and product.title != blank
+assign featured_alt = product.title
+endif
+assign cta_href = tiq_section.instance.settings.button_link
+if cta_href == blank and product != blank
+assign cta_href = product.url
+endif
+if cta_href == blank
+assign cta_href = '#'
+endif
+assign reviews_label_display = '693+ reseñas'
+assign cta_icon_display = tiq_section.instance.settings.button_icon
+if cta_icon_display == '♧'
+assign cta_icon_display = 'cart'
+endif
+assign first_bundle_price = blank
+assign first_bundle_compare = blank
+for block in tiq_section.instance.blocks
+if block.type == 'bundle' and first_bundle_price == blank
+assign first_bundle_price = block.settings.price
+assign first_bundle_compare = block.settings.compare_at_price
+endif
+endfor
+assign cta_price_display = blank
+assign cta_compare_display = blank
+if current_variant != blank
+assign cta_price_display = current_variant.price | money
+if current_variant.compare_at_price > current_variant.price
+assign cta_compare_display = current_variant.compare_at_price | money
+endif
+elsif first_bundle_price != blank
+assign cta_price_display = first_bundle_price
+assign cta_compare_display = first_bundle_compare
+endif
 %}
-
-<!-- Product hero section: product media, offers, CTA, payment badges and tabs. -->
 <section
-  id="{{ section_dom_id }}"
-  class="{{ section_dom_id }}"
-  style="
-    --hero-max-width: {{ tiq_section.instance.settings.max_width }}px;
-    --hero-content-max-width: {{ hero_content_max_width }}px;
-    --hero-media-width: {{ tiq_section.instance.settings.media_width }}%;
-    --hero-column-gap: {{ tiq_section.instance.settings.column_gap }}px;
-    --hero-card-gap: {{ tiq_section.instance.settings.card_gap }}px;
-    --hero-media-gap: 8px;
-    --hero-thumbnail-size: {{ tiq_section.instance.settings.thumbnail_size }}px;
-    --hero-desktop-top: {{ tiq_section.instance.settings.desktop_padding_top }}px;
-    --hero-desktop-bottom: {{ tiq_section.instance.settings.desktop_padding_bottom }}px;
-    --hero-mobile-top: {{ tiq_section.instance.settings.mobile_padding_top }}px;
-    --hero-mobile-bottom: {{ tiq_section.instance.settings.mobile_padding_bottom }}px;
-    --hero-desktop-side: {{ tiq_section.instance.settings.desktop_side_padding }}px;
-    --hero-mobile-side: {{ tiq_section.instance.settings.mobile_side_padding }}px;
-    --hero-media-radius: 0px;
-    --hero-panel-radius: 6px;
-    --hero-background: {{ tiq_section.instance.settings.background_color }};
-    --hero-media-background: {{ tiq_section.instance.settings.media_background_color }};
-    --hero-text: {{ tiq_section.instance.settings.text_color }};
-    --hero-heading: {{ tiq_section.instance.settings.heading_color }};
-    --hero-muted: {{ tiq_section.instance.settings.muted_color }};
-    --hero-accent: {{ tiq_section.instance.settings.accent_color }};
-    --hero-border: {{ tiq_section.instance.settings.border_color }};
-    --hero-panel: {{ tiq_section.instance.settings.panel_color }};
-    --hero-panel-alt: {{ tiq_section.instance.settings.panel_alt_color }};
-    --hero-button: {{ tiq_section.instance.settings.button_color }};
-    --hero-button-text: {{ tiq_section.instance.settings.button_text_color }};
-    --hero-success: {{ tiq_section.instance.settings.success_color }};
-    --hero-star: {{ tiq_section.instance.settings.star_color }};
-  "
+id="{{ section_dom_id }}"
+class="{{ section_dom_id }}"
+style="
+--hero-max-width: {{ tiq_section.instance.settings.max_width }}px;
+--hero-content-max-width: {{ hero_content_max_width }}px;
+--hero-media-width: {{ tiq_section.instance.settings.media_width }}%;
+--hero-column-gap: {{ tiq_section.instance.settings.column_gap }}px;
+--hero-card-gap: {{ tiq_section.instance.settings.card_gap }}px;
+--hero-media-gap: 8px;
+--hero-thumbnail-size: {{ tiq_section.instance.settings.thumbnail_size }}px;
+--hero-desktop-top: {{ tiq_section.instance.settings.desktop_padding_top }}px;
+--hero-desktop-bottom: {{ tiq_section.instance.settings.desktop_padding_bottom }}px;
+--hero-mobile-top: {{ tiq_section.instance.settings.mobile_padding_top }}px;
+--hero-mobile-bottom: {{ tiq_section.instance.settings.mobile_padding_bottom }}px;
+--hero-desktop-side: {{ tiq_section.instance.settings.desktop_side_padding }}px;
+--hero-mobile-side: {{ tiq_section.instance.settings.mobile_side_padding }}px;
+--hero-media-radius: 0px;
+--hero-panel-radius: 6px;
+--hero-background: {{ tiq_section.instance.settings.background_color }};
+--hero-media-background: {{ tiq_section.instance.settings.media_background_color }};
+--hero-text: {{ tiq_section.instance.settings.text_color }};
+--hero-heading: {{ tiq_section.instance.settings.heading_color }};
+--hero-muted: {{ tiq_section.instance.settings.muted_color }};
+--hero-accent: {{ tiq_section.instance.settings.accent_color }};
+--hero-border: {{ tiq_section.instance.settings.border_color }};
+--hero-panel: {{ tiq_section.instance.settings.panel_color }};
+--hero-panel-alt: {{ tiq_section.instance.settings.panel_alt_color }};
+--hero-button: {{ tiq_section.instance.settings.button_color }};
+--hero-button-text: {{ tiq_section.instance.settings.button_text_color }};
+--hero-success: {{ tiq_section.instance.settings.success_color }};
+--hero-star: {{ tiq_section.instance.settings.star_color }};
+"
 >
-  <div class="{{ section_dom_id }}__inner">
-    <div class="{{ section_dom_id }}__grid">
-      <!-- Product media gallery. The left column stays visible while the details scroll. -->
-      <div class="{{ section_dom_id }}__media-column">
-        <div class="{{ section_dom_id }}__media-stage">
-          {% if featured_media != blank %}
-            {{ featured_media.preview_image | image_url: width: 1600 | image_tag: class: main_image_class, widths: '540, 720, 960, 1200, 1600', sizes: '(min-width: 990px) 46vw, 100vw', loading: 'eager', alt: featured_alt }}
-          {% elsif tiq_section.instance.settings.hero_image != blank %}
-            {{ tiq_section.instance.settings.hero_image | image_url: width: 1600 | image_tag: class: main_image_class, widths: '540, 720, 960, 1200, 1600', sizes: '(min-width: 990px) 46vw, 100vw', loading: 'eager', alt: tiq_section.instance.settings.image_alt }}
-          {% else %}
-            <div class="{{ section_dom_id }}__media-placeholder" role="img" aria-label="{{ tiq_section.instance.settings.image_alt | escape }}">
-              {{ 'product-1' | placeholder_svg_tag: placeholder_svg_class }}
-            </div>
-          {% endif %}
-        </div>
-
-        {% if product != blank and product.media.size > 0 %}
-          <div class="{{ section_dom_id }}__thumbnails" role="list" aria-label="Imágenes del producto">
-            {% for media in product.media %}
-              {% assign media_preview = media.preview_image %}
-              {% assign media_alt = media.alt | default: product.title | default: tiq_section.instance.settings.image_alt %}
-              {% if media_preview != blank %}
-                <button
-                  type="button"
-                  class="{{ section_dom_id }}__thumbnail {% if featured_media != blank and media.id == featured_media.id %}{{ section_dom_id }}__thumbnail--active{% endif %}"
-                  data-thumb
-                  data-image="{{ media_preview | image_url: width: 1600 }}"
-                  data-alt="{{ media_alt | escape }}"
-                  aria-label="Ver {{ media_alt | escape }}"
-                  aria-current="{% if featured_media != blank and media.id == featured_media.id %}true{% else %}false{% endif %}"
-                >
-                  {{ media_preview | image_url: width: 220 | image_tag: class: thumbnail_image_class, loading: 'lazy', alt: media_alt }}
-                </button>
-              {% endif %}
-            {% endfor %}
-          </div>
-        {% else %}
-          {% assign media_thumb_count = 0 %}
-          {% for block in tiq_section.instance.blocks %}
-            {% if block.type == 'media_thumb' %}
-              {% assign media_thumb_count = media_thumb_count | plus: 1 %}
-            {% endif %}
-          {% endfor %}
-          {% if media_thumb_count > 0 %}
-            <div class="{{ section_dom_id }}__thumbnails" role="list" aria-label="Imágenes del producto">
-              {% assign media_thumb_index = 0 %}
-              {% for block in tiq_section.instance.blocks %}
-                {% if block.type == 'media_thumb' %}
-                  {% assign media_thumb_index = media_thumb_index | plus: 1 %}
-                  <button
-                    type="button"
-                    class="{{ section_dom_id }}__thumbnail {% if media_thumb_index == 1 %}{{ section_dom_id }}__thumbnail--active{% endif %}"
-                    data-thumb
-                    data-image="{% if block.settings.image != blank %}{{ block.settings.image | image_url: width: 1600 }}{% endif %}"
-                    data-alt="{{ block.settings.alt | escape }}"
-                    aria-label="{{ block.settings.button_label | escape }}"
-                    aria-current="{% if media_thumb_index == 1 %}true{% else %}false{% endif %}"
-                    data-tiq-block-id="{{ block.id | escape }}"
-                  >
-                    {% if block.settings.image != blank %}
-                      {{ block.settings.image | image_url: width: 220 | image_tag: class: thumbnail_image_class, loading: 'lazy', alt: block.settings.alt }}
-                    {% else %}
-                      {{ 'product-1' | placeholder_svg_tag: thumbnail_placeholder_class }}
-                    {% endif %}
-                  </button>
-                {% endif %}
-              {% endfor %}
-            </div>
-          {% endif %}
-        {% endif %}
-      </div>
-
-      <!-- Product information and conversion panel. -->
-      <div class="{{ section_dom_id }}__details">
-        <div class="{{ section_dom_id }}__rating-row">
-          <span class="{{ section_dom_id }}__stars" aria-label="5 de 5 estrellas">{{ tiq_section.instance.settings.rating_stars | escape }}</span>
-          <span>{{ tiq_section.instance.settings.rating_text | escape }}</span>
-          {% if tiq_section.instance.settings.reviews_link != blank %}
-            <a href="{{ tiq_section.instance.settings.reviews_link }}" class="{{ section_dom_id }}__reviews-link">{{ reviews_label_display }}</a>
-          {% else %}
-            <span class="{{ section_dom_id }}__reviews-link">{{ reviews_label_display }}</span>
-          {% endif %}
-        </div>
-
-        <h1 class="{{ section_dom_id }}__title">{{ tiq_section.instance.settings.heading | escape }}</h1>
-
-        {% if tiq_section.instance.settings.description != blank %}
-          <div class="{{ section_dom_id }}__description">{{ tiq_section.instance.settings.description }}</div>
-        {% endif %}
-
-        {% assign benefit_count = 0 %}
-        {% for block in tiq_section.instance.blocks %}
-          {% if block.type == 'benefit' %}
-            {% assign benefit_count = benefit_count | plus: 1 %}
-          {% endif %}
-        {% endfor %}
-        {% if benefit_count > 0 %}
-          <div class="{{ section_dom_id }}__benefits" aria-label="Beneficios del producto">
-            {% for block in tiq_section.instance.blocks %}
-              {% if block.type == 'benefit' %}
-                <span class="{{ section_dom_id }}__benefit" data-tiq-block-id="{{ block.id | escape }}">
-                  <span class="{{ section_dom_id }}__benefit-icon" aria-hidden="true">{{ block.settings.icon_glyph }}</span>
-                  <span>{{ block.settings.text | escape }}</span>
-                </span>
-              {% endif %}
-            {% endfor %}
-          </div>
-        {% endif %}
-
-        {% assign bundle_count = 0 %}
-        {% for block in tiq_section.instance.blocks %}
-          {% if block.type == 'bundle' %}
-            {% assign bundle_count = bundle_count | plus: 1 %}
-          {% endif %}
-        {% endfor %}
-        {% if bundle_count > 0 %}
-          <div class="{{ section_dom_id }}__bundle-heading">
-            <span></span>
-            <strong>{{ tiq_section.instance.settings.bundle_heading | escape }}</strong>
-            <span></span>
-          </div>
-
-          <div class="{{ section_dom_id }}__bundles" role="group" aria-label="Elige un paquete">
-            {% assign bundle_index = 0 %}
-            {% for block in tiq_section.instance.blocks %}
-              {% if block.type == 'bundle' %}
-                {% assign bundle_index = bundle_index | plus: 1 %}
-                {% assign bundle_selected = false %}
-                {% if block.settings.selected or bundle_index == 1 %}
-                  {% assign bundle_selected = true %}
-                {% endif %}
-
-                {% assign bundle_title_key = block.settings.title | downcase %}
-                {% assign bundle_units = 1 %}
-                {% if bundle_title_key contains 'buy 3' or bundle_title_key contains 'compra 3' %}
-                  {% assign bundle_units = 5 %}
-                {% elsif bundle_title_key contains 'buy 2' or bundle_title_key contains 'compra 2' %}
-                  {% assign bundle_units = 3 %}
-                {% endif %}
-
-                {% assign bundle_price_display = block.settings.price %}
-                {% assign bundle_compare_display = block.settings.compare_at_price %}
-                {% assign bundle_subtitle_display = block.settings.subtitle %}
-                {% if current_variant != blank %}
-                  {% assign bundle_price_total = current_variant.price | times: bundle_units %}
-                  {% assign bundle_price_display = bundle_price_total | money %}
-                  {% if current_variant.compare_at_price > current_variant.price %}
-                    {% assign bundle_compare_total = current_variant.compare_at_price | times: bundle_units %}
-                    {% assign bundle_compare_display = bundle_compare_total | money %}
-                    {% assign unit_savings = current_variant.compare_at_price | minus: current_variant.price %}
-                    {% assign bundle_savings = unit_savings | times: bundle_units %}
-                    {% capture bundle_subtitle_display %}Ahorras {{ bundle_savings | money }}{% endcapture %}
-                  {% else %}
-                    {% assign bundle_compare_display = blank %}
-                    {% assign bundle_subtitle_display = blank %}
-                  {% endif %}
-                {% endif %}
-                <button
-                  type="button"
-                  class="{{ section_dom_id }}__bundle {% if bundle_selected %}{{ section_dom_id }}__bundle--selected{% endif %}"
-                  data-bundle
-                  data-selected="{% if bundle_selected %}true{% else %}false{% endif %}"
-                  data-price="{{ bundle_price_display | escape }}"
-                  data-compare="{{ bundle_compare_display | escape }}"
-                  aria-pressed="{% if bundle_selected %}true{% else %}false{% endif %}"
-                  data-tiq-block-id="{{ block.id | escape }}"
-                >
-                  {% if block.settings.image != blank %}
-                    {{ block.settings.image | image_url: width: 110 | image_tag: class: bundle_image_class, loading: 'lazy', alt: block.settings.image_alt }}
-                  {% elsif featured_media != blank %}
-                    {{ featured_media.preview_image | image_url: width: 110 | image_tag: class: bundle_image_class, loading: 'lazy', alt: featured_alt }}
-                  {% else %}
-                    <span class="{{ section_dom_id }}__bundle-image-placeholder" aria-hidden="true">{{ block.settings.image_placeholder }}</span>
-                  {% endif %}
-                  <span class="{{ section_dom_id }}__bundle-copy">
-                    <span class="{{ section_dom_id }}__bundle-title">{{ block.settings.title | escape }}</span>
-                    {% if bundle_subtitle_display != blank %}
-                      <span class="{{ section_dom_id }}__bundle-subtitle">{{ bundle_subtitle_display }}</span>
-                    {% endif %}
-                  </span>
-                  <span class="{{ section_dom_id }}__bundle-prices">
-                    <span class="{{ section_dom_id }}__bundle-price">{{ bundle_price_display }}</span>
-                    {% if bundle_compare_display != blank %}
-                      <s>{{ bundle_compare_display }}</s>
-                    {% endif %}
-                  </span>
-                  {% if block.settings.badge != blank %}
-                    <span class="{{ section_dom_id }}__bundle-badge">{{ block.settings.badge | escape }}</span>
-                  {% endif %}
-                </button>
-              {% endif %}
-            {% endfor %}
-          </div>
-        {% endif %}
-
-        {% if tiq_section.instance.settings.urgency_text != blank %}
-          <div class="{{ section_dom_id }}__urgency">
-            <span aria-hidden="true"></span>
-            <span>{{ tiq_section.instance.settings.urgency_text | escape }}</span>
-          </div>
-        {% endif %}
-
-        <a
-          class="{{ section_dom_id }}__cta"
-          href="{{ cta_href }}"
-          aria-label="{{ tiq_section.instance.settings.button_label | escape }}"
-          data-cta
-          data-variant-id="{% if current_variant != blank %}{{ current_variant.id }}{% endif %}"
-        >
-          <span class="{{ section_dom_id }}__cta-icon" aria-hidden="true">
-            {% if cta_icon_display == 'cart' %}
-              <svg viewBox="0 0 24 24" focusable="false"><path d="M3 4h2l2.2 10.2h10.7l2-7H7.1M9.3 20a1.25 1.25 0 1 0 0-2.5 1.25 1.25 0 0 0 0 2.5Zm7.8 0a1.25 1.25 0 1 0 0-2.5 1.25 1.25 0 0 0 0 2.5Z" /></svg>
-            {% else %}
-              {{ cta_icon_display }}
-            {% endif %}
-          </span>
-          <span data-cta-label>{{ tiq_section.instance.settings.button_label | escape }}</span>
-          {% if cta_price_display != blank %}
-            <span data-cta-price> - {{ cta_price_display }}</span>
-          {% endif %}
-          <s data-cta-compare{% if cta_compare_display == blank %} hidden{% endif %}>{% if cta_compare_display != blank %}{{ cta_compare_display }}{% endif %}</s>
-        </a>
-
-        {% assign trust_count = 0 %}
-        {% for block in tiq_section.instance.blocks %}
-          {% if block.type == 'trust_item' %}
-            {% assign trust_count = trust_count | plus: 1 %}
-          {% endif %}
-        {% endfor %}
-        {% if trust_count > 0 %}
-          <div class="{{ section_dom_id }}__trust-row" aria-label="Beneficios de compra">
-            {% for block in tiq_section.instance.blocks %}
-              {% if block.type == 'trust_item' %}
-                <span class="{{ section_dom_id }}__trust-item" data-tiq-block-id="{{ block.id | escape }}">
-                  <span class="{{ section_dom_id }}__trust-icon" aria-hidden="true">
-                    {% if block.settings.icon_glyph == '♢' and block.settings.text contains 'Shipping' or block.settings.icon_glyph == '♢' and block.settings.text contains 'Envío' %}
-                      <svg viewBox="0 0 24 24" focusable="false"><path d="m3 7 9-4 9 4v10l-9 4-9-4V7Zm0 0 9 4 9-4M12 11v10" /></svg>
-                    {% elsif block.settings.icon_glyph == '♢' and block.settings.text contains 'Guarantee' or block.settings.icon_glyph == '♢' and block.settings.text contains 'Garantía' %}
-                      <svg viewBox="0 0 24 24" focusable="false"><path d="M5 8h14l-1 12H6L5 8Zm3 0V6a4 4 0 0 1 8 0v2m-6 6 1.4 1.4L15 12" /></svg>
-                    {% else %}
-                      {{ block.settings.icon_glyph }}
-                    {% endif %}
-                  </span>
-                  <span>{{ block.settings.text | escape }}</span>
-                </span>
-              {% endif %}
-            {% endfor %}
-          </div>
-        {% endif %}
-
-        {% assign payment_count = 0 %}
-        {% for block in tiq_section.instance.blocks %}
-          {% if block.type == 'payment' %}
-            {% assign payment_count = payment_count | plus: 1 %}
-          {% endif %}
-        {% endfor %}
-        {% if payment_count > 0 %}
-          <div class="{{ section_dom_id }}__payments" aria-label="Métodos de pago aceptados">
-            {% for block in tiq_section.instance.blocks %}
-              {% if block.type == 'payment' %}
-                {% assign payment_width = block.settings.width | plus: 0 %}
-                {% if payment_width < 30 %}
-                  {% assign payment_width = 32 %}
-                {% endif %}
-                <span class="{{ section_dom_id }}__payment {{ section_dom_id }}__payment--{{ block.settings.label | handleize }}" style="--payment-width: {{ payment_width }}px;" data-tiq-block-id="{{ block.id | escape }}">
-                  {% if block.settings.image != blank %}
-                    {{ block.settings.image | image_url: width: 160 | image_tag: loading: 'lazy', alt: block.settings.alt }}
-                  {% else %}
-                    <span class="{{ section_dom_id }}__payment-placeholder {{ section_dom_id }}__payment-placeholder--{{ block.settings.style }}">{{ block.settings.label | escape }}</span>
-                  {% endif %}
-                </span>
-              {% endif %}
-            {% endfor %}
-          </div>
-        {% endif %}
-
-        {% assign tab_count = 0 %}
-        {% for block in tiq_section.instance.blocks %}
-          {% if block.type == 'tab' %}
-            {% assign tab_count = tab_count | plus: 1 %}
-          {% endif %}
-        {% endfor %}
-        {% if tab_count > 0 %}
-          <div class="{{ section_dom_id }}__tabs" data-tabs>
-            <div class="{{ section_dom_id }}__tab-list" role="tablist" aria-label="Detalles del producto">
-              {% assign tab_index = 0 %}
-              {% for block in tiq_section.instance.blocks %}
-                {% if block.type == 'tab' %}
-                  {% assign tab_index = tab_index | plus: 1 %}
-                  {% assign tab_id = section_dom_id | append: '-tab-' | append: tab_index %}
-                  {% assign panel_id = section_dom_id | append: '-panel-' | append: tab_index %}
-                  <button
-                    type="button"
-                    id="{{ tab_id }}"
-                    class="{{ section_dom_id }}__tab"
-                    role="tab"
-                    aria-controls="{{ panel_id }}"
-                    aria-selected="false"
-                    tabindex="-1"
-                    data-tab-button
-                    data-panel-id="{{ panel_id }}"
-                    data-active="{% if block.settings.active %}true{% else %}false{% endif %}"
-                    data-tiq-block-id="{{ block.id | escape }}"
-                  >
-                    {{ block.settings.title | escape }}
-                  </button>
-                {% endif %}
-              {% endfor %}
-            </div>
-
-            {% assign tab_index = 0 %}
-            {% for block in tiq_section.instance.blocks %}
-              {% if block.type == 'tab' %}
-                {% assign tab_index = tab_index | plus: 1 %}
-                {% assign tab_id = section_dom_id | append: '-tab-' | append: tab_index %}
-                {% assign panel_id = section_dom_id | append: '-panel-' | append: tab_index %}
-                {% assign tab_layout = block.settings.layout %}
-                {% assign tab_title_key = block.settings.title | downcase %}
-                {% if tab_title_key contains 'compar' %}
-                  {% assign tab_layout = 'comparison' %}
-                {% elsif tab_title_key contains 'spec' or tab_title_key contains 'especific' %}
-                  {% assign tab_layout = 'specification' %}
-                {% endif %}
-                <div
-                  id="{{ panel_id }}"
-                  class="{{ section_dom_id }}__tab-panel"
-                  role="tabpanel"
-                  aria-labelledby="{{ tab_id }}"
-                  hidden
-                  data-tab-panel
-                  data-layout="{{ tab_layout }}"
-                >
-                  {% case tab_layout %}
-                    {% when 'review' %}
-                      <div class="{{ section_dom_id }}__review-stars" aria-label="{{ block.settings.rating_label | escape }}">{{ block.settings.rating_stars | escape }}</div>
-                      <div class="{{ section_dom_id }}__review-content">{{ block.settings.content }}</div>
-                      <div class="{{ section_dom_id }}__reviewer">
-                        {% if block.settings.reviewer_image != blank %}
-                          {{ block.settings.reviewer_image | image_url: width: 120 | image_tag: class: reviewer_image_class, loading: 'lazy', alt: block.settings.reviewer_image_alt }}
-                        {% else %}
-                          <span class="{{ section_dom_id }}__reviewer-initials" aria-hidden="true">{{ block.settings.reviewer_initials | escape }}</span>
-                        {% endif %}
-                        <span class="{{ section_dom_id }}__reviewer-copy">
-                          <strong>{{ block.settings.reviewer_name | escape }}</strong>
-                          <span>{{ block.settings.reviewer_date | escape }}</span>
-                          <small>{{ block.settings.reviewer_role | escape }}</small>
-                        </span>
-                      </div>
-                    {% when 'comparison' %}
-                      <div class="{{ section_dom_id }}__comparison" role="table" aria-label="Comparación de productos">
-                        <div class="{{ section_dom_id }}__comparison-head" role="row">
-                          <span role="columnheader"></span>
-                          <strong role="columnheader">{{ block.settings.comparison_us_heading | escape }}</strong>
-                          <strong role="columnheader">{{ block.settings.comparison_other_heading | escape }}</strong>
-                        </div>
-                        {% for comparison_item in (1..3) %}
-                          {% case comparison_item %}
-                            {% when 1 %}{% assign item_text = block.settings.comparison_item_1 %}
-                            {% when 2 %}{% assign item_text = block.settings.comparison_item_2 %}
-                            {% when 3 %}{% assign item_text = block.settings.comparison_item_3 %}
-                          {% endcase %}
-                          <div class="{{ section_dom_id }}__comparison-row" role="row">
-                            <span role="rowheader">{{ item_text | escape }}</span>
-                            <span class="{{ section_dom_id }}__comparison-yes" role="cell" aria-label="{{ block.settings.comparison_yes_label | escape }}">✓</span>
-                            <span class="{{ section_dom_id }}__comparison-no" role="cell" aria-label="{{ block.settings.comparison_no_label | escape }}">×</span>
-                          </div>
-                        {% endfor %}
-                      </div>
-                    {% else %}
-                      <div class="{{ section_dom_id }}__specification">{{ block.settings.specification_text | escape }}</div>
-                  {% endcase %}
-                </div>
-              {% endif %}
-            {% endfor %}
-          </div>
-        {% endif %}
-      </div>
-    </div>
-  </div>
+<div class="{{ section_dom_id }}__inner">
+<div class="{{ section_dom_id }}__grid">
+<div class="{{ section_dom_id }}__media-column">
+<div class="{{ section_dom_id }}__media-stage">
+{% if featured_media != blank %}
+{{ featured_media.preview_image | image_url: width: 1600 | image_tag: class: main_image_class, widths: '540, 720, 960, 1200, 1600', sizes: '(min-width: 990px) 46vw, 100vw', loading: 'eager', alt: featured_alt }}
+{% elsif tiq_section.instance.settings.hero_image != blank %}
+{{ tiq_section.instance.settings.hero_image | image_url: width: 1600 | image_tag: class: main_image_class, widths: '540, 720, 960, 1200, 1600', sizes: '(min-width: 990px) 46vw, 100vw', loading: 'eager', alt: tiq_section.instance.settings.image_alt }}
+{% else %}
+<div class="{{ section_dom_id }}__media-placeholder" role="img" aria-label="{{ tiq_section.instance.settings.image_alt | escape }}">
+{{ 'product-1' | placeholder_svg_tag: placeholder_svg_class }}
+</div>
+{% endif %}
+</div>
+{% if product != blank and product.media.size > 0 %}
+<div class="{{ section_dom_id }}__thumbnails" role="list" aria-label="Imágenes del producto">
+{% for media in product.media %}
+{% assign media_preview = media.preview_image %}
+{% assign media_alt = media.alt | default: product.title | default: tiq_section.instance.settings.image_alt %}
+{% if media_preview != blank %}
+<button
+type="button"
+class="{{ section_dom_id }}__thumbnail {% if featured_media != blank and media.id == featured_media.id %}{{ section_dom_id }}__thumbnail--active{% endif %}"
+data-thumb
+data-image="{{ media_preview | image_url: width: 1600 }}"
+data-alt="{{ media_alt | escape }}"
+aria-label="Ver {{ media_alt | escape }}"
+aria-current="{% if featured_media != blank and media.id == featured_media.id %}true{% else %}false{% endif %}"
+>
+{{ media_preview | image_url: width: 220 | image_tag: class: thumbnail_image_class, loading: 'lazy', alt: media_alt }}
+</button>
+{% endif %}
+{% endfor %}
+</div>
+{% else %}
+{% assign media_thumb_count = 0 %}
+{% for block in tiq_section.instance.blocks %}
+{% if block.type == 'media_thumb' %}
+{% assign media_thumb_count = media_thumb_count | plus: 1 %}
+{% endif %}
+{% endfor %}
+{% if media_thumb_count > 0 %}
+<div class="{{ section_dom_id }}__thumbnails" role="list" aria-label="Imágenes del producto">
+{% assign media_thumb_index = 0 %}
+{% for block in tiq_section.instance.blocks %}
+{% if block.type == 'media_thumb' %}
+{% assign media_thumb_index = media_thumb_index | plus: 1 %}
+<button
+type="button"
+class="{{ section_dom_id }}__thumbnail {% if media_thumb_index == 1 %}{{ section_dom_id }}__thumbnail--active{% endif %}"
+data-thumb
+data-image="{% if block.settings.image != blank %}{{ block.settings.image | image_url: width: 1600 }}{% endif %}"
+data-alt="{{ block.settings.alt | escape }}"
+aria-label="{{ block.settings.button_label | escape }}"
+aria-current="{% if media_thumb_index == 1 %}true{% else %}false{% endif %}"
+data-tiq-block-id="{{ block.id | escape }}"
+>
+{% if block.settings.image != blank %}
+{{ block.settings.image | image_url: width: 220 | image_tag: class: thumbnail_image_class, loading: 'lazy', alt: block.settings.alt }}
+{% else %}
+{{ 'product-1' | placeholder_svg_tag: thumbnail_placeholder_class }}
+{% endif %}
+</button>
+{% endif %}
+{% endfor %}
+</div>
+{% endif %}
+{% endif %}
+</div>
+<div class="{{ section_dom_id }}__details">
+<div class="{{ section_dom_id }}__rating-row">
+<span class="{{ section_dom_id }}__stars" aria-label="5 de 5 estrellas">{{ tiq_section.instance.settings.rating_stars | escape }}</span>
+<span>{{ tiq_section.instance.settings.rating_text | escape }}</span>
+{% if tiq_section.instance.settings.reviews_link != blank %}
+<a href="{{ tiq_section.instance.settings.reviews_link }}" class="{{ section_dom_id }}__reviews-link">{{ reviews_label_display }}</a>
+{% else %}
+<span class="{{ section_dom_id }}__reviews-link">{{ reviews_label_display }}</span>
+{% endif %}
+</div>
+<h1 class="{{ section_dom_id }}__title">{{ tiq_section.instance.settings.heading | escape }}</h1>
+{% if tiq_section.instance.settings.description != blank %}
+<div class="{{ section_dom_id }}__description">{{ tiq_section.instance.settings.description }}</div>
+{% endif %}
+{% assign benefit_count = 0 %}
+{% for block in tiq_section.instance.blocks %}
+{% if block.type == 'benefit' %}
+{% assign benefit_count = benefit_count | plus: 1 %}
+{% endif %}
+{% endfor %}
+{% if benefit_count > 0 %}
+<div class="{{ section_dom_id }}__benefits" aria-label="Beneficios del producto">
+{% for block in tiq_section.instance.blocks %}
+{% if block.type == 'benefit' %}
+<span class="{{ section_dom_id }}__benefit" data-tiq-block-id="{{ block.id | escape }}">
+<span class="{{ section_dom_id }}__benefit-icon" aria-hidden="true">{{ block.settings.icon_glyph }}</span>
+<span>{{ block.settings.text | escape }}</span>
+</span>
+{% endif %}
+{% endfor %}
+</div>
+{% endif %}
+{% assign bundle_count = 0 %}
+{% for block in tiq_section.instance.blocks %}
+{% if block.type == 'bundle' %}
+{% assign bundle_count = bundle_count | plus: 1 %}
+{% endif %}
+{% endfor %}
+{% if bundle_count > 0 %}
+<div class="{{ section_dom_id }}__bundle-heading">
+<span></span>
+<strong>{{ tiq_section.instance.settings.bundle_heading | escape }}</strong>
+<span></span>
+</div>
+<div class="{{ section_dom_id }}__bundles" role="group" aria-label="Elige un paquete">
+{% assign bundle_index = 0 %}
+{% for block in tiq_section.instance.blocks %}
+{% if block.type == 'bundle' %}
+{% assign bundle_index = bundle_index | plus: 1 %}
+{% assign bundle_selected = false %}
+{% if block.settings.selected or bundle_index == 1 %}
+{% assign bundle_selected = true %}
+{% endif %}
+{% assign bundle_title_key = block.settings.title | downcase %}
+{% assign bundle_units = 1 %}
+{% if bundle_title_key contains 'buy 3' or bundle_title_key contains 'compra 3' %}
+{% assign bundle_units = 5 %}
+{% elsif bundle_title_key contains 'buy 2' or bundle_title_key contains 'compra 2' %}
+{% assign bundle_units = 3 %}
+{% endif %}
+{% assign bundle_price_display = block.settings.price %}
+{% assign bundle_compare_display = block.settings.compare_at_price %}
+{% assign bundle_subtitle_display = block.settings.subtitle %}
+{% if current_variant != blank %}
+{% assign bundle_price_total = current_variant.price | times: bundle_units %}
+{% assign bundle_price_display = bundle_price_total | money %}
+{% if current_variant.compare_at_price > current_variant.price %}
+{% assign bundle_compare_total = current_variant.compare_at_price | times: bundle_units %}
+{% assign bundle_compare_display = bundle_compare_total | money %}
+{% assign unit_savings = current_variant.compare_at_price | minus: current_variant.price %}
+{% assign bundle_savings = unit_savings | times: bundle_units %}
+{% capture bundle_subtitle_display %}Ahorras {{ bundle_savings | money }}{% endcapture %}
+{% else %}
+{% assign bundle_compare_display = blank %}
+{% assign bundle_subtitle_display = blank %}
+{% endif %}
+{% endif %}
+<button
+type="button"
+class="{{ section_dom_id }}__bundle {% if bundle_selected %}{{ section_dom_id }}__bundle--selected{% endif %}"
+data-bundle
+data-selected="{% if bundle_selected %}true{% else %}false{% endif %}"
+data-price="{{ bundle_price_display | escape }}"
+data-compare="{{ bundle_compare_display | escape }}"
+aria-pressed="{% if bundle_selected %}true{% else %}false{% endif %}"
+data-tiq-block-id="{{ block.id | escape }}"
+>
+{% if block.settings.image != blank %}
+{{ block.settings.image | image_url: width: 110 | image_tag: class: bundle_image_class, loading: 'lazy', alt: block.settings.image_alt }}
+{% elsif featured_media != blank %}
+{{ featured_media.preview_image | image_url: width: 110 | image_tag: class: bundle_image_class, loading: 'lazy', alt: featured_alt }}
+{% else %}
+<span class="{{ section_dom_id }}__bundle-image-placeholder" aria-hidden="true">{{ block.settings.image_placeholder }}</span>
+{% endif %}
+<span class="{{ section_dom_id }}__bundle-copy">
+<span class="{{ section_dom_id }}__bundle-title">{{ block.settings.title | escape }}</span>
+{% if bundle_subtitle_display != blank %}
+<span class="{{ section_dom_id }}__bundle-subtitle">{{ bundle_subtitle_display }}</span>
+{% endif %}
+</span>
+<span class="{{ section_dom_id }}__bundle-prices">
+<span class="{{ section_dom_id }}__bundle-price">{{ bundle_price_display }}</span>
+{% if bundle_compare_display != blank %}
+<s>{{ bundle_compare_display }}</s>
+{% endif %}
+</span>
+{% if block.settings.badge != blank %}
+<span class="{{ section_dom_id }}__bundle-badge">{{ block.settings.badge | escape }}</span>
+{% endif %}
+</button>
+{% endif %}
+{% endfor %}
+</div>
+{% endif %}
+{% if tiq_section.instance.settings.urgency_text != blank %}
+<div class="{{ section_dom_id }}__urgency">
+<span aria-hidden="true"></span>
+<span>{{ tiq_section.instance.settings.urgency_text | escape }}</span>
+</div>
+{% endif %}
+<a
+class="{{ section_dom_id }}__cta"
+href="{{ cta_href }}"
+aria-label="{{ tiq_section.instance.settings.button_label | escape }}"
+data-cta
+data-variant-id="{% if current_variant != blank %}{{ current_variant.id }}{% endif %}"
+>
+<span class="{{ section_dom_id }}__cta-icon" aria-hidden="true">
+{% if cta_icon_display == 'cart' %}
+<svg viewBox="0 0 24 24" focusable="false"><path d="M3 4h2l2.2 10.2h10.7l2-7H7.1M9.3 20a1.25 1.25 0 1 0 0-2.5 1.25 1.25 0 0 0 0 2.5Zm7.8 0a1.25 1.25 0 1 0 0-2.5 1.25 1.25 0 0 0 0 2.5Z" /></svg>
+{% else %}
+{{ cta_icon_display }}
+{% endif %}
+</span>
+<span data-cta-label>{{ tiq_section.instance.settings.button_label | escape }}</span>
+{% if cta_price_display != blank %}
+<span data-cta-price> - {{ cta_price_display }}</span>
+{% endif %}
+<s data-cta-compare{% if cta_compare_display == blank %} hidden{% endif %}>{% if cta_compare_display != blank %}{{ cta_compare_display }}{% endif %}</s>
+</a>
+{% assign trust_count = 0 %}
+{% for block in tiq_section.instance.blocks %}
+{% if block.type == 'trust_item' %}
+{% assign trust_count = trust_count | plus: 1 %}
+{% endif %}
+{% endfor %}
+{% if trust_count > 0 %}
+<div class="{{ section_dom_id }}__trust-row" aria-label="Beneficios de compra">
+{% for block in tiq_section.instance.blocks %}
+{% if block.type == 'trust_item' %}
+<span class="{{ section_dom_id }}__trust-item" data-tiq-block-id="{{ block.id | escape }}">
+<span class="{{ section_dom_id }}__trust-icon" aria-hidden="true">
+{% if block.settings.icon_glyph == '♢' and block.settings.text contains 'Shipping' or block.settings.icon_glyph == '♢' and block.settings.text contains 'Envío' %}
+<svg viewBox="0 0 24 24" focusable="false"><path d="m3 7 9-4 9 4v10l-9 4-9-4V7Zm0 0 9 4 9-4M12 11v10" /></svg>
+{% elsif block.settings.icon_glyph == '♢' and block.settings.text contains 'Guarantee' or block.settings.icon_glyph == '♢' and block.settings.text contains 'Garantía' %}
+<svg viewBox="0 0 24 24" focusable="false"><path d="M5 8h14l-1 12H6L5 8Zm3 0V6a4 4 0 0 1 8 0v2m-6 6 1.4 1.4L15 12" /></svg>
+{% else %}
+{{ block.settings.icon_glyph }}
+{% endif %}
+</span>
+<span>{{ block.settings.text | escape }}</span>
+</span>
+{% endif %}
+{% endfor %}
+</div>
+{% endif %}
+{% assign payment_count = 0 %}
+{% for block in tiq_section.instance.blocks %}
+{% if block.type == 'payment' %}
+{% assign payment_count = payment_count | plus: 1 %}
+{% endif %}
+{% endfor %}
+{% if payment_count > 0 %}
+<div class="{{ section_dom_id }}__payments" aria-label="Métodos de pago aceptados">
+{% for block in tiq_section.instance.blocks %}
+{% if block.type == 'payment' %}
+{% assign payment_width = block.settings.width | plus: 0 %}
+{% if payment_width < 30 %}
+{% assign payment_width = 32 %}
+{% endif %}
+<span class="{{ section_dom_id }}__payment {{ section_dom_id }}__payment--{{ block.settings.label | handleize }}" style="--payment-width: {{ payment_width }}px;" data-tiq-block-id="{{ block.id | escape }}">
+{% if block.settings.image != blank %}
+{{ block.settings.image | image_url: width: 160 | image_tag: loading: 'lazy', alt: block.settings.alt }}
+{% else %}
+<span class="{{ section_dom_id }}__payment-placeholder {{ section_dom_id }}__payment-placeholder--{{ block.settings.style }}">{{ block.settings.label | escape }}</span>
+{% endif %}
+</span>
+{% endif %}
+{% endfor %}
+</div>
+{% endif %}
+{% assign tab_count = 0 %}
+{% for block in tiq_section.instance.blocks %}
+{% if block.type == 'tab' %}
+{% assign tab_count = tab_count | plus: 1 %}
+{% endif %}
+{% endfor %}
+{% if tab_count > 0 %}
+<div class="{{ section_dom_id }}__tabs" data-tabs>
+<div class="{{ section_dom_id }}__tab-list" role="tablist" aria-label="Detalles del producto">
+{% assign tab_index = 0 %}
+{% for block in tiq_section.instance.blocks %}
+{% if block.type == 'tab' %}
+{% assign tab_index = tab_index | plus: 1 %}
+{% assign tab_id = section_dom_id | append: '-tab-' | append: tab_index %}
+{% assign panel_id = section_dom_id | append: '-panel-' | append: tab_index %}
+<button
+type="button"
+id="{{ tab_id }}"
+class="{{ section_dom_id }}__tab"
+role="tab"
+aria-controls="{{ panel_id }}"
+aria-selected="false"
+tabindex="-1"
+data-tab-button
+data-panel-id="{{ panel_id }}"
+data-active="{% if block.settings.active %}true{% else %}false{% endif %}"
+data-tiq-block-id="{{ block.id | escape }}"
+>
+{{ block.settings.title | escape }}
+</button>
+{% endif %}
+{% endfor %}
+</div>
+{% assign tab_index = 0 %}
+{% for block in tiq_section.instance.blocks %}
+{% if block.type == 'tab' %}
+{% assign tab_index = tab_index | plus: 1 %}
+{% assign tab_id = section_dom_id | append: '-tab-' | append: tab_index %}
+{% assign panel_id = section_dom_id | append: '-panel-' | append: tab_index %}
+{% assign tab_layout = block.settings.layout %}
+{% assign tab_title_key = block.settings.title | downcase %}
+{% if tab_title_key contains 'compar' %}
+{% assign tab_layout = 'comparison' %}
+{% elsif tab_title_key contains 'spec' or tab_title_key contains 'especific' %}
+{% assign tab_layout = 'specification' %}
+{% endif %}
+<div
+id="{{ panel_id }}"
+class="{{ section_dom_id }}__tab-panel"
+role="tabpanel"
+aria-labelledby="{{ tab_id }}"
+hidden
+data-tab-panel
+data-layout="{{ tab_layout }}"
+>
+{% case tab_layout %}
+{% when 'review' %}
+<div class="{{ section_dom_id }}__review-stars" aria-label="{{ block.settings.rating_label | escape }}">{{ block.settings.rating_stars | escape }}</div>
+<div class="{{ section_dom_id }}__review-content">{{ block.settings.content }}</div>
+<div class="{{ section_dom_id }}__reviewer">
+{% if block.settings.reviewer_image != blank %}
+{{ block.settings.reviewer_image | image_url: width: 120 | image_tag: class: reviewer_image_class, loading: 'lazy', alt: block.settings.reviewer_image_alt }}
+{% else %}
+<span class="{{ section_dom_id }}__reviewer-initials" aria-hidden="true">{{ block.settings.reviewer_initials | escape }}</span>
+{% endif %}
+<span class="{{ section_dom_id }}__reviewer-copy">
+<strong>{{ block.settings.reviewer_name | escape }}</strong>
+<span>{{ block.settings.reviewer_date | escape }}</span>
+<small>{{ block.settings.reviewer_role | escape }}</small>
+</span>
+</div>
+{% when 'comparison' %}
+<div class="{{ section_dom_id }}__comparison" role="table" aria-label="Comparación de productos">
+<div class="{{ section_dom_id }}__comparison-head" role="row">
+<span role="columnheader"></span>
+<strong role="columnheader">{{ block.settings.comparison_us_heading | escape }}</strong>
+<strong role="columnheader">{{ block.settings.comparison_other_heading | escape }}</strong>
+</div>
+{% for comparison_item in (1..3) %}
+{% case comparison_item %}
+{% when 1 %}{% assign item_text = block.settings.comparison_item_1 %}
+{% when 2 %}{% assign item_text = block.settings.comparison_item_2 %}
+{% when 3 %}{% assign item_text = block.settings.comparison_item_3 %}
+{% endcase %}
+<div class="{{ section_dom_id }}__comparison-row" role="row">
+<span role="rowheader">{{ item_text | escape }}</span>
+<span class="{{ section_dom_id }}__comparison-yes" role="cell" aria-label="{{ block.settings.comparison_yes_label | escape }}">✓</span>
+<span class="{{ section_dom_id }}__comparison-no" role="cell" aria-label="{{ block.settings.comparison_no_label | escape }}">×</span>
+</div>
+{% endfor %}
+</div>
+{% else %}
+<div class="{{ section_dom_id }}__specification">{{ block.settings.specification_text | escape }}</div>
+{% endcase %}
+</div>
+{% endif %}
+{% endfor %}
+</div>
+{% endif %}
+</div>
+</div>
+</div>
 </section>
-
 <style>
-  /* Scoped product hero styles. */
-  #{{ section_dom_id }} {
-    box-sizing: border-box;
-    width: 100%;
-    overflow: hidden;
-    color: var(--hero-text);
-    background: var(--hero-background);
-  }
-
-  #{{ section_dom_id }},
-  #{{ section_dom_id }} * {
-    box-sizing: border-box;
-  }
-
-  #{{ section_dom_id }}__inner,
-  .{{ section_dom_id }}__inner {
-    width: min(100%, var(--hero-max-width));
-    margin: 0 auto;
-    padding: var(--hero-desktop-top) var(--hero-desktop-side) var(--hero-desktop-bottom);
-  }
-
-  .{{ section_dom_id }}__grid {
-    display: grid;
-    grid-template-columns: minmax(0, var(--hero-media-width)) minmax(0, 1fr);
-    gap: var(--hero-column-gap);
-    align-items: start;
-  }
-
-  .{{ section_dom_id }}__media-column {
-    position: sticky;
-    top: 24px;
-    min-width: 0;
-  }
-
-  .{{ section_dom_id }}__media-stage {
-    position: relative;
-    display: grid;
-    width: 100%;
-    aspect-ratio: 1 / 1;
-    overflow: hidden;
-    background: var(--hero-media-background);
-    border-radius: var(--hero-media-radius);
-  }
-
-  .{{ section_dom_id }}__main-image,
-  .{{ section_dom_id }}__media-placeholder {
-    display: block;
-    width: 100%;
-    height: 100%;
-    object-fit: {{ tiq_section.instance.settings.image_fit }};
-    object-position: center;
-    transition: opacity 220ms ease, transform 220ms ease;
-  }
-
-  .{{ section_dom_id }}__main-image.is-changing {
-    opacity: 0.18;
-    transform: scale(0.985);
-  }
-
-    .{{ section_dom_id }}__media-placeholder {
-      color: var(--hero-muted);
-      padding: 18%;
-    }
-
-  .{{ section_dom_id }}__placeholder-svg,
-  .{{ section_dom_id }}__thumbnail-placeholder {
-    width: 100%;
-    height: 100%;
-  }
-
-  .{{ section_dom_id }}__thumbnails {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--hero-media-gap);
-    margin-top: var(--hero-media-gap);
-  }
-
-  .{{ section_dom_id }}__thumbnail {
-    display: grid;
-    place-items: center;
-    width: var(--hero-thumbnail-size);
-    height: var(--hero-thumbnail-size);
-    padding: 0;
-    overflow: hidden;
-    color: var(--hero-muted);
-    background: var(--hero-panel);
-    border: 1px solid transparent;
-    border-radius: 0;
-    cursor: pointer;
-    transition: border-color 180ms ease, transform 180ms ease, opacity 180ms ease;
-  }
-
-  .{{ section_dom_id }}__thumbnail:hover {
-    transform: translateY(-2px);
-    opacity: 0.9;
-  }
-
-  .{{ section_dom_id }}__thumbnail--active {
-    border-color: var(--hero-heading);
-  }
-
-  .{{ section_dom_id }}__thumbnail-image {
-    display: block;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-
-  .{{ section_dom_id }}__details {
-    width: 100%;
-    max-width: var(--hero-content-max-width);
-    min-width: 0;
-    justify-self: end;
-  }
-
-  .{{ section_dom_id }}__rating-row {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 4px;
-    margin-bottom: 8px;
-    color: var(--hero-heading);
-    font-size: 12px;
-    font-weight: 600;
-    line-height: 1.25;
-  }
-
-  .{{ section_dom_id }}__stars {
-    color: var(--hero-star);
-    letter-spacing: 1px;
-    white-space: nowrap;
-  }
-
-  .{{ section_dom_id }}__reviews-link {
-    color: var(--hero-heading);
-    font-weight: 700;
-    text-decoration: underline;
-    text-underline-offset: 2px;
-  }
-
-  .{{ section_dom_id }}__title {
-    margin: 0 0 8px;
-    color: var(--hero-heading);
-    font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
-    font-size: clamp(34px, 4vw, 48px);
-    font-weight: 400;
-    letter-spacing: 0.2px;
-    line-height: 0.96;
-    text-transform: uppercase;
-  }
-
-  .{{ section_dom_id }}__description {
-    max-width: 590px;
-    margin-bottom: 14px;
-    color: var(--hero-text);
-    font-size: 14px;
-    line-height: 1.35;
-  }
-
-  .{{ section_dom_id }}__description p {
-    margin: 0;
-  }
-
-  .{{ section_dom_id }}__description a {
-    color: inherit;
-    text-decoration: underline;
-    text-underline-offset: 2px;
-  }
-
-  .{{ section_dom_id }}__benefits {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--hero-card-gap);
-    margin-bottom: 20px;
-  }
-
-  .{{ section_dom_id }}__benefit {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    min-height: 30px;
-    padding: 6px 10px;
-    color: var(--hero-heading);
-    background: var(--hero-panel);
-    border-radius: 2px;
-    font-size: 13px;
-    line-height: 1;
-  }
-
-  .{{ section_dom_id }}__benefit-icon {
-    display: inline-grid;
-    place-items: center;
-    width: 16px;
-    height: 16px;
-    color: var(--hero-heading);
-    background: var(--hero-accent);
-    border-radius: 50%;
-    font-size: 11px;
-    font-weight: 700;
-  }
-
-  .{{ section_dom_id }}__bundle-heading {
-    display: grid;
-    grid-template-columns: 1fr auto 1fr;
-    gap: 12px;
-    align-items: center;
-    margin-bottom: 10px;
-    color: var(--hero-accent);
-    font-size: 12px;
-    font-weight: 800;
-    letter-spacing: 0.5px;
-    text-align: center;
-  }
-
-  .{{ section_dom_id }}__bundle-heading span {
-    height: 1px;
-    background: var(--hero-border);
-    opacity: 0.35;
-  }
-
-  .{{ section_dom_id }}__bundles {
-    display: grid;
-    gap: var(--hero-card-gap);
-  }
-
-  .{{ section_dom_id }}__bundle {
-    position: relative;
-    display: grid;
-    grid-template-columns: 40px minmax(0, 1fr) auto;
-    gap: 10px;
-    align-items: center;
-    width: 100%;
-    min-height: 70px;
-    padding: 10px 12px;
-    color: var(--hero-heading);
-    text-align: left;
-    background: var(--hero-panel);
-    border: 1px solid transparent;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background 180ms ease, border-color 180ms ease, transform 180ms ease;
-  }
-
-  .{{ section_dom_id }}__bundle:hover {
-    transform: translateY(-1px);
-    border-color: color-mix(in srgb, var(--hero-accent) 65%, transparent);
-  }
-
-  .{{ section_dom_id }}__bundle--selected {
-    background: var(--hero-panel-alt);
-    border-color: var(--hero-accent);
-  }
-
-  .{{ section_dom_id }}__bundle-image {
-    display: block;
-    width: 38px;
-    height: 38px;
-    object-fit: contain;
-  }
-
-  .{{ section_dom_id }}__bundle-image-placeholder {
-    display: grid;
-    place-items: center;
-    width: 30px;
-    height: 30px;
-    color: var(--hero-muted);
-    background: rgba(255, 255, 255, 0.07);
-    border-radius: 3px;
-    font-size: 10px;
-  }
-
-  .{{ section_dom_id }}__bundle-copy {
-    display: grid;
-    gap: 2px;
-    min-width: 0;
-  }
-
-  .{{ section_dom_id }}__bundle-title {
-    overflow: hidden;
-    color: var(--hero-heading);
-    font-size: 15px;
-    font-weight: 800;
-    line-height: 1.1;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .{{ section_dom_id }}__bundle-subtitle {
-    color: var(--hero-muted);
-    font-size: 11px;
-    line-height: 1.1;
-  }
-
-  .{{ section_dom_id }}__bundle-prices {
-    display: grid;
-    justify-items: end;
-    gap: 2px;
-    min-width: 76px;
-    color: var(--hero-accent);
-    font-size: 16px;
-    font-weight: 800;
-    line-height: 1.05;
-  }
-
-  .{{ section_dom_id }}__bundle-prices s {
-    color: var(--hero-heading);
-    font-size: 10px;
-    font-weight: 600;
-  }
-
-  .{{ section_dom_id }}__bundle-badge {
-    position: absolute;
-    top: -8px;
-    right: 10px;
-    padding: 2px 6px;
-    color: #ffffff;
-    background: var(--hero-accent);
-    border-radius: 2px;
-    font-size: 9px;
-    font-weight: 800;
-    line-height: 1.1;
-    text-transform: uppercase;
-  }
-
-  .{{ section_dom_id }}__urgency {
-    display: flex;
-    width: max-content;
-    max-width: 100%;
-    min-height: 30px;
-    align-items: center;
-    gap: 7px;
-    margin: 10px auto 14px;
-    padding: 8px 13px;
-    color: var(--hero-heading);
-    background: #14271b;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 3px 10px rgba(0, 0, 0, 0.16);
-    border-radius: 999px;
-    font-size: 12px;
-    font-weight: 700;
-    line-height: 1;
-    animation: {{ section_dom_id }}-urgency-float 3.6s ease-in-out infinite;
-  }
-
-  .{{ section_dom_id }}__urgency > span:first-child {
-    width: 7px;
-    height: 7px;
-    flex: 0 0 7px;
-    background: #4be33a;
-    box-shadow: 0 0 8px rgba(75, 227, 58, 0.65);
-    border-radius: 50%;
-  }
-
-  @keyframes {{ section_dom_id }}-urgency-float {
-    0%, 100% { transform: translate3d(0, 0, 0); }
-    50% { transform: translate3d(0, -2px, 0); }
-  }
-
-  .{{ section_dom_id }}__cta {
-    display: flex;
-    min-height: 60px;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    width: 100%;
-    padding: 12px 16px;
-    color: var(--hero-button-text);
-    background: linear-gradient(180deg, #ffffff 0%, #e5ebf4 42%, #c5d3e5 100%);
-    border: 1px solid #71aafb;
-    border-radius: 4px;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95), 0 2px 8px rgba(0, 0, 0, 0.15);
-    font-size: 16px;
-    font-weight: 800;
-    line-height: 1;
-    text-decoration: none;
-    transition: transform 180ms ease, filter 180ms ease;
-  }
-
-  .{{ section_dom_id }}__cta:hover {
-    filter: brightness(1.025) saturate(1.04);
-    transform: translateY(-1px);
-  }
-
-  .{{ section_dom_id }}__cta-icon {
-    display: inline-grid;
-    width: 19px;
-    height: 19px;
-    place-items: center;
-    line-height: 1;
-  }
-
-  .{{ section_dom_id }}__cta-icon svg {
-    display: block;
-    width: 19px;
-    height: 19px;
-    fill: none;
-    stroke: currentColor;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-    stroke-width: 1.7;
-  }
-
-  .{{ section_dom_id }}__cta s {
-    color: color-mix(in srgb, var(--hero-button-text) 65%, transparent);
-    font-size: 12px;
-    font-weight: 600;
-  }
-
-  .{{ section_dom_id }}__trust-row {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 14px;
-    margin-top: 12px;
-  }
-
-  .{{ section_dom_id }}__trust-item {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    color: var(--hero-heading);
-    font-size: 13px;
-    font-weight: 700;
-    line-height: 1;
-  }
-
-  .{{ section_dom_id }}__trust-item > span:first-child {
-    color: #e9f0fa;
-    font-size: 14px;
-  }
-
-  .{{ section_dom_id }}__trust-icon {
-    display: inline-grid;
-    width: 15px;
-    height: 15px;
-    place-items: center;
-  }
-
-  .{{ section_dom_id }}__trust-icon svg {
-    display: block;
-    width: 15px;
-    height: 15px;
-    fill: none;
-    stroke: currentColor;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-    stroke-width: 1.45;
-  }
-
-  .{{ section_dom_id }}__payments {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 7px;
-    margin-top: 10px;
-  }
-
-  .{{ section_dom_id }}__payment {
-    display: grid;
-    place-items: center;
-    width: var(--payment-width);
-    min-width: 24px;
-    height: 20px;
-    overflow: hidden;
-    background: #ffffff;
-    border-radius: 2px;
-  }
-
-  .{{ section_dom_id }}__payment img {
-    display: block;
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-  }
-
-  .{{ section_dom_id }}__payment-placeholder {
-    position: relative;
-    display: grid;
-    place-items: center;
-    width: 100%;
-    height: 100%;
-    color: #0d1320;
-    font-size: 7px;
-    font-weight: 900;
-    line-height: 1;
-    text-transform: uppercase;
-  }
-
-  .{{ section_dom_id }}__payment-placeholder--blue { color: #ffffff; background: #0877bd; }
-  .{{ section_dom_id }}__payment-placeholder--purple { color: #ffffff; background: #5d2ad8; }
-  .{{ section_dom_id }}__payment-placeholder--dark { color: #ffffff; background: #202734; }
-
-  .{{ section_dom_id }}__payment--mc .{{ section_dom_id }}__payment-placeholder {
-    color: transparent;
-    background: #ffffff;
-  }
-
-  .{{ section_dom_id }}__payment--mc .{{ section_dom_id }}__payment-placeholder::before,
-  .{{ section_dom_id }}__payment--mc .{{ section_dom_id }}__payment-placeholder::after {
-    position: absolute;
-    top: 5px;
-    width: 10px;
-    height: 10px;
-    content: '';
-    border-radius: 50%;
-  }
-
-  .{{ section_dom_id }}__payment--mc .{{ section_dom_id }}__payment-placeholder::before { left: 7px; background: #ed1c24; }
-  .{{ section_dom_id }}__payment--mc .{{ section_dom_id }}__payment-placeholder::after { right: 7px; background: #ffad16; mix-blend-mode: multiply; }
-  .{{ section_dom_id }}__payment--amex .{{ section_dom_id }}__payment-placeholder { color: #ffffff; background: #087cc1; }
-  .{{ section_dom_id }}__payment--shop .{{ section_dom_id }}__payment-placeholder { color: #ffffff; background: #5f36dc; }
-  .{{ section_dom_id }}__payment--visa .{{ section_dom_id }}__payment-placeholder { color: #123a91; font-size: 8px; font-style: italic; }
-  .{{ section_dom_id }}__payment--discover .{{ section_dom_id }}__payment-placeholder { color: #131820; font-size: 6px; }
-
-  .{{ section_dom_id }}__tabs {
-    margin-top: 28px;
-    overflow: hidden;
-    background: var(--hero-panel-alt);
-    border-radius: var(--hero-panel-radius);
-  }
-
-  .{{ section_dom_id }}__tab-list {
-    display: grid;
-    grid-auto-columns: 1fr;
-    grid-auto-flow: column;
-    background: var(--hero-panel);
-  }
-
-  .{{ section_dom_id }}__tab {
-    min-height: 44px;
-    padding: 8px 10px;
-    color: var(--hero-heading);
-    background: transparent;
-    border: 0;
-    border-right: 1px solid rgba(255, 255, 255, 0.12);
-    cursor: pointer;
-    font-size: 12px;
-    font-weight: 800;
-    transition: color 180ms ease, background 180ms ease;
-  }
-
-  .{{ section_dom_id }}__tab:last-child {
-    border-right: 0;
-  }
-
-  .{{ section_dom_id }}__tab:hover,
-  .{{ section_dom_id }}__tab--active {
-    color: var(--hero-heading);
-    background: var(--hero-panel-alt);
-  }
-
-  .{{ section_dom_id }}__tab-panel {
-    min-height: 132px;
-    padding: 24px 20px;
-    opacity: 0;
-    transform: translateY(8px);
-    transition: opacity 220ms ease, transform 220ms ease;
-  }
-
-  .{{ section_dom_id }}__tab-panel--visible {
-    opacity: 1;
-    transform: translateY(0);
-  }
-
-  .{{ section_dom_id }}__review-stars {
-    margin-bottom: 12px;
-    color: var(--hero-star);
-    letter-spacing: 2px;
-  }
-
-  .{{ section_dom_id }}__review-content {
-    margin-bottom: 18px;
-    color: var(--hero-heading);
-    font-size: 13px;
-    line-height: 1.4;
-  }
-
-  .{{ section_dom_id }}__review-content p {
-    margin: 0;
-  }
-
-  .{{ section_dom_id }}__reviewer {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-
-  .{{ section_dom_id }}__reviewer-image,
-  .{{ section_dom_id }}__reviewer-initials {
-    display: grid;
-    place-items: center;
-    width: 48px;
-    height: 48px;
-    flex: 0 0 48px;
-    overflow: hidden;
-    color: var(--hero-heading);
-    background: var(--hero-panel);
-    border-radius: 50%;
-    font-size: 12px;
-    font-weight: 800;
-    object-fit: cover;
-  }
-
-  .{{ section_dom_id }}__reviewer-copy {
-    display: grid;
-    grid-template-columns: auto auto;
-    gap: 2px 7px;
-    align-items: baseline;
-    min-width: 0;
-    color: var(--hero-heading);
-    font-size: 12px;
-  }
-
-  .{{ section_dom_id }}__reviewer-copy strong {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .{{ section_dom_id }}__reviewer-copy > span {
-    color: var(--hero-muted);
-    font-size: 10px;
-  }
-
-  .{{ section_dom_id }}__reviewer-copy small {
-    grid-column: 1 / -1;
-    color: var(--hero-heading);
-    font-size: 10px;
-  }
-
-  .{{ section_dom_id }}__comparison {
-    display: grid;
-    color: var(--hero-heading);
-    font-size: 12px;
-  }
-
-  .{{ section_dom_id }}__comparison-head,
-  .{{ section_dom_id }}__comparison-row {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 64px 64px;
-    align-items: center;
-  }
-
-  .{{ section_dom_id }}__comparison-head {
-    min-height: 40px;
-    text-align: center;
-  }
-
-  .{{ section_dom_id }}__comparison-head strong:first-of-type {
-    padding: 12px 6px;
-    color: var(--hero-button-text);
-    background: var(--hero-button);
-    border-radius: 10px 10px 0 0;
-  }
-
-  .{{ section_dom_id }}__comparison-row {
-    min-height: 30px;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
-  }
-
-  .{{ section_dom_id }}__comparison-row > span:first-child {
-    padding-right: 8px;
-  }
-
-  .{{ section_dom_id }}__comparison-row > span:not(:first-child) {
-    display: grid;
-    place-items: center;
-    height: 100%;
-    background: rgba(255, 255, 255, 0.05);
-    font-size: 20px;
-  }
-
-  .{{ section_dom_id }}__comparison-yes { color: #3bd26b; }
-  .{{ section_dom_id }}__comparison-no { color: #ff4d43; }
-
-  .{{ section_dom_id }}__specification {
-    display: grid;
-    min-height: 82px;
-    align-items: center;
-    color: var(--hero-heading);
-    font-size: 14px;
-    font-weight: 600;
-  }
-
-  #{{ section_dom_id }} :is(a, button):focus-visible {
-    outline: 2px solid var(--hero-accent);
-    outline-offset: 3px;
-  }
-
-  @media (max-width: 989px) {
-    #{{ section_dom_id }}__inner,
-    .{{ section_dom_id }}__inner {
-      padding: var(--hero-mobile-top) var(--hero-mobile-side) var(--hero-mobile-bottom);
-    }
-
-    .{{ section_dom_id }}__grid {
-      grid-template-columns: 1fr;
-      gap: 28px;
-    }
-
-    .{{ section_dom_id }}__media-column {
-      position: static;
-    }
-
-    .{{ section_dom_id }}__details {
-      max-width: none;
-      justify-self: stretch;
-    }
-  }
-
-  @media (max-width: 560px) {
-    .{{ section_dom_id }}__title {
-      font-size: clamp(32px, 11vw, 44px);
-    }
-
-    .{{ section_dom_id }}__bundle {
-      grid-template-columns: 34px minmax(0, 1fr) auto;
-      gap: 8px;
-      padding-inline: 9px;
-    }
-
-    .{{ section_dom_id }}__bundle-title {
-      font-size: 14px;
-    }
-
-    .{{ section_dom_id }}__comparison-head,
-    .{{ section_dom_id }}__comparison-row {
-      grid-template-columns: minmax(0, 1fr) 54px 54px;
-    }
-
-    .{{ section_dom_id }}__tab-panel {
-      padding: 20px 14px;
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .{{ section_dom_id }}__urgency,
-    .{{ section_dom_id }}__main-image,
-    .{{ section_dom_id }}__thumbnail,
-    .{{ section_dom_id }}__bundle,
-    .{{ section_dom_id }}__cta,
-    .{{ section_dom_id }}__tab-panel {
-      animation: none;
-      transition: none;
-    }
-  }
+#{{ section_dom_id }} {
+box-sizing: border-box;
+width: 100%;
+overflow: hidden;
+color: var(--hero-text);
+background: var(--hero-background);
+}
+#{{ section_dom_id }},
+#{{ section_dom_id }} * {
+box-sizing: border-box;
+}
+#{{ section_dom_id }}__inner,
+.{{ section_dom_id }}__inner {
+width: min(100%, var(--hero-max-width));
+margin: 0 auto;
+padding: var(--hero-desktop-top) var(--hero-desktop-side) var(--hero-desktop-bottom);
+}
+.{{ section_dom_id }}__grid {
+display: grid;
+grid-template-columns: minmax(0, var(--hero-media-width)) minmax(0, 1fr);
+gap: var(--hero-column-gap);
+align-items: start;
+}
+.{{ section_dom_id }}__media-column {
+position: sticky;
+top: 24px;
+min-width: 0;
+}
+.{{ section_dom_id }}__media-stage {
+position: relative;
+display: grid;
+width: 100%;
+aspect-ratio: 1 / 1;
+overflow: hidden;
+background: var(--hero-media-background);
+border-radius: var(--hero-media-radius);
+}
+.{{ section_dom_id }}__main-image,
+.{{ section_dom_id }}__media-placeholder {
+display: block;
+width: 100%;
+height: 100%;
+object-fit: {{ tiq_section.instance.settings.image_fit }};
+object-position: center;
+transition: opacity 220ms ease, transform 220ms ease;
+}
+.{{ section_dom_id }}__main-image.is-changing {
+opacity: 0.18;
+transform: scale(0.985);
+}
+.{{ section_dom_id }}__media-placeholder {
+color: var(--hero-muted);
+padding: 18%;
+}
+.{{ section_dom_id }}__placeholder-svg,
+.{{ section_dom_id }}__thumbnail-placeholder {
+width: 100%;
+height: 100%;
+}
+.{{ section_dom_id }}__thumbnails {
+display: flex;
+flex-wrap: wrap;
+gap: var(--hero-media-gap);
+margin-top: var(--hero-media-gap);
+}
+.{{ section_dom_id }}__thumbnail {
+display: grid;
+place-items: center;
+width: var(--hero-thumbnail-size);
+height: var(--hero-thumbnail-size);
+padding: 0;
+overflow: hidden;
+color: var(--hero-muted);
+background: var(--hero-panel);
+border: 1px solid transparent;
+border-radius: 0;
+cursor: pointer;
+transition: border-color 180ms ease, transform 180ms ease, opacity 180ms ease;
+}
+.{{ section_dom_id }}__thumbnail:hover {
+transform: translateY(-2px);
+opacity: 0.9;
+}
+.{{ section_dom_id }}__thumbnail--active {
+border-color: var(--hero-heading);
+}
+.{{ section_dom_id }}__thumbnail-image {
+display: block;
+width: 100%;
+height: 100%;
+object-fit: cover;
+}
+.{{ section_dom_id }}__details {
+width: 100%;
+max-width: var(--hero-content-max-width);
+min-width: 0;
+justify-self: end;
+}
+.{{ section_dom_id }}__rating-row {
+display: flex;
+flex-wrap: wrap;
+align-items: center;
+gap: 4px;
+margin-bottom: 8px;
+color: var(--hero-heading);
+font-size: 12px;
+font-weight: 600;
+line-height: 1.25;
+}
+.{{ section_dom_id }}__stars {
+color: var(--hero-star);
+letter-spacing: 1px;
+white-space: nowrap;
+}
+.{{ section_dom_id }}__reviews-link {
+color: var(--hero-heading);
+font-weight: 700;
+text-decoration: underline;
+text-underline-offset: 2px;
+}
+.{{ section_dom_id }}__title {
+margin: 0 0 8px;
+color: var(--hero-heading);
+font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
+font-size: clamp(34px, 4vw, 48px);
+font-weight: 400;
+letter-spacing: 0.2px;
+line-height: 0.96;
+text-transform: uppercase;
+}
+.{{ section_dom_id }}__description {
+max-width: 590px;
+margin-bottom: 14px;
+color: var(--hero-text);
+font-size: 14px;
+line-height: 1.35;
+}
+.{{ section_dom_id }}__description p {
+margin: 0;
+}
+.{{ section_dom_id }}__description a {
+color: inherit;
+text-decoration: underline;
+text-underline-offset: 2px;
+}
+.{{ section_dom_id }}__benefits {
+display: flex;
+flex-wrap: wrap;
+gap: var(--hero-card-gap);
+margin-bottom: 20px;
+}
+.{{ section_dom_id }}__benefit {
+display: inline-flex;
+align-items: center;
+gap: 6px;
+min-height: 30px;
+padding: 6px 10px;
+color: var(--hero-heading);
+background: var(--hero-panel);
+border-radius: 2px;
+font-size: 13px;
+line-height: 1;
+}
+.{{ section_dom_id }}__benefit-icon {
+display: inline-grid;
+place-items: center;
+width: 16px;
+height: 16px;
+color: var(--hero-heading);
+background: var(--hero-accent);
+border-radius: 50%;
+font-size: 11px;
+font-weight: 700;
+}
+.{{ section_dom_id }}__bundle-heading {
+display: grid;
+grid-template-columns: 1fr auto 1fr;
+gap: 12px;
+align-items: center;
+margin-bottom: 10px;
+color: var(--hero-accent);
+font-size: 12px;
+font-weight: 800;
+letter-spacing: 0.5px;
+text-align: center;
+}
+.{{ section_dom_id }}__bundle-heading span {
+height: 1px;
+background: var(--hero-border);
+opacity: 0.35;
+}
+.{{ section_dom_id }}__bundles {
+display: grid;
+gap: var(--hero-card-gap);
+}
+.{{ section_dom_id }}__bundle {
+position: relative;
+display: grid;
+grid-template-columns: 40px minmax(0, 1fr) auto;
+gap: 10px;
+align-items: center;
+width: 100%;
+min-height: 70px;
+padding: 10px 12px;
+color: var(--hero-heading);
+text-align: left;
+background: var(--hero-panel);
+border: 1px solid transparent;
+border-radius: 4px;
+cursor: pointer;
+transition: background 180ms ease, border-color 180ms ease, transform 180ms ease;
+}
+.{{ section_dom_id }}__bundle:hover {
+transform: translateY(-1px);
+border-color: color-mix(in srgb, var(--hero-accent) 65%, transparent);
+}
+.{{ section_dom_id }}__bundle--selected {
+background: var(--hero-panel-alt);
+border-color: var(--hero-accent);
+}
+.{{ section_dom_id }}__bundle-image {
+display: block;
+width: 38px;
+height: 38px;
+object-fit: contain;
+}
+.{{ section_dom_id }}__bundle-image-placeholder {
+display: grid;
+place-items: center;
+width: 30px;
+height: 30px;
+color: var(--hero-muted);
+background: rgba(255, 255, 255, 0.07);
+border-radius: 3px;
+font-size: 10px;
+}
+.{{ section_dom_id }}__bundle-copy {
+display: grid;
+gap: 2px;
+min-width: 0;
+}
+.{{ section_dom_id }}__bundle-title {
+overflow: hidden;
+color: var(--hero-heading);
+font-size: 15px;
+font-weight: 800;
+line-height: 1.1;
+text-overflow: ellipsis;
+white-space: nowrap;
+}
+.{{ section_dom_id }}__bundle-subtitle {
+color: var(--hero-muted);
+font-size: 11px;
+line-height: 1.1;
+}
+.{{ section_dom_id }}__bundle-prices {
+display: grid;
+justify-items: end;
+gap: 2px;
+min-width: 76px;
+color: var(--hero-accent);
+font-size: 16px;
+font-weight: 800;
+line-height: 1.05;
+}
+.{{ section_dom_id }}__bundle-prices s {
+color: var(--hero-heading);
+font-size: 10px;
+font-weight: 600;
+}
+.{{ section_dom_id }}__bundle-badge {
+position: absolute;
+top: -8px;
+right: 10px;
+padding: 2px 6px;
+color: #ffffff;
+background: var(--hero-accent);
+border-radius: 2px;
+font-size: 9px;
+font-weight: 800;
+line-height: 1.1;
+text-transform: uppercase;
+}
+.{{ section_dom_id }}__urgency {
+display: flex;
+width: max-content;
+max-width: 100%;
+min-height: 30px;
+align-items: center;
+gap: 7px;
+margin: 10px auto 14px;
+padding: 8px 13px;
+color: var(--hero-heading);
+background: #14271b;
+box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 3px 10px rgba(0, 0, 0, 0.16);
+border-radius: 999px;
+font-size: 12px;
+font-weight: 700;
+line-height: 1;
+animation: {{ section_dom_id }}-urgency-float 3.6s ease-in-out infinite;
+}
+.{{ section_dom_id }}__urgency > span:first-child {
+width: 7px;
+height: 7px;
+flex: 0 0 7px;
+background: #4be33a;
+box-shadow: 0 0 8px rgba(75, 227, 58, 0.65);
+border-radius: 50%;
+}
+@keyframes {{ section_dom_id }}-urgency-float {
+0%, 100% { transform: translate3d(0, 0, 0); }
+50% { transform: translate3d(0, -2px, 0); }
+}
+.{{ section_dom_id }}__cta {
+display: flex;
+min-height: 60px;
+align-items: center;
+justify-content: center;
+gap: 6px;
+width: 100%;
+padding: 12px 16px;
+color: var(--hero-button-text);
+background: linear-gradient(180deg, #ffffff 0%, #e5ebf4 42%, #c5d3e5 100%);
+border: 1px solid #71aafb;
+border-radius: 4px;
+box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95), 0 2px 8px rgba(0, 0, 0, 0.15);
+font-size: 16px;
+font-weight: 800;
+line-height: 1;
+text-decoration: none;
+transition: transform 180ms ease, filter 180ms ease;
+}
+.{{ section_dom_id }}__cta:hover {
+filter: brightness(1.025) saturate(1.04);
+transform: translateY(-1px);
+}
+.{{ section_dom_id }}__cta-icon {
+display: inline-grid;
+width: 19px;
+height: 19px;
+place-items: center;
+line-height: 1;
+}
+.{{ section_dom_id }}__cta-icon svg {
+display: block;
+width: 19px;
+height: 19px;
+fill: none;
+stroke: currentColor;
+stroke-linecap: round;
+stroke-linejoin: round;
+stroke-width: 1.7;
+}
+.{{ section_dom_id }}__cta s {
+color: color-mix(in srgb, var(--hero-button-text) 65%, transparent);
+font-size: 12px;
+font-weight: 600;
+}
+.{{ section_dom_id }}__trust-row {
+display: flex;
+flex-wrap: wrap;
+justify-content: center;
+gap: 14px;
+margin-top: 12px;
+}
+.{{ section_dom_id }}__trust-item {
+display: inline-flex;
+align-items: center;
+gap: 5px;
+color: var(--hero-heading);
+font-size: 13px;
+font-weight: 700;
+line-height: 1;
+}
+.{{ section_dom_id }}__trust-item > span:first-child {
+color: #e9f0fa;
+font-size: 14px;
+}
+.{{ section_dom_id }}__trust-icon {
+display: inline-grid;
+width: 15px;
+height: 15px;
+place-items: center;
+}
+.{{ section_dom_id }}__trust-icon svg {
+display: block;
+width: 15px;
+height: 15px;
+fill: none;
+stroke: currentColor;
+stroke-linecap: round;
+stroke-linejoin: round;
+stroke-width: 1.45;
+}
+.{{ section_dom_id }}__payments {
+display: flex;
+flex-wrap: wrap;
+justify-content: center;
+gap: 7px;
+margin-top: 10px;
+}
+.{{ section_dom_id }}__payment {
+display: grid;
+place-items: center;
+width: var(--payment-width);
+min-width: 24px;
+height: 20px;
+overflow: hidden;
+background: #ffffff;
+border-radius: 2px;
+}
+.{{ section_dom_id }}__payment img {
+display: block;
+width: 100%;
+height: 100%;
+object-fit: contain;
+}
+.{{ section_dom_id }}__payment-placeholder {
+position: relative;
+display: grid;
+place-items: center;
+width: 100%;
+height: 100%;
+color: #0d1320;
+font-size: 7px;
+font-weight: 900;
+line-height: 1;
+text-transform: uppercase;
+}
+.{{ section_dom_id }}__payment-placeholder--blue { color: #ffffff; background: #0877bd; }
+.{{ section_dom_id }}__payment-placeholder--purple { color: #ffffff; background: #5d2ad8; }
+.{{ section_dom_id }}__payment-placeholder--dark { color: #ffffff; background: #202734; }
+.{{ section_dom_id }}__payment--mc .{{ section_dom_id }}__payment-placeholder {
+color: transparent;
+background: #ffffff;
+}
+.{{ section_dom_id }}__payment--mc .{{ section_dom_id }}__payment-placeholder::before,
+.{{ section_dom_id }}__payment--mc .{{ section_dom_id }}__payment-placeholder::after {
+position: absolute;
+top: 5px;
+width: 10px;
+height: 10px;
+content: '';
+border-radius: 50%;
+}
+.{{ section_dom_id }}__payment--mc .{{ section_dom_id }}__payment-placeholder::before { left: 7px; background: #ed1c24; }
+.{{ section_dom_id }}__payment--mc .{{ section_dom_id }}__payment-placeholder::after { right: 7px; background: #ffad16; mix-blend-mode: multiply; }
+.{{ section_dom_id }}__payment--amex .{{ section_dom_id }}__payment-placeholder { color: #ffffff; background: #087cc1; }
+.{{ section_dom_id }}__payment--shop .{{ section_dom_id }}__payment-placeholder { color: #ffffff; background: #5f36dc; }
+.{{ section_dom_id }}__payment--visa .{{ section_dom_id }}__payment-placeholder { color: #123a91; font-size: 8px; font-style: italic; }
+.{{ section_dom_id }}__payment--discover .{{ section_dom_id }}__payment-placeholder { color: #131820; font-size: 6px; }
+.{{ section_dom_id }}__tabs {
+margin-top: 28px;
+overflow: hidden;
+background: var(--hero-panel-alt);
+border-radius: var(--hero-panel-radius);
+}
+.{{ section_dom_id }}__tab-list {
+display: grid;
+grid-auto-columns: 1fr;
+grid-auto-flow: column;
+background: var(--hero-panel);
+}
+.{{ section_dom_id }}__tab {
+min-height: 44px;
+padding: 8px 10px;
+color: var(--hero-heading);
+background: transparent;
+border: 0;
+border-right: 1px solid rgba(255, 255, 255, 0.12);
+cursor: pointer;
+font-size: 12px;
+font-weight: 800;
+transition: color 180ms ease, background 180ms ease;
+}
+.{{ section_dom_id }}__tab:last-child {
+border-right: 0;
+}
+.{{ section_dom_id }}__tab:hover,
+.{{ section_dom_id }}__tab--active {
+color: var(--hero-heading);
+background: var(--hero-panel-alt);
+}
+.{{ section_dom_id }}__tab-panel {
+min-height: 132px;
+padding: 24px 20px;
+opacity: 0;
+transform: translateY(8px);
+transition: opacity 220ms ease, transform 220ms ease;
+}
+.{{ section_dom_id }}__tab-panel--visible {
+opacity: 1;
+transform: translateY(0);
+}
+.{{ section_dom_id }}__review-stars {
+margin-bottom: 12px;
+color: var(--hero-star);
+letter-spacing: 2px;
+}
+.{{ section_dom_id }}__review-content {
+margin-bottom: 18px;
+color: var(--hero-heading);
+font-size: 13px;
+line-height: 1.4;
+}
+.{{ section_dom_id }}__review-content p {
+margin: 0;
+}
+.{{ section_dom_id }}__reviewer {
+display: flex;
+align-items: center;
+gap: 10px;
+}
+.{{ section_dom_id }}__reviewer-image,
+.{{ section_dom_id }}__reviewer-initials {
+display: grid;
+place-items: center;
+width: 48px;
+height: 48px;
+flex: 0 0 48px;
+overflow: hidden;
+color: var(--hero-heading);
+background: var(--hero-panel);
+border-radius: 50%;
+font-size: 12px;
+font-weight: 800;
+object-fit: cover;
+}
+.{{ section_dom_id }}__reviewer-copy {
+display: grid;
+grid-template-columns: auto auto;
+gap: 2px 7px;
+align-items: baseline;
+min-width: 0;
+color: var(--hero-heading);
+font-size: 12px;
+}
+.{{ section_dom_id }}__reviewer-copy strong {
+overflow: hidden;
+text-overflow: ellipsis;
+white-space: nowrap;
+}
+.{{ section_dom_id }}__reviewer-copy > span {
+color: var(--hero-muted);
+font-size: 10px;
+}
+.{{ section_dom_id }}__reviewer-copy small {
+grid-column: 1 / -1;
+color: var(--hero-heading);
+font-size: 10px;
+}
+.{{ section_dom_id }}__comparison {
+display: grid;
+color: var(--hero-heading);
+font-size: 12px;
+}
+.{{ section_dom_id }}__comparison-head,
+.{{ section_dom_id }}__comparison-row {
+display: grid;
+grid-template-columns: minmax(0, 1fr) 64px 64px;
+align-items: center;
+}
+.{{ section_dom_id }}__comparison-head {
+min-height: 40px;
+text-align: center;
+}
+.{{ section_dom_id }}__comparison-head strong:first-of-type {
+padding: 12px 6px;
+color: var(--hero-button-text);
+background: var(--hero-button);
+border-radius: 10px 10px 0 0;
+}
+.{{ section_dom_id }}__comparison-row {
+min-height: 30px;
+border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+.{{ section_dom_id }}__comparison-row > span:first-child {
+padding-right: 8px;
+}
+.{{ section_dom_id }}__comparison-row > span:not(:first-child) {
+display: grid;
+place-items: center;
+height: 100%;
+background: rgba(255, 255, 255, 0.05);
+font-size: 20px;
+}
+.{{ section_dom_id }}__comparison-yes { color: #3bd26b; }
+.{{ section_dom_id }}__comparison-no { color: #ff4d43; }
+.{{ section_dom_id }}__specification {
+display: grid;
+min-height: 82px;
+align-items: center;
+color: var(--hero-heading);
+font-size: 14px;
+font-weight: 600;
+}
+#{{ section_dom_id }} :is(a, button):focus-visible {
+outline: 2px solid var(--hero-accent);
+outline-offset: 3px;
+}
+@media (max-width: 989px) {
+#{{ section_dom_id }}__inner,
+.{{ section_dom_id }}__inner {
+padding: var(--hero-mobile-top) var(--hero-mobile-side) var(--hero-mobile-bottom);
+}
+.{{ section_dom_id }}__grid {
+grid-template-columns: 1fr;
+gap: 28px;
+}
+.{{ section_dom_id }}__media-column {
+position: static;
+}
+.{{ section_dom_id }}__details {
+max-width: none;
+justify-self: stretch;
+}
+}
+@media (max-width: 560px) {
+.{{ section_dom_id }}__title {
+font-size: clamp(32px, 11vw, 44px);
+}
+.{{ section_dom_id }}__bundle {
+grid-template-columns: 34px minmax(0, 1fr) auto;
+gap: 8px;
+padding-inline: 9px;
+}
+.{{ section_dom_id }}__bundle-title {
+font-size: 14px;
+}
+.{{ section_dom_id }}__comparison-head,
+.{{ section_dom_id }}__comparison-row {
+grid-template-columns: minmax(0, 1fr) 54px 54px;
+}
+.{{ section_dom_id }}__tab-panel {
+padding: 20px 14px;
+}
+}
+@media (prefers-reduced-motion: reduce) {
+.{{ section_dom_id }}__urgency,
+.{{ section_dom_id }}__main-image,
+.{{ section_dom_id }}__thumbnail,
+.{{ section_dom_id }}__bundle,
+.{{ section_dom_id }}__cta,
+.{{ section_dom_id }}__tab-panel {
+animation: none;
+transition: none;
+}
+}
 </style>
-
 <script>
-  /* Scoped vanilla JavaScript for the gallery, bundle selection and tabs. */
-  (() => {
-    const root = document.getElementById('{{ section_dom_id }}');
-    if (!root) return;
-
-    const mainImage = root.querySelector('.{{ section_dom_id }}__main-image');
-    const thumbnails = Array.from(root.querySelectorAll('[data-thumb]'));
-    const bundleOptions = Array.from(root.querySelectorAll('[data-bundle]'));
-    const ctaPrice = root.querySelector('[data-cta-price]');
-    const ctaCompare = root.querySelector('[data-cta-compare]');
-    const tabButtons = Array.from(root.querySelectorAll('[data-tab-button]'));
-    const tabPanels = Array.from(root.querySelectorAll('[data-tab-panel]'));
-
-    const selectThumbnail = (thumbnail) => {
-      if (!thumbnail || !mainImage) return;
-      const imageUrl = thumbnail.getAttribute('data-image');
-      if (!imageUrl) return;
-
-      mainImage.classList.add('is-changing');
-      window.setTimeout(() => {
-        mainImage.src = imageUrl;
-        mainImage.removeAttribute('srcset');
-        mainImage.alt = thumbnail.getAttribute('data-alt') || mainImage.alt;
-        window.requestAnimationFrame(() => mainImage.classList.remove('is-changing'));
-      }, 140);
-
-      thumbnails.forEach((item) => {
-        const isActive = item === thumbnail;
-        item.classList.toggle('{{ section_dom_id }}__thumbnail--active', isActive);
-        item.setAttribute('aria-current', isActive ? 'true' : 'false');
-      });
-    };
-
-    thumbnails.forEach((thumbnail) => {
-      thumbnail.addEventListener('click', () => selectThumbnail(thumbnail));
-    });
-
-    const setBundle = (option) => {
-      if (!option) return;
-
-      bundleOptions.forEach((item) => {
-        const isSelected = item === option;
-        item.classList.toggle('{{ section_dom_id }}__bundle--selected', isSelected);
-        item.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
-      });
-
-      if (ctaPrice && option.dataset.price) {
-        ctaPrice.textContent = ` - ${option.dataset.price}`;
-      }
-
-      if (ctaCompare) {
-        const compare = option.dataset.compare || '';
-        ctaCompare.textContent = compare;
-        ctaCompare.hidden = !compare;
-      }
-    };
-
-    bundleOptions.forEach((option) => {
-      option.addEventListener('click', () => setBundle(option));
-    });
-
-    setBundle(bundleOptions.find((option) => option.dataset.selected === 'true') || bundleOptions[0]);
-
-    const activateTab = (button, shouldFocus) => {
-      if (!button) return;
-
-      tabButtons.forEach((tabButton) => {
-        const isActive = tabButton === button;
-        tabButton.classList.toggle('{{ section_dom_id }}__tab--active', isActive);
-        tabButton.setAttribute('aria-selected', isActive ? 'true' : 'false');
-        tabButton.tabIndex = isActive ? 0 : -1;
-      });
-
-      tabPanels.forEach((panel) => {
-        const isActive = panel.id === button.dataset.panelId;
-        if (isActive) {
-          panel.hidden = false;
-          panel.classList.remove('{{ section_dom_id }}__tab-panel--visible');
-          window.requestAnimationFrame(() => panel.classList.add('{{ section_dom_id }}__tab-panel--visible'));
-        } else {
-          panel.classList.remove('{{ section_dom_id }}__tab-panel--visible');
-          window.setTimeout(() => {
-            if (!panel.classList.contains('{{ section_dom_id }}__tab-panel--visible')) panel.hidden = true;
-          }, 230);
-        }
-      });
-
-      if (shouldFocus) button.focus();
-    };
-
-    tabButtons.forEach((button, index) => {
-      button.addEventListener('click', () => activateTab(button, false));
-      button.addEventListener('keydown', (event) => {
-        if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft' && event.key !== 'Home' && event.key !== 'End') return;
-        event.preventDefault();
-        let nextIndex = index;
-        if (event.key === 'ArrowRight') nextIndex = (index + 1) % tabButtons.length;
-        if (event.key === 'ArrowLeft') nextIndex = (index - 1 + tabButtons.length) % tabButtons.length;
-        if (event.key === 'Home') nextIndex = 0;
-        if (event.key === 'End') nextIndex = tabButtons.length - 1;
-        activateTab(tabButtons[nextIndex], true);
-      });
-    });
-
-    activateTab(tabButtons.find((button) => button.dataset.active === 'true') || tabButtons[0], false);
-  })();
+(() => {
+const root = document.getElementById('{{ section_dom_id }}');
+if (!root) return;
+const mainImage = root.querySelector('.{{ section_dom_id }}__main-image');
+const thumbnails = Array.from(root.querySelectorAll('[data-thumb]'));
+const bundleOptions = Array.from(root.querySelectorAll('[data-bundle]'));
+const ctaPrice = root.querySelector('[data-cta-price]');
+const ctaCompare = root.querySelector('[data-cta-compare]');
+const tabButtons = Array.from(root.querySelectorAll('[data-tab-button]'));
+const tabPanels = Array.from(root.querySelectorAll('[data-tab-panel]'));
+const selectThumbnail = (thumbnail) => {
+if (!thumbnail || !mainImage) return;
+const imageUrl = thumbnail.getAttribute('data-image');
+if (!imageUrl) return;
+mainImage.classList.add('is-changing');
+window.setTimeout(() => {
+mainImage.src = imageUrl;
+mainImage.removeAttribute('srcset');
+mainImage.alt = thumbnail.getAttribute('data-alt') || mainImage.alt;
+window.requestAnimationFrame(() => mainImage.classList.remove('is-changing'));
+}, 140);
+thumbnails.forEach((item) => {
+const isActive = item === thumbnail;
+item.classList.toggle('{{ section_dom_id }}__thumbnail--active', isActive);
+item.setAttribute('aria-current', isActive ? 'true' : 'false');
+});
+};
+thumbnails.forEach((thumbnail) => {
+thumbnail.addEventListener('click', () => selectThumbnail(thumbnail));
+});
+const setBundle = (option) => {
+if (!option) return;
+bundleOptions.forEach((item) => {
+const isSelected = item === option;
+item.classList.toggle('{{ section_dom_id }}__bundle--selected', isSelected);
+item.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
+});
+if (ctaPrice && option.dataset.price) {
+ctaPrice.textContent = ` - ${option.dataset.price}`;
+}
+if (ctaCompare) {
+const compare = option.dataset.compare || '';
+ctaCompare.textContent = compare;
+ctaCompare.hidden = !compare;
+}
+};
+bundleOptions.forEach((option) => {
+option.addEventListener('click', () => setBundle(option));
+});
+setBundle(bundleOptions.find((option) => option.dataset.selected === 'true') || bundleOptions[0]);
+const activateTab = (button, shouldFocus) => {
+if (!button) return;
+tabButtons.forEach((tabButton) => {
+const isActive = tabButton === button;
+tabButton.classList.toggle('{{ section_dom_id }}__tab--active', isActive);
+tabButton.setAttribute('aria-selected', isActive ? 'true' : 'false');
+tabButton.tabIndex = isActive ? 0 : -1;
+});
+tabPanels.forEach((panel) => {
+const isActive = panel.id === button.dataset.panelId;
+if (isActive) {
+panel.hidden = false;
+panel.classList.remove('{{ section_dom_id }}__tab-panel--visible');
+window.requestAnimationFrame(() => panel.classList.add('{{ section_dom_id }}__tab-panel--visible'));
+} else {
+panel.classList.remove('{{ section_dom_id }}__tab-panel--visible');
+window.setTimeout(() => {
+if (!panel.classList.contains('{{ section_dom_id }}__tab-panel--visible')) panel.hidden = true;
+}, 230);
+}
+});
+if (shouldFocus) button.focus();
+};
+tabButtons.forEach((button, index) => {
+button.addEventListener('click', () => activateTab(button, false));
+button.addEventListener('keydown', (event) => {
+if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft' && event.key !== 'Home' && event.key !== 'End') return;
+event.preventDefault();
+let nextIndex = index;
+if (event.key === 'ArrowRight') nextIndex = (index + 1) % tabButtons.length;
+if (event.key === 'ArrowLeft') nextIndex = (index - 1 + tabButtons.length) % tabButtons.length;
+if (event.key === 'Home') nextIndex = 0;
+if (event.key === 'End') nextIndex = tabButtons.length - 1;
+activateTab(tabButtons[nextIndex], true);
+});
+});
+activateTab(tabButtons.find((button) => button.dataset.active === 'true') || tabButtons[0], false);
+})();
 </script>

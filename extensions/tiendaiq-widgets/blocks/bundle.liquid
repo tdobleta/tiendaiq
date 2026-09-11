@@ -1,61 +1,41 @@
-{% comment %}
-  TiendaIQ — Bundles (app embed).
-  Se activa desde el editor de temas: Personalizar > Insertar bloque de app >
-  "TiendaIQ Bundles". Solo actúa en páginas de producto.
-
-  Deja en window los datos del producto y la URL pública desde donde el widget
-  trae la config del bundle (mismo dato que hoy viaja embebido en la inyección
-  directa; sin secretos). El widget se monta solo cerca del botón de compra.
-
-  El origen se guarda por instalación en un app-data metafield no sensible.
-  No hay fallback a producción: si la instalación todavía no fue configurada,
-  el widget no hace ninguna petición a otro entorno.
-{% endcomment %}
 {%- if product -%}
-  {%- assign tiendaiq_bundles_origin = app.metafields.tiendaiq.storefront_origin.value -%}
-  <script>
-    window.TIENDAIQ_PRODUCTO = {
-      id: {{ product.id | json }},
-      variante: {{ product.selected_or_first_available_variant.id | json }},
-      colecciones: {{ product.collections | map: 'id' | json }},
-      precio: {{ product.selected_or_first_available_variant.price | json }},
-      moneda: {{ shop.money_format | json }}
-    };
-    // Mapa de variantes: precio en vivo + compare-at + stock. Habilita los toggles
-    // "Coincidir precio del widget" y "Usar precio de comparación".
-    window.TIENDAIQ_VARIANTES = {
-      {%- for v in product.variants -%}
-        {{ v.id | json }}: { precio: {{ v.price | json }}, compare: {{ v.compare_at_price | json }}, stock: {{ v.available | json }} }{%- unless forloop.last -%},{%- endunless -%}
-      {%- endfor -%}
-    };
-    // Contexto de cliente (para "Excluir clientes B2B"). Sin login → false.
-    window.TIENDAIQ_CLIENTE = { b2b: {% if customer.b2b? %}true{% else %}false{% endif %} };
-    // Selling plans del producto (de una app de suscripción de terceros). Si el
-    // producto no tiene, queda [] y el widget no ofrece la opción Subscribe.
-    window.TIENDAIQ_SELLING_PLANS = [
-      {%- for g in product.selling_plan_groups -%}
-        { id: {{ g.id | json }}, nombre: {{ g.name | json }}, plans: [
-          {%- for p in g.selling_plans -%}
-            { id: {{ p.id | json }}, name: {{ p.name | json }}, adj: {%- if p.price_adjustments.size > 0 -%}{{ p.price_adjustments.first.value | json }}{%- else -%}null{%- endif -%}, adjType: {%- if p.price_adjustments.size > 0 -%}{{ p.price_adjustments.first.value_type | json }}{%- else -%}null{%- endif -%} }{%- unless forloop.last -%},{%- endunless -%}
-          {%- endfor -%}
-        ] }{%- unless forloop.last -%},{%- endunless -%}
-      {%- endfor -%}
-    ];
-    // País del comprador (para "Segmentar por mercado"). ISO code, ej. "AR".
-    window.TIENDAIQ_MERCADO = { pais: {{ localization.country.iso_code | json }} };
-    {%- if tiendaiq_bundles_origin != blank -%}
-      {%- assign tiendaiq_bundles_src = tiendaiq_bundles_origin | append: "/publico/bundles?shop=" | append: shop.permanent_domain -%}
-      window.TIENDAIQ_BUNDLES_SRC = {{ tiendaiq_bundles_src | json }};
-    {%- endif -%}
-  </script>
-  {{ 'tiendaiq-bundle.css' | asset_url | stylesheet_tag }}
-  <script src="{{ 'tiendaiq-bundle.js' | asset_url }}" defer></script>
+{%- assign tiendaiq_bundles_origin = app.metafields.tiendaiq.storefront_origin.value -%}
+<script>
+window.TIENDAIQ_PRODUCTO = {
+id: {{ product.id | json }},
+variante: {{ product.selected_or_first_available_variant.id | json }},
+colecciones: {{ product.collections | map: 'id' | json }},
+precio: {{ product.selected_or_first_available_variant.price | json }},
+moneda: {{ shop.money_format | json }}
+};
+window.TIENDAIQ_VARIANTES = {
+{%- for v in product.variants -%}
+{{ v.id | json }}: { precio: {{ v.price | json }}, compare: {{ v.compare_at_price | json }}, stock: {{ v.available | json }} }{%- unless forloop.last -%},{%- endunless -%}
+{%- endfor -%}
+};
+window.TIENDAIQ_CLIENTE = { b2b: {% if customer.b2b? %}true{% else %}false{% endif %} };
+window.TIENDAIQ_SELLING_PLANS = [
+{%- for g in product.selling_plan_groups -%}
+{ id: {{ g.id | json }}, nombre: {{ g.name | json }}, plans: [
+{%- for p in g.selling_plans -%}
+{ id: {{ p.id | json }}, name: {{ p.name | json }}, adj: {%- if p.price_adjustments.size > 0 -%}{{ p.price_adjustments.first.value | json }}{%- else -%}null{%- endif -%}, adjType: {%- if p.price_adjustments.size > 0 -%}{{ p.price_adjustments.first.value_type | json }}{%- else -%}null{%- endif -%} }{%- unless forloop.last -%},{%- endunless -%}
+{%- endfor -%}
+] }{%- unless forloop.last -%},{%- endunless -%}
+{%- endfor -%}
+];
+window.TIENDAIQ_MERCADO = { pais: {{ localization.country.iso_code | json }} };
+{%- if tiendaiq_bundles_origin != blank -%}
+{%- assign tiendaiq_bundles_src = tiendaiq_bundles_origin | append: "/publico/bundles?shop=" | append: shop.permanent_domain -%}
+window.TIENDAIQ_BUNDLES_SRC = {{ tiendaiq_bundles_src | json }};
 {%- endif -%}
-
+</script>
+{{ 'tiendaiq-bundle.css' | asset_url | stylesheet_tag }}
+<script src="{{ 'tiendaiq-bundle.js' | asset_url }}" defer></script>
+{%- endif -%}
 {% schema %}
 {
-  "name": "TiendaIQ Bundles",
-  "target": "body",
-  "settings": []
+"name": "TiendaIQ Bundles",
+"target": "body",
+"settings": []
 }
 {% endschema %}
