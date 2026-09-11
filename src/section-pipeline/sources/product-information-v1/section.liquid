@@ -1247,9 +1247,16 @@
     const bundleOptions = Array.from(root.querySelectorAll('[data-bundle]'));
     const ctaPrice = root.querySelector('[data-cta-price]');
     const ctaCompare = root.querySelector('[data-cta-compare]');
+    const cta = root.querySelector('[data-cta]');
+    const cartVariant = root.querySelector('[data-cart-variant]');
     const cartQuantity = root.querySelector('[data-cart-quantity]');
     const tabButtons = Array.from(root.querySelectorAll('[data-tab-button]'));
     const tabPanels = Array.from(root.querySelectorAll('[data-tab-panel]'));
+
+    // Shopify can rehydrate a section and omit hidden input values while
+    // preserving data attributes. Restore the cart payload before interaction.
+    if (cartVariant && cta?.dataset.variantId) cartVariant.value = cta.dataset.variantId;
+    if (cartQuantity && !cartQuantity.value) cartQuantity.value = '1';
 
     const selectThumbnail = (thumbnail) => {
       if (!thumbnail || !mainImage) return;
