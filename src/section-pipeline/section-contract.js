@@ -187,7 +187,30 @@ function normalizeContentSources(schema, contentSources = {}) {
   });
 }
 
-function createSectionDefinition({ id, version, source, adaptation, outline = [], catalog = {}, capabilities = {}, copySlots = {}, contentSources = {} }) {
+function normalizeLockedFields(schema, lockedFields = {}) {
+  const settings = new Set((schema.settings || []).filter((item) => item.id).map((item) => item.id));
+  const blockSettings = new Map((schema.blocks || []).map((block) => [
+    block.type,
+    new Set((block.settings || []).filter((item) => item.id).map((item) => item.id))
+  ]));
+  const normalizeFields = (fields, where, allowed) => {
+    if (!Array.isArray(fields) || new Set(fields).size !== fields.length || fields.some((field) => !allowed.has(field))) {
+      throw new SectionContractError(`${where}: campo protegido desconocido o duplicado`);
+    }
+    return Object.freeze([...fields]);
+  };
+  const blocks = Object.fromEntries(Object.entries(lockedFields.blocks || {}).map(([type, fields]) => {
+    const allowed = blockSettings.get(type);
+    if (!allowed) throw new SectionContractError(`lockedFields.blocks.${type}: bloque desconocido`);
+    return [type, normalizeFields(fields, `lockedFields.blocks.${type}`, allowed)];
+  }));
+  return Object.freeze({
+    section: normalizeFields(lockedFields.section || [], "lockedFields.section", settings),
+    blocks: Object.freeze(blocks)
+  });
+}
+
+function createSectionDefinition({ id, version, source, adaptation, outline = [], catalog = {}, capabilities = {}, copySlots = {}, contentSources = {}, lockedFields = {} }) {
   if (!/^[a-z0-9][a-z0-9-]*$/.test(id) || !Number.isInteger(version) || version < 1) {
     throw new SectionContractError("La identidad de la sección es inválida");
   }
@@ -197,6 +220,7 @@ function createSectionDefinition({ id, version, source, adaptation, outline = []
   const seed = defaultInstance(schema);
   const normalizedCopySlots = normalizeCopySlots(schema, copySlots);
   const normalizedContentSources = normalizeContentSources(schema, contentSources);
+  const normalizedLockedFields = normalizeLockedFields(schema, lockedFields);
   const normalizedCatalog = Object.freeze({
     scale: catalog.scale === "block" ? "block" : "section",
     category: String(catalog.category || "Contenido"),
@@ -218,6 +242,7 @@ function createSectionDefinition({ id, version, source, adaptation, outline = []
     id, version, source, sourceSha256, schema: Object.freeze(schema), editor, seed: Object.freeze(seed),
     copySlots: normalizedCopySlots,
     contentSources: normalizedContentSources,
+    lockedFields: normalizedLockedFields,
     catalog: normalizedCatalog,
     capabilities: normalizedCapabilities,
     adapt(product, research = {}) {

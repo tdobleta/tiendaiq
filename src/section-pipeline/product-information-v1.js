@@ -148,6 +148,10 @@ module.exports = createSectionDefinition({
     section: { heading: "shopify", image_alt: "shopify" },
     blocks: { media_thumb: { image: "shopify", alt: "shopify" } }
   },
+  lockedFields: {
+    section: ["heading", "image_alt"],
+    blocks: { media_thumb: ["image", "alt"] }
+  },
   adaptation: adapt,
   catalog: {
     scale: "section",

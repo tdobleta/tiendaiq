@@ -138,6 +138,7 @@ function editorRegistry() {
     editor: definition.editor,
     copySlots: definition.copySlots,
     contentSources: definition.contentSources,
+    lockedFields: definition.lockedFields,
     seed: definition.seed,
     catalog: definition.catalog,
     capabilities: definition.capabilities

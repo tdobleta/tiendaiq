@@ -15,6 +15,7 @@ test("Testimonios con imágenes es una sección reutilizable con bloques indepen
   assert.equal(testimonials.editor.blocks[0].type, "testimonial");
   assert.ok(testimonials.schema.settings.some((setting) => setting.id === "mobile_columns"));
   assert.ok(testimonials.schema.blocks[0].settings.some((setting) => setting.id === "image" && setting.type === "image_picker"));
+  assert.equal(testimonials.contentSources.blocks.testimonial.image, "shopify");
 });
 
 test("los testimonios se renderizan con imagen, texto y controles del carrusel", async () => {
