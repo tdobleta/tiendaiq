@@ -22,7 +22,7 @@ function adapt({ research, seed }) {
   const reviewItems = Array.isArray(research?.sectionCopy?.reviewItems) ? research.sectionCopy.reviewItems : [];
   instance.blocks.filter((block) => block.type === "review").forEach((block, index) => {
     const generated = readCopySlot(research, {
-      section_id: "reviews-carousel", occurrence: 1, block_type: "review", block_index: index, field: "quote"
+      section_id: "reviews-carousel", occurrence: 1, block_type: "review", block_id: block.id, block_index: index, field: "quote"
     });
     const fallback = reviewItems[index]?.quote;
     if (generated || fallback) block.settings.quote = escapeText(generated || fallback);

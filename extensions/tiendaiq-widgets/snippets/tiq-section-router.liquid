@@ -11,4 +11,6 @@
     {% render 'tiq-testimonios-con-imagenes-v1', tiq_section: tiq_section, product: product %}
   {%- elsif tiq_section.definition.id == 'reviews-carousel' and tiq_section.definition.version == 1 -%}
     {% render 'tiq-reviews-carousel-v1', tiq_section: tiq_section, product: product %}
+  {%- elsif tiq_section.definition.id == 'guarantee-with-social-proof' and tiq_section.definition.version == 1 -%}
+    {% render 'tiq-guarantee-with-social-proof-v1', tiq_section: tiq_section, product: product %}
   {%- endif -%}

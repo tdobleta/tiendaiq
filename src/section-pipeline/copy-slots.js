@@ -11,20 +11,28 @@ function normalizedTarget(target, where = "copy_slots_v1.target") {
   const sectionId = String(target.section_id || "");
   const field = String(target.field || "");
   const occurrence = target.occurrence ?? 1;
-  const hasBlockType = target.block_type != null || target.block_index != null;
+  const hasBlockType = target.block_type != null || target.block_index != null || target.block_id != null;
   if (!/^[a-z0-9][a-z0-9-]{0,79}$/.test(sectionId)
     || !/^[a-z0-9][a-z0-9_-]{0,79}$/.test(field)
     || !Number.isInteger(occurrence) || occurrence < 1 || occurrence > 12) {
     throw new SectionContractError(`${where}: destino inválido`);
   }
+  const hasStableBlockId = target.block_id != null;
+  const hasLegacyBlockIndex = target.block_index != null;
   if (hasBlockType && (!/^[a-z0-9][a-z0-9-]{0,79}$/.test(String(target.block_type || ""))
-    || !Number.isInteger(target.block_index) || target.block_index < 0 || target.block_index > 49)) {
+    || (hasStableBlockId && !/^[a-z0-9][a-z0-9-]{0,79}$/.test(String(target.block_id)))
+    || (!hasStableBlockId && (!Number.isInteger(target.block_index) || target.block_index < 0 || target.block_index > 49))
+    || (hasLegacyBlockIndex && (!Number.isInteger(target.block_index) || target.block_index < 0 || target.block_index > 49)))) {
     throw new SectionContractError(`${where}: bloque de destino inválido`);
   }
   return {
     section_id: sectionId,
     occurrence,
-    ...(hasBlockType ? { block_type: String(target.block_type), block_index: target.block_index } : {}),
+    ...(hasBlockType ? {
+      block_type: String(target.block_type),
+      ...(hasStableBlockId ? { block_id: String(target.block_id) } : {}),
+      ...(hasLegacyBlockIndex ? { block_index: target.block_index } : {})
+    } : {}),
     field
   };
 }
@@ -108,7 +116,7 @@ function targetKey(target = {}) {
     target.section_id,
     target.occurrence || 1,
     target.block_type || "section",
-    target.block_index ?? "section",
+    target.block_id ?? target.block_index ?? "section",
     target.field
   ].join("/");
 }
@@ -117,7 +125,14 @@ function readCopySlot(research, target) {
   const slots = research?.copy_slots_v1?.slots;
   if (Array.isArray(slots)) {
     const wanted = targetKey(target);
-    const match = slots.find((slot) => targetKey(slot?.target) === wanted && typeof slot?.value === "string");
+    const legacyWanted = target?.block_id == null
+      ? null
+      : targetKey({ ...target, block_id: undefined });
+    const match = slots.find((slot) => {
+      if (typeof slot?.value !== "string") return false;
+      const key = targetKey(slot.target);
+      return key === wanted || (legacyWanted && key === legacyWanted);
+    });
     if (match) return match.value;
   }
   return null;

@@ -103,6 +103,7 @@ const OUTPUT_SCHEMA = Object.freeze({
                   section_id: { type: "string", maxLength: 80 },
                   occurrence: { type: "integer", minimum: 1, maximum: 12 },
                   block_type: { type: "string", maxLength: 80 },
+                  block_id: { type: "string", maxLength: 80 },
                   block_index: { type: "integer", minimum: 0, maximum: 49 },
                   field: { type: "string", maxLength: 80 }
                 }
@@ -151,7 +152,7 @@ function parseJson(text) {
 }
 
 function copySlotKey(target = {}) {
-  return [target.section_id, target.occurrence || 1, target.block_type || "section", target.block_index ?? "section", target.field].join("/");
+  return [target.section_id, target.occurrence || 1, target.block_type || "section", target.block_id ?? target.block_index ?? "section", target.field].join("/");
 }
 
 function legacyCopySlots(sectionCopy) {
@@ -201,7 +202,7 @@ function normalizeCopySlots(value, fallbackSectionCopy = {}) {
       && (target.occurrence || 1) >= 1
       && Array.isArray(allowedFields)
       && allowedFields.includes(target.field)
-      && (!target.block_type || Number.isInteger(target.block_index));
+      && (!target.block_type || Number.isInteger(target.block_index) || /^[a-z0-9][a-z0-9-]{0,79}$/.test(String(target.block_id || "")));
     if (!validTarget) {
       skipped.push({ target, reason: "target_no_autorizado" });
       continue;
@@ -224,7 +225,11 @@ function normalizeCopySlots(value, fallbackSectionCopy = {}) {
       target: {
         section_id: target.section_id,
         occurrence: target.occurrence || 1,
-        ...(target.block_type ? { block_type: target.block_type, block_index: target.block_index } : {}),
+        ...(target.block_type ? {
+          block_type: target.block_type,
+          ...(target.block_id ? { block_id: String(target.block_id) } : {}),
+          ...(Number.isInteger(target.block_index) ? { block_index: target.block_index } : {})
+        } : {}),
         field: target.field
       },
       value: valueText.slice(0, target.field === "body" || target.field === "description" ? 1200 : 700),
@@ -309,9 +314,9 @@ async function researchProduct(product, media, { idioma = "es", angulo = "" } = 
     "Analizás un producto para completar únicamente el contenido editable de una sección de producto ya diseñada.",
     "El Liquid, el CSS, el JavaScript, la estructura, los precios, las variantes y el carrito están fuera de tu alcance.",
     "summary debe ser copy comercial sobrio basado en la descripción de Shopify y en observaciones visuales conservadoras.",
-    "copy_slots_v1 contiene únicamente palabras para slots editoriales declarados por la composición. Cada target debe indicar section_id, occurrence, field y, si corresponde, block_type y block_index.",
+    "copy_slots_v1 contiene únicamente palabras para slots editoriales declarados por la composición. Cada target debe indicar section_id, occurrence, field y, si corresponde, block_type y un block_id estable (se acepta block_index para compatibilidad).",
     "copy_slots_v1 debe tener version 1 y una lista slots. Cada slot debe incluir target, value y evidence; evidence sólo puede citar shopify_description, shopify_media o shopify_product.",
-    "Ejemplo de target permitido: {section_id:\"image-with-timeline\", occurrence:1, block_type:\"timeline_step\", block_index:0, field:\"heading\"}. Nunca uses un target para precio, variante, imagen, carrito, rating o estilos.",
+    "Ejemplo de target permitido: {section_id:\"image-with-timeline\", occurrence:1, block_type:\"timeline_step\", block_id:\"block-2\", field:\"heading\"}. Nunca uses un target para precio, variante, imagen, carrito, rating o estilos.",
     "sectionCopy es un formato legado compatible; si usás copy_slots_v1 no lo repitas.",
     "No cambies el título real del producto, imágenes, precio, variantes, estructura, nombres de bloques, reseñas, ratings, descuentos, envío, garantía ni métodos de pago.",
     "Si un slot no puede escribirse con respaldo suficiente, dejalo vacío u omitilo. No rellenes con frases genéricas que parezcan hechos del producto.",
