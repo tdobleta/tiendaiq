@@ -1463,6 +1463,11 @@ async function api(req, res, url) {
           expectedRevision: cuerpo.expected_revision
         });
         existente.data = { ...(existente.data || {}), section_page: sectionPage };
+        // La selección de tema acompaña al guardado canónico sin abrir una
+        // segunda ruta de escritura para páginas que ya usan section_page.
+        if (cuerpo.global && typeof cuerpo.global === "object" && typeof cuerpo.global.tema === "string") {
+          existente.data.global = { ...(existente.data.global || {}), tema: cuerpo.global.tema.slice(0, 80) };
+        }
         if (existente.estado === "publicada") existente.cambios_sin_publicar = true;
         existente.actualizado = new Date().toISOString();
         const saved = await guardarPaginaSiRevisionDB(sesion.tenant, existente.id, existente, cuerpo.expected_revision);

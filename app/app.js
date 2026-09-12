@@ -1438,7 +1438,7 @@
         (estado.pagina.data.global ||= {}).tema = pending.tema;
         estado.pagina = await api(`/paginas/${estado.pagina.id}`, {
           method: "PUT",
-          body: { data: estado.pagina.data }
+          body: { section_page: estado.pagina.data.section_page, expected_revision: estado.pagina.data.section_page.revision, global: { tema: pending.tema } }
         });
       }
       limpiarGeneracionPendiente();
@@ -1451,7 +1451,7 @@
       (estado.pagina.data.global ||= {}).tema = pending.tema;
       estado.pagina = await api(`/paginas/${estado.pagina.id}`, {
         method: "PUT",
-        body: { data: estado.pagina.data }
+        body: { section_page: estado.pagina.data.section_page, expected_revision: estado.pagina.data.section_page.revision, global: { tema: pending.tema } }
       });
     }
     limpiarGeneracionPendiente();

@@ -6,7 +6,7 @@ const productInformation = require("../src/section-pipeline/product-information-
 const imageWithText = require("../src/section-pipeline/image-with-text-v1");
 const { createProductPage, editorRegistry, instantiateSection, validatePage } = require("../src/section-pipeline/page-pipeline");
 const { outlineTargets, renderSectionPage } = require("../src/section-pipeline/preview-renderer");
-const { validateResearch } = require("../src/section-pipeline/research-product");
+const { OUTPUT_SCHEMA, validateResearch } = require("../src/section-pipeline/research-product");
 const { SectionContractError, createSectionDefinition, sha256, validateInstance } = require("../src/section-pipeline/section-contract");
 const { build: buildStorefront } = require("../src/section-pipeline/compile-storefront");
 const fs = require("node:fs");
@@ -30,6 +30,10 @@ test("el código Shopify es la fuente inmutable del diseño y del editor", () =>
   assert.deepEqual(productInformation.contentSources.blocks.media_thumb, { image: "shopify", alt: "shopify" });
   assert.doesNotMatch(productInformation.source, /if hero_(?:max_width|column_gap|desktop_top|thumbnail_size)/);
   assert.doesNotMatch(productInformation.source, /\| replace:/);
+});
+
+test("la investigación de Claude debe devolver los contratos de copy nuevos", () => {
+  assert.deepEqual(OUTPUT_SCHEMA.required, ["summary", "claims", "visualObservations", "sectionCopy", "copy_slots_v1"]);
 });
 
 test("el registro distingue definiciones, catálogo y capacidades", () => {

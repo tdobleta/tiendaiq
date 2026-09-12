@@ -34,6 +34,13 @@ test("la ruta canónica de section_page sigue permitida", () => {
   }));
 });
 
+test("la ruta canónica puede transportar un tema sin cambiar de contrato", () => {
+  assert.doesNotThrow(() => assertCompatiblePageWrite({
+    persistedData: sectionPageRecord,
+    body: { section_page: { contractVersion: 1, revision: 3 }, expected_revision: 3, global: { tema: "azul" } }
+  }));
+});
+
 test("las páginas legacy conservan su ruta compatible", () => {
   assert.doesNotThrow(() => assertCompatiblePageWrite({
     persistedData: { piloto_pdp_01: {} },
