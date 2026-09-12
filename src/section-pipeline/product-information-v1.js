@@ -57,7 +57,7 @@ function templateCopyFor(idioma) {
   return TEMPLATE_COPY[locale] || TEMPLATE_COPY.es;
 }
 
-function adapt({ product, research, seed, idioma = "es" }) {
+function adapt({ product, research, seed, idioma = "es", occurrence = 1 }) {
   // La fuente Liquid y todos sus valores visuales permanecen inmutables. La
   // adaptación sólo escribe campos de contenido autorizados y respaldados por
   // el producto o por la investigación validada.
@@ -87,7 +87,7 @@ function adapt({ product, research, seed, idioma = "es" }) {
     : [];
   if (benefits.length) {
     instance.blocks.filter((block) => block.type === "benefit").forEach((block, index) => {
-      const generatedText = readCopySlot(research, { section_id: "product-information", occurrence: 1, block_type: "benefit", block_id: block.id, block_index: index, field: "text" });
+      const generatedText = readCopySlot(research, { section_id: "product-information", occurrence, block_type: "benefit", block_id: block.id, block_index: index, field: "text" });
       if (generatedText || benefits[index]) block.settings.text = String(generatedText || benefits[index]).slice(0, 180);
     });
   }

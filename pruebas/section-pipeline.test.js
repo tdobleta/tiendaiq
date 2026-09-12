@@ -41,7 +41,7 @@ test("la investigación de Claude debe devolver los contratos de copy nuevos", (
 
 test("el registro distingue definiciones, catálogo y capacidades", () => {
   const registry = editorRegistry();
-  assert.deepEqual(registry.map((entry) => entry.id), ["product-information", "image-with-text", "image-with-timeline", "image-with-benefits", "testimonios-con-imagenes", "reviews-carousel", "guarantee-with-social-proof"]);
+  assert.deepEqual(registry.map((entry) => entry.id), ["product-information", "image-with-text", "image-with-timeline", "image-with-benefits", "benefits-spotlight", "testimonios-con-imagenes", "reviews-carousel", "guarantee-with-social-proof"]);
   assert.equal(registry[0].capabilities.duplicable, false);
   assert.equal(registry[0].capabilities.protected, true);
   assert.equal(registry[0].capabilities.reorderable, false);
@@ -54,11 +54,14 @@ test("el registro distingue definiciones, catálogo y capacidades", () => {
   assert.deepEqual(registry[2].copySlots.blocks.timeline_step, ["heading", "body"]);
   assert.equal(registry[1].contentSources.section.image, "shopify");
   assert.equal(registry[3].contentSources.section.image_alt, "shopify");
-  assert.deepEqual(registry[4].copySlots, { section: [], blocks: {} });
   assert.equal(registry[3].capabilities.editableStructure, true);
   assert.equal(registry[3].capabilities.allowMultipleInstances, true);
-  assert.equal(registry[6].catalog.category, "Prueba social y confianza");
-  assert.deepEqual(registry[6].copySlots, { section: [], blocks: {} });
+  assert.equal(registry[4].catalog.thumbnail, "benefits-spotlight");
+  assert.deepEqual(registry[4].copySlots, { section: ["heading", "intro"], blocks: { benefit: ["heading", "body"] } });
+  assert.equal(registry[4].capabilities.editableStructure, true);
+  assert.deepEqual(registry[5].copySlots, { section: [], blocks: {} });
+  assert.equal(registry[7].catalog.category, "Prueba social y confianza");
+  assert.deepEqual(registry[7].copySlots, { section: [], blocks: {} });
 });
 
 test("Garantía con prueba social es reutilizable y sus elementos son bloques independientes", async () => {
@@ -194,6 +197,37 @@ test("Imagen con beneficios mantiene diseño, imagen vinculada y bloques repetib
   assert.match(html, /Más simple cada día/);
 });
 
+test("Beneficios destacados replica la composición central de PagePilot y conserva bloques independientes", async () => {
+  const spotlight = require("../src/section-pipeline/benefits-spotlight-v1");
+  const product = { title: "Bolso Atelier", media: [{ url: "https://cdn.shopify.com/bolso.jpg" }] };
+  const research = {
+    summary: "Una pieza cómoda para acompañar tu jornada.",
+    copy_slots_v1: {
+      version: 1,
+      slots: [
+        { target: { section_id: "benefits-spotlight", occurrence: 1, field: "heading" }, value: "Una presencia más segura durante el día", evidence: [] },
+        { target: { section_id: "benefits-spotlight", occurrence: 1, field: "intro" }, value: "Diseñado para acompañar tu ritmo.", evidence: [] },
+        { target: { section_id: "benefits-spotlight", occurrence: 1, block_type: "benefit", block_id: "block-1", block_index: 0, field: "heading" }, value: "Más simple cada mañana", evidence: [] }
+      ],
+      skipped: []
+    }
+  };
+  const instance = spotlight.adapt(product, research);
+  assert.equal(instance.settings.image, "https://cdn.shopify.com/bolso.jpg");
+  assert.equal(instance.settings.heading, "Una presencia más segura durante el día");
+  assert.match(instance.settings.intro, /Diseñado para acompañar/);
+  assert.equal(instance.blocks.length, 4);
+  assert.equal(instance.blocks[0].settings.position, "left-top");
+  assert.equal(instance.blocks[3].settings.position, "right-bottom");
+  assert.equal(spotlight.editor.outline.find((node) => node.id === "spotlight-benefits").blockType, "benefit");
+  const page = createProductPage({ product });
+  page.sections.push({ id: "section-benefits-spotlight", label: spotlight.schema.name, definition: { id: spotlight.id, version: spotlight.version, sourceSha256: spotlight.sourceSha256 }, instance });
+  const html = await renderSectionPage(validatePage(page));
+  assert.match(html, /tiq-benefits-spotlight/);
+  assert.match(html, /Una presencia más segura/);
+  assert.match(html, /data-tiq-block-id=/);
+});
+
 test("Image with Text se adapta al producto sin modificar su fuente visual", async () => {
   const before = imageWithText.source;
   const product = {
@@ -230,6 +264,38 @@ test("la inserción usa el adaptador común del registro, no condiciones del nav
   const editor = fs.readFileSync(path.join(__dirname, "../app/section-editor.js"), "utf8");
   assert.doesNotMatch(editor, /entry\.id==="image-with-text"/);
   assert.match(editor, /sections\/instantiate/);
+});
+
+test("una segunda instancia no reutiliza el copy de la primera ocurrencia", () => {
+  const research = {
+    summary: "Descripción de Shopify",
+    copy_slots_v1: {
+      version: 1,
+      slots: [{
+        target: { section_id: "image-with-text", occurrence: 1, field: "body" },
+        value: "Copy de la primera sección",
+        evidence: []
+      }],
+      skipped: []
+    }
+  };
+  const first = instantiateSection(
+    { id: "image-with-text", version: 1 },
+    { title: "Producto", description: "Descripción de Shopify" },
+    research,
+    "es",
+    { occurrence: 1 }
+  );
+  const second = instantiateSection(
+    { id: "image-with-text", version: 1 },
+    { title: "Producto", description: "Descripción de Shopify" },
+    research,
+    "es",
+    { occurrence: 2 }
+  );
+  assert.match(first.settings.body, /Copy de la primera sección/);
+  assert.match(second.settings.body, /Descripción de Shopify/);
+  assert.doesNotMatch(second.settings.body, /Copy de la primera sección/);
 });
 
 test("crear una página conserva el diseño Shopify y adapta sólo contenido autorizado", () => {

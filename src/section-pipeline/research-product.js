@@ -70,6 +70,19 @@ const OUTPUT_SCHEMA = Object.freeze({
             }
           }
         },
+        benefitsSpotlightHeading: { type: "string", maxLength: 180 },
+        benefitsSpotlightIntro: { type: "string", maxLength: 700 },
+        benefitsSpotlightItems: {
+          type: "array", maxItems: 6,
+          items: {
+            type: "object", additionalProperties: false,
+            required: ["heading", "body"],
+            properties: {
+              heading: { type: "string", maxLength: 180 },
+              body: { type: "string", maxLength: 700 }
+            }
+          }
+        },
         reviewsIntro: { type: "string", maxLength: 700 },
         reviewItems: {
           type: "array", maxItems: 6,
@@ -133,8 +146,13 @@ const COPY_SLOT_MANIFEST = Object.freeze({
   "image-with-text": Object.freeze({ section: Object.freeze(["body"]), blocks: Object.freeze({}) }),
   "image-with-timeline": Object.freeze({ section: Object.freeze(["intro"]), blocks: Object.freeze({ timeline_step: Object.freeze(["heading", "body"]) }) }),
   "image-with-benefits": Object.freeze({ section: Object.freeze(["intro"]), blocks: Object.freeze({ benefit: Object.freeze(["heading", "body"]) }) }),
+  "benefits-spotlight": Object.freeze({ section: Object.freeze(["heading", "intro"]), blocks: Object.freeze({ benefit: Object.freeze(["heading", "body"]) }) }),
   "reviews-carousel": Object.freeze({ section: Object.freeze(["intro"]), blocks: Object.freeze({ review: Object.freeze(["quote"]) }) })
 });
+
+const COPY_SLOT_INSTRUCTIONS = Object.entries(COPY_SLOT_MANIFEST)
+  .map(([sectionId, manifest]) => `${sectionId}: sección [${manifest.section.join(", ") || "ninguno"}]${Object.entries(manifest.blocks).map(([type, fields]) => `; bloque ${type} [${fields.join(", ")}]`).join("")}`)
+  .join(" | ");
 
 function mediaForAnalysis(url) {
   try {
@@ -172,6 +190,12 @@ function legacyCopySlots(sectionCopy) {
   for (const [index, value] of (sectionCopy?.benefitItems || []).entries()) {
     add("image-with-benefits", "heading", value?.heading, { block_type: "benefit", block_index: index });
     add("image-with-benefits", "body", value?.body, { block_type: "benefit", block_index: index });
+  }
+  add("benefits-spotlight", "heading", sectionCopy?.benefitsSpotlightHeading);
+  add("benefits-spotlight", "intro", sectionCopy?.benefitsSpotlightIntro);
+  for (const [index, value] of (sectionCopy?.benefitsSpotlightItems || []).entries()) {
+    add("benefits-spotlight", "heading", value?.heading, { block_type: "benefit", block_index: index });
+    add("benefits-spotlight", "body", value?.body, { block_type: "benefit", block_index: index });
   }
   add("reviews-carousel", "intro", sectionCopy?.reviewsIntro);
   for (const [index, value] of (sectionCopy?.reviewItems || []).entries()) {
@@ -266,6 +290,9 @@ function validateResearch(value, mediaIds) {
     timelineSteps: copyItems(value?.sectionCopy?.timelineSteps, 4),
     benefitsIntro: copyText(value?.sectionCopy?.benefitsIntro, 700),
     benefitItems: copyItems(value?.sectionCopy?.benefitItems, 6),
+    benefitsSpotlightHeading: copyText(value?.sectionCopy?.benefitsSpotlightHeading, 180),
+    benefitsSpotlightIntro: copyText(value?.sectionCopy?.benefitsSpotlightIntro, 700),
+    benefitsSpotlightItems: copyItems(value?.sectionCopy?.benefitsSpotlightItems, 6),
     reviewsIntro: copyText(value?.sectionCopy?.reviewsIntro, 700),
     reviewItems: (Array.isArray(value?.sectionCopy?.reviewItems) ? value.sectionCopy.reviewItems : [])
       .slice(0, 6)
@@ -278,6 +305,9 @@ function validateResearch(value, mediaIds) {
     || sectionCopy.timelineSteps.length
     || sectionCopy.benefitsIntro
     || sectionCopy.benefitItems.length
+    || sectionCopy.benefitsSpotlightHeading
+    || sectionCopy.benefitsSpotlightIntro
+    || sectionCopy.benefitsSpotlightItems.length
     || sectionCopy.reviewsIntro
     || sectionCopy.reviewItems.length;
   const normalizedCopySlots = normalizeCopySlots(value, sectionCopy);
@@ -292,6 +322,9 @@ function validateResearch(value, mediaIds) {
       timelineSteps: Object.freeze(sectionCopy.timelineSteps),
       benefitsIntro: sectionCopy.benefitsIntro,
       benefitItems: Object.freeze(sectionCopy.benefitItems),
+      benefitsSpotlightHeading: sectionCopy.benefitsSpotlightHeading,
+      benefitsSpotlightIntro: sectionCopy.benefitsSpotlightIntro,
+      benefitsSpotlightItems: Object.freeze(sectionCopy.benefitsSpotlightItems),
       reviewsIntro: sectionCopy.reviewsIntro,
       reviewItems: Object.freeze(sectionCopy.reviewItems)
     } : {}),
@@ -316,7 +349,7 @@ async function researchProduct(product, media, { idioma = "es", angulo = "" } = 
     "summary debe ser copy comercial sobrio basado en la descripción de Shopify y en observaciones visuales conservadoras.",
     "copy_slots_v1 contiene únicamente palabras para slots editoriales declarados por la composición. Cada target debe indicar section_id, occurrence, field y, si corresponde, block_type y un block_id estable (se acepta block_index para compatibilidad).",
     "copy_slots_v1 debe tener version 1 y una lista slots. Cada slot debe incluir target, value y evidence; evidence sólo puede citar shopify_description, shopify_media o shopify_product.",
-    "Ejemplo de target permitido: {section_id:\"image-with-timeline\", occurrence:1, block_type:\"timeline_step\", block_id:\"block-2\", field:\"heading\"}. Nunca uses un target para precio, variante, imagen, carrito, rating o estilos.",
+    `Targets permitidos por la composición actual: ${COPY_SLOT_INSTRUCTIONS}. Ejemplo: {section_id:"image-with-timeline", occurrence:1, block_type:"timeline_step", block_id:"block-2", field:"heading"}. Nunca uses un target para precio, variante, imagen, carrito, rating o estilos.`,
     "sectionCopy es un formato legado compatible; si usás copy_slots_v1 no lo repitas.",
     "No cambies el título real del producto, imágenes, precio, variantes, estructura, nombres de bloques, reseñas, ratings, descuentos, envío, garantía ni métodos de pago.",
     "Si un slot no puede escribirse con respaldo suficiente, dejalo vacío u omitilo. No rellenes con frases genéricas que parezcan hechos del producto.",

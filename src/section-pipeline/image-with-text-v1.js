@@ -8,11 +8,11 @@ const { readCopySlot } = require("./copy-slots");
 const source = fs.readFileSync(path.join(__dirname, "sources", "image-with-text-v1", "section.liquid"), "utf8")
   .replace(/\r\n?/g, "\n");
 
-function adapt({ product, research, seed }) {
+function adapt({ product, research, seed, occurrence = 1 }) {
   const instance = structuredClone(seed);
   const rich = (value) => `<p>${String(value || "").replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]).slice(0, 1200)}</p>`;
   if (product?.title) instance.settings.heading = String(product.title).slice(0, 180);
-  const generatedBody = readCopySlot(research, { section_id: "image-with-text", occurrence: 1, field: "body" });
+  const generatedBody = readCopySlot(research, { section_id: "image-with-text", occurrence, field: "body" });
   if (generatedBody || research?.sectionCopy?.imageWithTextBody) instance.settings.body = rich(generatedBody || research.sectionCopy.imageWithTextBody);
   else if (research?.summary) instance.settings.body = rich(research.summary);
   const media = Array.isArray(product?.media) ? product.media : product?.media?.nodes || [];

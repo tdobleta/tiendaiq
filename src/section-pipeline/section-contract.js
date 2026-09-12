@@ -289,9 +289,16 @@ function createSectionDefinition({ id, version, source, adaptation, outline = []
     lockedFields: normalizedLockedFields,
     catalog: normalizedCatalog,
     capabilities: normalizedCapabilities,
-    adapt(product, research = {}, idioma = "es") {
+    adapt(product, research = {}, idioma = "es", context = {}) {
       const before = sourceSha256;
-      const result = adaptation({ product: clone(product || {}), research: clone(research || {}), seed: clone(seed), idioma });
+      const result = adaptation({
+        product: clone(product || {}),
+        research: clone(research || {}),
+        seed: clone(seed),
+        idioma,
+        occurrence: Number.isInteger(context?.occurrence) && context.occurrence > 0 ? context.occurrence : 1,
+        instanceId: context?.instanceId ? String(context.instanceId) : null
+      });
       if (sha256(source) !== before) throw new SectionContractError("La adaptación intentó modificar el diseño de la sección");
       assertAdaptationScope(seed, result, normalizedCopySlots, normalizedContentSources);
       return validateInstance({ definition: this, instance: result });

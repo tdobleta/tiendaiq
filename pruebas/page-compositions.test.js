@@ -71,7 +71,7 @@ test("las plantillas comerciales tienen composiciones distintas y válidas", () 
 
 test("la demostración carga una composición reusable adicional sin cambiar la plantilla real", () => {
   assert.deepEqual(DEMO_SECTION_PAGE_COMPOSITION_V1.map((section) => section.id), [
-    "product-information", "image-with-text", "image-with-timeline", "image-with-benefits", "testimonios-con-imagenes"
+    "product-information", "image-with-text", "image-with-timeline", "image-with-benefits", "benefits-spotlight", "testimonios-con-imagenes"
   ]);
   assert.deepEqual(DEFAULT_SECTION_PAGE_COMPOSITION_V1.map((section) => section.id), [
     "product-information", "image-with-text", "image-with-timeline", "testimonios-con-imagenes"

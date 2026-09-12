@@ -7,6 +7,8 @@
     {% render 'tiq-image-with-timeline-v1', tiq_section: tiq_section, product: product %}
   {%- elsif tiq_section.definition.id == 'image-with-benefits' and tiq_section.definition.version == 1 -%}
     {% render 'tiq-image-with-benefits-v1', tiq_section: tiq_section, product: product %}
+  {%- elsif tiq_section.definition.id == 'benefits-spotlight' and tiq_section.definition.version == 1 -%}
+    {% render 'tiq-benefits-spotlight-v1', tiq_section: tiq_section, product: product %}
   {%- elsif tiq_section.definition.id == 'testimonios-con-imagenes' and tiq_section.definition.version == 1 -%}
     {% render 'tiq-testimonios-con-imagenes-v1', tiq_section: tiq_section, product: product %}
   {%- elsif tiq_section.definition.id == 'reviews-carousel' and tiq_section.definition.version == 1 -%}
