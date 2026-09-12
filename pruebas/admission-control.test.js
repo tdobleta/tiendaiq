@@ -67,3 +67,13 @@ test("el frontend muestra progreso solo despues de que la cola acepta el trabajo
   assert.match(generationSource, /fallback\?\.data\?\.section_page/,
     "un fallo de copy debe abrir el borrador por secciones y no el editor heredado");
 });
+
+test("el frontend no confunde una página existente con un fallo de IA", () => {
+  const appSource = fs.readFileSync(path.join(__dirname, "..", "app", "app.js"), "utf8");
+  assert.match(appSource, /e\.code = cuerpo\.code/,
+    "los errores de dominio deben conservar su código para la interfaz");
+  assert.match(appSource, /e\.code === "PAGE_ALREADY_EXISTS" \|\| e\.status === 409/,
+    "la página existente debe tener un flujo visible y separado");
+  assert.match(appSource, /ir\("informacion"\)/,
+    "el merchant debe volver al paso que permite editar la página existente");
+});
