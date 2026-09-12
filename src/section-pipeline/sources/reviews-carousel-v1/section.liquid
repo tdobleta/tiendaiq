@@ -53,7 +53,7 @@
 </section>
 
 <style>
-  #{{ section_dom_id }} { --tiq-reviews-bg: {{ section.settings.background_color }}; --tiq-reviews-card: {{ section.settings.card_background }}; --tiq-reviews-heading: {{ section.settings.heading_color }}; --tiq-reviews-text: {{ section.settings.text_color }}; --tiq-reviews-muted: {{ section.settings.muted_color }}; --tiq-reviews-accent: {{ section.settings.accent_color }}; --tiq-reviews-border: {{ section.settings.border_color }}; --tiq-reviews-radius: {{ section.settings.card_radius }}px; --tiq-reviews-gap: {{ section.settings.card_gap }}px; width: 100%; background: var(--tiq-reviews-bg); color: var(--tiq-reviews-text); }
+#{{ section_dom_id }} { --tiq-reviews-bg: {{ section.settings.background_color }}; --tiq-reviews-card: {{ section.settings.card_background }}; --tiq-reviews-heading: {{ section.settings.heading_color }}; --tiq-reviews-text: {{ section.settings.text_color }}; --tiq-reviews-muted: {{ section.settings.muted_color }}; --tiq-reviews-accent: {{ section.settings.accent_color }}; --tiq-reviews-border: {{ section.settings.border_color }}; --tiq-reviews-radius: {{ section.settings.card_radius }}px; --tiq-reviews-gap: {{ section.settings.card_gap }}px; --tiq-reviews-columns: {{ section.settings.desktop_columns }}; --tiq-reviews-mobile-columns: {{ section.settings.mobile_columns }}; width: 100%; background: var(--tiq-reviews-bg); color: var(--tiq-reviews-text); }
   #{{ section_dom_id }} * { box-sizing: border-box; }
   #{{ section_dom_id }} .{{ section_dom_id }}__inner { width: min(100%, {{ section.settings.max_width }}px); margin: 0 auto; padding: {{ section.settings.padding_top }}px {{ section.settings.side_padding }}px {{ section.settings.padding_bottom }}px; }
   #{{ section_dom_id }} .{{ section_dom_id }}__eyebrow { margin: 0 0 10px; color: var(--tiq-reviews-accent); font-size: 12px; font-weight: 700; letter-spacing: .13em; line-height: 1.3; text-align: center; text-transform: uppercase; }
@@ -65,14 +65,7 @@
   #{{ section_dom_id }} .{{ section_dom_id }}__stars { font-size: 17px; }
   #{{ section_dom_id }} .{{ section_dom_id }}__rating-count { color: var(--tiq-reviews-muted); }
   #{{ section_dom_id }} .{{ section_dom_id }}__carousel-wrap { position: relative; margin-top: 30px; }
-  #{{ section_dom_id }} .{{ section_dom_id }}__carousel { display: grid; grid-auto-flow: column; gap: var(--tiq-reviews-gap); overflow-x: auto; padding: 2px 1px 8px; scroll-behavior: smooth; scroll-snap-type: x mandatory; scrollbar-width: none;
-    {% case section.settings.desktop_columns %}
-      {% when 2 %} grid-auto-columns: calc((100% - var(--tiq-reviews-gap)) / 2);
-      {% when 3 %} grid-auto-columns: calc((100% - var(--tiq-reviews-gap) - var(--tiq-reviews-gap)) / 3);
-      {% when 5 %} grid-auto-columns: calc((100% - var(--tiq-reviews-gap) - var(--tiq-reviews-gap) - var(--tiq-reviews-gap) - var(--tiq-reviews-gap)) / 5);
-      {% else %} grid-auto-columns: calc((100% - var(--tiq-reviews-gap) - var(--tiq-reviews-gap) - var(--tiq-reviews-gap)) / 4);
-    {% endcase %}
-  }
+#{{ section_dom_id }} .{{ section_dom_id }}__carousel { display: grid; grid-auto-flow: column; grid-auto-columns: calc((100% - (var(--tiq-reviews-gap) * (var(--tiq-reviews-columns) - 1))) / var(--tiq-reviews-columns)); gap: var(--tiq-reviews-gap); overflow-x: auto; padding: 2px 1px 8px; scroll-behavior: smooth; scroll-snap-type: x mandatory; scrollbar-width: none; }
   #{{ section_dom_id }} .{{ section_dom_id }}__carousel::-webkit-scrollbar { display: none; }
   #{{ section_dom_id }} .{{ section_dom_id }}__card { display: flex; min-width: 0; min-height: 250px; flex-direction: column; padding: 22px; border: 1px solid var(--tiq-reviews-border); border-radius: var(--tiq-reviews-radius); background: var(--tiq-reviews-card); scroll-snap-align: start; }
   #{{ section_dom_id }} .{{ section_dom_id }}__card-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
@@ -93,7 +86,7 @@
     #{{ section_dom_id }} .{{ section_dom_id }}__inner { padding: {{ section.settings.mobile_padding_top }}px {{ section.settings.mobile_side_padding }}px {{ section.settings.mobile_padding_bottom }}px; }
     #{{ section_dom_id }} .{{ section_dom_id }}__heading { font-size: clamp(30px, 9vw, 42px); }
     #{{ section_dom_id }} .{{ section_dom_id }}__intro { font-size: 15px; }
-    #{{ section_dom_id }} .{{ section_dom_id }}__carousel { {% if section.settings.mobile_columns == 2 %}grid-auto-columns: calc((100% - var(--tiq-reviews-gap)) / 2);{% else %}grid-auto-columns: 100%;{% endif %} }
+#{{ section_dom_id }} .{{ section_dom_id }}__carousel { grid-auto-columns: calc((100% - (var(--tiq-reviews-gap) * (var(--tiq-reviews-mobile-columns) - 1))) / var(--tiq-reviews-mobile-columns)); }
     #{{ section_dom_id }} .{{ section_dom_id }}__card { min-height: 220px; padding: 18px; }
   }
   @media (prefers-reduced-motion: reduce) { #{{ section_dom_id }} .{{ section_dom_id }}__carousel { scroll-behavior: auto; } #{{ section_dom_id }} .{{ section_dom_id }}__controls button { transition: none; } }
