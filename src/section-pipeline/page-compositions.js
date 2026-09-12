@@ -15,6 +15,7 @@ const DEFAULT_SECTION_PAGE_COMPOSITION_V1 = Object.freeze([
 const DEMO_SECTION_PAGE_COMPOSITION_V1 = Object.freeze([
   ...DEFAULT_SECTION_PAGE_COMPOSITION_V1.slice(0, 3),
   Object.freeze({ id: "image-with-benefits", version: 1 }),
+  Object.freeze({ id: "benefits-spotlight", version: 1 }),
   DEFAULT_SECTION_PAGE_COMPOSITION_V1[3]
 ]);
 
