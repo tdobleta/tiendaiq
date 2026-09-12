@@ -1095,11 +1095,18 @@ async function api(req, res, url) {
       // una propiedad de la generación/página, no una decisión implícita del
       // adaptador (que usa español sólo como fallback seguro).
       const idioma = String(existente.data?.global?.idioma || "es").trim() || "es";
+      const occurrence = Number(body?.occurrence ?? 1);
+      if (!Number.isInteger(occurrence) || occurrence < 1 || occurrence > 12) {
+        return json(res, 400, { error: "La ocurrencia de la sección no es válida." });
+      }
+      const research = {
+        summary: sectionPage.productSnapshot?.description || "",
+        claims: sectionPage.evidence?.verifiedClaims || [],
+        visualObservations: sectionPage.evidence?.visualObservations || [],
+        ...(sectionPage.copy_slots_v1 ? { copy_slots_v1: sectionPage.copy_slots_v1 } : {})
+      };
       return json(res, 200, {
-        instance: instantiateSection(body.definition, sectionPage.productSnapshot, {
-          claims: sectionPage.evidence?.verifiedClaims || [],
-          visualObservations: sectionPage.evidence?.visualObservations || []
-        }, idioma)
+        instance: instantiateSection(body.definition, sectionPage.productSnapshot, research, idioma, { occurrence })
       });
     } catch (error) {
       return json(res, 400, { error: error.message || "No se pudo preparar la sección." });

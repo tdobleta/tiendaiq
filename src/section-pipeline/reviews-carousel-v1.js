@@ -14,15 +14,15 @@ function escapeText(value, limit = 900) {
     .slice(0, limit);
 }
 
-function adapt({ research, seed }) {
+function adapt({ research, seed, occurrence = 1 }) {
   const instance = structuredClone(seed);
-  const intro = readCopySlot(research, { section_id: "reviews-carousel", occurrence: 1, field: "intro" })
+  const intro = readCopySlot(research, { section_id: "reviews-carousel", occurrence, field: "intro" })
     || research?.sectionCopy?.reviewsIntro;
   if (intro) instance.settings.intro = `<p>${escapeText(intro)}</p>`;
   const reviewItems = Array.isArray(research?.sectionCopy?.reviewItems) ? research.sectionCopy.reviewItems : [];
   instance.blocks.filter((block) => block.type === "review").forEach((block, index) => {
     const generated = readCopySlot(research, {
-      section_id: "reviews-carousel", occurrence: 1, block_type: "review", block_id: block.id, block_index: index, field: "quote"
+      section_id: "reviews-carousel", occurrence, block_type: "review", block_id: block.id, block_index: index, field: "quote"
     });
     const fallback = reviewItems[index]?.quote;
     if (generated || fallback) block.settings.quote = escapeText(generated || fallback);

@@ -232,6 +232,38 @@ test("la inserción usa el adaptador común del registro, no condiciones del nav
   assert.match(editor, /sections\/instantiate/);
 });
 
+test("una segunda instancia no reutiliza el copy de la primera ocurrencia", () => {
+  const research = {
+    summary: "Descripción de Shopify",
+    copy_slots_v1: {
+      version: 1,
+      slots: [{
+        target: { section_id: "image-with-text", occurrence: 1, field: "body" },
+        value: "Copy de la primera sección",
+        evidence: []
+      }],
+      skipped: []
+    }
+  };
+  const first = instantiateSection(
+    { id: "image-with-text", version: 1 },
+    { title: "Producto", description: "Descripción de Shopify" },
+    research,
+    "es",
+    { occurrence: 1 }
+  );
+  const second = instantiateSection(
+    { id: "image-with-text", version: 1 },
+    { title: "Producto", description: "Descripción de Shopify" },
+    research,
+    "es",
+    { occurrence: 2 }
+  );
+  assert.match(first.settings.body, /Copy de la primera sección/);
+  assert.match(second.settings.body, /Descripción de Shopify/);
+  assert.doesNotMatch(second.settings.body, /Copy de la primera sección/);
+});
+
 test("crear una página conserva el diseño Shopify y adapta sólo contenido autorizado", () => {
   const before = productInformation.source;
   const page = createProductPage({

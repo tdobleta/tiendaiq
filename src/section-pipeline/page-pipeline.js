@@ -158,10 +158,10 @@ function editorRegistry() {
   }));
 }
 
-function instantiateSection(descriptor, product = {}, research = {}, idioma = "es") {
+function instantiateSection(descriptor, product = {}, research = {}, idioma = "es", context = {}) {
   const definition = resolveSection(descriptor);
   if (!definition) throw new SectionContractError("La sección solicitada no existe en el registro");
-  return definition.adapt(product, research, idioma);
+  return definition.adapt(product, research, idioma, context);
 }
 
 module.exports = Object.freeze({ DEFINITIONS, createProductPage, editorRegistry, instantiateSection, productSnapshot, resolveSection, sectionTree, validatePage });

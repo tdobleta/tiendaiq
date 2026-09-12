@@ -8,7 +8,7 @@ const { readCopySlot } = require("./copy-slots");
 const source = fs.readFileSync(path.join(__dirname, "sources", "image-with-timeline-v1", "section.liquid"), "utf8")
   .replace(/\r\n?/g, "\n");
 
-function adapt({ product, research, seed }) {
+function adapt({ product, research, seed, occurrence = 1 }) {
   const instance = structuredClone(seed);
   const rich = (value) => `<p>${String(value || "").replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]).slice(0, 700)}</p>`;
   const media = Array.isArray(product?.media) ? product.media : product?.media?.nodes || [];
@@ -17,13 +17,13 @@ function adapt({ product, research, seed }) {
   if (url) instance.settings.image = url;
   if (product?.title) instance.settings.image_alt = String(product.title).slice(0, 180);
   const timelineCopy = Array.isArray(research?.sectionCopy?.timelineSteps) ? research.sectionCopy.timelineSteps : [];
-  const generatedIntro = readCopySlot(research, { section_id: "image-with-timeline", occurrence: 1, field: "intro" });
+  const generatedIntro = readCopySlot(research, { section_id: "image-with-timeline", occurrence, field: "intro" });
   if (generatedIntro || research?.sectionCopy?.timelineIntro) instance.settings.intro = rich(generatedIntro || research.sectionCopy.timelineIntro);
   else if (research?.summary) instance.settings.intro = rich(research.summary);
   instance.blocks.filter((block) => block.type === "timeline_step").forEach((block, index) => {
     const copy = timelineCopy[index] || {};
-    const generatedHeading = readCopySlot(research, { section_id: "image-with-timeline", occurrence: 1, block_type: "timeline_step", block_id: block.id, block_index: index, field: "heading" });
-    const generatedBody = readCopySlot(research, { section_id: "image-with-timeline", occurrence: 1, block_type: "timeline_step", block_id: block.id, block_index: index, field: "body" });
+    const generatedHeading = readCopySlot(research, { section_id: "image-with-timeline", occurrence, block_type: "timeline_step", block_id: block.id, block_index: index, field: "heading" });
+    const generatedBody = readCopySlot(research, { section_id: "image-with-timeline", occurrence, block_type: "timeline_step", block_id: block.id, block_index: index, field: "body" });
     if (!generatedHeading && !generatedBody && !copy.heading && !copy.body) return;
     if (generatedHeading || copy.heading) block.settings.heading = String(generatedHeading || copy.heading).slice(0, 180);
     if (generatedBody || copy.body) block.settings.body = rich(generatedBody || copy.body);
