@@ -9,7 +9,7 @@ const TIMEOUT = Math.max(30000, Number(env.ANTHROPIC_TIMEOUT_MS) || 120000);
 const OUTPUT_SCHEMA = Object.freeze({
   type: "object",
   additionalProperties: false,
-  required: ["summary", "claims", "visualObservations"],
+  required: ["summary", "claims", "visualObservations", "sectionCopy", "copy_slots_v1"],
   properties: {
     summary: { type: "string", maxLength: 700 },
     claims: {
