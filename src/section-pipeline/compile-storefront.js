@@ -2,6 +2,7 @@
 
 const fs = require("node:fs");
 const path = require("node:path");
+const esbuild = require("esbuild");
 const { DEFINITIONS } = require("./page-pipeline");
 
 const TARGET = path.join(__dirname, "..", "..", "extensions", "tiendaiq-widgets", "snippets", "tiq-product-information-v1.liquid");
@@ -26,17 +27,59 @@ function compactLiquid(source) {
     .replace(/\n{2,}/g, "\n")
     .trim();
 
+  // Delimitadores Liquid aceptan whitespace opcional alrededor de la
+  // expresión. Eliminamos sólo ese whitespace (no el que separa palabras
+  // dentro de la expresión) para reducir el bundle sin tocar su semántica.
+  const compactDelimiters = compact
+    .replace(/{{\s*/g, "{{")
+    .replace(/\s*}}/g, "}}")
+    .replace(/\s*%}/g, "%}");
+
   // Shopify counts all Liquid inside an extension bundle. Compact only the
   // embedded CSS while protecting Liquid tags, so readable canonical sources
   // can ship below the platform limit without changing rendered values.
-  return compact.replace(/<style>([\s\S]*?)<\/style>/gi, (_, body) => {
+  const withCompactCss = compactDelimiters.replace(/<style>([\s\S]*?)<\/style>/gi, (_, body) => {
     const liquid = [];
     const css = body.replace(/({{[\s\S]*?}}|{%[\s\S]*?%})/g, (tag) => {
       liquid.push(tag);
       return `__TIQ_LIQUID_${liquid.length - 1}__`;
-    }).replace(/\s+/g, " ").replace(/\s*([{}:;,>])\s*/g, "$1").trim();
+    }).replace(/\s+/g, " ")
+      .replace(/\s*([{}:;,>+~])\s*/g, "$1")
+      .replace(/\s*\(\s*/g, "(")
+      .replace(/\s*\)\s*/g, ")")
+      .replace(/;}/g, "}")
+      .replace(/\b0(?:px|em|rem|%|vh|vw|s|ms)\b/g, "0")
+      .replace(/#([0-9a-f])\1([0-9a-f])\2([0-9a-f])\3\b/gi, "#$1$2$3")
+      .trim();
     return `<style>${css.replace(/__TIQ_LIQUID_(\d+)__/g, (_, index) => liquid[Number(index)])}</style>`;
   });
+
+  const withCompactJavaScript = withCompactCss.replace(/<script>([\s\S]*?)<\/script>/gi, (_, body) => {
+    const liquid = [];
+    const protectedSource = body.replace(/{{[\s\S]*?}}/g, (tag) => {
+      liquid.push(tag);
+      return `TIQ_LIQUID_${liquid.length - 1}`;
+    });
+    try {
+      const minified = esbuild.transformSync(protectedSource, {
+        minify: true,
+        legalComments: "none",
+        target: "es2020"
+      }).code.trim();
+      return `<script>${minified.replace(/TIQ_LIQUID_(\d+)/g, (_, index) => liquid[Number(index)])}</script>`;
+    } catch {
+      // A future Liquid construct may not be valid JavaScript until Shopify
+      // evaluates it. In that case keep the already compacted source intact.
+      return `<script>${body.trim()}</script>`;
+    }
+  });
+
+  return withCompactJavaScript
+    // Shopify cuenta también el whitespace de atributos y saltos entre tags.
+    // Compactamos sólo markup generado; CSS, JavaScript y texto visible quedan
+    // fuera para no cambiar la semántica ni la experiencia de la sección.
+    .replace(/<(?!style\b|\/style\b|script\b|\/script\b)[^>]+>/gs, (tag) => tag.replace(/\s+/g, " "))
+    .replace(/>\s+</g, "><");
 }
 
 function compileSection(source, sourceSha256, descriptor = "product-information@1") {
@@ -46,7 +89,7 @@ function compileSection(source, sourceSha256, descriptor = "product-information@
     .replace(/section\.blocks/g, "tiq_section.instance.blocks")
     .replace(/section\.id/g, "tiq_section.id")
     .replace(/{{\s*block\.shopify_attributes\s*}}/g, 'data-tiq-block-id="{{ block.id | escape }}"'));
-  return `{% comment %} GENERATED from ${descriptor} · ${sourceSha256}. Do not edit. {% endcomment %}\n${compiled.trimEnd()}\n`;
+  return `{% comment %}gen ${descriptor} ${sourceSha256}{% endcomment %}\n${compiled.trimEnd()}\n`;
 }
 
 function compileRouter(definitions = DEFINITIONS) {
@@ -54,7 +97,7 @@ function compileRouter(definitions = DEFINITIONS) {
     const condition = `${index === 0 ? "if" : "elsif"} tiq_section.definition.id == '${definition.id}' and tiq_section.definition.version == ${definition.version}`;
     return `  {%- ${condition} -%}\n    {% render 'tiq-${definition.id}-v${definition.version}', tiq_section: tiq_section, product: product %}`;
   }).join("\n");
-  return `{% comment %} GENERATED section router. Do not edit. {% endcomment %}\n${branches}\n  {%- endif -%}\n`;
+  return `{% comment %}gen router{% endcomment %}\n${branches}\n  {%- endif -%}\n`;
 }
 
 function build({ write = true } = {}) {
