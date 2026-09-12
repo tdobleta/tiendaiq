@@ -80,7 +80,15 @@ function compactLiquid(source) {
   // reducir whitespace no cambia el texto visible porque los espacios
   // internos se conservan como un único espacio.
   const protectedBlocks = [];
-  const compactMarkup = withCompactJavaScript.replace(/<(style|script)\b[\s\S]*?<\/\1>/gi, (block) => {
+  // The multiline `{% liquid %}` tag is whitespace-sensitive: Shopify uses
+  // line breaks to distinguish each command inside the tag. Protect it from
+  // the outer HTML whitespace pass, otherwise `if/endif` pairs can be parsed
+  // as an invalid single command when the extension is validated.
+  const withProtectedLiquid = withCompactJavaScript.replace(/{%\s*liquid\b[\s\S]*?%}/gi, (block) => {
+    protectedBlocks.push(block);
+    return `__TIQ_PROTECTED_BLOCK_${protectedBlocks.length - 1}__`;
+  });
+  const compactMarkup = withProtectedLiquid.replace(/<(style|script)\b[\s\S]*?<\/\1>/gi, (block) => {
     protectedBlocks.push(block);
     return `__TIQ_PROTECTED_BLOCK_${protectedBlocks.length - 1}__`;
   })
