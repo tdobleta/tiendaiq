@@ -462,6 +462,17 @@ test("el navegador lateral usa la jerarquía semántica y sincroniza cada selecc
   assert.doesNotMatch(source, /<i>▫<\/i>/);
 });
 
+test("el árbol ofrece inserción contextual sin crear un segundo modelo de página", () => {
+  const source = fs.readFileSync(path.join(__dirname, "../app/section-editor.js"), "utf8");
+  const css = fs.readFileSync(path.join(__dirname, "../app/section-editor.css"), "utf8");
+  assert.match(source, /data-insert-kind=\"\$\{kind\}\"/);
+  assert.match(source, /state\.page\.sections\.splice\(index,0,section\)/);
+  assert.match(source, /state\.insertTarget\?\.kind===\"block\"/);
+  assert.match(source, /afterBlockId:blockIdsForOutline\(node,section\)/);
+  assert.match(source, /state\.insertTarget=\{kind:\"section\",index:state\.page\.sections\.length\}/);
+  assert.match(css, /\.se__insert-slot/);
+});
+
 test("la vista aislada usa la pila tipográfica nativa de Shopify sin fuentes externas", async () => {
   const html = await renderSectionPage(createProductPage({
     product: { id: "gid://shopify/Product/1", title: "Producto", variants: [] }
