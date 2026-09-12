@@ -1091,11 +1091,15 @@ async function api(req, res, url) {
     try {
       const sectionPage = validateSectionPage(existente.data?.section_page);
       const body = await leerCuerpo(req);
+      // Una sección nueva debe nacer en el idioma de la página. El idioma es
+      // una propiedad de la generación/página, no una decisión implícita del
+      // adaptador (que usa español sólo como fallback seguro).
+      const idioma = String(existente.data?.global?.idioma || "es").trim() || "es";
       return json(res, 200, {
         instance: instantiateSection(body.definition, sectionPage.productSnapshot, {
           claims: sectionPage.evidence?.verifiedClaims || [],
           visualObservations: sectionPage.evidence?.visualObservations || []
-        })
+        }, idioma)
       });
     } catch (error) {
       return json(res, 400, { error: error.message || "No se pudo preparar la sección." });
@@ -1727,7 +1731,7 @@ const servidor = http.createServer(async (req, res) => {
           instance: instantiateSection(body.definition, page.productSnapshot, {
             claims: page.evidence.verifiedClaims,
             visualObservations: page.evidence.visualObservations
-          })
+          }, "es")
         });
       } catch (error) {
         return json(res, 400, { error: error.message || "No se pudo preparar la sección de demostración." });
