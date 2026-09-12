@@ -93,6 +93,7 @@
         if (!r.ok) {
           const e = new Error(cuerpo.error || `Error ${r.status}`);
           e.status = r.status;
+          e.code = cuerpo.code;
           e.reinstalar = cuerpo.reinstalar;
           // El backend distingue una autorización que sólo necesita un pase
           // fresco de una instalación que realmente desapareció. El header es
@@ -1509,6 +1510,23 @@
       abrirEditorV3(estado.pagina.id);
     } catch (e) {
       clearInterval(reloj);
+      // Un producto con página existente no es un fallo de IA ni debe caer en
+      // el fallback que abre el documento guardado. El backend protege esta
+      // operación con PAGE_ALREADY_EXISTS; aquí mostramos el estado real y
+      // devolvemos al paso de estrategia para que el merchant elija editar la
+      // página existente o haga una sustitución explícita.
+      if (e.code === "PAGE_ALREADY_EXISTS" || e.status === 409) {
+        limpiarGeneracionPendiente();
+        estado.error = e.message || "Este producto ya tiene una página.";
+        ir("informacion");
+        requestAnimationFrame(() => {
+          vista.insertAdjacentHTML(
+            "afterbegin",
+            `<div class="error" role="alert">${ico("x", "ico--banner")} ${esc(estado.error)}</div>`
+          );
+        });
+        return;
+      }
       // El contrato nuevo se prepara antes de la IA. Si el copy asistido
       // falla, abrimos igualmente esa página editable; jamás hacemos fallback
       // al documento o al editor anteriores.
