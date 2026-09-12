@@ -38,7 +38,7 @@ test("la investigación de Claude debe devolver los contratos de copy nuevos", (
 
 test("el registro distingue definiciones, catálogo y capacidades", () => {
   const registry = editorRegistry();
-  assert.deepEqual(registry.map((entry) => entry.id), ["product-information", "image-with-text", "image-with-timeline", "image-with-benefits", "testimonios-con-imagenes"]);
+  assert.deepEqual(registry.map((entry) => entry.id), ["product-information", "image-with-text", "image-with-timeline", "image-with-benefits", "testimonios-con-imagenes", "reviews-carousel"]);
   assert.equal(registry[0].capabilities.duplicable, false);
   assert.equal(registry[0].capabilities.protected, true);
   assert.equal(registry[0].capabilities.reorderable, false);

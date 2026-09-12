@@ -9,4 +9,6 @@
     {% render 'tiq-image-with-benefits-v1', tiq_section: tiq_section, product: product %}
   {%- elsif tiq_section.definition.id == 'testimonios-con-imagenes' and tiq_section.definition.version == 1 -%}
     {% render 'tiq-testimonios-con-imagenes-v1', tiq_section: tiq_section, product: product %}
+  {%- elsif tiq_section.definition.id == 'reviews-carousel' and tiq_section.definition.version == 1 -%}
+    {% render 'tiq-reviews-carousel-v1', tiq_section: tiq_section, product: product %}
   {%- endif -%}
