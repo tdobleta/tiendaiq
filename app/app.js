@@ -1309,16 +1309,19 @@
     // Sólo se ofrecen plantillas activas. Los modelos legacy quedan
     // renderizables para páginas existentes, pero no pueden iniciar una
     // generación nueva: no deben volver a entrar al catálogo comercial.
-    const plantillas = [
-      {
-        id: "section-page-v1",
-        nombre: "Página por secciones",
-        subtitulo: "Cada sección conserva su diseño Shopify exacto y adapta sólo el contenido del producto.",
-        tags: ["Diseño exacto", "Editor sincronizado", "Producto real"],
+    let plantillas = [];
+    try {
+      const result = await api("/page-templates");
+      plantillas = (result.templates || []).map((tpl) => ({
+        ...tpl,
+        nombre: tpl.name,
+        subtitulo: tpl.description,
         activa: true,
-        tipo: "section-page-v1"
-      }
-    ];
+        tipo: tpl.theme || "section-page-v1"
+      }));
+    } catch (error) {
+      estado.error = error.message;
+    }
 
     vista.innerHTML = `
       <div class="plantillas ${plantillas.length === 1 ? "plantillas--single" : ""}">
@@ -1333,7 +1336,7 @@
 
           <div class="plantillas__notice" id="tpl-notice">
             <span>${ico("info")}</span>
-            <p>Seleccioná una plantilla para continuar.</p>
+            <p>${esc(estado.error || "Seleccioná una plantilla para continuar.")}</p>
           </div>
 
           <div class="plantillas__grid" id="plantillas-grid">
