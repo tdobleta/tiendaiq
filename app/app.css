@@ -3845,6 +3845,64 @@ body.sec-panel-abierto .constructor { padding-right: 394px; }
 .tpl-preview__body i:nth-child(2) { width: 92%; }
 .tpl-preview__body i:nth-child(3) { width: 80%; }
 .tpl-preview__body i:nth-child(4) { width: 48%; }
+.tpl-preview__composition {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  min-height: 32px;
+}
+.tpl-preview__composition i {
+  display: block;
+  min-height: 32px;
+  border: 1px solid rgba(32,34,35,.06);
+  border-radius: 6px;
+  background: #fff;
+}
+.tpl-preview__composition i:nth-child(1) { background: #e9edf0; }
+.tpl-preview__composition i:nth-child(2) { background: #f5f6f7; }
+.tpl-preview__composition i:nth-child(3) { background: #e9edf0; }
+.tpl-preview__composition i:nth-child(4) { background: #f5f6f7; }
+.tpl-preview--composition-section-page-v1 .tpl-preview__composition {
+  grid-template-columns: 1.3fr .85fr .85fr;
+}
+.tpl-preview--composition-section-page-v1 .tpl-preview__composition i:last-child {
+  display: none;
+}
+.tpl-preview--composition-section-page-social-v1 .tpl-preview__body {
+  background: #f1f3ff;
+}
+.tpl-preview--composition-section-page-social-v1 .tpl-preview__composition i {
+  min-height: 42px;
+  background: #dfe5ff;
+}
+.tpl-preview--composition-section-page-social-v1 .tpl-preview__composition i:nth-child(2),
+.tpl-preview--composition-section-page-social-v1 .tpl-preview__composition i:nth-child(4) {
+  background: #eef0ff;
+}
+.tpl-preview--composition-section-page-benefits-v1 .tpl-preview__composition {
+  grid-template-columns: 1fr;
+  gap: 5px;
+}
+.tpl-preview--composition-section-page-benefits-v1 .tpl-preview__composition i {
+  min-height: 10px;
+  border-radius: 999px;
+  background: #d8f0e7;
+}
+.tpl-preview--composition-section-page-benefits-v1 .tpl-preview__composition i:nth-child(n+3) {
+  background: #edf8f3;
+}
+.tpl-preview--composition-section-page-story-v1 .tpl-preview__composition {
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.tpl-preview--composition-section-page-story-v1 .tpl-preview__composition i {
+  min-height: 25px;
+  background: #f0e8fb;
+}
+.tpl-preview--composition-section-page-story-v1 .tpl-preview__composition i:nth-child(2),
+.tpl-preview--composition-section-page-story-v1 .tpl-preview__composition i:nth-child(3) {
+  background: #faf6ff;
+}
 .tpl-preview--premium .tpl-preview__hero i:nth-child(3) { background: #6e56cf; }
 .tpl-preview--premium .tpl-preview__cols span:nth-child(2) { background: #efeafb; }
 .tpl-preview--social .tpl-preview__hero i:nth-child(3),

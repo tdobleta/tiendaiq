@@ -1289,17 +1289,21 @@
 
   // ---------- 3. plantillas ----------
 
-  function previewPlantilla(tipo = "clasico", id = tipo, imagen = "") {
+  function previewPlantilla(tipo = "clasico", id = tipo, imagen = "", compositionKey = "") {
+    const compositionClass = String(compositionKey || "section-page-v1").replace(/[^a-z0-9-]/gi, "-");
     const portada = imagen
       ? `<div class="tpl-preview__cover"><img src="${esc(imagen)}" alt="Vista previa de la plantilla" loading="lazy"></div>`
       : `<div class="tpl-preview__hero"><i></i><i></i><i></i></div>`;
     return `
-      <div class="tpl-preview tpl-preview--${esc(tipo)} tpl-preview--theme-${esc(id)}" aria-hidden="true">
+      <div class="tpl-preview tpl-preview--${esc(tipo)} tpl-preview--theme-${esc(id)} tpl-preview--composition-${esc(compositionClass)}" aria-hidden="true">
         ${portada}
         <div class="tpl-preview__cols">
           <span></span><span></span><span></span>
         </div>
         <div class="tpl-preview__body">
+          <i></i><i></i><i></i><i></i>
+        </div>
+        <div class="tpl-preview__composition" aria-hidden="true">
           <i></i><i></i><i></i><i></i>
         </div>
       </div>`;
@@ -1350,7 +1354,7 @@
                 <span class="plantilla-card__head">
                   <b>${esc(tpl.nombre)}</b>
                 </span>
-                ${previewPlantilla(tpl.tipo, tpl.id, tpl.imagen)}
+                ${previewPlantilla(tpl.tipo, tpl.id, tpl.imagen, tpl.compositionKey)}
                 <span class="plantilla-card__foot">
                   <span>${esc(tpl.subtitulo)}</span>
                   <span class="tpl-tags">${tpl.tags.map((tag) => `<i>${esc(tag)}</i>`).join("")}</span>
