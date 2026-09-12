@@ -469,7 +469,9 @@ test("el árbol ofrece inserción contextual sin crear un segundo modelo de pág
   assert.match(source, /state\.page\.sections\.splice\(index,0,section\)/);
   assert.match(source, /state\.insertTarget\?\.kind===\"block\"/);
   assert.match(source, /afterBlockId:blockIdsForOutline\(node,section\)/);
-  assert.match(source, /state\.insertTarget=\{kind:\"section\",index:state\.page\.sections\.length\}/);
+  assert.match(source, /function openSectionLibrary\(index=state\.page\.sections\.length\)/);
+  assert.match(source, /root\.querySelector\("#se-add"\)\.onclick=\(\)=>openSectionLibrary\(\)/);
+  assert.match(source, /openSectionLibrary\(Number\(slot\.dataset\.insertIndex\)\)/);
   assert.match(css, /\.se__insert-slot/);
 });
 
