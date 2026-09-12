@@ -307,7 +307,11 @@
             <input type="hidden" name="id" value="{{ current_variant.id }}" data-cart-variant>
             <input type="hidden" name="quantity" value="1" data-cart-quantity>
         {% endif %}
-        <{% if cta_is_cart and current_variant != blank %}button type="submit"{% else %}a href="{{ cta_href }}"{% endif %}
+        {% if cta_is_cart and current_variant != blank %}
+          <button type="submit"
+        {% else %}
+          <a href="{{ cta_href }}"
+        {% endif %}
           class="{{ section_dom_id }}__cta"
           aria-label="{{ section.settings.button_label | escape }}"
           data-cta
@@ -325,7 +329,11 @@
             <span data-cta-price> - {{ cta_price_display }}</span>
           {% endif %}
           <s data-cta-compare{% if cta_compare_display == blank %} hidden{% endif %}>{% if cta_compare_display != blank %}{{ cta_compare_display }}{% endif %}</s>
-        </{% if cta_is_cart and current_variant != blank %}button{% else %}a{% endif %}>
+        {% if cta_is_cart and current_variant != blank %}
+          </button>
+        {% else %}
+          </a>
+        {% endif %}
         {% if cta_is_cart and current_variant != blank %}
           </form>
         {% endif %}

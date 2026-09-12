@@ -1,4 +1,4 @@
-{% comment %}gen product-information@1 1aaaf42071da82ccb1f5e0468f4e90c8652abcf5a5db557cc542da65f9a12586{% endcomment %}
+{% comment %}gen product-information@1 31bb54920850b0b84438c515a3423e0c019c36ecf80d91eb6cc27d56f1123945{% endcomment %}
 {% liquid
 assign section_dom_id = 'product-hero-' | append: tiq_section.id | handleize
 assign hero_content_max_width = 600
@@ -199,7 +199,8 @@ endif%}
 {% if cta_is_cart and current_variant != blank%}
 <form class="{{section_dom_id}}__cta-form" action="{{routes.cart_add_url}}" method="post" data-cart-form><input type="hidden" name="id" value="{{current_variant.id}}" data-cart-variant><input type="hidden" name="quantity" value="1" data-cart-quantity>
 {% endif%}
-<{% if cta_is_cart and current_variant != blank%}button type="submit"{% else%}a href="{{cta_href}}"{% endif%} class="{{section_dom_id}}__cta" aria-label="{{tiq_section.instance.settings.button_label | escape}}" data-cta data-variant-id="{% if current_variant != blank%}{{current_variant.id}}{% endif%}" ><span class="{{section_dom_id}}__cta-icon" aria-hidden="true">
+{% if cta_is_cart and current_variant != blank%}
+<button type="submit" {% else%} <a href="{{cta_href}}" {% endif%} class="{{section_dom_id}}__cta" aria-label="{{tiq_section.instance.settings.button_label | escape}}" data-cta data-variant-id="{% if current_variant != blank%}{{current_variant.id}}{% endif%}" ><span class="{{section_dom_id}}__cta-icon" aria-hidden="true">
 {% if cta_icon_display == 'cart'%}
 <svg viewBox="0 0 24 24" focusable="false"><path d="M3 4h2l2.2 10.2h10.7l2-7H7.1M9.3 20a1.25 1.25 0 1 0 0-2.5 1.25 1.25 0 0 0 0 2.5Zm7.8 0a1.25 1.25 0 1 0 0-2.5 1.25 1.25 0 0 0 0 2.5Z" /></svg>
 {% else%}
@@ -209,7 +210,12 @@ endif%}
 {% if cta_price_display != blank%}
 <span data-cta-price> - {{cta_price_display}}</span>
 {% endif%}
-<s data-cta-compare{% if cta_compare_display == blank%} hidden{% endif%}>{% if cta_compare_display != blank%}{{cta_compare_display}}{% endif%}</s></{% if cta_is_cart and current_variant != blank%}button{% else%}a{% endif%}>
+<s data-cta-compare{% if cta_compare_display == blank%} hidden{% endif%}>{% if cta_compare_display != blank%}{{cta_compare_display}}{% endif%}</s>
+{% if cta_is_cart and current_variant != blank%}
+</button>
+{% else%}
+</a>
+{% endif%}
 {% if cta_is_cart and current_variant != blank%}
 </form>
 {% endif%}
