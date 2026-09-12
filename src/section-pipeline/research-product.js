@@ -69,6 +69,18 @@ const OUTPUT_SCHEMA = Object.freeze({
               body: { type: "string", maxLength: 700 }
             }
           }
+        },
+        reviewsIntro: { type: "string", maxLength: 700 },
+        reviewItems: {
+          type: "array", maxItems: 6,
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: ["quote"],
+            properties: {
+              quote: { type: "string", maxLength: 1200 }
+            }
+          }
         }
       }
     },
@@ -119,7 +131,8 @@ const COPY_SLOT_MANIFEST = Object.freeze({
   "product-information": Object.freeze({ section: Object.freeze(["description"]), blocks: Object.freeze({ benefit: Object.freeze(["text"]) }) }),
   "image-with-text": Object.freeze({ section: Object.freeze(["body"]), blocks: Object.freeze({}) }),
   "image-with-timeline": Object.freeze({ section: Object.freeze(["intro"]), blocks: Object.freeze({ timeline_step: Object.freeze(["heading", "body"]) }) }),
-  "image-with-benefits": Object.freeze({ section: Object.freeze(["intro"]), blocks: Object.freeze({ benefit: Object.freeze(["heading", "body"]) }) })
+  "image-with-benefits": Object.freeze({ section: Object.freeze(["intro"]), blocks: Object.freeze({ benefit: Object.freeze(["heading", "body"]) }) }),
+  "reviews-carousel": Object.freeze({ section: Object.freeze(["intro"]), blocks: Object.freeze({ review: Object.freeze(["quote"]) }) })
 });
 
 function mediaForAnalysis(url) {
@@ -158,6 +171,10 @@ function legacyCopySlots(sectionCopy) {
   for (const [index, value] of (sectionCopy?.benefitItems || []).entries()) {
     add("image-with-benefits", "heading", value?.heading, { block_type: "benefit", block_index: index });
     add("image-with-benefits", "body", value?.body, { block_type: "benefit", block_index: index });
+  }
+  add("reviews-carousel", "intro", sectionCopy?.reviewsIntro);
+  for (const [index, value] of (sectionCopy?.reviewItems || []).entries()) {
+    add("reviews-carousel", "quote", value?.quote, { block_type: "review", block_index: index });
   }
   return slots.filter((slot) => slot.target.field !== "description" || slot.value);
 }
@@ -243,14 +260,21 @@ function validateResearch(value, mediaIds) {
     timelineIntro: copyText(value?.sectionCopy?.timelineIntro, 700),
     timelineSteps: copyItems(value?.sectionCopy?.timelineSteps, 4),
     benefitsIntro: copyText(value?.sectionCopy?.benefitsIntro, 700),
-    benefitItems: copyItems(value?.sectionCopy?.benefitItems, 6)
+    benefitItems: copyItems(value?.sectionCopy?.benefitItems, 6),
+    reviewsIntro: copyText(value?.sectionCopy?.reviewsIntro, 700),
+    reviewItems: (Array.isArray(value?.sectionCopy?.reviewItems) ? value.sectionCopy.reviewItems : [])
+      .slice(0, 6)
+      .map((item) => ({ quote: copyText(item?.quote, 1200) }))
+      .filter((item) => item.quote)
   };
   const hasSectionCopy = sectionCopy.productBenefits.length
     || sectionCopy.imageWithTextBody
     || sectionCopy.timelineIntro
     || sectionCopy.timelineSteps.length
     || sectionCopy.benefitsIntro
-    || sectionCopy.benefitItems.length;
+    || sectionCopy.benefitItems.length
+    || sectionCopy.reviewsIntro
+    || sectionCopy.reviewItems.length;
   const normalizedCopySlots = normalizeCopySlots(value, sectionCopy);
   return Object.freeze({
     summary,
@@ -262,7 +286,9 @@ function validateResearch(value, mediaIds) {
       timelineIntro: sectionCopy.timelineIntro,
       timelineSteps: Object.freeze(sectionCopy.timelineSteps),
       benefitsIntro: sectionCopy.benefitsIntro,
-      benefitItems: Object.freeze(sectionCopy.benefitItems)
+      benefitItems: Object.freeze(sectionCopy.benefitItems),
+      reviewsIntro: sectionCopy.reviewsIntro,
+      reviewItems: Object.freeze(sectionCopy.reviewItems)
     } : {}),
     copy_slots_v1: normalizedCopySlots
   });

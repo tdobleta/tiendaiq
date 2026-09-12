@@ -1,0 +1,166 @@
+{% liquid
+  assign section_dom_id = 'tiq-reviews-' | append: section.id | handleize
+  assign placeholder_class = section_dom_id | append: '__placeholder'
+%}
+
+<section id="{{ section_dom_id }}" class="{{ section_dom_id }}" aria-labelledby="{{ section_dom_id }}-heading">
+  <div class="{{ section_dom_id }}__inner">
+    {% if section.settings.eyebrow != blank %}<p class="{{ section_dom_id }}__eyebrow" data-tiq-outline-id="{{ section_dom_id }}__eyebrow">{{ section.settings.eyebrow | escape }}</p>{% endif %}
+    {% if section.settings.heading != blank %}<h2 id="{{ section_dom_id }}-heading" class="{{ section_dom_id }}__heading" data-tiq-outline-id="{{ section_dom_id }}__heading">{{ section.settings.heading | escape }}</h2>{% endif %}
+    {% if section.settings.intro != blank %}<div class="{{ section_dom_id }}__intro rte" data-tiq-outline-id="{{ section_dom_id }}__intro">{{ section.settings.intro }}</div>{% endif %}
+
+    <div class="{{ section_dom_id }}__rating" data-tiq-outline-id="{{ section_dom_id }}__rating" aria-label="{{ section.settings.rating_label | escape }}">
+      <span class="{{ section_dom_id }}__stars" aria-hidden="true">★★★★★</span>
+      <span>{{ section.settings.rating_label | escape }}</span>
+      {% if section.settings.rating_count != blank %}<span class="{{ section_dom_id }}__rating-count">{{ section.settings.rating_count | escape }}</span>{% endif %}
+    </div>
+
+    <div class="{{ section_dom_id }}__carousel-wrap">
+      <div class="{{ section_dom_id }}__carousel" data-tiq-reviews-track tabindex="0" aria-label="Reseñas destacadas">
+        {% for block in section.blocks %}
+          <article class="{{ section_dom_id }}__card" {{ block.shopify_attributes }}>
+            <div class="{{ section_dom_id }}__card-top">
+              <span class="{{ section_dom_id }}__card-stars" aria-label="{{ block.settings.rating }} de 5 estrellas">
+                {% for star in (1..5) %}{% if star <= block.settings.rating %}★{% else %}☆{% endif %}{% endfor %}
+              </span>
+              {% if block.settings.verified %}<span class="{{ section_dom_id }}__verified">{{ block.settings.verified_label | escape }}</span>{% endif %}
+            </div>
+            {% if block.settings.quote != blank %}<blockquote>“{{ block.settings.quote | escape }}”</blockquote>{% endif %}
+            <div class="{{ section_dom_id }}__author">
+              <div class="{{ section_dom_id }}__avatar">
+                {% if block.settings.image != blank %}
+                  <img src="{{ block.settings.image | escape }}" alt="{{ block.settings.image_alt | default: block.settings.author | escape }}" loading="lazy" width="96" height="96">
+                {% else %}
+                  {{ 'image' | placeholder_svg_tag: placeholder_class }}
+                {% endif %}
+              </div>
+              <div>
+                {% if block.settings.author != blank %}<p>{{ block.settings.author | escape }}</p>{% endif %}
+                {% if block.settings.role != blank %}<span>{{ block.settings.role | escape }}</span>{% endif %}
+              </div>
+            </div>
+          </article>
+        {% endfor %}
+      </div>
+      {% if section.blocks.size > 1 %}
+        <div class="{{ section_dom_id }}__controls" data-tiq-reviews-controls hidden>
+          <button type="button" data-tiq-reviews-prev aria-label="Reseñas anteriores"><span aria-hidden="true">←</span></button>
+          <button type="button" data-tiq-reviews-next aria-label="Siguientes reseñas"><span aria-hidden="true">→</span></button>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+<style>
+  #{{ section_dom_id }} { --tiq-reviews-bg: {{ section.settings.background_color }}; --tiq-reviews-card: {{ section.settings.card_background }}; --tiq-reviews-heading: {{ section.settings.heading_color }}; --tiq-reviews-text: {{ section.settings.text_color }}; --tiq-reviews-muted: {{ section.settings.muted_color }}; --tiq-reviews-accent: {{ section.settings.accent_color }}; --tiq-reviews-border: {{ section.settings.border_color }}; --tiq-reviews-radius: {{ section.settings.card_radius }}px; --tiq-reviews-gap: {{ section.settings.card_gap }}px; width: 100%; background: var(--tiq-reviews-bg); color: var(--tiq-reviews-text); }
+  #{{ section_dom_id }} * { box-sizing: border-box; }
+  #{{ section_dom_id }} .{{ section_dom_id }}__inner { width: min(100%, {{ section.settings.max_width }}px); margin: 0 auto; padding: {{ section.settings.padding_top }}px {{ section.settings.side_padding }}px {{ section.settings.padding_bottom }}px; }
+  #{{ section_dom_id }} .{{ section_dom_id }}__eyebrow { margin: 0 0 10px; color: var(--tiq-reviews-accent); font-size: 12px; font-weight: 700; letter-spacing: .13em; line-height: 1.3; text-align: center; text-transform: uppercase; }
+  #{{ section_dom_id }} .{{ section_dom_id }}__heading { margin: 0; color: var(--tiq-reviews-heading); font-size: clamp(30px, 4vw, 50px); font-weight: 700; letter-spacing: -.035em; line-height: 1.05; text-align: center; }
+  #{{ section_dom_id }} .{{ section_dom_id }}__intro { max-width: 680px; margin: 14px auto 0; color: var(--tiq-reviews-muted); font-size: 16px; line-height: 1.55; text-align: center; }
+  #{{ section_dom_id }} .{{ section_dom_id }}__intro p { margin: 0; }
+  #{{ section_dom_id }} .{{ section_dom_id }}__rating { display: flex; align-items: center; justify-content: center; gap: 9px; margin: 18px auto 0; color: var(--tiq-reviews-muted); font-size: 14px; line-height: 1.4; }
+  #{{ section_dom_id }} .{{ section_dom_id }}__stars, #{{ section_dom_id }} .{{ section_dom_id }}__card-stars { color: var(--tiq-reviews-accent); letter-spacing: .08em; }
+  #{{ section_dom_id }} .{{ section_dom_id }}__stars { font-size: 17px; }
+  #{{ section_dom_id }} .{{ section_dom_id }}__rating-count { color: var(--tiq-reviews-muted); }
+  #{{ section_dom_id }} .{{ section_dom_id }}__carousel-wrap { position: relative; margin-top: 30px; }
+  #{{ section_dom_id }} .{{ section_dom_id }}__carousel { display: grid; grid-auto-flow: column; gap: var(--tiq-reviews-gap); overflow-x: auto; padding: 2px 1px 8px; scroll-behavior: smooth; scroll-snap-type: x mandatory; scrollbar-width: none;
+    {% case section.settings.desktop_columns %}
+      {% when 2 %} grid-auto-columns: calc((100% - var(--tiq-reviews-gap)) / 2);
+      {% when 3 %} grid-auto-columns: calc((100% - var(--tiq-reviews-gap) - var(--tiq-reviews-gap)) / 3);
+      {% when 5 %} grid-auto-columns: calc((100% - var(--tiq-reviews-gap) - var(--tiq-reviews-gap) - var(--tiq-reviews-gap) - var(--tiq-reviews-gap)) / 5);
+      {% else %} grid-auto-columns: calc((100% - var(--tiq-reviews-gap) - var(--tiq-reviews-gap) - var(--tiq-reviews-gap)) / 4);
+    {% endcase %}
+  }
+  #{{ section_dom_id }} .{{ section_dom_id }}__carousel::-webkit-scrollbar { display: none; }
+  #{{ section_dom_id }} .{{ section_dom_id }}__card { display: flex; min-width: 0; min-height: 250px; flex-direction: column; padding: 22px; border: 1px solid var(--tiq-reviews-border); border-radius: var(--tiq-reviews-radius); background: var(--tiq-reviews-card); scroll-snap-align: start; }
+  #{{ section_dom_id }} .{{ section_dom_id }}__card-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  #{{ section_dom_id }} .{{ section_dom_id }}__card-stars { font-size: 15px; line-height: 1; }
+  #{{ section_dom_id }} .{{ section_dom_id }}__verified { color: var(--tiq-reviews-muted); font-size: 11px; font-weight: 650; }
+  #{{ section_dom_id }} blockquote { margin: 22px 0; color: var(--tiq-reviews-text); font-size: 16px; line-height: 1.55; }
+  #{{ section_dom_id }} .{{ section_dom_id }}__author { display: flex; align-items: center; gap: 11px; margin-top: auto; }
+  #{{ section_dom_id }} .{{ section_dom_id }}__avatar { width: 42px; height: 42px; flex: 0 0 42px; overflow: hidden; border-radius: 50%; background: color-mix(in srgb, var(--tiq-reviews-accent) 10%, var(--tiq-reviews-card)); }
+  #{{ section_dom_id }} .{{ section_dom_id }}__avatar img, #{{ section_dom_id }} .{{ section_dom_id }}__avatar svg { display: block; width: 100%; height: 100%; object-fit: cover; }
+  #{{ section_dom_id }} .{{ section_dom_id }}__author p { margin: 0; color: var(--tiq-reviews-heading); font-size: 13px; font-weight: 700; }
+  #{{ section_dom_id }} .{{ section_dom_id }}__author span { display: block; margin-top: 3px; color: var(--tiq-reviews-muted); font-size: 12px; }
+  #{{ section_dom_id }} .{{ section_dom_id }}__controls { display: flex; justify-content: center; gap: 10px; margin-top: 20px; }
+  #{{ section_dom_id }} .{{ section_dom_id }}__controls[hidden] { display: none; }
+  #{{ section_dom_id }} .{{ section_dom_id }}__controls button { display: grid; width: 40px; height: 40px; padding: 0; place-items: center; border: 1px solid var(--tiq-reviews-accent); border-radius: 50%; background: transparent; color: var(--tiq-reviews-accent); cursor: pointer; transition: background .18s ease, color .18s ease, transform .18s ease; }
+  #{{ section_dom_id }} .{{ section_dom_id }}__controls button:hover { background: var(--tiq-reviews-accent); color: var(--tiq-reviews-card); transform: translateY(-1px); }
+  #{{ section_dom_id }} .{{ section_dom_id }}__controls button:focus-visible { outline: 3px solid color-mix(in srgb, var(--tiq-reviews-accent) 35%, transparent); outline-offset: 3px; }
+  @media (max-width: 749px) {
+    #{{ section_dom_id }} .{{ section_dom_id }}__inner { padding: {{ section.settings.mobile_padding_top }}px {{ section.settings.mobile_side_padding }}px {{ section.settings.mobile_padding_bottom }}px; }
+    #{{ section_dom_id }} .{{ section_dom_id }}__heading { font-size: clamp(30px, 9vw, 42px); }
+    #{{ section_dom_id }} .{{ section_dom_id }}__intro { font-size: 15px; }
+    #{{ section_dom_id }} .{{ section_dom_id }}__carousel { {% if section.settings.mobile_columns == 2 %}grid-auto-columns: calc((100% - var(--tiq-reviews-gap)) / 2);{% else %}grid-auto-columns: 100%;{% endif %} }
+    #{{ section_dom_id }} .{{ section_dom_id }}__card { min-height: 220px; padding: 18px; }
+  }
+  @media (prefers-reduced-motion: reduce) { #{{ section_dom_id }} .{{ section_dom_id }}__carousel { scroll-behavior: auto; } #{{ section_dom_id }} .{{ section_dom_id }}__controls button { transition: none; } }
+</style>
+
+<script>
+  (function () {
+    var root = document.getElementById({{ section_dom_id | json }});
+    if (!root) return;
+    var track = root.querySelector('[data-tiq-reviews-track]');
+    var previous = root.querySelector('[data-tiq-reviews-prev]');
+    var next = root.querySelector('[data-tiq-reviews-next]');
+    var controls = root.querySelector('[data-tiq-reviews-controls]');
+    if (!track) return;
+    function updateControls() { if (controls) controls.hidden = track.scrollWidth <= track.clientWidth + 1; }
+    function move(direction) { var card = track.querySelector('article'); if (!card) return; track.scrollBy({ left: (card.getBoundingClientRect().width + {{ section.settings.card_gap }}) * direction, behavior: 'smooth' }); }
+    if (previous) previous.addEventListener('click', function () { move(-1); });
+    if (next) next.addEventListener('click', function () { move(1); });
+    updateControls();
+    window.addEventListener('resize', updateControls, { passive: true });
+  }());
+</script>
+
+{% schema %}
+{
+  "name": "Carrusel de reseñas",
+  "max_blocks": 12,
+  "settings": [
+    { "type": "header", "content": "Contenido" },
+    { "type": "text", "id": "eyebrow", "label": "Texto superior", "default": "PRUEBA SOCIAL" },
+    { "type": "text", "id": "heading", "label": "Título", "default": "Lo que dicen nuestros clientes" },
+    { "type": "richtext", "id": "intro", "label": "Introducción", "default": "<p>Historias reales de personas que incorporaron el producto a su rutina.</p>" },
+    { "type": "text", "id": "rating_label", "label": "Texto de valoración", "default": "4.9 de 5" },
+    { "type": "text", "id": "rating_count", "label": "Cantidad de reseñas", "default": "Más de 1.000 reseñas" },
+    { "type": "header", "content": "Layout" },
+    { "type": "range", "id": "max_width", "label": "Ancho máximo", "min": 800, "max": 1600, "step": 20, "unit": "px", "default": 1240 },
+    { "type": "range", "id": "desktop_columns", "label": "Tarjetas en escritorio", "min": 2, "max": 5, "step": 1, "default": 4 },
+    { "type": "range", "id": "mobile_columns", "label": "Tarjetas en móvil", "min": 1, "max": 2, "step": 1, "default": 1 },
+    { "type": "range", "id": "card_gap", "label": "Separación entre tarjetas", "min": 8, "max": 40, "step": 2, "unit": "px", "default": 16 },
+    { "type": "range", "id": "padding_top", "label": "Padding superior escritorio", "min": 0, "max": 160, "step": 4, "unit": "px", "default": 72 },
+    { "type": "range", "id": "padding_bottom", "label": "Padding inferior escritorio", "min": 0, "max": 160, "step": 4, "unit": "px", "default": 72 },
+    { "type": "range", "id": "side_padding", "label": "Padding lateral escritorio", "min": 12, "max": 80, "step": 2, "unit": "px", "default": 24 },
+    { "type": "range", "id": "mobile_padding_top", "label": "Padding superior móvil", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 44 },
+    { "type": "range", "id": "mobile_padding_bottom", "label": "Padding inferior móvil", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 44 },
+    { "type": "range", "id": "mobile_side_padding", "label": "Padding lateral móvil", "min": 12, "max": 40, "step": 2, "unit": "px", "default": 18 },
+    { "type": "header", "content": "Apariencia" },
+    { "type": "color", "id": "background_color", "label": "Fondo", "default": "#11151C" },
+    { "type": "color", "id": "card_background", "label": "Fondo de tarjeta", "default": "#0C2D5A" },
+    { "type": "color", "id": "heading_color", "label": "Título", "default": "#FFFFFF" },
+    { "type": "color", "id": "text_color", "label": "Texto", "default": "#FFFFFF" },
+    { "type": "color", "id": "muted_color", "label": "Texto secundario", "default": "#B8C1D1" },
+    { "type": "color", "id": "accent_color", "label": "Acento", "default": "#FFC42D" },
+    { "type": "color", "id": "border_color", "label": "Borde", "default": "#26354B" },
+    { "type": "range", "id": "card_radius", "label": "Radio de tarjetas", "min": 0, "max": 32, "step": 2, "unit": "px", "default": 12 }
+  ],
+  "blocks": [{ "type": "review", "name": "Reseña", "limit": 12, "settings": [
+    { "type": "image_picker", "id": "image", "label": "Imagen" },
+    { "type": "text", "id": "image_alt", "label": "Texto alternativo", "default": "Imagen del cliente" },
+    { "type": "textarea", "id": "quote", "label": "Reseña", "default": "La experiencia con este producto superó mis expectativas." },
+    { "type": "text", "id": "author", "label": "Nombre", "default": "Nombre del cliente" },
+    { "type": "text", "id": "role", "label": "Descripción del cliente", "default": "Cliente verificado" },
+    { "type": "range", "id": "rating", "label": "Puntuación", "min": 1, "max": 5, "step": 1, "default": 5 },
+    { "type": "checkbox", "id": "verified", "label": "Mostrar etiqueta de verificación", "default": true },
+    { "type": "text", "id": "verified_label", "label": "Etiqueta de verificación", "default": "Verificado" }
+  ]}],
+  "presets": [{ "name": "Carrusel de reseñas", "blocks": [
+    { "type": "review" }, { "type": "review" }, { "type": "review" }, { "type": "review" }
+  ]}]
+}
+{% endschema %}
