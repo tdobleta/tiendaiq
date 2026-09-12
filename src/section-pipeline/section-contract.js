@@ -289,9 +289,9 @@ function createSectionDefinition({ id, version, source, adaptation, outline = []
     lockedFields: normalizedLockedFields,
     catalog: normalizedCatalog,
     capabilities: normalizedCapabilities,
-    adapt(product, research = {}) {
+    adapt(product, research = {}, idioma = "es") {
       const before = sourceSha256;
-      const result = adaptation({ product: clone(product || {}), research: clone(research || {}), seed: clone(seed) });
+      const result = adaptation({ product: clone(product || {}), research: clone(research || {}), seed: clone(seed), idioma });
       if (sha256(source) !== before) throw new SectionContractError("La adaptación intentó modificar el diseño de la sección");
       assertAdaptationScope(seed, result, normalizedCopySlots, normalizedContentSources);
       return validateInstance({ definition: this, instance: result });

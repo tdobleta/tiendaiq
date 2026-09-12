@@ -67,7 +67,7 @@ function uniqueSectionId(definition, index) {
   return index === 0 ? "section-product-information" : `section-${definition.id}-${index}`;
 }
 
-function createProductPage({ product, research = {}, urls = {}, composition = null, generatedAt = null }) {
+function createProductPage({ product, research = {}, urls = {}, composition = null, generatedAt = null, idioma = "es" }) {
   const selectedComposition = composition == null
     ? [{ id: productInformation.id, version: productInformation.version, required: true }]
     : (Array.isArray(composition) ? composition : resolvePageComposition(composition));
@@ -83,7 +83,7 @@ function createProductPage({ product, research = {}, urls = {}, composition = nu
       id: uniqueSectionId(definition, index),
       label: definition.schema.name,
       definition: sectionDescriptor(definition),
-      instance: definition.adapt(product, research)
+      instance: definition.adapt(product, research, idioma)
     };
   });
   const persistedCopySlots = Object.hasOwn(research, "copy_slots_v1")
@@ -158,10 +158,10 @@ function editorRegistry() {
   }));
 }
 
-function instantiateSection(descriptor, product = {}, research = {}) {
+function instantiateSection(descriptor, product = {}, research = {}, idioma = "es") {
   const definition = resolveSection(descriptor);
   if (!definition) throw new SectionContractError("La sección solicitada no existe en el registro");
-  return definition.adapt(product, research);
+  return definition.adapt(product, research, idioma);
 }
 
 module.exports = Object.freeze({ DEFINITIONS, createProductPage, editorRegistry, instantiateSection, productSnapshot, resolveSection, sectionTree, validatePage });

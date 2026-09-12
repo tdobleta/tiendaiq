@@ -846,7 +846,8 @@ async function crearPagina(idProducto, sesion, {
       research: generated.research,
       urls,
       composition: template.compositionKey || "section-page-v1",
-      generatedAt: new Date().toISOString()
+      generatedAt: new Date().toISOString(),
+      idioma
     });
     return {
       data: {
@@ -966,7 +967,7 @@ async function crearPaginaBase(idProducto, sesion, {
         global: { estilo: metadata.legacyStyle, template: metadata.template, idioma, angulo, cta: "Agregar al carrito" },
         fuente,
         compliance: { claims_verified: false },
-        section_page: createProductPage({ product, research: {}, urls, composition: template.compositionKey || "section-page-v1" })
+        section_page: createProductPage({ product, research: {}, urls, composition: template.compositionKey || "section-page-v1", idioma })
       },
       urls,
       avisos: ["Sección creada con datos reales de Shopify. La investigación asistida queda pendiente."],
