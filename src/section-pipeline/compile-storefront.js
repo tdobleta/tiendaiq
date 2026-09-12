@@ -7,6 +7,7 @@ const { DEFINITIONS } = require("./page-pipeline");
 
 const TARGET = path.join(__dirname, "..", "..", "extensions", "tiendaiq-widgets", "snippets", "tiq-product-information-v1.liquid");
 const ROUTER_TARGET = path.join(__dirname, "..", "..", "extensions", "tiendaiq-widgets", "snippets", "tiq-section-router.liquid");
+const SECTION_CSS_TARGET = path.join(__dirname, "..", "..", "extensions", "tiendaiq-widgets", "assets", "tiq-section-page.css");
 
 function targetFor(definition) {
   return path.join(__dirname, "..", "..", "extensions", "tiendaiq-widgets", "snippets", `tiq-${definition.id}-v${definition.version}.liquid`);
@@ -74,22 +75,52 @@ function compactLiquid(source) {
     }
   });
 
-  return withCompactJavaScript
-    // Shopify cuenta también el whitespace de atributos y saltos entre tags.
-    // Compactamos sólo markup generado; CSS, JavaScript y texto visible quedan
-    // fuera para no cambiar la semántica ni la experiencia de la sección.
-    .replace(/<(?!style\b|\/style\b|script\b|\/script\b)[^>]+>/gs, (tag) => tag.replace(/\s+/g, " "))
-    .replace(/>\s+</g, "><");
+  // Shopify también cuenta la indentación y los saltos de línea del markup
+  // Liquid. Protegemos CSS/JS y compactamos sólo el HTML/Liquid exterior;
+  // reducir whitespace no cambia el texto visible porque los espacios
+  // internos se conservan como un único espacio.
+  const protectedBlocks = [];
+  const compactMarkup = withCompactJavaScript.replace(/<(style|script)\b[\s\S]*?<\/\1>/gi, (block) => {
+    protectedBlocks.push(block);
+    return `__TIQ_PROTECTED_BLOCK_${protectedBlocks.length - 1}__`;
+  })
+    .replace(/\s+/g, " ")
+    .replace(/>\s+</g, "><")
+    .trim()
+    .replace(/__TIQ_PROTECTED_BLOCK_(\d+)__/g, (_, index) => protectedBlocks[Number(index)]);
+
+  return compactMarkup;
 }
 
 function compileSection(source, sourceSha256, descriptor = "product-information@1") {
   const withoutSchema = String(source).replace(/{%\s*schema\s*%}[\s\S]*?{%\s*endschema\s*%}\s*$/, "");
-  const compiled = compactLiquid(withoutSchema
+  const sourceWithoutExternalCss = descriptor === "product-information@1"
+    ? withoutSchema.replace(/<style>[\s\S]*?<\/style>\s*/i, "")
+    : withoutSchema;
+  const compiled = compactLiquid(sourceWithoutExternalCss
     .replace(/section\.settings/g, "tiq_section.instance.settings")
     .replace(/section\.blocks/g, "tiq_section.instance.blocks")
     .replace(/section\.id/g, "tiq_section.id")
     .replace(/{{\s*block\.shopify_attributes\s*}}/g, 'data-tiq-block-id="{{ block.id | escape }}"'));
   return `{% comment %}gen ${descriptor} ${sourceSha256}{% endcomment %}\n${compiled.trimEnd()}\n`;
+}
+
+function compileSectionCss(definition) {
+  if (!definition || definition.id !== "product-information") return "";
+  const match = String(definition.source).match(/<style>([\s\S]*?)<\/style>/i);
+  if (!match) return "";
+  const token = "\\{\\{\\s*section_dom_id\\s*\\}\\}";
+  const prefix = "product-hero-";
+  const classSuffix = (value) => `[class^="${prefix}"][class$="__${value}"]`;
+  const idSuffix = (value) => `[id^="${prefix}"][id$="__${value}"]`;
+  const css = match[1]
+    .replace(new RegExp(`#${token}__([a-z0-9_-]+)`, "gi"), (_, value) => idSuffix(value))
+    .replace(new RegExp(`\\.${token}__([a-z0-9_-]+)`, "gi"), (_, value) => classSuffix(value))
+    .replace(new RegExp(`#${token}`, "gi"), `[id^="${prefix}"]`)
+    .replace(new RegExp(`\\{\\{\\s*section_dom_id\\s*\\}\\}-urgency-float`, "gi"), "tiq-product-information-urgency-float")
+    .replace(/\{\{\s*section\.settings\.image_fit\s*\}\}/g, "var(--hero-image-fit)");
+  const compact = compactLiquid(`<style>${css}</style>`);
+  return `${compact.replace(/^<style>|<\/style>$/g, "").trim()}\n`;
 }
 
 function compileRouter(definitions = DEFINITIONS) {
@@ -107,19 +138,21 @@ function build({ write = true } = {}) {
     output: compileSection(definition.source, definition.sourceSha256, `${definition.id}@${definition.version}`)
   }));
   const router = { target: ROUTER_TARGET, output: compileRouter() };
+  const sectionCss = { target: SECTION_CSS_TARGET, output: compileSectionCss(DEFINITIONS.find((definition) => definition.id === "product-information")) };
   if (write) {
     for (const artifact of artifacts) {
       fs.mkdirSync(path.dirname(artifact.target), { recursive: true });
       fs.writeFileSync(artifact.target, artifact.output, "utf8");
     }
     fs.writeFileSync(router.target, router.output, "utf8");
+    fs.writeFileSync(sectionCss.target, sectionCss.output, "utf8");
   }
   const primary = artifacts.find((artifact) => artifact.target === TARGET) || artifacts[0];
-  return { output: primary.output, target: primary.target, artifacts, router };
+  return { output: primary.output, target: primary.target, artifacts, router, sectionCss };
 }
 
 function verify() {
-  const { artifacts, router } = build({ write: false });
+  const { artifacts, router, sectionCss } = build({ write: false });
   for (const { output, target } of artifacts) {
     if (!fs.existsSync(target) || fs.readFileSync(target, "utf8") !== output) {
       throw new Error(`La sección publicada ${path.basename(target)} no coincide con la fuente canónica. Ejecutá npm run construir:secciones.`);
@@ -128,7 +161,10 @@ function verify() {
   if (!fs.existsSync(router.target) || fs.readFileSync(router.target, "utf8") !== router.output) {
     throw new Error("El router de secciones publicado no coincide con el registro. Ejecutá npm run construir:secciones.");
   }
-  return [...artifacts.map((artifact) => artifact.target), router.target];
+  if (!fs.existsSync(sectionCss.target) || fs.readFileSync(sectionCss.target, "utf8") !== sectionCss.output) {
+    throw new Error("El CSS externo de la página por secciones no coincide con la fuente. Ejecutá npm run construir:secciones.");
+  }
+  return [...artifacts.map((artifact) => artifact.target), router.target, sectionCss.target];
 }
 
 if (require.main === module) {
@@ -136,4 +172,4 @@ if (require.main === module) {
   else build();
 }
 
-module.exports = Object.freeze({ ROUTER_TARGET, TARGET, build, compileRouter, compileSection, targetFor, verify });
+module.exports = Object.freeze({ ROUTER_TARGET, SECTION_CSS_TARGET, TARGET, build, compileRouter, compileSection, compileSectionCss, targetFor, verify });

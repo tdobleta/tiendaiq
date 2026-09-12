@@ -1,6 +1,7 @@
 {%- if product and product.metafields.tiendaiq.pagina.value -%}
 {%- assign tq_pagina = product.metafields.tiendaiq.pagina.value -%}
 {%- if tq_pagina.section_page.contractVersion == 1 -%}
+{{ 'tiq-section-page.css' | asset_url | stylesheet_tag }}
 <div id="tiq-section-page" data-tiendaiq-section-page="1">
 {%- for tq_section in tq_pagina.section_page.sections -%}
 {%- if forloop.first -%}
