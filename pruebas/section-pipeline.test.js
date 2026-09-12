@@ -475,6 +475,21 @@ test("el árbol ofrece inserción contextual sin crear un segundo modelo de pág
   assert.match(css, /\.se__insert-slot/);
 });
 
+test("las secciones se pueden reordenar sobre el mismo modelo y con teclado", () => {
+  const source = fs.readFileSync(path.join(__dirname, "../app/section-editor.js"), "utf8");
+  const css = fs.readFileSync(path.join(__dirname, "../app/section-editor.css"), "utf8");
+  assert.match(source, /aria-roledescription="sortable"/);
+  assert.match(source, /data-section-drop-index/);
+  assert.match(source, /function sectionMoveTarget\(sectionId,targetIndex\)/);
+  assert.match(source, /function reorderSectionToIndex\(sectionId,finalIndex\)/);
+  assert.match(source, /state\.page\.sections\.splice\(move\.from,1\)/);
+  assert.match(source, /state\.page\.sections\.splice\(move\.finalIndex,0,moving\)/);
+  assert.match(source, /event\.key===\"ArrowUp\"\?-1:event\.key===\"ArrowDown\"\?1/);
+  assert.match(source, /commitSectionDrop\(state\.sectionDropIndex\)/);
+  assert.match(source, /capabilities\?\.reorderable===false/);
+  assert.match(css, /\.se\.is-section-dragging \.se__section-drop-slot\.is-active/);
+});
+
 test("la vista aislada usa la pila tipográfica nativa de Shopify sin fuentes externas", async () => {
   const html = await renderSectionPage(createProductPage({
     product: { id: "gid://shopify/Product/1", title: "Producto", variants: [] }
