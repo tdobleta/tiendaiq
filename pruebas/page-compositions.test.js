@@ -10,6 +10,9 @@ const {
 const {
   DEFAULT_SECTION_PAGE_COMPOSITION_V1,
   DEMO_SECTION_PAGE_COMPOSITION_V1,
+  SECTION_PAGE_SOCIAL_COMPOSITION_V1,
+  SECTION_PAGE_BENEFITS_COMPOSITION_V1,
+  SECTION_PAGE_STORY_COMPOSITION_V1,
   resolvePageComposition
 } = require("../src/section-pipeline/page-compositions");
 
@@ -49,6 +52,21 @@ test("la composición publicada y el registro del editor comparten las mismas de
   assert.deepEqual(resolvePageComposition("section-page-v1"), DEFAULT_SECTION_PAGE_COMPOSITION_V1);
   const ids = new Set(editorRegistry().map((entry) => entry.id));
   for (const section of DEFAULT_SECTION_PAGE_COMPOSITION_V1) assert.ok(ids.has(section.id));
+});
+
+test("las plantillas comerciales tienen composiciones distintas y válidas", () => {
+  const cases = [
+    ["section-page-social-v1", SECTION_PAGE_SOCIAL_COMPOSITION_V1],
+    ["section-page-benefits-v1", SECTION_PAGE_BENEFITS_COMPOSITION_V1],
+    ["section-page-story-v1", SECTION_PAGE_STORY_COMPOSITION_V1]
+  ];
+  for (const [key, expected] of cases) {
+    assert.deepEqual(resolvePageComposition(key), expected);
+    const page = createProductPage({ product, composition: key });
+    assert.equal(page.sections[0].definition.id, "product-information");
+    assert.ok(page.sections.length >= 4);
+    assert.doesNotThrow(() => validatePage(page));
+  }
 });
 
 test("la demostración carga una composición reusable adicional sin cambiar la plantilla real", () => {

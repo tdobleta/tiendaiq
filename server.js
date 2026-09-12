@@ -96,6 +96,7 @@ const { documentoDePagina, guardarBorradorV1 } = require("./nucleo/migraciones/p
 const { productoPreviewDePagina } = require("./nucleo/producto-preview");
 const { publicarDocumentoV1 } = require("./nucleo/publicar-v1");
 const { createProductPage, editorRegistry, instantiateSection, validatePage: validateSectionPage } = require("./src/section-pipeline/page-pipeline");
+const { creationTemplates } = require("./src/domain/template-registry");
 const { DEMO_SECTION_PAGE_COMPOSITION_V1 } = require("./src/section-pipeline/page-compositions");
 const { applyPageTransition } = require("./src/section-pipeline/page-transition");
 const { renderSectionPage } = require("./src/section-pipeline/preview-renderer");
@@ -1074,6 +1075,13 @@ async function api(req, res, url) {
   // que renderiza Shopify. No existe una segunda definición hardcodeada.
   if (req.method === "GET" && ruta === "/api/section-registry") {
     return json(res, 200, { version: 1, sections: editorRegistry() });
+  }
+
+  // El selector de creación comparte el registro versionado del dominio. Así
+  // una plantilla visible siempre tiene una composición que el backend sabe
+  // materializar y no queda duplicada sólo en el frontend.
+  if (req.method === "GET" && ruta === "/api/page-templates") {
+    return json(res, 200, { version: 1, templates: creationTemplates() });
   }
 
   const mInstantiateSection = ruta.match(/^\/api\/paginas\/([^/]+)\/sections\/instantiate$/);

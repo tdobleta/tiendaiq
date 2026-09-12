@@ -18,8 +18,38 @@ const DEMO_SECTION_PAGE_COMPOSITION_V1 = Object.freeze([
   DEFAULT_SECTION_PAGE_COMPOSITION_V1[3]
 ]);
 
+// Catálogo inicial de composiciones comerciales. Cada opción reutiliza las
+// mismas secciones versionadas del editor, pero cambia el orden narrativo de
+// la página. Esto permite que "Plantilla" sea una decisión real del merchant
+// y no una tarjeta visual que termina generando siempre el mismo documento.
+const SECTION_PAGE_SOCIAL_COMPOSITION_V1 = Object.freeze([
+  DEFAULT_SECTION_PAGE_COMPOSITION_V1[0],
+  DEFAULT_SECTION_PAGE_COMPOSITION_V1[3],
+  Object.freeze({ id: "reviews-carousel", version: 1 }),
+  DEFAULT_SECTION_PAGE_COMPOSITION_V1[1]
+]);
+
+const SECTION_PAGE_BENEFITS_COMPOSITION_V1 = Object.freeze([
+  DEFAULT_SECTION_PAGE_COMPOSITION_V1[0],
+  Object.freeze({ id: "image-with-benefits", version: 1 }),
+  DEFAULT_SECTION_PAGE_COMPOSITION_V1[2],
+  DEFAULT_SECTION_PAGE_COMPOSITION_V1[3]
+]);
+
+const SECTION_PAGE_STORY_COMPOSITION_V1 = Object.freeze([
+  DEFAULT_SECTION_PAGE_COMPOSITION_V1[0],
+  DEFAULT_SECTION_PAGE_COMPOSITION_V1[1],
+  DEFAULT_SECTION_PAGE_COMPOSITION_V1[2],
+  Object.freeze({ id: "image-with-benefits", version: 1 }),
+  Object.freeze({ id: "reviews-carousel", version: 1 }),
+  DEFAULT_SECTION_PAGE_COMPOSITION_V1[3]
+]);
+
 const COMPOSITIONS = Object.freeze({
-  "section-page-v1": DEFAULT_SECTION_PAGE_COMPOSITION_V1
+  "section-page-v1": DEFAULT_SECTION_PAGE_COMPOSITION_V1,
+  "section-page-social-v1": SECTION_PAGE_SOCIAL_COMPOSITION_V1,
+  "section-page-benefits-v1": SECTION_PAGE_BENEFITS_COMPOSITION_V1,
+  "section-page-story-v1": SECTION_PAGE_STORY_COMPOSITION_V1
 });
 
 function resolvePageComposition(key = "section-page-v1") {
@@ -32,5 +62,8 @@ module.exports = Object.freeze({
   COMPOSITIONS,
   DEFAULT_SECTION_PAGE_COMPOSITION_V1,
   DEMO_SECTION_PAGE_COMPOSITION_V1,
+  SECTION_PAGE_SOCIAL_COMPOSITION_V1,
+  SECTION_PAGE_BENEFITS_COMPOSITION_V1,
+  SECTION_PAGE_STORY_COMPOSITION_V1,
   resolvePageComposition
 });

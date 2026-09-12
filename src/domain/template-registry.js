@@ -63,6 +63,55 @@ const TEMPLATE_REGISTRY = Object.freeze([
     version: 1,
     legacyStyle: "section-page-v1",
     rendererKey: "section-page-v1",
+    compositionKey: "section-page-v1",
+    creation: Object.freeze({
+      name: "Base equilibrada",
+      description: "Producto primero, beneficios, recorrido y prueba social.",
+      tags: ["Producto real", "Conversión", "Prueba social"],
+      theme: "greens"
+    }),
+    status: "active"
+  }),
+  Object.freeze({
+    id: "tiendaiq/section-page-social",
+    version: 1,
+    legacyStyle: "section-page-social-v1",
+    rendererKey: "section-page-v1",
+    compositionKey: "section-page-social-v1",
+    creation: Object.freeze({
+      name: "Prueba social",
+      description: "La confianza aparece temprano para acelerar la decisión.",
+      tags: ["Reseñas primero", "Carruseles", "Conversión"],
+      theme: "social"
+    }),
+    status: "active"
+  }),
+  Object.freeze({
+    id: "tiendaiq/section-page-benefits",
+    version: 1,
+    legacyStyle: "section-page-benefits-v1",
+    rendererKey: "section-page-v1",
+    compositionKey: "section-page-benefits-v1",
+    creation: Object.freeze({
+      name: "Beneficios claros",
+      description: "Explica el producto con ventajas visibles y un recorrido guiado.",
+      tags: ["Beneficios", "Timeline", "Claridad"],
+      theme: "aura"
+    }),
+    status: "active"
+  }),
+  Object.freeze({
+    id: "tiendaiq/section-page-story",
+    version: 1,
+    legacyStyle: "section-page-story-v1",
+    rendererKey: "section-page-v1",
+    compositionKey: "section-page-story-v1",
+    creation: Object.freeze({
+      name: "Historia completa",
+      description: "Una narrativa extensa con beneficios, reseñas y cierre de confianza.",
+      tags: ["Narrativa", "Contenido completo", "Confianza"],
+      theme: "editorial"
+    }),
     status: "active"
   }),
   Object.freeze({
@@ -141,12 +190,27 @@ function templateMetadata(entry) {
     template: descriptor(entry),
     legacyStyle: entry.legacyStyle,
     rendererKey: entry.rendererKey,
+    ...(entry.compositionKey ? { compositionKey: entry.compositionKey } : {}),
+    ...(entry.creation ? { creation: entry.creation } : {}),
     status: entry.status
   });
 }
 
+function creationTemplates() {
+  return TEMPLATE_REGISTRY
+    .filter((entry) => entry.status === "active" && entry.creation)
+    .map((entry) => ({
+      id: entry.legacyStyle,
+      template: descriptor(entry),
+      rendererKey: entry.rendererKey,
+      compositionKey: entry.compositionKey || null,
+      ...entry.creation
+    }));
+}
+
 module.exports = Object.freeze({
   TEMPLATE_REGISTRY,
+  creationTemplates,
   TemplateContractError,
   resolveStoredTemplate,
   resolveTemplateForCreation,
