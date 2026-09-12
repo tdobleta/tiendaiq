@@ -14,7 +14,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 test("el código Shopify es la fuente inmutable del diseño y del editor", () => {
-  assert.equal(productInformation.sourceSha256, "31bb54920850b0b84438c515a3423e0c019c36ecf80d91eb6cc27d56f1123945");
+  assert.equal(productInformation.sourceSha256, "342b54ab536ff9c1b27ce4d734595df38ad7d960b6f96b9c4c8aafb1712e1d10");
   assert.equal(sha256(productInformation.source), productInformation.sourceSha256);
   assert.equal(productInformation.schema.settings.length, 38);
   assert.equal(productInformation.schema.settings.filter((setting) => setting.id).length, 37);

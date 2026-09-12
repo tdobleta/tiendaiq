@@ -68,6 +68,7 @@
 <section
   id="{{ section_dom_id }}"
   class="{{ section_dom_id }}"
+  data-tiq-section-type="product-information"
   style="
     --hero-max-width: {{ section.settings.max_width }}px;
     --hero-content-max-width: {{ hero_content_max_width }}px;
@@ -97,6 +98,7 @@
     --hero-button-text: {{ section.settings.button_text_color }};
     --hero-success: {{ section.settings.success_color }};
     --hero-star: {{ section.settings.star_color }};
+    --hero-image-fit: {{ section.settings.image_fit }};
   "
 >
   <div class="{{ section_dom_id }}__inner">
