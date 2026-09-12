@@ -1,0 +1,31 @@
+{% comment %} GENERATED from guarantee-with-social-proof@1 · 7f7c516c649fa14e0d42732257170b5061fd449c733f632e993b33cf7b823d83. Do not edit. {% endcomment %}
+{% liquid
+assign section_dom_id = 'tiq-guarantee-social-' | append: tiq_section.id | handleize
+%}
+<section id="{{ section_dom_id }}" class="{{ section_dom_id }}" aria-labelledby="{{ section_dom_id }}-heading">
+<div class="{{ section_dom_id }}__inner">
+<div class="{{ section_dom_id }}__mark" aria-hidden="true">✓</div>
+<div class="{{ section_dom_id }}__content">
+{% if tiq_section.instance.settings.eyebrow != blank %}<p class="{{ section_dom_id }}__eyebrow" data-tiq-outline-id="{{ section_dom_id }}__eyebrow">{{ tiq_section.instance.settings.eyebrow | escape }}</p>{% endif %}
+{% if tiq_section.instance.settings.heading != blank %}<h2 id="{{ section_dom_id }}-heading" class="{{ section_dom_id }}__heading" data-tiq-outline-id="{{ section_dom_id }}__heading">{{ tiq_section.instance.settings.heading | escape }}</h2>{% endif %}
+{% if tiq_section.instance.settings.body != blank %}<div class="{{ section_dom_id }}__body rte" data-tiq-outline-id="{{ section_dom_id }}__body">{{ tiq_section.instance.settings.body }}</div>{% endif %}
+{% if tiq_section.instance.blocks.size > 0 %}
+<ul class="{{ section_dom_id }}__items" aria-label="{{ tiq_section.instance.settings.items_label | escape }}" data-tiq-outline-id="{{ section_dom_id }}__items">
+{% for block in tiq_section.instance.blocks %}
+<li class="{{ section_dom_id }}__item" data-tiq-block-id="{{ block.id | escape }}">
+<span class="{{ section_dom_id }}__item-icon" aria-hidden="true">{{ block.settings.icon | escape }}</span>
+<span class="{{ section_dom_id }}__item-copy">
+{% if block.settings.heading != blank %}<strong>{{ block.settings.heading | escape }}</strong>{% endif %}
+{% if block.settings.body != blank %}<span>{{ block.settings.body | escape }}</span>{% endif %}
+</span>
+</li>
+{% endfor %}
+</ul>
+{% endif %}
+{% if tiq_section.instance.settings.button_label != blank %}
+<a class="{{ section_dom_id }}__button" href="{{ tiq_section.instance.settings.button_link }}">{{ tiq_section.instance.settings.button_label | escape }}</a>
+{% endif %}
+</div>
+</div>
+</section>
+<style>#{{ section_dom_id }}{--tiq-guarantee-bg:{{ tiq_section.instance.settings.background_color }};--tiq-guarantee-card:{{ tiq_section.instance.settings.card_background }};--tiq-guarantee-heading:{{ tiq_section.instance.settings.heading_color }};--tiq-guarantee-text:{{ tiq_section.instance.settings.text_color }};--tiq-guarantee-muted:{{ tiq_section.instance.settings.muted_color }};--tiq-guarantee-accent:{{ tiq_section.instance.settings.accent_color }};--tiq-guarantee-border:{{ tiq_section.instance.settings.border_color }};--tiq-guarantee-radius:{{ tiq_section.instance.settings.card_radius }}px;width:100%;background:var(--tiq-guarantee-bg);color:var(--tiq-guarantee-text);}#{{ section_dom_id }} *{box-sizing:border-box;}#{{ section_dom_id }} .{{ section_dom_id }}__inner{width:min(100%,{{ tiq_section.instance.settings.max_width }}px);margin:0 auto;display:grid;grid-template-columns:72px minmax(0,720px);gap:24px;align-items:start;padding:{{ tiq_section.instance.settings.padding_top }}px {{ tiq_section.instance.settings.side_padding }}px {{ tiq_section.instance.settings.padding_bottom }}px;}#{{ section_dom_id }} .{{ section_dom_id }}__mark{display:grid;width:72px;height:72px;place-items:center;border:1px solid var(--tiq-guarantee-border);border-radius:50%;background:color-mix(in srgb,var(--tiq-guarantee-accent) 14%,transparent);color:var(--tiq-guarantee-accent);font-size:32px;font-weight:700;}#{{ section_dom_id }} .{{ section_dom_id }}__content{min-width:0;}#{{ section_dom_id }} .{{ section_dom_id }}__eyebrow{margin:0 0 10px;color:var(--tiq-guarantee-accent);font-size:12px;font-weight:700;letter-spacing:.14em;line-height:1.3;text-transform:uppercase;}#{{ section_dom_id }} .{{ section_dom_id }}__heading{margin:0;color:var(--tiq-guarantee-heading);font-size:clamp(28px,4vw,48px);font-weight:700;letter-spacing:-.035em;line-height:1.05;}#{{ section_dom_id }} .{{ section_dom_id }}__body{margin-top:14px;color:var(--tiq-guarantee-muted);font-size:16px;line-height:1.55;}#{{ section_dom_id }} .{{ section_dom_id }}__body p{margin:0;}#{{ section_dom_id }} .{{ section_dom_id }}__items{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:24px 0 0;padding:0;list-style:none;}#{{ section_dom_id }} .{{ section_dom_id }}__item{display:flex;gap:10px;min-width:0;padding:12px;border:1px solid var(--tiq-guarantee-border);border-radius:calc(var(--tiq-guarantee-radius) * .75);background:var(--tiq-guarantee-card);}#{{ section_dom_id }} .{{ section_dom_id }}__item-icon{flex:0 0 auto;color:var(--tiq-guarantee-accent);font-size:18px;line-height:1.2;}#{{ section_dom_id }} .{{ section_dom_id }}__item-copy{display:grid;gap:3px;min-width:0;}#{{ section_dom_id }} .{{ section_dom_id }}__item-copy strong{color:var(--tiq-guarantee-heading);font-size:14px;line-height:1.25;}#{{ section_dom_id }} .{{ section_dom_id }}__item-copy span{color:var(--tiq-guarantee-muted);font-size:13px;line-height:1.4;}#{{ section_dom_id }} .{{ section_dom_id }}__button{display:inline-flex;min-height:46px;align-items:center;justify-content:center;margin-top:24px;padding:12px 24px;border-radius:calc(var(--tiq-guarantee-radius) * .7);background:var(--tiq-guarantee-accent);color:#fff;font-size:14px;font-weight:700;text-decoration:none;transition:filter .2s ease,transform .2s ease;}#{{ section_dom_id }} .{{ section_dom_id }}__button:hover{filter:brightness(1.08);transform:translateY(-1px);}#{{ section_dom_id }} .{{ section_dom_id }}__button:focus-visible{outline:2px solid var(--tiq-guarantee-heading);outline-offset:3px;}@media (max-width:749px){#{{ section_dom_id }} .{{ section_dom_id }}__inner{grid-template-columns:1fr;gap:16px;padding:{{ tiq_section.instance.settings.mobile_padding_top }}px {{ tiq_section.instance.settings.mobile_side_padding }}px {{ tiq_section.instance.settings.mobile_padding_bottom }}px;}#{{ section_dom_id }} .{{ section_dom_id }}__mark{width:56px;height:56px;font-size:25px;}#{{ section_dom_id }} .{{ section_dom_id }}__body{font-size:15px;}#{{ section_dom_id }} .{{ section_dom_id }}__items{grid-template-columns:1fr;}}</style>

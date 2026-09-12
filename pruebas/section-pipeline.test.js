@@ -7,6 +7,7 @@ const imageWithText = require("../src/section-pipeline/image-with-text-v1");
 const { createProductPage, editorRegistry, instantiateSection, validatePage } = require("../src/section-pipeline/page-pipeline");
 const { outlineTargets, renderSectionPage } = require("../src/section-pipeline/preview-renderer");
 const { OUTPUT_SCHEMA, validateResearch } = require("../src/section-pipeline/research-product");
+const { readCopySlot, normalizePersistedCopySlots } = require("../src/section-pipeline/copy-slots");
 const { SectionContractError, createSectionDefinition, sha256, validateInstance } = require("../src/section-pipeline/section-contract");
 const { build: buildStorefront } = require("../src/section-pipeline/compile-storefront");
 const fs = require("node:fs");
@@ -38,7 +39,7 @@ test("la investigación de Claude debe devolver los contratos de copy nuevos", (
 
 test("el registro distingue definiciones, catálogo y capacidades", () => {
   const registry = editorRegistry();
-  assert.deepEqual(registry.map((entry) => entry.id), ["product-information", "image-with-text", "image-with-timeline", "image-with-benefits", "testimonios-con-imagenes", "reviews-carousel"]);
+  assert.deepEqual(registry.map((entry) => entry.id), ["product-information", "image-with-text", "image-with-timeline", "image-with-benefits", "testimonios-con-imagenes", "reviews-carousel", "guarantee-with-social-proof"]);
   assert.equal(registry[0].capabilities.duplicable, false);
   assert.equal(registry[0].capabilities.protected, true);
   assert.equal(registry[0].capabilities.reorderable, false);
@@ -54,6 +55,20 @@ test("el registro distingue definiciones, catálogo y capacidades", () => {
   assert.deepEqual(registry[4].copySlots, { section: [], blocks: {} });
   assert.equal(registry[3].capabilities.editableStructure, true);
   assert.equal(registry[3].capabilities.allowMultipleInstances, true);
+  assert.equal(registry[6].catalog.category, "Prueba social y confianza");
+  assert.deepEqual(registry[6].copySlots, { section: [], blocks: {} });
+});
+
+test("Garantía con prueba social es reutilizable y sus elementos son bloques independientes", async () => {
+  const guarantee = require("../src/section-pipeline/guarantee-with-social-proof-v1");
+  const instance = guarantee.adapt({});
+  assert.equal(instance.blocks.length, 3);
+  assert.notEqual(instance.blocks[0].id, instance.blocks[1].id);
+  const page = createProductPage({ product: { id: "gid://shopify/Product/1", title: "Producto" } });
+  page.sections.push({ id: "section-guarantee", label: guarantee.schema.name, definition: { id: guarantee.id, version: guarantee.version, sourceSha256: guarantee.sourceSha256 }, instance });
+  const html = await renderSectionPage(validatePage(page));
+  assert.match(html, /Compra protegida/);
+  assert.match(html, /data-tiq-block-id=/);
 });
 
 test("copy_slots_v1 aplica primero los slots autorizados y conserva el formato legado", () => {
@@ -93,6 +108,37 @@ test("copy_slots_v1 registra targets desconocidos sin permitir que entren a una 
   }, []);
   assert.equal(research.copy_slots_v1.slots.length, 0);
   assert.equal(research.copy_slots_v1.skipped[0].reason, "target_no_autorizado");
+});
+
+test("copy_slots_v1 puede apuntar a un bloque estable y mantiene fallback legado por índice", () => {
+  const stable = validateResearch({
+    summary: "Resumen",
+    claims: [],
+    visualObservations: [],
+    copy_slots_v1: {
+      version: 1,
+      slots: [{
+        target: { section_id: "reviews-carousel", occurrence: 1, block_type: "review", block_id: "block-2", field: "quote" },
+        value: "Este texto pertenece al segundo bloque, aunque otro bloque se ordene antes.",
+        evidence: []
+      }]
+    }
+  }, []);
+  assert.equal(readCopySlot(stable, {
+    section_id: "reviews-carousel", occurrence: 1, block_type: "review", block_id: "block-2", block_index: 0, field: "quote"
+  }), "Este texto pertenece al segundo bloque, aunque otro bloque se ordene antes.");
+
+  const legacy = normalizePersistedCopySlots({
+    version: 1,
+    slots: [{
+      target: { section_id: "reviews-carousel", occurrence: 1, block_type: "review", block_index: 1, field: "quote" },
+      value: "Slot legado",
+      evidence: []
+    }]
+  });
+  assert.equal(readCopySlot({ copy_slots_v1: legacy }, {
+    section_id: "reviews-carousel", occurrence: 1, block_type: "review", block_id: "block-2", block_index: 1, field: "quote"
+  }), "Slot legado");
 });
 
 test("una página conserva la procedencia durable de cada slot generado", () => {

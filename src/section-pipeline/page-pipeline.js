@@ -6,11 +6,12 @@ const imageWithTimeline = require("./image-with-timeline-v1");
 const imageWithBenefits = require("./image-with-benefits-v1");
 const testimonialsWithImages = require("./testimonials-with-images-v1");
 const reviewsCarousel = require("./reviews-carousel-v1");
+const guaranteeWithSocialProof = require("./guarantee-with-social-proof-v1");
 const { resolvePageComposition } = require("./page-compositions");
 const { SectionContractError, validateInstance } = require("./section-contract");
 const { normalizePersistedCopySlots, persistCopySlots } = require("./copy-slots");
 
-const DEFINITIONS = Object.freeze([productInformation, imageWithText, imageWithTimeline, imageWithBenefits, testimonialsWithImages, reviewsCarousel]);
+const DEFINITIONS = Object.freeze([productInformation, imageWithText, imageWithTimeline, imageWithBenefits, testimonialsWithImages, reviewsCarousel, guaranteeWithSocialProof]);
 const REGISTRY = new Map(DEFINITIONS.map((definition) => [`${definition.id}@${definition.version}`, definition]));
 
 function connection(value) {

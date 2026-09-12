@@ -22,8 +22,8 @@ function adapt({ product, research, seed }) {
   else if (research?.summary) instance.settings.intro = rich(research.summary);
   instance.blocks.filter((block) => block.type === "timeline_step").forEach((block, index) => {
     const copy = timelineCopy[index] || {};
-    const generatedHeading = readCopySlot(research, { section_id: "image-with-timeline", occurrence: 1, block_type: "timeline_step", block_index: index, field: "heading" });
-    const generatedBody = readCopySlot(research, { section_id: "image-with-timeline", occurrence: 1, block_type: "timeline_step", block_index: index, field: "body" });
+    const generatedHeading = readCopySlot(research, { section_id: "image-with-timeline", occurrence: 1, block_type: "timeline_step", block_id: block.id, block_index: index, field: "heading" });
+    const generatedBody = readCopySlot(research, { section_id: "image-with-timeline", occurrence: 1, block_type: "timeline_step", block_id: block.id, block_index: index, field: "body" });
     if (!generatedHeading && !generatedBody && !copy.heading && !copy.body) return;
     if (generatedHeading || copy.heading) block.settings.heading = String(generatedHeading || copy.heading).slice(0, 180);
     if (generatedBody || copy.body) block.settings.body = rich(generatedBody || copy.body);

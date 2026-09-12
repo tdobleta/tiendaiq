@@ -42,7 +42,7 @@ function adapt({ product, research, seed }) {
     : [];
   if (benefits.length) {
     instance.blocks.filter((block) => block.type === "benefit").forEach((block, index) => {
-      const generatedText = readCopySlot(research, { section_id: "product-information", occurrence: 1, block_type: "benefit", block_index: index, field: "text" });
+      const generatedText = readCopySlot(research, { section_id: "product-information", occurrence: 1, block_type: "benefit", block_id: block.id, block_index: index, field: "text" });
       if (generatedText || benefits[index]) block.settings.text = String(generatedText || benefits[index]).slice(0, 180);
     });
   }
