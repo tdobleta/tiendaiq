@@ -101,14 +101,7 @@
   #{{ section_dom_id }} .{{ section_dom_id }}__intro { max-width: 650px; margin: 14px auto 0; color: var(--tiq-testimonials-muted); font-size: 16px; line-height: 1.55; text-align: center; }
   #{{ section_dom_id }} .{{ section_dom_id }}__intro p { margin: 0; }
   #{{ section_dom_id }} .{{ section_dom_id }}__carousel-wrap { position: relative; margin-top: 36px; }
-  #{{ section_dom_id }} .{{ section_dom_id }}__carousel { display: grid; grid-auto-flow: column; gap: var(--tiq-testimonials-gap); overflow-x: auto; padding: 2px 1px 8px; scroll-behavior: smooth; scroll-snap-type: x mandatory; scrollbar-width: none;
-    {% case section.settings.desktop_columns %}
-      {% when 2 %} grid-auto-columns: calc((100% - var(--tiq-testimonials-gap)) / 2);
-      {% when 3 %} grid-auto-columns: calc((100% - var(--tiq-testimonials-gap) - var(--tiq-testimonials-gap)) / 3);
-      {% when 5 %} grid-auto-columns: calc((100% - var(--tiq-testimonials-gap) - var(--tiq-testimonials-gap) - var(--tiq-testimonials-gap) - var(--tiq-testimonials-gap)) / 5);
-      {% else %} grid-auto-columns: calc((100% - var(--tiq-testimonials-gap) - var(--tiq-testimonials-gap) - var(--tiq-testimonials-gap)) / 4);
-    {% endcase %}
-  }
+  #{{ section_dom_id }} .{{ section_dom_id }}__carousel { display: grid; grid-auto-flow: column; grid-auto-columns: calc((100% - (var(--tiq-testimonials-gap) * (var(--tiq-testimonials-columns) - 1))) / var(--tiq-testimonials-columns)); gap: var(--tiq-testimonials-gap); overflow-x: auto; padding: 2px 1px 8px; scroll-behavior: smooth; scroll-snap-type: x mandatory; scrollbar-width: none; }
   #{{ section_dom_id }} .{{ section_dom_id }}__carousel::-webkit-scrollbar { display: none; }
   #{{ section_dom_id }} .{{ section_dom_id }}__card { min-width: 0; overflow: hidden; border: 1px solid var(--tiq-testimonials-border); border-radius: var(--tiq-testimonials-radius); background: var(--tiq-testimonials-card); scroll-snap-align: start; }
   #{{ section_dom_id }} .{{ section_dom_id }}__image { aspect-ratio: 1 / 1; overflow: hidden; background: color-mix(in srgb, var(--tiq-testimonials-card) 84%, var(--tiq-testimonials-border)); }
@@ -131,13 +124,7 @@
     #{{ section_dom_id }} .{{ section_dom_id }}__inner { padding: {{ section.settings.mobile_padding_top }}px {{ section.settings.mobile_side_padding }}px {{ section.settings.mobile_padding_bottom }}px; }
     #{{ section_dom_id }} .{{ section_dom_id }}__heading { font-size: clamp(28px, 9vw, 40px); }
     #{{ section_dom_id }} .{{ section_dom_id }}__intro { font-size: 15px; }
-    #{{ section_dom_id }} .{{ section_dom_id }}__carousel {
-      {% if section.settings.mobile_columns == 2 %}
-        grid-auto-columns: calc((100% - var(--tiq-testimonials-gap)) / 2);
-      {% else %}
-        grid-auto-columns: 100%;
-      {% endif %}
-    }
+    #{{ section_dom_id }} .{{ section_dom_id }}__carousel { grid-auto-columns: calc((100% - (var(--tiq-testimonials-gap) * (var(--tiq-testimonials-mobile-columns) - 1))) / var(--tiq-testimonials-mobile-columns)); }
     #{{ section_dom_id }} .{{ section_dom_id }}__content { padding: 14px; }
   }
 
