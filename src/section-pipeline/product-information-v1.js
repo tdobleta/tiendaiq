@@ -25,11 +25,56 @@ function plainText(value) {
     .trim();
 }
 
-function adapt({ product, research, seed }) {
+const TEMPLATE_COPY = Object.freeze({
+  es: Object.freeze({
+    rating_text: "Valorado con 4,9: excelente",
+    bundle_heading: "COMBOS Y AHORRA",
+    button_label: "AÑADIR AL CARRITO",
+    benefits: ["Ayuda a la próstata", "Equilibra las hormonas", "Aumenta la resistencia", "Mejora el flujo sanguíneo"],
+    trust: ["Envío rápido", "Garantía de 60 días"],
+    tabs: ["Reseñas", "Comparación", "Especificaciones"]
+  }),
+  en: Object.freeze({
+    rating_text: "Rated 4.9 ‘Excellent’",
+    bundle_heading: "BUNDLE & SAVE",
+    button_label: "ADD TO CART",
+    benefits: ["Helps support the prostate", "Balances hormones", "Increases stamina", "Improves blood flow"],
+    trust: ["Fast shipping", "60-day guarantee"],
+    tabs: ["Reviews", "Comparison", "Specifications"]
+  }),
+  pt: Object.freeze({
+    rating_text: "Avaliado com 4,9: excelente",
+    bundle_heading: "COMPRE E ECONOMIZE",
+    button_label: "ADICIONAR AO CARRINHO",
+    benefits: ["Ajuda a próstata", "Equilibra os hormônios", "Aumenta a resistência", "Melhora o fluxo sanguíneo"],
+    trust: ["Envio rápido", "Garantia de 60 dias"],
+    tabs: ["Avaliações", "Comparação", "Especificações"]
+  })
+});
+
+function templateCopyFor(idioma) {
+  const locale = String(idioma || "es").toLowerCase().slice(0, 2);
+  return TEMPLATE_COPY[locale] || TEMPLATE_COPY.es;
+}
+
+function adapt({ product, research, seed, idioma = "es" }) {
   // La fuente Liquid y todos sus valores visuales permanecen inmutables. La
   // adaptación sólo escribe campos de contenido autorizados y respaldados por
   // el producto o por la investigación validada.
   const instance = structuredClone(seed);
+  const templateCopy = templateCopyFor(idioma);
+  instance.settings.rating_text = templateCopy.rating_text;
+  instance.settings.bundle_heading = templateCopy.bundle_heading;
+  instance.settings.button_label = templateCopy.button_label;
+  instance.blocks.filter((block) => block.type === "benefit").forEach((block, index) => {
+    if (templateCopy.benefits[index]) block.settings.text = templateCopy.benefits[index];
+  });
+  instance.blocks.filter((block) => block.type === "trust_item").forEach((block, index) => {
+    if (templateCopy.trust[index]) block.settings.text = templateCopy.trust[index];
+  });
+  instance.blocks.filter((block) => block.type === "tab").forEach((block, index) => {
+    if (templateCopy.tabs[index]) block.settings.title = templateCopy.tabs[index];
+  });
   const title = plainText(product?.title || product?.titulo).slice(0, 180);
   const description = plainText(research?.summary || product?.description || product?.descripcion).slice(0, 1200);
   if (title) {
@@ -147,8 +192,19 @@ module.exports = createSectionDefinition({
   outline,
   copySlots: { section: ["description"], blocks: { benefit: ["text"] } },
   contentSources: {
-    section: { heading: "shopify", image_alt: "shopify" },
-    blocks: { media_thumb: { image: "shopify", alt: "shopify" } }
+    section: {
+      heading: "shopify",
+      image_alt: "shopify",
+      rating_text: "template",
+      bundle_heading: "template",
+      button_label: "template"
+    },
+    blocks: {
+      media_thumb: { image: "shopify", alt: "shopify" },
+      benefit: { text: "template" },
+      trust_item: { text: "template" },
+      tab: { title: "template" }
+    }
   },
   lockedFields: {
     section: ["heading", "image_alt"],

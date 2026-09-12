@@ -27,7 +27,9 @@ test("el código Shopify es la fuente inmutable del diseño y del editor", () =>
   assert.deepEqual(productInformation.editor.outline[0].previewSuffixes, ["__media-column"]);
   assert.equal(productInformation.editor.outline[1].children.find((node) => node.id === "payment-icons").blockType, "payment");
   assert.deepEqual(productInformation.copySlots, { section: ["description"], blocks: { benefit: ["text"] } });
-  assert.deepEqual(productInformation.contentSources.section, { heading: "shopify", image_alt: "shopify" });
+  assert.equal(productInformation.contentSources.section.heading, "shopify");
+  assert.equal(productInformation.contentSources.section.image_alt, "shopify");
+  assert.equal(productInformation.contentSources.section.button_label, "template");
   assert.deepEqual(productInformation.contentSources.blocks.media_thumb, { image: "shopify", alt: "shopify" });
   assert.doesNotMatch(productInformation.source, /if hero_(?:max_width|column_gap|desktop_top|thumbnail_size)/);
   assert.doesNotMatch(productInformation.source, /\| replace:/);
@@ -260,6 +262,38 @@ test("crear una página conserva el diseño Shopify y adapta sólo contenido aut
   assert.equal(page.sections[0].instance.blocks.length, 19);
   assert.equal(page.sections[0].instance.blocks.filter((block) => block.type === "bundle").length, 3);
   assert.equal(page.sections[0].instance.blocks.some((block) => block.binding), false);
+});
+
+test("el idioma seleccionado localiza el copy fijo de la plantilla sin cambiar datos Shopify", () => {
+  const product = {
+    id: "gid://shopify/Product/locale-test",
+    title: "Producto de prueba",
+    description: "Descripción del producto.",
+    media: [{ url: "https://cdn.shopify.com/producto.jpg", altText: "Producto" }]
+  };
+  const english = createProductPage({ product, idioma: "en" }).sections[0].instance;
+  assert.equal(english.settings.heading, "Producto de prueba");
+  assert.equal(english.settings.rating_text, "Rated 4.9 ‘Excellent’");
+  assert.equal(english.settings.bundle_heading, "BUNDLE & SAVE");
+  assert.equal(english.settings.button_label, "ADD TO CART");
+  assert.deepEqual(english.blocks.filter((block) => block.type === "benefit").map((block) => block.settings.text), [
+    "Helps support the prostate",
+    "Balances hormones",
+    "Increases stamina",
+    "Improves blood flow"
+  ]);
+  assert.deepEqual(english.blocks.filter((block) => block.type === "tab").map((block) => block.settings.title), [
+    "Reviews",
+    "Comparison",
+    "Specifications"
+  ]);
+
+  const portuguese = createProductPage({ product, idioma: "pt-BR" }).sections[0].instance;
+  assert.equal(portuguese.settings.button_label, "ADICIONAR AO CARRINHO");
+  assert.equal(portuguese.blocks.find((block) => block.type === "trust_item").settings.text, "Envio rápido");
+
+  const fallback = createProductPage({ product, idioma: "fr" }).sections[0].instance;
+  assert.equal(fallback.settings.button_label, "AÑADIR AL CARRITO");
 });
 
 test("una página persistida con la huella anterior se migra al registro vigente", () => {
