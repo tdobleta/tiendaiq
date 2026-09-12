@@ -16,7 +16,7 @@ function targetFor(definition) {
 // canónica) para conservar su hash y, a la vez, publicar sin comentarios ni
 // sangrías innecesarias. No se alteran valores ni delimitadores Liquid.
 function compactLiquid(source) {
-  return String(source)
+  const compact = String(source)
     .replace(/{%-?\s*comment\s*-?%}[\s\S]*?{%-?\s*endcomment\s*-?%}/g, "")
     .replace(/<!--[\s\S]*?-->/g, "")
     .replace(/^\s*\/\/.*(?:\r?\n|$)/gm, "")
@@ -25,6 +25,18 @@ function compactLiquid(source) {
     .replace(/[ \t]+$/gm, "")
     .replace(/\n{2,}/g, "\n")
     .trim();
+
+  // Shopify counts all Liquid inside an extension bundle. Compact only the
+  // embedded CSS while protecting Liquid tags, so readable canonical sources
+  // can ship below the platform limit without changing rendered values.
+  return compact.replace(/<style>([\s\S]*?)<\/style>/gi, (_, body) => {
+    const liquid = [];
+    const css = body.replace(/({{[\s\S]*?}}|{%[\s\S]*?%})/g, (tag) => {
+      liquid.push(tag);
+      return `__TIQ_LIQUID_${liquid.length - 1}__`;
+    }).replace(/\s+/g, " ").replace(/\s*([{}:;,>])\s*/g, "$1").trim();
+    return `<style>${css.replace(/__TIQ_LIQUID_(\d+)__/g, (_, index) => liquid[Number(index)])}</style>`;
+  });
 }
 
 function compileSection(source, sourceSha256, descriptor = "product-information@1") {
