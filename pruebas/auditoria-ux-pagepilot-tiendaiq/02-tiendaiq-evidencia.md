@@ -15,6 +15,7 @@
 
 - El arrastre físico directo sobre una fila no quedó certificado con la automatización disponible dentro del iframe.
 - El proyecto conserva un editor anterior con otro modelo de árbol y otra biblioteca; una mejora aplicada solo a `/editor-secciones` no garantiza paridad en todas las rutas.
+- La entrada `/editor-v3` redirige a `/editor-secciones` cuando la página ya contiene `section_page`; el editor anterior queda para páginas legacy. Esto reduce el riesgo de mezcla dentro de una misma página, pero deja una deuda de migración y de consistencia visual entre generaciones.
 - Algunas ramas internas se representan visualmente como grupos, pero sus bloques se almacenan en una lista plana de la sección. Debe probarse que el destino semántico coincida con la rama que el usuario tenía seleccionada.
 - La biblioteca de TiendaIQ necesita previews más informativas y estados de disponibilidad más explicativos para acercarse a PagePilot.
 
