@@ -36,6 +36,13 @@
 - `[O]` La interacción quedó limitada a staging y se restauró el estado inicial.
 - `[P]` Sigue pendiente certificar el gesto de arrastre con un mouse físico auténtico. La automatización disponible selecciona correctamente las filas, pero su método de drag dentro del iframe no produjo una reordenación observable; no se marca como aprobado.
 
+## Corrección preparada después de la prueba
+
+- `[O]` La implementación publicada combinaba `draggable="true"` con el fallback de Pointer Events.
+- `[I]` Esa doble ruta podía dejar el gesto en el drag nativo y no entregar el ciclo de puntero que necesita el reordenamiento dentro del árbol.
+- `[R]` El PR #189 cambia las filas reordenables a `draggable="false"`, mantiene `aria-roledescription="sortable"` y deja Pointer Events como ruta principal; teclado y los eventos de fila conservan el mismo commit canónico.
+- `[P]` El PR debe desplegarse en staging y repetirse con mouse real antes de cerrar P0.
+
 ## Frontera de editor
 
 - `[R]` `/editor-v3` conserva la entrada heredada, pero `app/editor-producto.html` deriva a `/editor-secciones` cuando la página ya contiene `data.section_page`.
