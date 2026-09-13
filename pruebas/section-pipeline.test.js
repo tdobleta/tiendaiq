@@ -503,6 +503,8 @@ test("las secciones se pueden reordenar sobre el mismo modelo y con teclado", ()
   assert.match(source, /button\.addEventListener\(\"dragover\",\(event\)=>reorderSectionByRow\(button,event\)\)/);
   assert.match(source, /button\.addEventListener\(\"drop\",\(event\)=>dropSectionOnRow\(button,event\)\)/);
   assert.match(source, /button\.addEventListener\(\"pointerdown\",\(event\)=>/);
+  assert.match(source, /function handleSectionMouseMove\(event\)/);
+  assert.match(source, /button\.addEventListener\(\"mousedown\",\(event\)=>/);
   assert.match(source, /capabilities\?\.reorderable===false/);
   assert.match(css, /\.se\.is-section-dragging \.se__section-drop-slot\.is-active/);
 });

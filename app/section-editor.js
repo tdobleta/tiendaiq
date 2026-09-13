@@ -186,6 +186,27 @@
     const pointer=state.pointerDrag;if(!pointer||event.pointerId!==pointer.pointerId)return;
     state.pointerDrag=null;clearSectionDrag()
   }
+  function handleSectionMouseMove(event){
+    const pointer=state.pointerDrag;if(!pointer?.mouse)return;
+    const moved=Math.hypot(event.clientX-pointer.startX,event.clientY-pointer.startY)>=6;
+    if(!pointer.active&&!moved)return;
+    if(!pointer.active){pointer.active=true;state.draggingSectionId=pointer.sectionId;state.keyboardDragging=false;state.sectionDropIndex=null;syncSectionDragUI()}
+    const targetIndex=pointerSectionTarget(event);if(targetIndex===null){state.sectionDropIndex=null;syncSectionDragUI();return}
+    event.preventDefault();state.sectionDropIndex=targetIndex;syncSectionDragUI()
+  }
+  function handleSectionMouseUp(event){
+    const pointer=state.pointerDrag;if(!pointer?.mouse)return;state.pointerDrag=null;
+    if(!pointer.active){clearSectionDrag();return}
+    const targetIndex=pointerSectionTarget(event);if(targetIndex===null){clearSectionDrag();return}
+    event.preventDefault();commitSectionDrop(targetIndex)
+  }
+  function handleSectionKeydown(event){
+    const button=event.target.closest?.("[data-section-drag]");if(!button)return;
+    if(state.keyboardDragging&&event.key==="Escape"){event.preventDefault();clearSectionDrag();return}
+    if(state.keyboardDragging&&["ArrowUp","ArrowDown"].includes(event.key)){moveKeyboardSection(event);return}
+    if(state.keyboardDragging&&(isSpaceKey(event)||event.key==="Enter")){event.preventDefault();commitSectionDrop(state.sectionDropIndex);return}
+    beginKeyboardSectionDrag(button,event)
+  }
   function moveSelectedSection(direction){const {section,definition:entry}=selected();if(!section||entry?.capabilities?.reorderable===false)return;const index=state.page.sections.indexOf(section);const nextIndex=index+direction;if(index<0||nextIndex<0||nextIndex>=state.page.sections.length)return;if(!reorderSectionToIndex(section.id,nextIndex))notify("Esa sección está protegida y no se puede atravesar.")}
   function inspectorHtml(){
     const {section,block,outline,definition:entry}=selected();if(!section||!entry)return`<div class="se__notice">Seleccioná una sección.</div>`;
@@ -297,23 +318,24 @@
       button.addEventListener("dragend",clearSectionDrag);
       button.addEventListener("pointerdown",(event)=>{
         if(event.button!==0||event.isPrimary===false||state.keyboardDragging)return;
-        state.pointerDrag={sectionId:button.dataset.sectionDrag,pointerId:event.pointerId,button,startX:event.clientX,startY:event.clientY,active:false};
+        state.pointerDrag={sectionId:button.dataset.sectionDrag,pointerId:event.pointerId,mouse:event.pointerType==="mouse",button,startX:event.clientX,startY:event.clientY,active:false};
         try{button.setPointerCapture(event.pointerId)}catch{}
+      });
+      button.addEventListener("mousedown",(event)=>{
+        if(event.button!==0||state.keyboardDragging||state.pointerDrag)return;
+        state.pointerDrag={sectionId:button.dataset.sectionDrag,mouse:true,button,startX:event.clientX,startY:event.clientY,active:false};
       });
       button.addEventListener("dragover",(event)=>reorderSectionByRow(button,event));
       button.addEventListener("drop",(event)=>dropSectionOnRow(button,event));
-      button.addEventListener("keydown",(event)=>{
-        if(state.keyboardDragging&&event.key==="Escape"){event.preventDefault();clearSectionDrag();return}
-        if(state.keyboardDragging&&["ArrowUp","ArrowDown"].includes(event.key)){moveKeyboardSection(event);return}
-        if(state.keyboardDragging&&(isSpaceKey(event)||event.key==="Enter")){event.preventDefault();commitSectionDrop(state.sectionDropIndex);return}
-        beginKeyboardSectionDrag(button,event)
-      });
     });
     if(!root.dataset.sectionDragBound){
       root.addEventListener("pointermove",handleSectionPointerMove,{passive:false});
       root.addEventListener("pointerup",handleSectionPointerUp,{passive:false});
       root.addEventListener("pointercancel",handleSectionPointerCancel,{passive:false});
       root.addEventListener("lostpointercapture",handleSectionPointerCancel,{passive:false});
+      root.addEventListener("mousemove",handleSectionMouseMove,{passive:false});
+      root.addEventListener("mouseup",handleSectionMouseUp,{passive:false});
+      root.addEventListener("keydown",handleSectionKeydown);
       root.dataset.sectionDragBound="true";
     }
     root.querySelectorAll("[data-section-drop-index]").forEach((slot)=>{
