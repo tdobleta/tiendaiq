@@ -17,15 +17,16 @@ Aceptación:
 
 ## Prioridad P1
 
-### Dos modelos dentro de la aplicación
+### Dos modelos por generación de página
 
-El editor nuevo usa `section_page`, definiciones versionadas y `state.registry`. El editor anterior usa `arbol`, `registro.catalogo()` y otra biblioteca.
+El editor nuevo usa `section_page`, definiciones versionadas y `state.registry`. El editor anterior usa `arbol`, `registro.catalogo()` y otra biblioteca. La entrada `/editor-v3` ya redirige las páginas con `section_page` al editor nuevo, por lo que el problema principal es la deuda de legacy y la consistencia entre generaciones, no que una misma página cambie de modelo durante el uso normal.
 
 Aceptación:
 
-- todas las rutas activas deben converger en el modelo canónico;
+- todas las páginas nuevas y las páginas migradas deben converger en el modelo canónico;
 - un mismo tipo debe tener nombre, categoría, límites y preview consistentes;
-- ninguna ruta de producción debe insertar en un modelo paralelo;
+- ninguna ruta de producción debe insertar una página `section_page` en un modelo paralelo;
+- las páginas legacy deben tener una estrategia explícita de migración o permanecer claramente identificadas como legacy;
 - debe existir una prueba de ruta que confirme la convergencia.
 
 ### Protección anticipada
