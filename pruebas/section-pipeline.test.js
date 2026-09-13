@@ -14,7 +14,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 test("el código Shopify es la fuente inmutable del diseño y del editor", () => {
-  assert.equal(productInformation.sourceSha256, "342b54ab536ff9c1b27ce4d734595df38ad7d960b6f96b9c4c8aafb1712e1d10");
+  assert.equal(productInformation.sourceSha256, "e2a05193e05e93c63bbea9b03c835316a000ee212893cc95686d82af2bea7486");
   assert.equal(sha256(productInformation.source), productInformation.sourceSha256);
   assert.equal(productInformation.schema.settings.length, 38);
   assert.equal(productInformation.schema.settings.filter((setting) => setting.id).length, 37);
@@ -412,7 +412,7 @@ test("la vista del editor ejecuta la misma fuente Liquid con datos Shopify", asy
   assert.match(html, /class="product-hero-section-product-information__bundle-image"/);
   assert.match(html, /class="product-hero-section-product-information__thumbnail-image"/);
   assert.match(html, /data-variant-id="gid:\/\/shopify\/ProductVariant\/1"/);
-  assert.match(html, /class="product-hero-section-product-information__cta-form"[\s\S]*action="\/cart\/add"/);
+  assert.match(html, /class="product-hero-section-product-information__cta-form"[\s\S]*action="#"/);
   assert.match(html, /name="id" value="gid:\/\/shopify\/ProductVariant\/1"/);
   assert.match(html, /name="quantity" value="1" data-cart-quantity/);
   assert.match(html, /<button type="submit"[\s\S]*class="product-hero-section-product-information__cta"/);
@@ -423,6 +423,8 @@ test("la vista del editor ejecuta la misma fuente Liquid con datos Shopify", asy
   assert.match(html, /class="tiq-editor-highlight"/);
   assert.match(html, /outlineId:editable\.dataset\.tiqOutlineId\|\|null/);
   assert.match(html, /if\(interactive&&interactive\.tagName==="A"\)event\.preventDefault\(\)/);
+  const sectionSource = fs.readFileSync(path.join(__dirname, "../src/section-pipeline/sources/product-information-v1/section.liquid"), "utf8");
+  assert.match(sectionSource, /form\.getAttribute\('action'\) === '#'[\s\S]*tiq-preview-cart/);
 });
 
 test("cada control visual declara un destino semántico para hover y clic", () => {

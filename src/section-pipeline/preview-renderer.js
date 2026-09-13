@@ -120,7 +120,10 @@ async function renderSectionPage(page) {
     const html = await engine.parseAndRender(liquidWithoutSchema(definition.source), {
       section: { id: section.id, settings: section.instance.settings, blocks },
       product: productForPreview(page.productSnapshot),
-      routes: { cart_add_url: "/cart/add" }
+      // El preview vive en el origen de TiendaIQ, no en el dominio de la
+      // tienda. Nunca debe enviar el formulario a una ruta de carrito de la
+      // app; la versión publicada usa el endpoint real de Shopify.
+      routes: { cart_add_url: "#" }
     });
     rendered.push(`<div data-tiq-section-id="${escapeAttribute(section.id)}">${html}</div>`);
   }
