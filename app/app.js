@@ -1005,6 +1005,7 @@
   }
 
   function elegirProducto(id) {
+    if (estado.producto?.id !== id) estado.paginaExistenteId = null;
     estado.producto = estado.productos.find((p) => p.id === id);
     if (estado.producto && estado.pantalla === "lista") pantallaLista();
   }
@@ -1126,6 +1127,11 @@
     estado.anguloPreset ||= "problema";
     estado.idiomaPagina ||= "es";
 
+    const paginasExistentes = Array.isArray(p.paginas) ? p.paginas : [];
+    if (!paginasExistentes.some((pagina) => String(pagina.id) === String(estado.paginaExistenteId))) {
+      estado.paginaExistenteId = paginasExistentes[0]?.id || null;
+    }
+
     const audiencia = estado.audienciaPagina;
     const preset = estado.anguloPreset;
     const detalleInicial = estado.anguloExtra || "";
@@ -1195,7 +1201,16 @@
                 <section class="piloto-strategy__summary"><span>ESTRATEGIA ELEGIDA</span><div class="strategy-chips"><span id="chip-audiencia">${esc(audienciaTexto[audiencia] || "Unisex")}</span><span id="chip-angulo">${esc(textoAngulo(preset))}</span></div><p>La plantilla del próximo paso usa estas decisiones como guía inicial.</p></section>
                 <section class="piloto-strategy__settings"><label>Idioma<s-select id="idioma" label="Idioma" labelAccessibilityVisibility="exclusive" value="${esc(estado.idiomaPagina || "es")}"><s-option value="es">Español</s-option><s-option value="en">English</s-option><s-option value="pt">Português</s-option></s-select></label><label>Color de acento<div id="tema-previo">${swatchesTema(estado.temaElegido === "auto" ? null : estado.temaElegido)}</div></label></section>
                 <section class="piloto-strategy__media"><span>MEDIOS DEL PRODUCTO</span><div class="medios medios--compactos" id="medios"><span class="ayuda">Cargando…</span></div><p id="nota-medios"></p></section>
-                ${p.estado ? `<s-button id="abrir">Editar una página existente${p.cantidad_paginas > 1 ? ` (${p.cantidad_paginas})` : ""}</s-button>` : ""}
+                ${paginasExistentes.length ? `
+                  <section class="piloto-strategy__existing" aria-label="Páginas existentes">
+                    <span>YA TENÉS PÁGINAS PARA ESTE PRODUCTO</span>
+                    <label>Elegí cuál querés editar
+                      <s-select id="pagina-existente" label="Página existente" labelAccessibilityVisibility="exclusive" value="${esc(String(estado.paginaExistenteId || ""))}">
+                        ${paginasExistentes.map((pagina, index) => `<s-option value="${esc(String(pagina.id))}">${esc(pagina.titulo || `Página ${index + 1}`)} · ${esc(ESTADO_ETQ[pagina.estado] || pagina.estado || "borrador")} · ${esc(fechaCorta(pagina.actualizado))}</s-option>`).join("")}
+                      </s-select>
+                    </label>
+                    <s-button id="abrir">Editar la página seleccionada</s-button>
+                  </section>` : ""}
               </aside>
             </div>
           </section>
@@ -1243,6 +1258,8 @@
     if (extra) extra.oninput = syncAngulo;
     const idioma = $("idioma");
     if (idioma) idioma.onchange = () => { estado.idiomaPagina = idioma.value || "es"; };
+    const paginaExistente = $("pagina-existente");
+    if (paginaExistente) paginaExistente.onchange = () => { estado.paginaExistenteId = paginaExistente.value || null; };
     // Swatches de color (opción previa): guarda la elección para el generado.
     const tp = $("tema-previo");
     if (tp) tp.onclick = (e) => {
@@ -1606,10 +1623,16 @@
   // ---------- abrir una página ya generada (sin gastar generación) ----------
 
   async function abrirExistente() {
-    const id = estado.producto.id.split("/").pop();
+    const paginas = Array.isArray(estado.producto?.paginas) ? estado.producto.paginas : [];
+    const id = estado.paginaExistenteId || paginas[0]?.id;
+    if (!id || !/^page-[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(id))) {
+      ir("paginas");
+      requestAnimationFrame(() => vista.insertAdjacentHTML("afterbegin", `<div class="error">${ico("x","ico--banner")} No encontramos una página existente válida para este producto.</div>`));
+      return;
+    }
     vista.innerHTML = `<div class="generando"><div class="giro"></div><h2>Abriendo la página…</h2></div>`;
     try {
-      estado.pagina = await api(`/paginas/${id}`);
+      estado.pagina = await api(`/paginas/${encodeURIComponent(id)}`);
       abrirEditorV3(estado.pagina.id);
     } catch (e) {
       ir("informacion");

@@ -19,3 +19,10 @@ test("el selector sólo ofrece las plantillas activas para creación", () => {
   assert.doesNotMatch(selectorSource, /id: "pagepilot"/);
   assert.doesNotMatch(selectorSource, /id: "pagepilot-blue"/);
 });
+
+test("editar una página existente usa el ID de la página, no el del producto", () => {
+  assert.match(appSource, /paginaExistenteId/);
+  assert.match(appSource, /data-id|id="pagina-existente"/);
+  assert.match(appSource, /api\(`\/paginas\/\$\{encodeURIComponent\(id\)\}`\)/);
+  assert.doesNotMatch(appSource.slice(appSource.indexOf("async function abrirExistente"), appSource.indexOf("// ---------- 3. preview", appSource.indexOf("async function abrirExistente"))), /producto\.id\.split\("\/"\)\.pop\(\)/);
+});

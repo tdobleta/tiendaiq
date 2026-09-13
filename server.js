@@ -1008,6 +1008,16 @@ async function api(req, res, url) {
           // pueden crear varias para este mismo producto.
           estado: paginas[0]?.estado ?? null,
           cantidad_paginas: paginas.length,
+          // Producto y página son recursos distintos. El asistente necesita
+          // los IDs de página para abrir exactamente la versión elegida.
+          paginas: paginas.map((pagina) => ({
+            id: pagina.id,
+            estado: pagina.estado,
+            actualizado: pagina.actualizado,
+            titulo: pagina.titulo,
+            imagen: pagina.imagen,
+            url_publica: pagina.url_publica
+          })),
           opciones: (p.options || []).map((o) => ({ nombre: o.name, valores: o.values || [] })),
           variantes: (p.variants?.edges || []).map((e) => ({
             id: e.node.id,
