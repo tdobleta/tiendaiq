@@ -63,13 +63,14 @@ const TEMPLATE_REGISTRY = Object.freeze([
     version: 1,
     legacyStyle: "section-page-v1",
     rendererKey: "section-page-v1",
-    compositionKey: "section-page-v1",
+    compositionKey: "section-page-base-v1",
     creation: Object.freeze({
       name: "Base equilibrada",
-      description: "Producto primero, beneficios, recorrido y prueba social.",
-      tags: ["Producto real", "Conversión", "Prueba social"],
+      description: "Una sección base editable para probar el editor.",
+      tags: ["Producto real", "Editor de secciones", "Conversión"],
       theme: "greens"
     }),
+    creationEnabled: true,
     status: "active"
   }),
   Object.freeze({
@@ -84,6 +85,7 @@ const TEMPLATE_REGISTRY = Object.freeze([
       tags: ["Reseñas primero", "Carruseles", "Conversión"],
       theme: "social"
     }),
+    creationEnabled: false,
     status: "active"
   }),
   Object.freeze({
@@ -98,6 +100,7 @@ const TEMPLATE_REGISTRY = Object.freeze([
       tags: ["Beneficios", "Timeline", "Claridad"],
       theme: "aura"
     }),
+    creationEnabled: false,
     status: "active"
   }),
   Object.freeze({
@@ -112,6 +115,7 @@ const TEMPLATE_REGISTRY = Object.freeze([
       tags: ["Narrativa", "Contenido completo", "Confianza"],
       theme: "editorial"
     }),
+    creationEnabled: false,
     status: "active"
   }),
   Object.freeze({
@@ -176,7 +180,7 @@ function resolveTemplateForCreation(style = "section-page-v1") {
   // no es una opción comercial ni puede iniciar trabajos nuevos. Así evitamos
   // que una generación nueva herede superficies de contenido que ya no
   // mantenemos ni certificamos.
-  if (entry.status !== "active") {
+  if (entry.status !== "active" || entry.creationEnabled === false) {
     throw new TemplateContractError("La plantilla solicitada ya no está disponible para páginas nuevas");
   }
   return entry;
@@ -198,7 +202,7 @@ function templateMetadata(entry) {
 
 function creationTemplates() {
   return TEMPLATE_REGISTRY
-    .filter((entry) => entry.status === "active" && entry.creation)
+    .filter((entry) => entry.status === "active" && entry.creation && entry.creationEnabled !== false)
     .map((entry) => ({
       id: entry.legacyStyle,
       template: descriptor(entry),

@@ -12,10 +12,7 @@ const {
 
 test("las plantillas activas resuelven a un descriptor versionado estable", () => {
   const expected = [
-    ["section-page-v1", "tiendaiq/section-page", "section-page-v1", "active"],
-    ["section-page-social-v1", "tiendaiq/section-page-social", "section-page-v1", "active"],
-    ["section-page-benefits-v1", "tiendaiq/section-page-benefits", "section-page-v1", "active"],
-    ["section-page-story-v1", "tiendaiq/section-page-story", "section-page-v1", "active"]
+    ["section-page-v1", "tiendaiq/section-page", "section-page-v1", "active"]
   ];
 
   for (const [style, id, rendererKey, status] of expected) {
@@ -30,15 +27,21 @@ test("las plantillas activas resuelven a un descriptor versionado estable", () =
 test("el catálogo de creación sólo expone plantillas con composición real", () => {
   const templates = creationTemplates();
   assert.deepEqual(templates.map((item) => item.id), [
-    "section-page-v1",
-    "section-page-social-v1",
-    "section-page-benefits-v1",
-    "section-page-story-v1"
+    "section-page-v1"
   ]);
   for (const item of templates) {
     assert.ok(item.compositionKey);
     assert.ok(item.name);
     assert.ok(Array.isArray(item.tags) && item.tags.length > 0);
+  }
+});
+
+test("las composiciones futuras permanecen registradas pero no aparecen durante la certificación", () => {
+  for (const style of ["section-page-social-v1", "section-page-benefits-v1", "section-page-story-v1"]) {
+    assert.throws(
+      () => resolveTemplateForCreation(style),
+      (error) => error instanceof TemplateContractError && error.code === "PAGE_TEMPLATE_INVALID"
+    );
   }
 });
 

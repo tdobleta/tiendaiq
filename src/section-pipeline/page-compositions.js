@@ -10,6 +10,14 @@ const DEFAULT_SECTION_PAGE_COMPOSITION_V1 = Object.freeze([
   Object.freeze({ id: "testimonios-con-imagenes", version: 1 })
 ]);
 
+// Semilla deliberadamente mínima para validar el editor con una página nueva.
+// La composición completa permanece disponible como contrato histórico, pero
+// no se ofrece en el flujo comercial mientras se certifican las interacciones
+// de agregar, anidar y reordenar secciones.
+const SECTION_PAGE_BASE_COMPOSITION_V1 = Object.freeze([
+  Object.freeze({ id: "product-information", version: 1, required: true })
+]);
+
 // La demostración expone una instancia adicional de una composición reusable
 // para validar el flujo completo sin alterar todavía la plantilla de producción.
 const DEMO_SECTION_PAGE_COMPOSITION_V1 = Object.freeze([
@@ -48,6 +56,7 @@ const SECTION_PAGE_STORY_COMPOSITION_V1 = Object.freeze([
 
 const COMPOSITIONS = Object.freeze({
   "section-page-v1": DEFAULT_SECTION_PAGE_COMPOSITION_V1,
+  "section-page-base-v1": SECTION_PAGE_BASE_COMPOSITION_V1,
   "section-page-social-v1": SECTION_PAGE_SOCIAL_COMPOSITION_V1,
   "section-page-benefits-v1": SECTION_PAGE_BENEFITS_COMPOSITION_V1,
   "section-page-story-v1": SECTION_PAGE_STORY_COMPOSITION_V1
@@ -62,6 +71,7 @@ function resolvePageComposition(key = "section-page-v1") {
 module.exports = Object.freeze({
   COMPOSITIONS,
   DEFAULT_SECTION_PAGE_COMPOSITION_V1,
+  SECTION_PAGE_BASE_COMPOSITION_V1,
   DEMO_SECTION_PAGE_COMPOSITION_V1,
   SECTION_PAGE_SOCIAL_COMPOSITION_V1,
   SECTION_PAGE_BENEFITS_COMPOSITION_V1,

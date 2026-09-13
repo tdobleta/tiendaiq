@@ -1195,7 +1195,7 @@
                 <section class="piloto-strategy__summary"><span>ESTRATEGIA ELEGIDA</span><div class="strategy-chips"><span id="chip-audiencia">${esc(audienciaTexto[audiencia] || "Unisex")}</span><span id="chip-angulo">${esc(textoAngulo(preset))}</span></div><p>La plantilla del próximo paso usa estas decisiones como guía inicial.</p></section>
                 <section class="piloto-strategy__settings"><label>Idioma<s-select id="idioma" label="Idioma" labelAccessibilityVisibility="exclusive" value="${esc(estado.idiomaPagina || "es")}"><s-option value="es">Español</s-option><s-option value="en">English</s-option><s-option value="pt">Português</s-option></s-select></label><label>Color de acento<div id="tema-previo">${swatchesTema(estado.temaElegido === "auto" ? null : estado.temaElegido)}</div></label></section>
                 <section class="piloto-strategy__media"><span>MEDIOS DEL PRODUCTO</span><div class="medios medios--compactos" id="medios"><span class="ayuda">Cargando…</span></div><p id="nota-medios"></p></section>
-                ${p.estado ? `<s-button id="abrir">Editar la página existente</s-button>` : ""}
+                ${p.estado ? `<s-button id="abrir">Editar una página existente${p.cantidad_paginas > 1 ? ` (${p.cantidad_paginas})` : ""}</s-button>` : ""}
               </aside>
             </div>
           </section>
@@ -1283,7 +1283,9 @@
         : "Cuando subas fotos al producto en Shopify, regenerá la página y se llenan solas.";
     }
     const meta = $("f-meta");
-    if (meta) meta.textContent = p.estado ? `Ya tiene página · ${p.estado}` : "Sin página todavía";
+    if (meta) meta.textContent = p.estado
+      ? `${p.cantidad_paginas > 1 ? `${p.cantidad_paginas} páginas` : "Ya tiene página"} · ${p.estado}`
+      : "Sin página todavía";
     const desc = $("f-desc");
     if (desc) desc.textContent = "La descripción del proveedor se lee al generar y no se muestra al cliente.";
   }
@@ -1324,6 +1326,12 @@
         activa: true,
         tipo: tpl.theme || "section-page-v1"
       }));
+      // Durante la certificación sólo hay una plantilla habilitada. Si quedó
+      // un estilo viejo en el estado de una sesión anterior, no lo dejamos
+      // bloquear el flujo: la única opción válida queda seleccionada.
+      if (!plantillas.some((tpl) => tpl.id === estado.modeloPagina)) {
+        estado.modeloPagina = plantillas.length === 1 ? plantillas[0].id : null;
+      }
     } catch (error) {
       estado.error = error.message;
     }
@@ -1416,6 +1424,11 @@
   }
 
   async function aceptarGeneracionPendiente(pending) {
+    // Descarta restos de sesiones anteriores que guardaban el ID numérico del
+    // producto como pageId. Ese valor ya no identifica una página nueva.
+    if (pending.pageId && !/^page-[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(pending.pageId))) {
+      pending.pageId = null;
+    }
     if (!pending.jobId && !pending.pageId) {
       const respuesta = await api("/paginas", { method: "POST", body: pending.body });
       // Con la admisión de IA cerrada el servidor crea igualmente un borrador
@@ -1427,6 +1440,7 @@
         pending.generation = respuesta.generation || null;
       } else if (respuesta.job?.id) {
         pending.jobId = respuesta.job.id;
+        pending.pageId = respuesta.pageId || respuesta.job.pageId || pending.pageId || null;
       } else {
         throw new Error("El servidor no devolvió una página ni un trabajo de generación.");
       }
@@ -1453,7 +1467,8 @@
       return estado.pagina;
     }
     const completed = await esperarJob(pending.jobId, { timeoutMs: 6 * 60 * 1000 });
-    const pageId = completed.result?.pageId || String(pending.body.producto_id).split("/").pop();
+    const pageId = completed.result?.pageId || pending.pageId || String(pending.body.producto_id).split("/").pop();
+    pending.pageId = pageId;
     estado.pagina = await api(`/paginas/${pageId}`);
     if (pending.tema && pending.tema !== "auto" && estado.pagina?.data) {
       (estado.pagina.data.global ||= {}).tema = pending.tema;
@@ -1510,29 +1525,12 @@
       abrirEditorV3(estado.pagina.id);
     } catch (e) {
       clearInterval(reloj);
-      // Un producto con página existente no es un fallo de IA ni debe caer en
-      // el fallback que abre el documento guardado. El backend protege esta
-      // operación con PAGE_ALREADY_EXISTS; aquí mostramos el estado real y
-      // devolvemos al paso de estrategia para que el merchant elija editar la
-      // página existente o haga una sustitución explícita.
-      if (e.code === "PAGE_ALREADY_EXISTS" || e.status === 409) {
-        limpiarGeneracionPendiente();
-        estado.error = e.message || "Este producto ya tiene una página.";
-        ir("informacion");
-        requestAnimationFrame(() => {
-          vista.insertAdjacentHTML(
-            "afterbegin",
-            `<div class="error" role="alert">${ico("x", "ico--banner")} ${esc(estado.error)}</div>`
-          );
-        });
-        return;
-      }
       // El contrato nuevo se prepara antes de la IA. Si el copy asistido
       // falla, abrimos igualmente esa página editable; jamás hacemos fallback
       // al documento o al editor anteriores.
       if (body.estilo === "section-page-v1") {
         try {
-          const pageId = String(body.producto_id).split("/").pop();
+          const pageId = pending.pageId || String(body.producto_id).split("/").pop();
           const fallback = await api(`/paginas/${pageId}`);
           if (fallback?.data?.section_page) {
             limpiarGeneracionPendiente();

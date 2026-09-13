@@ -37,6 +37,13 @@ function pageIdFromProduct(productId) {
   return String(productId || "").split("/").pop();
 }
 
+function pageIdForJob(payload = {}) {
+  // Los jobs nuevos reciben el id de su página al admitir la creación. El
+  // fallback mantiene recuperables los jobs históricos que aún sólo guardaban
+  // productId.
+  return String(payload.pageId || "").trim() || pageIdFromProduct(payload.productId);
+}
+
 function ambiguousProviderStateError(message, cause) {
   const error = new Error(message, cause ? { cause } : undefined);
   error.code = "GENERATION_PROVIDER_AMBIGUOUS";
@@ -67,7 +74,7 @@ function createGeneratePageHandler({ sessions, generations, pages, generate, met
 
     async run(job, { signal } = {}) {
       const { reservationId, productId, idioma = "es", angulo = "", estilo = "section-page-v1", requestId = null } = job.payload || {};
-      const pageId = pageIdFromProduct(productId);
+      const pageId = pageIdForJob(job.payload);
       if (!reservationId || !pageId) {
         const error = new Error("El job de generación está incompleto");
         error.nonRetryable = true;

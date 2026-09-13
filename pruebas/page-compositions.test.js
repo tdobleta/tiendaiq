@@ -9,6 +9,7 @@ const {
 } = require("../src/section-pipeline/page-pipeline");
 const {
   DEFAULT_SECTION_PAGE_COMPOSITION_V1,
+  SECTION_PAGE_BASE_COMPOSITION_V1,
   DEMO_SECTION_PAGE_COMPOSITION_V1,
   SECTION_PAGE_SOCIAL_COMPOSITION_V1,
   SECTION_PAGE_BENEFITS_COMPOSITION_V1,
@@ -40,6 +41,12 @@ test("la plantilla real de página crea una composición versionada de secciones
   assert.equal(page.sections[2].instance.settings.image, product.media[0].url);
   assert.equal(page.sections[3].instance.blocks.length, 4);
   assert.equal(validatePage(page).sections.length, 4);
+});
+
+test("la plantilla base habilitada para nuevas pruebas nace con una sola sección", () => {
+  const page = createProductPage({ product, composition: "section-page-base-v1" });
+  assert.deepEqual(page.sections.map((section) => section.definition.id), ["product-information"]);
+  assert.deepEqual(resolvePageComposition("section-page-base-v1"), SECTION_PAGE_BASE_COMPOSITION_V1);
 });
 
 test("el comportamiento anterior sigue disponible para páginas que piden una sola sección", () => {
