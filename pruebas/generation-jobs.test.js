@@ -310,6 +310,33 @@ describe("GeneratePageHandler", () => {
     assert.equal(finalized.reservationId, "reservation-1");
   });
 
+  test("un job nuevo conserva el id de página independiente del producto", async () => {
+    let finalized;
+    const handler = createGeneratePageHandler({
+      sessions: { async get() { return { tienda: tenant.tenantId, token: "token" }; } },
+      generations: {
+        async getReservation() { return { status: "reserved" }; },
+        async transitionProvider() { return { started: true, state: "provider_in_flight", attemptId: "attempt-new-page" }; },
+        async finalize(context, value) { finalized = value; },
+        async release() {}
+      },
+      pages: { async get() { return null; } },
+      async generate(productId, session, options) {
+        await options.beforeProviderCall();
+        return { data: { titulo: "IA" }, urls: {}, avisos: [], uso: {} };
+      },
+      metrics() {}
+    });
+
+    const result = await handler.run({
+      ...baseJob,
+      payload: { ...baseJob.payload, pageId: "page-una-creacion-nueva" }
+    });
+    assert.equal(result.pageId, "page-una-creacion-nueva");
+    assert.equal(finalized.pageId, "page-una-creacion-nueva");
+    assert.equal(finalized.page.id, "page-una-creacion-nueva");
+  });
+
   test("captura la revisión de la página y la incrementa al confirmar una generación", async () => {
     let finalized;
     const handler = createGeneratePageHandler({

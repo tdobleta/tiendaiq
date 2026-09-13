@@ -97,6 +97,7 @@ const { productoPreviewDePagina } = require("./nucleo/producto-preview");
 const { publicarDocumentoV1 } = require("./nucleo/publicar-v1");
 const { createProductPage, editorRegistry, instantiateSection, validatePage: validateSectionPage } = require("./src/section-pipeline/page-pipeline");
 const { creationTemplates } = require("./src/domain/template-registry");
+const { pageIdFromCreationRequest, REQUEST_ID } = require("./src/domain/page-identity");
 const { DEMO_SECTION_PAGE_COMPOSITION_V1 } = require("./src/section-pipeline/page-compositions");
 const { applyPageTransition } = require("./src/section-pipeline/page-transition");
 const { renderSectionPage } = require("./src/section-pipeline/preview-renderer");
@@ -982,24 +983,39 @@ async function api(req, res, url) {
   // GET /api/productos
   if (req.method === "GET" && ruta === "/api/productos") {
     const productos = await listarProductos(sesion);
-    const paginas = Object.fromEntries((await listarPaginas(sesion.tenant)).map((p) => [p.id, p.estado]));
+    const paginasPorProducto = new Map();
+    for (const pagina of await listarPaginas(sesion.tenant)) {
+      const productoId = String(pagina.shopify_product_id || pagina.data?.fuente?.shopify_product_id || "");
+      if (!productoId) continue;
+      const lista = paginasPorProducto.get(productoId) || [];
+      lista.push(pagina);
+      paginasPorProducto.set(productoId, lista);
+    }
     return json(
       res,
       200,
-      productos.map((p) => ({
-        id: p.id,
-        titulo: p.title,
-        imagen: p.featuredMedia?.preview?.image?.url ?? null,
-        precio: p.priceRangeV2?.minVariantPrice?.amount ?? null,
-        moneda: p.priceRangeV2?.minVariantPrice?.currencyCode ?? null,
-        estado: paginas[idDePagina(p.id)] ?? null,
-        opciones: (p.options || []).map((o) => ({ nombre: o.name, valores: o.values || [] })),
-        variantes: (p.variants?.edges || []).map((e) => ({
-          id: e.node.id,
-          titulo: e.node.title,
-          disponible: e.node.availableForSale !== false
-        }))
-      }))
+      productos.map((p) => {
+        const paginas = [...(paginasPorProducto.get(String(p.id)) || [])]
+          .sort((a, b) => String(b.actualizado || "").localeCompare(String(a.actualizado || "")));
+        return {
+          id: p.id,
+          titulo: p.title,
+          imagen: p.featuredMedia?.preview?.image?.url ?? null,
+          precio: p.priceRangeV2?.minVariantPrice?.amount ?? null,
+          moneda: p.priceRangeV2?.minVariantPrice?.currencyCode ?? null,
+          // Compatibilidad con las tarjetas actuales: el estado representa la
+          // página más reciente, mientras cantidad_paginas deja claro que se
+          // pueden crear varias para este mismo producto.
+          estado: paginas[0]?.estado ?? null,
+          cantidad_paginas: paginas.length,
+          opciones: (p.options || []).map((o) => ({ nombre: o.name, valores: o.values || [] })),
+          variantes: (p.variants?.edges || []).map((e) => ({
+            id: e.node.id,
+            titulo: e.node.title,
+            disponible: e.node.availableForSale !== false
+          }))
+        };
+      })
     );
   }
 
@@ -1141,7 +1157,7 @@ async function api(req, res, url) {
       field_id = "",
       request_id
     } = await leerCuerpo(req, 40_000);
-    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(request_id || "")) {
+    if (!REQUEST_ID.test(request_id || "")) {
       return json(res, 400, { error: "Falta un request_id válido para editar de forma segura" });
     }
     if (String(texto).length > 10_000 || String(instrucciones).length > 2_000 || String(contexto).length > 15_000) {
@@ -1338,18 +1354,13 @@ async function api(req, res, url) {
     // un timeout o una respuesta inválida del proveedor nunca devuelve al
     // merchant al editor heredado: queda un borrador nuevo, completo y
     // editable, construido únicamente con datos vivos de Shopify.
-    const pageId = idDePagina(producto_id);
+    // El request_id da idempotencia sin confundir producto con página: cada
+    // acción nueva crea un recurso independiente aunque use el mismo
+    // producto. Un reintento de la misma acción vuelve al mismo borrador.
+    const pageId = pageIdFromCreationRequest(request_id);
     let existente = await leerPagina(sesion.tenant, pageId);
     let sectionDraftCreated = false;
     if (requestedTemplate.rendererKey === "section-page-v1") {
-      // Crear una página es idempotente por request_id. Una solicitud nueva
-      // nunca reemplaza silenciosamente una página/draft existente.
-      if (existente && existente.generacion?.request_id !== request_id) {
-        return json(res, 409, {
-          error: "Ya existe una página para este producto. Editá la existente o iniciá una sustitución explícita.",
-          code: "PAGE_ALREADY_EXISTS"
-        });
-      }
       try {
         if (!existente) {
           // La composición canónica se materializa una sola vez. El insert
@@ -1370,10 +1381,10 @@ async function api(req, res, url) {
           const result = await crearPaginaSiNoExisteDB(sesion.tenant, pageId, candidato);
           existente = result.page;
           sectionDraftCreated = result.created;
-          if (existente && existente.generacion?.request_id !== request_id) {
+          if (existente && existente.generacion?.request_id && existente.generacion.request_id !== request_id) {
             return json(res, 409, {
-              error: "Ya existe una página para este producto. Editá la existente o iniciá una sustitución explícita.",
-              code: "PAGE_ALREADY_EXISTS"
+              error: "No se pudo reservar un identificador único para la nueva página. Intentá nuevamente.",
+              code: "PAGE_CREATION_ID_COLLISION"
             });
           }
         }
@@ -1424,7 +1435,7 @@ async function api(req, res, url) {
 
     const plan = await estadoPlan(sesion);
     const { job } = await encolarGeneracionDB(sesion.tenant, {
-      payload: { productId: producto_id, idioma, angulo, estilo, requestId: request_id },
+      payload: { productId: producto_id, pageId, idioma, angulo, estilo, requestId: request_id },
       idempotencyKey: `generate:${request_id}`,
       period: mesActual(),
       limit: plan.limite,
@@ -1432,7 +1443,7 @@ async function api(req, res, url) {
       maxPending: GENERATION_QUEUE_MAX_PER_TENANT,
       maxGlobalPending: GENERATION_QUEUE_MAX_GLOBAL
     });
-    return json(res, 202, { job: jobPublico(job) });
+    return json(res, 202, { job: jobPublico(job), ...(sectionDraftCreated ? { pageId } : {}) });
   }
 
   // PUT /api/paginas/:id — el editor
