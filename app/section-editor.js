@@ -142,6 +142,19 @@
     const sectionId=state.draggingSectionId;const move=sectionId&&sectionMoveTarget(sectionId,targetIndex);if(!move){clearSectionDrag();return false}const moved=reorderSectionToIndex(sectionId,move.finalIndex);clearSectionDrag();if(moved)notify("Sección reordenada.");return moved
   }
   function reorderSectionByDrop(slot,event){if(!state.draggingSectionId)return;event.preventDefault();commitSectionDrop(Number(slot.dataset.sectionDropIndex))}
+  function sectionRowDropIndex(button,event){
+    const targetIndex=state.page.sections.findIndex((section)=>section.id===button.dataset.sectionDrag);if(targetIndex<1)return null;
+    const rect=button.getBoundingClientRect();return event.clientY<rect.top+rect.height/2?targetIndex:targetIndex+1
+  }
+  function reorderSectionByRow(button,event){
+    if(!state.draggingSectionId||state.draggingSectionId===button.dataset.sectionDrag)return;
+    const targetIndex=sectionRowDropIndex(button,event);if(targetIndex===null||!sectionMoveTarget(state.draggingSectionId,targetIndex))return;
+    event.preventDefault();state.sectionDropIndex=targetIndex;syncSectionDragUI()
+  }
+  function dropSectionOnRow(button,event){
+    if(!state.draggingSectionId||state.draggingSectionId===button.dataset.sectionDrag)return;
+    const targetIndex=sectionRowDropIndex(button,event);if(targetIndex===null)return;event.preventDefault();commitSectionDrop(targetIndex)
+  }
   function moveSelectedSection(direction){const {section,definition:entry}=selected();if(!section||entry?.capabilities?.reorderable===false)return;const index=state.page.sections.indexOf(section);const nextIndex=index+direction;if(index<0||nextIndex<0||nextIndex>=state.page.sections.length)return;if(!reorderSectionToIndex(section.id,nextIndex))notify("Esa sección está protegida y no se puede atravesar.")}
   function inspectorHtml(){
     const {section,block,outline,definition:entry}=selected();if(!section||!entry)return`<div class="se__notice">Seleccioná una sección.</div>`;
@@ -250,6 +263,8 @@
     root.querySelectorAll("[data-section-drag]").forEach((button)=>{
       button.addEventListener("dragstart",(event)=>beginSectionDrag(button,event));
       button.addEventListener("dragend",clearSectionDrag);
+      button.addEventListener("dragover",(event)=>reorderSectionByRow(button,event));
+      button.addEventListener("drop",(event)=>dropSectionOnRow(button,event));
       button.addEventListener("keydown",(event)=>{
         if(state.keyboardDragging&&event.key==="Escape"){event.preventDefault();clearSectionDrag();return}
         if(state.keyboardDragging&&["ArrowUp","ArrowDown"].includes(event.key)){moveKeyboardSection(event);return}
