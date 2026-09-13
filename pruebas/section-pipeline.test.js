@@ -486,6 +486,9 @@ test("las secciones se pueden reordenar sobre el mismo modelo y con teclado", ()
   assert.match(source, /state\.page\.sections\.splice\(move\.finalIndex,0,moving\)/);
   assert.match(source, /event\.key===\"ArrowUp\"\?-1:event\.key===\"ArrowDown\"\?1/);
   assert.match(source, /commitSectionDrop\(state\.sectionDropIndex\)/);
+  assert.match(source, /function sectionRowDropIndex\(button,event\)/);
+  assert.match(source, /button\.addEventListener\(\"dragover\",\(event\)=>reorderSectionByRow\(button,event\)\)/);
+  assert.match(source, /button\.addEventListener\(\"drop\",\(event\)=>dropSectionOnRow\(button,event\)\)/);
   assert.match(source, /capabilities\?\.reorderable===false/);
   assert.match(css, /\.se\.is-section-dragging \.se__section-drop-slot\.is-active/);
 });
