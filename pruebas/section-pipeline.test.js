@@ -487,6 +487,12 @@ test("las secciones se pueden reordenar sobre el mismo modelo y con teclado", ()
   assert.match(source, /event\.key===\"ArrowUp\"\?-1:event\.key===\"ArrowDown\"\?1/);
   assert.match(source, /commitSectionDrop\(state\.sectionDropIndex\)/);
   assert.match(source, /function sectionRowDropIndex\(button,event\)/);
+  assert.match(source, /function pointerSectionTarget\(event\)/);
+  assert.match(source, /function handleSectionPointerMove\(event\)/);
+  assert.match(source, /function handleSectionPointerUp\(event\)/);
+  assert.match(source, /state\.pointerDrag=\{sectionId:button\.dataset\.sectionDrag/);
+  assert.match(source, /root\.addEventListener\("pointermove",handleSectionPointerMove\)/);
+  assert.match(source, /root\.addEventListener\("pointerup",handleSectionPointerUp\)/);
   assert.match(source, /button\.addEventListener\(\"dragover\",\(event\)=>reorderSectionByRow\(button,event\)\)/);
   assert.match(source, /button\.addEventListener\(\"drop\",\(event\)=>dropSectionOnRow\(button,event\)\)/);
   assert.match(source, /capabilities\?\.reorderable===false/);
