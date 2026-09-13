@@ -20,11 +20,19 @@
 9. La nueva instancia recibió un id distinto (`section-a29f909d-daa2-4ba3-ae68-14ed9365e88c`), lo que confirma independencia de identidad.
 10. `Deshacer` devolvió el árbol a las tres secciones originales y volvió a deshabilitarse; no se guardó la prueba.
 
+## Recorrido de agregar bloque
+
+1. Se volvió a seleccionar `Testimonios con imágenes`.
+2. `Agregar bloque` abrió una biblioteca específica de esa sección y ofreció `Testimonio`.
+3. Al añadirlo, el contador de la sección pasó de `(8)` a `(9)` y el inspector mantuvo la sección como destino.
+4. `Deshacer` devolvió el contador a `(8)` y dejó staging sin cambios pendientes.
+
 ## Resultado
 
 - `[O]` El botón contextual no es un botón aislado: abre la biblioteca común y transporta un índice de inserción.
 - `[O]` La sección se inserta en el lugar correcto respecto de la sección seleccionada.
 - `[O]` La instancia nueva es independiente y el historial revierte la operación completa.
+- `[O]` `Agregar bloque` usa el destino de la sección seleccionada y actualiza su contador; no agrega el bloque a otra sección raíz.
 - `[O]` La interacción quedó limitada a staging y se restauró el estado inicial.
 - `[P]` Sigue pendiente certificar el gesto de arrastre con un mouse físico auténtico. La automatización disponible selecciona correctamente las filas, pero su método de drag dentro del iframe no produjo una reordenación observable; no se marca como aprobado.
 
