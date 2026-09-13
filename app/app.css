@@ -4435,3 +4435,9 @@ body.sec-panel-abierto .constructor { padding-right: 394px; }
   .piloto-create__actions { margin-right: 14px; margin-left: 14px; flex-direction: column; }
   .piloto-create__actions > * { width: 100%; }
 }
+/* Selector explícito cuando un producto ya tiene varias páginas. */
+.piloto-strategy__existing{display:grid;gap:8px;padding:12px;border:1px solid #d9c8ff;border-radius:9px;background:#faf7ff}
+.piloto-strategy__existing>span{color:#7653ac;font-size:9px;font-weight:760;letter-spacing:.06em}
+.piloto-strategy__existing label{display:grid;gap:6px;color:#48404f;font-size:11px;font-weight:650}
+.piloto-strategy__existing s-select{width:100%;font-size:12px}
+.piloto-strategy__existing>s-button{width:100%}

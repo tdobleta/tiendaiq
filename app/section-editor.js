@@ -127,13 +127,14 @@
     root.querySelectorAll("[data-section-drag]").forEach((button)=>button.classList.toggle("is-dragging",button.dataset.sectionDrag===state.draggingSectionId));
     root.querySelectorAll("[data-section-drop-index]").forEach((slot)=>{const move=dragging&&sectionMoveTarget(state.draggingSectionId,Number(slot.dataset.sectionDropIndex));slot.classList.toggle("is-active",Boolean(move&&move.target===Number(slot.dataset.sectionDropIndex)))})
   }
-  function clearSectionDrag(){state.draggingSectionId=null;state.sectionDropIndex=null;state.keyboardDragging=false;syncSectionDragUI()}
+  function clearSectionDrag(){const pointer=state.pointerDrag;state.draggingSectionId=null;state.sectionDropIndex=null;state.keyboardDragging=false;state.pointerDrag=null;if(pointer?.button&&pointer.pointerId!=null){try{if(pointer.button.hasPointerCapture?.(pointer.pointerId))pointer.button.releasePointerCapture(pointer.pointerId)}catch{}}syncSectionDragUI()}
   function beginSectionDrag(button,event){
     const sectionId=button.dataset.sectionDrag;const index=state.page.sections.findIndex((section)=>section.id===sectionId);if(!sectionId||index<sectionOrderFloor()||definition(state.page.sections[index])?.capabilities?.protected===true||definition(state.page.sections[index])?.capabilities?.reorderable===false){event.preventDefault();return}
     state.draggingSectionId=sectionId;state.keyboardDragging=false;state.sectionDropIndex=null;if(event.dataTransfer){event.dataTransfer.effectAllowed="move";event.dataTransfer.setData("text/plain",sectionId)}syncSectionDragUI()
   }
+  function isSpaceKey(event){return event.key===" "||event.key==="Spacebar"||event.key==="Space"||event.code==="Space"}
   function beginKeyboardSectionDrag(button,event){
-    if(event.key!==" ")return;const sectionId=button.dataset.sectionDrag;if(!sectionId)return;const from=state.page.sections.findIndex((section)=>section.id===sectionId);if(from<sectionOrderFloor()||definition(state.page.sections[from])?.capabilities?.protected===true||definition(state.page.sections[from])?.capabilities?.reorderable===false)return;event.preventDefault();state.draggingSectionId=sectionId;state.sectionDropIndex=from;state.keyboardDragging=true;syncSectionDragUI();notify("Sección seleccionada. Usá ↑ y ↓ para moverla; espacio para soltar.")
+    if(!isSpaceKey(event))return;const sectionId=button.dataset.sectionDrag;if(!sectionId)return;const from=state.page.sections.findIndex((section)=>section.id===sectionId);if(from<sectionOrderFloor()||definition(state.page.sections[from])?.capabilities?.protected===true||definition(state.page.sections[from])?.capabilities?.reorderable===false)return;event.preventDefault();state.draggingSectionId=sectionId;state.sectionDropIndex=from;state.keyboardDragging=true;syncSectionDragUI();notify("Sección seleccionada. Usá ↑ y ↓ para moverla; espacio para soltar.")
   }
   function moveKeyboardSection(event){
     if(!state.keyboardDragging)return false;const delta=event.key==="ArrowUp"?-1:event.key==="ArrowDown"?1:0;if(!delta)return false;event.preventDefault();const from=state.page.sections.findIndex((section)=>section.id===state.draggingSectionId);const current=sectionMoveTarget(state.draggingSectionId,state.sectionDropIndex)?.finalIndex??from;const finalIndex=Math.max(sectionOrderFloor(),Math.min(state.page.sections.length-1,current+delta));state.sectionDropIndex=finalIndex>from?finalIndex+1:finalIndex;syncSectionDragUI();return true
@@ -297,13 +298,14 @@
       button.addEventListener("pointerdown",(event)=>{
         if(event.button!==0||event.isPrimary===false||state.keyboardDragging)return;
         state.pointerDrag={sectionId:button.dataset.sectionDrag,pointerId:event.pointerId,button,startX:event.clientX,startY:event.clientY,active:false};
+        try{button.setPointerCapture(event.pointerId)}catch{}
       });
       button.addEventListener("dragover",(event)=>reorderSectionByRow(button,event));
       button.addEventListener("drop",(event)=>dropSectionOnRow(button,event));
       button.addEventListener("keydown",(event)=>{
         if(state.keyboardDragging&&event.key==="Escape"){event.preventDefault();clearSectionDrag();return}
         if(state.keyboardDragging&&["ArrowUp","ArrowDown"].includes(event.key)){moveKeyboardSection(event);return}
-        if(state.keyboardDragging&&(event.key===" "||event.key==="Enter")){event.preventDefault();commitSectionDrop(state.sectionDropIndex);return}
+        if(state.keyboardDragging&&(isSpaceKey(event)||event.key==="Enter")){event.preventDefault();commitSectionDrop(state.sectionDropIndex);return}
         beginKeyboardSectionDrag(button,event)
       });
     });
