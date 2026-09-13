@@ -41,7 +41,22 @@
 - `[O]` La implementación publicada combinaba `draggable="true"` con el fallback de Pointer Events.
 - `[I]` Esa doble ruta podía dejar el gesto en el drag nativo y no entregar el ciclo de puntero que necesita el reordenamiento dentro del árbol.
 - `[R]` El PR #189 cambia las filas reordenables a `draggable="false"`, mantiene `aria-roledescription="sortable"` y deja Pointer Events como ruta principal; teclado y los eventos de fila conservan el mismo commit canónico.
-- `[P]` El PR debe desplegarse en staging y repetirse con mouse real antes de cerrar P0.
+- `[O]` El PR #196 integra la corrección de interacción y el release Partner Staging del SHA `2874c20915d17525171a748a2b2bb8a97715b507` terminó correctamente.
+
+## Repetición posterior al release
+
+1. Se creó una segunda instancia de `Imagen con beneficios` desde la biblioteca global, sin usar un botón aislado ni un índice hardcodeado.
+2. Se mantuvo pulsada `Imagen con texto` y se arrastró debajo de `Imagen con beneficios`; el árbol cambió inmediatamente y la vista previa reflejó el mismo orden.
+3. Se guardó el borrador, se recargó el editor y el orden persistió con el botón `Guardar` nuevamente deshabilitado.
+4. Se repitió el movimiento con foco: espacio, flecha y espacio; el orden cambió y se guardó correctamente.
+5. El CTA de compra dentro del preview mantuvo la URL del editor y mostró el aviso de que el carrito real se prueba en la tienda publicada; no se creó un pedido.
+
+## Resultado actualizado
+
+- `[O]` El gesto de mantener pulsada y arrastrar funciona en la instancia desplegada con el fallback de mouse, pointer events y drag nativo.
+- `[O]` El teclado ofrece una ruta equivalente y accesible para mover una sección.
+- `[O]` El orden de la barra lateral, la vista previa y el documento persistido usan el mismo modelo canónico.
+- `[P]` La compra real en storefront continúa pendiente: la tienda de staging está protegida y no se publicó contenido de esta página de prueba.
 
 ## Frontera de editor
 
