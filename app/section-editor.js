@@ -6,7 +6,7 @@
   const params=new URLSearchParams(location.search);
   const pageId=params.get("id");
   const demo=params.get("demo")==="1";
-  const state={page:null,registry:[],shopFiles:[],shopFilesPageInfo:{hasNextPage:false,endCursor:null},language:"es",selectedSection:null,selectedBlock:null,selectedOutline:null,expandedSections:new Set(),expandedOutline:new Set(),mobile:false,fullPreview:false,dirty:false,savedFingerprint:"",previewTimer:null,previewRequest:0,previewAbort:null,libraryOpen:false,libraryCategory:"Todas",insertTarget:null,sectionAdding:false,blockLibraryOpen:false,blockLibraryQuery:"",past:[],future:[],historyKey:null,draggingSectionId:null,sectionDropIndex:null,keyboardDragging:false};
+  const state={page:null,registry:[],shopFiles:[],shopFilesPageInfo:{hasNextPage:false,endCursor:null},language:"es",selectedSection:null,selectedBlock:null,selectedOutline:null,expandedSections:new Set(),expandedOutline:new Set(),mobile:false,fullPreview:false,dirty:false,savedFingerprint:"",previewTimer:null,previewRequest:0,previewAbort:null,libraryOpen:false,libraryCategory:"Todas",insertTarget:null,sectionAdding:false,blockLibraryOpen:false,blockLibraryQuery:"",past:[],future:[],historyKey:null,draggingSectionId:null,sectionDropIndex:null,keyboardDragging:false,pointerDrag:null};
   const esc=(value)=>String(value??"").replace(/[&<>"']/g,(c)=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c]);
   const clone=(value)=>JSON.parse(JSON.stringify(value));
 
@@ -155,6 +155,28 @@
     if(!state.draggingSectionId||state.draggingSectionId===button.dataset.sectionDrag)return;
     const targetIndex=sectionRowDropIndex(button,event);if(targetIndex===null)return;event.preventDefault();commitSectionDrop(targetIndex)
   }
+  function pointerSectionTarget(event){
+    const element=document.elementFromPoint(event.clientX,event.clientY);if(!element)return null;
+    const row=element.closest?.("[data-section-drag]");
+    if(row){const targetIndex=sectionRowDropIndex(row,event);if(targetIndex!==null&&sectionMoveTarget(state.draggingSectionId,targetIndex))return targetIndex}
+    const slot=element.closest?.("[data-section-drop-index]");
+    if(slot){const targetIndex=Number(slot.dataset.sectionDropIndex);if(sectionMoveTarget(state.draggingSectionId,targetIndex))return targetIndex}
+    return null
+  }
+  function handleSectionPointerMove(event){
+    const pointer=state.pointerDrag;if(!pointer)return;
+    const moved=Math.hypot(event.clientX-pointer.startX,event.clientY-pointer.startY)>=6;
+    if(!pointer.active&&!moved)return;
+    if(!pointer.active){pointer.active=true;state.draggingSectionId=pointer.sectionId;state.keyboardDragging=false;state.sectionDropIndex=null;syncSectionDragUI()}
+    const targetIndex=pointerSectionTarget(event);if(targetIndex===null)return;
+    event.preventDefault();state.sectionDropIndex=targetIndex;syncSectionDragUI()
+  }
+  function handleSectionPointerUp(event){
+    const pointer=state.pointerDrag;if(!pointer)return;state.pointerDrag=null;
+    if(!pointer.active){clearSectionDrag();return}
+    const targetIndex=pointerSectionTarget(event)??state.sectionDropIndex;if(targetIndex===null){clearSectionDrag();return}
+    event.preventDefault();commitSectionDrop(targetIndex)
+  }
   function moveSelectedSection(direction){const {section,definition:entry}=selected();if(!section||entry?.capabilities?.reorderable===false)return;const index=state.page.sections.indexOf(section);const nextIndex=index+direction;if(index<0||nextIndex<0||nextIndex>=state.page.sections.length)return;if(!reorderSectionToIndex(section.id,nextIndex))notify("Esa sección está protegida y no se puede atravesar.")}
   function inspectorHtml(){
     const {section,block,outline,definition:entry}=selected();if(!section||!entry)return`<div class="se__notice">Seleccioná una sección.</div>`;
@@ -263,6 +285,11 @@
     root.querySelectorAll("[data-section-drag]").forEach((button)=>{
       button.addEventListener("dragstart",(event)=>beginSectionDrag(button,event));
       button.addEventListener("dragend",clearSectionDrag);
+      button.addEventListener("pointerdown",(event)=>{
+        if(event.button!==0||state.keyboardDragging)return;
+        state.pointerDrag={sectionId:button.dataset.sectionDrag,startX:event.clientX,startY:event.clientY,active:false};
+        button.setPointerCapture?.(event.pointerId)
+      });
       button.addEventListener("dragover",(event)=>reorderSectionByRow(button,event));
       button.addEventListener("drop",(event)=>dropSectionOnRow(button,event));
       button.addEventListener("keydown",(event)=>{
@@ -272,6 +299,9 @@
         beginKeyboardSectionDrag(button,event)
       });
     });
+    root.addEventListener("pointermove",handleSectionPointerMove);
+    root.addEventListener("pointerup",handleSectionPointerUp);
+    root.addEventListener("pointercancel",()=>{if(state.pointerDrag){state.pointerDrag=null;clearSectionDrag()}});
     root.querySelectorAll("[data-section-drop-index]").forEach((slot)=>{
       slot.addEventListener("dragover",(event)=>{if(!state.draggingSectionId)return;event.preventDefault();state.sectionDropIndex=Number(slot.dataset.sectionDropIndex);syncSectionDragUI()});
       slot.addEventListener("drop",(event)=>reorderSectionByDrop(slot,event));
