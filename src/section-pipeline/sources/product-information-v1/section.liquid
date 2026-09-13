@@ -1274,6 +1274,20 @@
       const form = event.target.closest('[data-cart-form]');
       if (!form) return;
 
+      // En el preview la ruta es deliberadamente "#": el iframe vive en la
+      // app y no tiene un carrito Shopify propio. Evitamos una navegación
+      // engañosa y comunicamos la intención al editor; en storefront,
+      // `routes.cart_add_url` sigue siendo el endpoint real de Shopify.
+      if (form.getAttribute('action') === '#') {
+        event.preventDefault();
+        window.parent.postMessage({
+          type: 'tiq-preview-cart',
+          variantId: form.querySelector('[data-cart-variant]')?.value || null,
+          quantity: form.querySelector('[data-cart-quantity]')?.value || '1'
+        }, '*');
+        return;
+      }
+
       const variantInput = form.querySelector('[data-cart-variant]');
       const quantityInput = form.querySelector('[data-cart-quantity]');
       const submitter = event.submitter && event.submitter.matches('[data-cta]')
