@@ -274,6 +274,29 @@
     root.querySelectorAll("[data-expand-section]").forEach((button)=>button.onclick=()=>{const id=button.dataset.expandSection;if(state.expandedSections.has(id))state.expandedSections.delete(id);else state.expandedSections.add(id);renderSelection()});
     root.querySelectorAll("[data-expand-outline]").forEach((button)=>button.onclick=()=>{const key=button.dataset.expandOutline;if(state.expandedOutline.has(key))state.expandedOutline.delete(key);else state.expandedOutline.add(key);renderSelection()});
     root.querySelectorAll("[data-section-preview],[data-section-menu]").forEach((button)=>button.onclick=(event)=>{event.stopPropagation();selectItem(button.dataset.sectionPreview||button.dataset.sectionMenu,null,null)});
+    bindDynamicTreeInteractions();
+  }
+  function bindDynamicTreeInteractions(){
+    root.querySelectorAll("[data-section-drag]").forEach((button)=>{
+      button.addEventListener("dragstart",(event)=>{state.pointerDrag=null;beginSectionDrag(button,event)});
+      button.addEventListener("dragend",clearSectionDrag);
+      button.addEventListener("pointerdown",(event)=>{
+        if(event.button!==0||event.isPrimary===false||state.keyboardDragging)return;
+        state.pointerDrag={sectionId:button.dataset.sectionDrag,pointerId:event.pointerId,mouse:event.pointerType==="mouse",button,startX:event.clientX,startY:event.clientY,active:false};
+        try{button.setPointerCapture(event.pointerId)}catch{}
+      });
+      button.addEventListener("mousedown",(event)=>{
+        if(event.button!==0||state.keyboardDragging||state.pointerDrag)return;
+        state.pointerDrag={sectionId:button.dataset.sectionDrag,mouse:true,button,startX:event.clientX,startY:event.clientY,active:false};
+      });
+      button.addEventListener("dragover",(event)=>reorderSectionByRow(button,event));
+      button.addEventListener("drop",(event)=>dropSectionOnRow(button,event));
+    });
+    root.querySelectorAll("[data-section-drop-index]").forEach((slot)=>{
+      slot.addEventListener("dragover",(event)=>{if(!state.draggingSectionId)return;event.preventDefault();state.sectionDropIndex=Number(slot.dataset.sectionDropIndex);syncSectionDragUI()});
+      slot.addEventListener("drop",(event)=>reorderSectionByDrop(slot,event));
+    });
+    root.querySelectorAll(".se__insert-slot").forEach((slot)=>slot.querySelector("button").onclick=()=>{if(slot.dataset.insertKind==="section"){openSectionLibrary(Number(slot.dataset.insertIndex));return}openBlockLibrary({sectionId:slot.dataset.insertSection,outlineId:slot.dataset.insertOutline,afterBlockId:slot.dataset.insertAfterBlock,blockType:slot.dataset.insertBlockType,label:slot.querySelector("button")?.getAttribute("aria-label")})});
   }
   function expandOutlinePath(section,nodeId){const entry=definition(section);const found=findOutline(entry?.editor.outline,nodeId);for(const parent of found?.parents||[])state.expandedOutline.add(`${section.id}:${parent.id}`)}
   function expandAllOutline(section,nodes){for(const node of nodes||[]){if(node.children||node.blockType)state.expandedOutline.add(`${section.id}:${node.id}`);expandAllOutline(section,node.children)}}
@@ -316,21 +339,6 @@
     root.querySelector("#se-expand-all").onclick=()=>{for(const section of state.page.sections){state.expandedSections.add(section.id);expandAllOutline(section,definition(section)?.editor.outline)}shell()};
     root.querySelector("#se-collapse-all").onclick=()=>{state.expandedOutline.clear();shell()};
     root.querySelector("#se-add").onclick=()=>openSectionLibrary();
-    root.querySelectorAll("[data-section-drag]").forEach((button)=>{
-      button.addEventListener("dragstart",(event)=>{state.pointerDrag=null;beginSectionDrag(button,event)});
-      button.addEventListener("dragend",clearSectionDrag);
-      button.addEventListener("pointerdown",(event)=>{
-        if(event.button!==0||event.isPrimary===false||state.keyboardDragging)return;
-        state.pointerDrag={sectionId:button.dataset.sectionDrag,pointerId:event.pointerId,mouse:event.pointerType==="mouse",button,startX:event.clientX,startY:event.clientY,active:false};
-        try{button.setPointerCapture(event.pointerId)}catch{}
-      });
-      button.addEventListener("mousedown",(event)=>{
-        if(event.button!==0||state.keyboardDragging||state.pointerDrag)return;
-        state.pointerDrag={sectionId:button.dataset.sectionDrag,mouse:true,button,startX:event.clientX,startY:event.clientY,active:false};
-      });
-      button.addEventListener("dragover",(event)=>reorderSectionByRow(button,event));
-      button.addEventListener("drop",(event)=>dropSectionOnRow(button,event));
-    });
     if(!root.dataset.sectionDragBound){
       root.addEventListener("pointermove",handleSectionPointerMove,{passive:false});
       root.addEventListener("pointerup",handleSectionPointerUp,{passive:false});
@@ -341,11 +349,6 @@
       root.addEventListener("keydown",handleSectionKeydown);
       root.dataset.sectionDragBound="true";
     }
-    root.querySelectorAll("[data-section-drop-index]").forEach((slot)=>{
-      slot.addEventListener("dragover",(event)=>{if(!state.draggingSectionId)return;event.preventDefault();state.sectionDropIndex=Number(slot.dataset.sectionDropIndex);syncSectionDragUI()});
-      slot.addEventListener("drop",(event)=>reorderSectionByDrop(slot,event));
-    });
-    root.querySelectorAll(".se__insert-slot").forEach((slot)=>slot.querySelector("button").onclick=()=>{if(slot.dataset.insertKind==="section"){openSectionLibrary(Number(slot.dataset.insertIndex));return}openBlockLibrary({sectionId:slot.dataset.insertSection,outlineId:slot.dataset.insertOutline,afterBlockId:slot.dataset.insertAfterBlock,blockType:slot.dataset.insertBlockType,label:slot.querySelector("button")?.getAttribute("aria-label")})});
     const backdrop=root.querySelector("[data-library-backdrop]");if(backdrop)backdrop.onclick=(event)=>{if(event.target===backdrop){state.libraryOpen=false;shell()}};
     root.querySelectorAll("[data-library-close]").forEach((button)=>button.onclick=()=>{state.libraryOpen=false;state.insertTarget=null;shell()});
     root.querySelectorAll("[data-add-definition]").forEach((button)=>button.onclick=()=>{const entry=state.registry.find((item)=>item.id===button.dataset.addDefinition&&item.version===Number(button.dataset.addVersion));if(entry)addSection(entry)});
