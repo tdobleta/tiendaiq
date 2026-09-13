@@ -177,14 +177,13 @@
   }
   function handleSectionPointerUp(event){
     const pointer=state.pointerDrag;if(!pointer||event.pointerId!==pointer.pointerId||event.isPrimary===false)return;state.pointerDrag=null;
-    pointer.button?.releasePointerCapture?.(pointer.pointerId);
     if(!pointer.active){clearSectionDrag();return}
     const targetIndex=pointerSectionTarget(event);if(targetIndex===null){clearSectionDrag();return}
     event.preventDefault();commitSectionDrop(targetIndex)
   }
   function handleSectionPointerCancel(event){
     const pointer=state.pointerDrag;if(!pointer||event.pointerId!==pointer.pointerId)return;
-    state.pointerDrag=null;pointer.button?.releasePointerCapture?.(pointer.pointerId);clearSectionDrag()
+    state.pointerDrag=null;clearSectionDrag()
   }
   function moveSelectedSection(direction){const {section,definition:entry}=selected();if(!section||entry?.capabilities?.reorderable===false)return;const index=state.page.sections.indexOf(section);const nextIndex=index+direction;if(index<0||nextIndex<0||nextIndex>=state.page.sections.length)return;if(!reorderSectionToIndex(section.id,nextIndex))notify("Esa sección está protegida y no se puede atravesar.")}
   function inspectorHtml(){
@@ -298,7 +297,6 @@
       button.addEventListener("pointerdown",(event)=>{
         if(event.button!==0||event.isPrimary===false||state.keyboardDragging)return;
         state.pointerDrag={sectionId:button.dataset.sectionDrag,pointerId:event.pointerId,button,startX:event.clientX,startY:event.clientY,active:false};
-        button.setPointerCapture?.(event.pointerId)
       });
       button.addEventListener("dragover",(event)=>reorderSectionByRow(button,event));
       button.addEventListener("drop",(event)=>dropSectionOnRow(button,event));

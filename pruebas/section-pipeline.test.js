@@ -494,7 +494,7 @@ test("las secciones se pueden reordenar sobre el mismo modelo y con teclado", ()
   assert.match(source, /function handleSectionPointerUp\(event\)/);
   assert.match(source, /state\.pointerDrag=\{sectionId:button\.dataset\.sectionDrag/);
   assert.match(source, /pointerId:event\.pointerId/);
-  assert.match(source, /releasePointerCapture/);
+  assert.doesNotMatch(source, /setPointerCapture|releasePointerCapture/);
   assert.match(source, /targetIndex=pointerSectionTarget\(event\);if\(targetIndex===null\)\{clearSectionDrag\(\);return\}/);
   assert.match(source, /root\.addEventListener\("pointermove",handleSectionPointerMove/);
   assert.match(source, /root\.addEventListener\("pointerup",handleSectionPointerUp/);
