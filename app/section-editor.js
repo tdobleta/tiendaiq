@@ -132,7 +132,7 @@
     if(event.key!==" ")return;const sectionId=button.dataset.sectionDrag;if(!sectionId)return;const from=state.page.sections.findIndex((section)=>section.id===sectionId);if(from<=0||definition(state.page.sections[from])?.capabilities?.reorderable===false)return;event.preventDefault();state.draggingSectionId=sectionId;state.sectionDropIndex=from;state.keyboardDragging=true;syncSectionDragUI();notify("Sección seleccionada. Usá ↑ y ↓ para moverla; espacio para soltar.")
   }
   function moveKeyboardSection(event){
-    if(!state.keyboardDragging)return false;const delta=event.key==="ArrowUp"?-1:event.key==="ArrowDown"?1:0;if(!delta)return false;event.preventDefault();const next=sectionDropIndex((state.sectionDropIndex||1)+delta);state.sectionDropIndex=next;syncSectionDragUI();return true
+    if(!state.keyboardDragging)return false;const delta=event.key==="ArrowUp"?-1:event.key==="ArrowDown"?1:0;if(!delta)return false;event.preventDefault();const from=state.page.sections.findIndex((section)=>section.id===state.draggingSectionId);const current=sectionMoveTarget(state.draggingSectionId,state.sectionDropIndex)?.finalIndex??from;const finalIndex=Math.max(1,Math.min(state.page.sections.length-1,current+delta));state.sectionDropIndex=finalIndex>from?finalIndex+1:finalIndex;syncSectionDragUI();return true
   }
   function reorderSectionToIndex(sectionId,finalIndex){
     const from=state.page.sections.findIndex((section)=>section.id===sectionId);if(from<0||from===finalIndex)return false;const target=finalIndex>from?finalIndex+1:finalIndex;const move=sectionMoveTarget(sectionId,target);if(!move)return false;
