@@ -466,9 +466,11 @@ test("el árbol ofrece inserción contextual sin crear un segundo modelo de pág
   const source = fs.readFileSync(path.join(__dirname, "../app/section-editor.js"), "utf8");
   const css = fs.readFileSync(path.join(__dirname, "../app/section-editor.css"), "utf8");
   assert.match(source, /data-insert-kind=\"\$\{kind\}\"/);
+  assert.match(source, /data-insert-parent=\"\$\{esc\(parentId\)\}\"/);
   assert.match(source, /state\.page\.sections\.splice\(index,0,section\)/);
   assert.match(source, /state\.insertTarget\?\.kind===\"block\"/);
   assert.match(source, /afterBlockId:blockIdsForOutline\(node,section\)/);
+  assert.match(source, /function blocksForOutline\(node,section\)/);
   assert.match(source, /function openSectionLibrary\(index=state\.page\.sections\.length\)/);
   assert.match(source, /root\.querySelector\("#se-add"\)\.onclick=\(\)=>openSectionLibrary\(\)/);
   assert.match(source, /openSectionLibrary\(Number\(slot\.dataset\.insertIndex\)\)/);
@@ -478,7 +480,7 @@ test("el árbol ofrece inserción contextual sin crear un segundo modelo de pág
 test("las secciones se pueden reordenar sobre el mismo modelo y con teclado", () => {
   const source = fs.readFileSync(path.join(__dirname, "../app/section-editor.js"), "utf8");
   const css = fs.readFileSync(path.join(__dirname, "../app/section-editor.css"), "utf8");
-  assert.match(source, /draggable="false" aria-roledescription="sortable"/);
+  assert.match(source, /draggable="true" aria-roledescription="sortable"/);
   assert.match(source, /data-section-drop-index/);
   assert.match(source, /function sectionMoveTarget\(sectionId,targetIndex\)/);
   assert.match(source, /function reorderSectionToIndex\(sectionId,finalIndex\)/);
@@ -491,13 +493,39 @@ test("las secciones se pueden reordenar sobre el mismo modelo y con teclado", ()
   assert.match(source, /function handleSectionPointerMove\(event\)/);
   assert.match(source, /function handleSectionPointerUp\(event\)/);
   assert.match(source, /state\.pointerDrag=\{sectionId:button\.dataset\.sectionDrag/);
-  assert.match(source, /root\.addEventListener\("pointermove",handleSectionPointerMove\)/);
-  assert.match(source, /root\.addEventListener\("pointerup",handleSectionPointerUp\)/);
+  assert.match(source, /pointerId:event\.pointerId/);
+  assert.match(source, /releasePointerCapture/);
+  assert.match(source, /targetIndex=pointerSectionTarget\(event\);if\(targetIndex===null\)\{clearSectionDrag\(\);return\}/);
+  assert.match(source, /root\.addEventListener\("pointermove",handleSectionPointerMove/);
+  assert.match(source, /root\.addEventListener\("pointerup",handleSectionPointerUp/);
   assert.match(source, /button\.addEventListener\(\"dragover\",\(event\)=>reorderSectionByRow\(button,event\)\)/);
   assert.match(source, /button\.addEventListener\(\"drop\",\(event\)=>dropSectionOnRow\(button,event\)\)/);
   assert.match(source, /button\.addEventListener\(\"pointerdown\",\(event\)=>/);
   assert.match(source, /capabilities\?\.reorderable===false/);
   assert.match(css, /\.se\.is-section-dragging \.se__section-drop-slot\.is-active/);
+});
+
+test("la instancia conserva el destino editorial de los bloques insertados en un grupo", () => {
+  const instance = JSON.parse(JSON.stringify(imageWithText.seed));
+  assert.throws(() => validateInstance({
+    definition: imageWithText,
+    instance: { ...instance, blocks: [{ id: "block-1", type: "no-existe", parentId: "content-group", settings: {} }] }
+  }), /Bloque no autorizado/);
+  const definition = createSectionDefinition({
+    id: "contract-destination-test",
+    version: 1,
+    source: "{% schema %}{\"name\":\"Destino\",\"settings\":[],\"blocks\":[{\"type\":\"item\",\"name\":\"Elemento\",\"settings\":[]}]}{% endschema %}",
+    outline: [{ id: "items", label: "Elementos", blockType: "item" }],
+    adaptation: ({ seed }) => seed
+  });
+  assert.equal(validateInstance({
+    definition,
+    instance: { settings: {}, blocks: [{ id: "block-1", type: "item", parentId: "items", settings: {} }] }
+  }).blocks[0].parentId, "items");
+  assert.throws(() => validateInstance({
+    definition,
+    instance: { settings: {}, blocks: [{ id: "block-1", type: "item", parentId: "other", settings: {} }] }
+  }), /destino editorial no compatible/);
 });
 
 test("la vista aislada usa la pila tipográfica nativa de Shopify sin fuentes externas", async () => {

@@ -275,6 +275,7 @@ function createSectionDefinition({ id, version, source, adaptation, outline = []
     editableContent: capabilities.editableContent !== false,
     editableStyles: capabilities.editableStyles !== false,
     editableStructure: capabilities.editableStructure === true,
+    minBlocks: Number.isInteger(capabilities.minBlocks) ? Math.max(0, Math.min(50, capabilities.minBlocks)) : 0,
     duplicable: capabilities.duplicable !== false,
     deletable: capabilities.deletable !== false,
     reorderable: capabilities.reorderable !== false,
@@ -368,6 +369,12 @@ function normalizeSettings(definitions, values, where) {
 function validateInstance({ definition, instance }) {
   const settings = normalizeSettings(definition.schema.settings, instance?.settings, "section");
   const blockMap = new Map((definition.schema.blocks || []).map((block) => [block.type, block]));
+  const outlineById = new Map();
+  const indexOutline = (nodes) => (nodes || []).forEach((node) => {
+    outlineById.set(node.id, node);
+    indexOutline(node.children);
+  });
+  indexOutline(definition.editor?.outline);
   if (!Array.isArray(instance?.blocks)) throw new SectionContractError("La instancia necesita una lista de bloques");
   const schemaMaximum = Number.isInteger(definition.schema.max_blocks) ? definition.schema.max_blocks : 50;
   const maximum = Math.min(50, schemaMaximum);
@@ -384,6 +391,21 @@ function validateInstance({ definition, instance }) {
     blockIds.add(block.id);
     const blockDefinition = blockMap.get(block.type);
     if (!blockDefinition) throw new SectionContractError(`Bloque no autorizado: ${block.type}`);
+    if (block.parentId != null) {
+      if (!/^[a-z0-9][a-z0-9-]*$/.test(String(block.parentId))) {
+        throw new SectionContractError(`${block.type}: destino editorial inválido`);
+      }
+      const outlineNode = outlineById.get(block.parentId);
+      const descendantTypes = new Set();
+      const collectBlockTypes = (node) => {
+        if (node?.blockType) descendantTypes.add(node.blockType);
+        for (const child of node?.children || []) collectBlockTypes(child);
+      };
+      collectBlockTypes(outlineNode);
+      if (!outlineNode || !descendantTypes.has(block.type)) {
+        throw new SectionContractError(`${block.type}: destino editorial no compatible`);
+      }
+    }
     const count = (blockCounts.get(block.type) || 0) + 1;
     blockCounts.set(block.type, count);
     if (Number.isInteger(blockDefinition.limit) && count > blockDefinition.limit) {
@@ -404,6 +426,10 @@ function validateInstance({ definition, instance }) {
     }
     return normalizedBlock;
   });
+  const minimum = Number.isInteger(definition.capabilities?.minBlocks) ? definition.capabilities.minBlocks : 0;
+  if (blocks.length < minimum) {
+    throw new SectionContractError(`La sección necesita al menos ${minimum} bloque${minimum === 1 ? "" : "s"}`);
+  }
   return Object.freeze(clone({ settings, blocks }));
 }
 

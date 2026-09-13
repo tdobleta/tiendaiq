@@ -41,7 +41,7 @@ test("el editor expone acciones reales para la estructura de bloques reutilizabl
   const editor = fs.readFileSync(require.resolve("../app/section-editor.js"), "utf8");
   assert.match(editor, /data-block-add/);
   assert.match(editor, /data-add-block-type/);
-  assert.match(editor, /function openBlockLibrary\(\)/);
+  assert.match(editor, /function openBlockLibrary\(/);
   assert.match(editor, /data-block-duplicate/);
   assert.match(editor, /data-block-delete/);
   assert.match(editor, /data-block-up/);
