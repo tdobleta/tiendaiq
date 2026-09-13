@@ -478,7 +478,7 @@ test("el árbol ofrece inserción contextual sin crear un segundo modelo de pág
 test("las secciones se pueden reordenar sobre el mismo modelo y con teclado", () => {
   const source = fs.readFileSync(path.join(__dirname, "../app/section-editor.js"), "utf8");
   const css = fs.readFileSync(path.join(__dirname, "../app/section-editor.css"), "utf8");
-  assert.match(source, /aria-roledescription="sortable"/);
+  assert.match(source, /draggable="false" aria-roledescription="sortable"/);
   assert.match(source, /data-section-drop-index/);
   assert.match(source, /function sectionMoveTarget\(sectionId,targetIndex\)/);
   assert.match(source, /function reorderSectionToIndex\(sectionId,finalIndex\)/);
@@ -495,6 +495,7 @@ test("las secciones se pueden reordenar sobre el mismo modelo y con teclado", ()
   assert.match(source, /root\.addEventListener\("pointerup",handleSectionPointerUp\)/);
   assert.match(source, /button\.addEventListener\(\"dragover\",\(event\)=>reorderSectionByRow\(button,event\)\)/);
   assert.match(source, /button\.addEventListener\(\"drop\",\(event\)=>dropSectionOnRow\(button,event\)\)/);
+  assert.match(source, /button\.addEventListener\(\"pointerdown\",\(event\)=>/);
   assert.match(source, /capabilities\?\.reorderable===false/);
   assert.match(css, /\.se\.is-section-dragging \.se__section-drop-slot\.is-active/);
 });

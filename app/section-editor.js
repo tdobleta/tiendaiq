@@ -101,7 +101,7 @@
   }).join("")}
   function treeHtml(){
     return state.page.sections.map((section,index)=>{
-      const entry=definition(section);const active=section.id===state.selectedSection&&!state.selectedBlock&&!state.selectedOutline;const dragEnabled=index>0&&entry?.capabilities?.reorderable!==false;const dragAttrs=dragEnabled?` draggable="true" aria-roledescription="sortable" aria-describedby="se-section-drag-help" data-section-drag="${esc(section.id)}"`:` draggable="false" aria-disabled="true"`;
+      const entry=definition(section);const active=section.id===state.selectedSection&&!state.selectedBlock&&!state.selectedOutline;const dragEnabled=index>0&&entry?.capabilities?.reorderable!==false;const dragAttrs=dragEnabled?` draggable="false" aria-roledescription="sortable" aria-describedby="se-section-drag-help" data-section-drag="${esc(section.id)}"`:` draggable="false" aria-disabled="true"`;
       const expanded=state.expandedSections.has(section.id);
       const contents=entry?.editor.outline?.length?outlineHtml(section,entry.editor.outline):section.instance.blocks.map((block)=>`<button class="se__outline-row se__outline-row--block ${section.id===state.selectedSection&&block.id===state.selectedBlock?"is-active":""}" data-section="${esc(section.id)}" data-block="${esc(block.id)}"><span class="se__outline-spacer"></span>${treeIcon("block")}<span>${esc(entry?.editor.blocks.find((item)=>item.type===block.type)?.name||block.type)}</span></button>`).join("");
       const count=entry?.editor.outline?.length?outlineCount(entry.editor.outline,section):section.instance.blocks.length;
