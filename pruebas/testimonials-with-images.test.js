@@ -37,11 +37,11 @@ test("los testimonios se renderizan con imagen, texto y controles del carrusel",
   assert.match(html, /data-tiq-block-id/);
 });
 
-test("el editor expone acciones reales para la estructura de bloques reutilizables", () => {
+test("el editor permite administrar bloques existentes sin ofrecer inserción anidada", () => {
   const editor = fs.readFileSync(require.resolve("../app/section-editor.js"), "utf8");
-  assert.match(editor, /data-block-add/);
-  assert.match(editor, /data-add-block-type/);
-  assert.match(editor, /function openBlockLibrary\(/);
+  assert.doesNotMatch(editor, /data-block-add/);
+  assert.doesNotMatch(editor, /data-add-block-type/);
+  assert.doesNotMatch(editor, /function openBlockLibrary\(/);
   assert.match(editor, /data-block-duplicate/);
   assert.match(editor, /data-block-delete/);
   assert.match(editor, /data-block-up/);

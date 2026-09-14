@@ -464,22 +464,21 @@ test("el navegador lateral usa la jerarquía semántica y sincroniza cada selecc
   assert.doesNotMatch(source, /<i>▫<\/i>/);
 });
 
-test("el árbol ofrece inserción contextual sin crear un segundo modelo de página", () => {
+test("el árbol ofrece inserción contextual de secciones sin insertar bloques anidados", () => {
   const source = fs.readFileSync(path.join(__dirname, "../app/section-editor.js"), "utf8");
   const css = fs.readFileSync(path.join(__dirname, "../app/section-editor.css"), "utf8");
-  assert.ok(source.includes('data-insert-outline="${esc(outlineId)}"'));
   assert.ok(source.includes("function sectionInsertSlot(index)"));
   assert.ok(source.includes("sectionInsertSlot(0)+state.page.sections.map"));
   assert.ok(source.includes("index===sections.length?`Añadir sección después"));
-  assert.match(source, /data-insert-kind=\"\$\{kind\}\"/);
-  assert.match(source, /data-insert-parent=\"\$\{esc\(parentId\)\}\"/);
+  assert.match(source, /data-insert-kind=\"section\"/);
   assert.match(source, /state\.page\.sections\.splice\(index,0,section\)/);
-  assert.match(source, /state\.insertTarget\?\.kind===\"block\"/);
-  assert.match(source, /afterBlockId:blockIdsForOutline\(node,section\)/);
   assert.match(source, /function blocksForOutline\(node,section\)/);
   assert.match(source, /function openSectionLibrary\(index=state\.page\.sections\.length\)/);
   assert.match(source, /root\.querySelector\("#se-add"\)\.onclick=\(\)=>openSectionLibrary\(\)/);
   assert.match(source, /openSectionLibrary\(Number\(slot\.dataset\.insertIndex\)\)/);
+  assert.doesNotMatch(source, /Añadir bloque en/);
+  assert.doesNotMatch(source, /class=\"se__block-add\"/);
+  assert.doesNotMatch(source, /data-block-add/);
   assert.match(css, /\.se__insert-slot/);
 });
 
