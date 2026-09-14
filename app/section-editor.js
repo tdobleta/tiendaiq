@@ -337,6 +337,17 @@
       root.addEventListener("keydown",handleSectionKeydown);
       root.dataset.sectionDragBound="true";
     }
+    // App Bridge renders this editor inside a modal iframe. Capture the final
+    // pointer event at document level as well, because the modal host can keep
+    // the release outside the tree root after pointer capture starts.
+    if(!document.documentElement.dataset.sectionDragDocumentBound){
+      document.addEventListener("pointermove",handleSectionPointerMove,{passive:false,capture:true});
+      document.addEventListener("pointerup",handleSectionPointerUp,{passive:false,capture:true});
+      document.addEventListener("pointercancel",handleSectionPointerCancel,{passive:false,capture:true});
+      document.addEventListener("mousemove",handleSectionMouseMove,{passive:false,capture:true});
+      document.addEventListener("mouseup",handleSectionMouseUp,{passive:false,capture:true});
+      document.documentElement.dataset.sectionDragDocumentBound="true";
+    }
     const backdrop=root.querySelector("[data-library-backdrop]");if(backdrop)backdrop.onclick=(event)=>{if(event.target===backdrop){state.libraryOpen=false;shell()}};
     root.querySelectorAll("[data-library-close]").forEach((button)=>button.onclick=()=>{state.libraryOpen=false;state.insertTarget=null;shell()});
     root.querySelectorAll("[data-add-definition]").forEach((button)=>button.onclick=()=>{const entry=state.registry.find((item)=>item.id===button.dataset.addDefinition&&item.version===Number(button.dataset.addVersion));if(entry)addSection(entry)});
