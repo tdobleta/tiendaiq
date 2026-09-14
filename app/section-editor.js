@@ -193,8 +193,12 @@
   }
   function handleSectionDragEnd(event){
     traceSectionDrag("dragend",event);
-    if(state.draggingSectionId&&Number.isInteger(state.sectionDropIndex)){const targetIndex=state.sectionDropIndex;commitSectionDrop(targetIndex);return}
+    if(state.draggingSectionId){const targetIndex=Number.isInteger(state.sectionDropIndex)?state.sectionDropIndex:sectionDropIndexNearPoint(event);if(Number.isInteger(targetIndex)){commitSectionDrop(targetIndex);return}}
     clearSectionDrag()
+  }
+  function sectionDropIndexNearPoint(event){
+    const rows=[...root.querySelectorAll("[data-section-drag]")];const nearest=rows.map((row)=>{const rect=row.getBoundingClientRect();return{row,rect,distance:event.clientY<rect.top?rect.top-event.clientY:event.clientY>rect.bottom?event.clientY-rect.bottom:0}}).filter(({distance})=>distance<=12).sort((a,b)=>a.distance-b.distance)[0];
+    if(!nearest)return null;const index=state.page.sections.findIndex((section)=>section.id===nearest.row.dataset.sectionDrag);return event.clientY>=nearest.rect.bottom?index+1:index
   }
   function handleSectionDragStart(event){
     const row=sectionDragTargetAtPoint(event);if(row)beginSectionDrag(row,event)
