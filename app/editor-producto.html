@@ -93,14 +93,39 @@
         temporizador = setTimeout(() => { notificacion.hidden = true; }, 4200);
       }
 
+      function abrirEditorDeSeccionesEnModal(pagina) {
+        const modalId = "tiq-section-editor-modal";
+        const params = new URLSearchParams(location.search);
+        params.set("modal", "section-editor");
+        const src = "/editor-secciones?" + params.toString();
+        const title = "Editar página de producto " + (pagina.titulo || "Página de producto");
+        let modal = document.getElementById(modalId);
+        if (!modal) {
+          modal = document.createElement("ui-modal");
+          modal.id = modalId;
+          modal.setAttribute("variant", "max");
+          const titleBar = document.createElement("ui-title-bar");
+          titleBar.setAttribute("title", title);
+          modal.appendChild(titleBar);
+          document.body.appendChild(modal);
+        }
+        modal.setAttribute("src", src);
+        customElements.whenDefined?.("ui-modal").then(async () => {
+          try {
+            await window.shopify?.modal?.show?.(modalId);
+          } catch {
+            params.delete("modal");
+            location.replace("/editor-secciones?" + params.toString());
+          }
+        });
+      }
+
       async function iniciar() {
         if (!id) return avisar("Falta el id de la página. Abrí el editor desde una página existente.");
         try {
           const pagina = await api("/api/paginas/" + encodeURIComponent(id));
           if (pagina.data && pagina.data.section_page) {
-            const destino = new URL("/editor-secciones", location.origin);
-            destino.search = location.search;
-            location.replace(destino.pathname + destino.search);
+            abrirEditorDeSeccionesEnModal({ ...pagina.data, titulo: pagina.titulo });
             return;
           }
           if (!pagina.documento) throw new Error(pagina.documento_error || "La página no pudo convertirse al documento v1.");

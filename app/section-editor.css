@@ -70,3 +70,13 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .se__inspector-head .se__section-menu{top:45px;right:8px}
 .se__section-insert-slot{pointer-events:auto}
 .se__section-insert-slot button{pointer-events:auto}
+
+/* Cuando el editor llega desde una página existente, App Bridge lo presenta
+   dentro de un modal max como PagePilot: Shopify conserva sólo su chrome y la
+   superficie de trabajo pasa a ser independiente del App Home. */
+body.se-modal-host{overflow:hidden;background:#f1f3f5}
+body.se-modal-host .se{height:100%;background:#f1f3f5}
+body.se-modal-host .se__top{grid-template-columns:minmax(0,1fr) auto minmax(430px,1fr);background:#eaf3ff}
+body.se-modal-host .se__identity{display:none}
+body.se-modal-host .se__viewport{grid-column:2;grid-row:1}
+body.se-modal-host .se__actions{grid-column:3;grid-row:1}

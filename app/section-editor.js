@@ -4,6 +4,7 @@
   const status=document.getElementById("section-editor-status");
   const toast=document.getElementById("section-editor-toast");
   const params=new URLSearchParams(location.search);
+  document.body.classList.toggle("se-modal-host",params.get("modal")==="section-editor");
   const pageId=params.get("id");
   const demo=params.get("demo")==="1";
   const state={page:null,registry:[],shopFiles:[],shopFilesPageInfo:{hasNextPage:false,endCursor:null},language:"es",selectedSection:null,selectedBlock:null,selectedOutline:null,expandedSections:new Set(),expandedOutline:new Set(),mobile:false,fullPreview:false,dirty:false,savedFingerprint:"",previewTimer:null,previewRequest:0,previewAbort:null,libraryOpen:false,libraryCategory:"Todas",insertTarget:null,sectionAdding:false,sectionMenuId:null,past:[],future:[],historyKey:null,draggingSectionId:null,sectionDropIndex:null,keyboardDragging:false,pointerDrag:null};

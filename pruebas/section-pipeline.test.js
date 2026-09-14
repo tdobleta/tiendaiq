@@ -585,6 +585,18 @@ test("el editor conserva estado limpio, filtra la biblioteca y guarda con revisi
   assert.match(source, /data-rich="spark"[^>]+disabled/);
 });
 
+test("las páginas por secciones abren el editor como modal independiente de Shopify", () => {
+  const source = fs.readFileSync(path.join(__dirname, "../app/editor-producto.html"), "utf8");
+  const css = fs.readFileSync(path.join(__dirname, "../app/section-editor.css"), "utf8");
+  assert.match(source, /function abrirEditorDeSeccionesEnModal\(pagina\)/);
+  assert.match(source, /ui-modal/);
+  assert.match(source, /variant\", \"max\"/);
+  assert.match(source, /window\.shopify\?\.modal\?\.show/);
+  assert.match(source, /params\.set\("modal", "section-editor"\)/);
+  assert.match(css, /body\.se-modal-host/);
+  assert.match(css, /body\.se-modal-host \.se__identity\{display:none\}/);
+});
+
 test("el inspector comunica el origen de cada campo desde el contrato de la sección", () => {
   const source = fs.readFileSync(path.join(__dirname, "../app/section-editor.js"), "utf8");
   const css = fs.readFileSync(path.join(__dirname, "../app/section-editor.css"), "utf8");
