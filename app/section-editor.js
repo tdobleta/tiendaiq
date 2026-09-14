@@ -185,7 +185,11 @@
     const pointer=state.pointerDrag;if(!pointer||event.pointerId!==pointer.pointerId||event.isPrimary===false)return;state.pointerDrag=null;
     if(!pointer.active){
       const moved=Math.hypot(event.clientX-pointer.startX,event.clientY-pointer.startY)>=6;
-      if(!moved){clearSectionDrag();return}
+      if(!moved){
+        const target=event.target.closest?.("[data-section]");
+        if(target)selectItem(target.dataset.section,target.dataset.block||null,target.dataset.outline||null);
+        clearSectionDrag();return
+      }
       state.draggingSectionId=pointer.sectionId;state.keyboardDragging=false;
     }
     const targetIndex=pointerSectionTarget(event);if(targetIndex===null){clearSectionDrag();return}
@@ -207,7 +211,11 @@
     const pointer=state.pointerDrag;if(!pointer?.mouse)return;state.pointerDrag=null;
     if(!pointer.active){
       const moved=Math.hypot(event.clientX-pointer.startX,event.clientY-pointer.startY)>=6;
-      if(!moved){clearSectionDrag();return}
+      if(!moved){
+        const target=event.target.closest?.("[data-section]");
+        if(target)selectItem(target.dataset.section,target.dataset.block||null,target.dataset.outline||null);
+        clearSectionDrag();return
+      }
       state.draggingSectionId=pointer.sectionId;state.keyboardDragging=false;
     }
     const targetIndex=pointerSectionTarget(event);if(targetIndex===null){clearSectionDrag();return}
