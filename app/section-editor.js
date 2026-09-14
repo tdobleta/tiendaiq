@@ -176,6 +176,7 @@
     traceSectionDrag("dragover",event);
     if(!state.draggingSectionId)return;
     const row=sectionDragTargetAtPoint(event);
+    if(row)traceSectionDrag(`dragover-target:${row.dataset.sectionDrag}`,event);
     if(row){reorderSectionByRow(row,event);return}
     const slot=event.target?.closest?.("[data-section-drop-index]");
     if(slot&&root.contains(slot))reorderSectionByDrop(slot,event)
@@ -209,7 +210,7 @@
     return null
   }
   function traceSectionDrag(name,event){
-    console.debug("[section-drag]",name,{type:event?.type,x:event?.clientX,y:event?.clientY,pointerId:event?.pointerId,button:event?.button,pointerType:event?.pointerType,target:event?.target?.tagName})
+    console.debug("[section-drag]",JSON.stringify({name,type:event?.type,x:event?.clientX,y:event?.clientY,pointerId:event?.pointerId,button:event?.button,pointerType:event?.pointerType,target:event?.target?.tagName,dragging:state.draggingSectionId,dropIndex:state.sectionDropIndex}))
   }
   function beginPointerSectionDrag(button,event){
     traceSectionDrag("pointerdown",event);
