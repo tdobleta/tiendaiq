@@ -186,12 +186,14 @@
     if(slot&&root.contains(slot))reorderSectionByDrop(slot,event)
   }
   function pointerSectionTarget(event){
-    const tree=root.querySelector(".se__tree");const rect=tree?.getBoundingClientRect();if(!rect||event.clientX<rect.left||event.clientX>rect.right||event.clientY<rect.top||event.clientY>rect.bottom)return null;
+    const pointer=state.pointerDrag;let point=event;
+    if(pointer?.coordinateSpace==="delta"&&pointer.button){const rect=pointer.button.getBoundingClientRect();point={...event,clientX:rect.left+pointer.startOffsetX+(event.clientX-pointer.startX),clientY:rect.top+pointer.startOffsetY+(event.clientY-pointer.startY)}}
+    const tree=root.querySelector(".se__tree");const rect=tree?.getBoundingClientRect();if(!rect||point.clientX<rect.left||point.clientX>rect.right||point.clientY<rect.top||point.clientY>rect.bottom)return null;
     const rows=[...root.querySelectorAll("[data-section-drag]")];
-    const row=rows.find((candidate)=>{const rect=candidate.getBoundingClientRect();return event.clientY>=rect.top&&event.clientY<=rect.bottom});
-    if(row){const targetIndex=sectionRowDropIndex(row,event);if(targetIndex!==null&&sectionMoveTarget(state.draggingSectionId,targetIndex))return targetIndex}
+    const row=rows.find((candidate)=>{const rect=candidate.getBoundingClientRect();return point.clientY>=rect.top&&point.clientY<=rect.bottom});
+    if(row){const targetIndex=sectionRowDropIndex(row,point);if(targetIndex!==null&&sectionMoveTarget(state.draggingSectionId,targetIndex))return targetIndex}
     const slots=[...root.querySelectorAll("[data-section-drop-index]")];
-    const slot=slots.find((candidate)=>{const rect=candidate.getBoundingClientRect();return event.clientY>=rect.top&&event.clientY<=rect.bottom});
+    const slot=slots.find((candidate)=>{const rect=candidate.getBoundingClientRect();return point.clientY>=rect.top&&point.clientY<=rect.bottom});
     if(slot){const targetIndex=Number(slot.dataset.sectionDropIndex);if(sectionMoveTarget(state.draggingSectionId,targetIndex))return targetIndex}
     return null
   }
@@ -345,12 +347,14 @@
       button.addEventListener("dragend",clearSectionDrag);
       button.addEventListener("pointerdown",(event)=>{
         if(event.button!==0||event.isPrimary===false||state.keyboardDragging||event.target.closest?.(".se__tree-actions"))return;
-        state.pointerDrag={sectionId:button.dataset.sectionDrag,pointerId:event.pointerId,mouse:event.pointerType==="mouse",button,startX:event.clientX,startY:event.clientY,active:false};
+        const rect=button.getBoundingClientRect();const local=event.clientX>=rect.left&&event.clientX<=rect.right&&event.clientY>=rect.top&&event.clientY<=rect.bottom;
+        state.pointerDrag={sectionId:button.dataset.sectionDrag,pointerId:event.pointerId,mouse:event.pointerType==="mouse",button,startX:event.clientX,startY:event.clientY,startOffsetX:local?event.clientX-rect.left:rect.width/2,startOffsetY:local?event.clientY-rect.top:rect.height/2,coordinateSpace:local?"local":"delta",active:false};
         try{button.setPointerCapture(event.pointerId)}catch{}
       });
       button.addEventListener("mousedown",(event)=>{
         if(event.button!==0||state.keyboardDragging||state.pointerDrag||event.target.closest?.(".se__tree-actions"))return;
-        state.pointerDrag={sectionId:button.dataset.sectionDrag,mouse:true,button,startX:event.clientX,startY:event.clientY,active:false};
+        const rect=button.getBoundingClientRect();const local=event.clientX>=rect.left&&event.clientX<=rect.right&&event.clientY>=rect.top&&event.clientY<=rect.bottom;
+        state.pointerDrag={sectionId:button.dataset.sectionDrag,mouse:true,button,startX:event.clientX,startY:event.clientY,startOffsetX:local?event.clientX-rect.left:rect.width/2,startOffsetY:local?event.clientY-rect.top:rect.height/2,coordinateSpace:local?"local":"delta",active:false};
       });
     });
     root.querySelectorAll("[data-section-drop-index]").forEach((slot)=>{
