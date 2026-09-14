@@ -107,7 +107,7 @@
   function sectionMenuHtml(section){const open=state.sectionMenuId===section.id;return `<div class="se__section-menu" data-section-menu-popover="${esc(section.id)}" role="menu" ${open?"":"hidden"}><button type="button" role="menuitem" data-section-action="select" data-section-id="${esc(section.id)}">Seleccionar</button><button type="button" role="menuitem" data-section-action="save" data-section-id="${esc(section.id)}" ${state.dirty?"":"disabled"}>Guardar cambios</button><button type="button" role="menuitem" data-section-action="duplicate" data-section-id="${esc(section.id)}">Duplicar sección</button><button type="button" role="menuitem" data-section-action="delete" data-section-id="${esc(section.id)}">Eliminar sección</button></div>`}
   function treeHtml(){
     return sectionInsertSlot(0)+state.page.sections.map((section,index)=>{
-      const entry=definition(section);const active=section.id===state.selectedSection&&!state.selectedBlock&&!state.selectedOutline;const dragEnabled=entry?.capabilities?.protected!==true&&entry?.capabilities?.reorderable!==false&&index>=sectionOrderFloor();const dragAttrs=dragEnabled?` draggable="true" aria-roledescription="sortable" aria-describedby="se-section-drag-help" data-section-drag="${esc(section.id)}"`:` draggable="false" aria-disabled="true"`;
+    const entry=definition(section);const active=section.id===state.selectedSection&&!state.selectedBlock&&!state.selectedOutline;const dragEnabled=entry?.capabilities?.protected!==true&&entry?.capabilities?.reorderable!==false&&index>=sectionOrderFloor();const dragAttrs=dragEnabled?` aria-roledescription="sortable" aria-describedby="se-section-drag-help" data-section-drag="${esc(section.id)}"`:` draggable="false" aria-disabled="true"`;
       const expanded=state.expandedSections.has(section.id);
       const contents=entry?.editor.outline?.length?outlineHtml(section,entry.editor.outline):section.instance.blocks.map((block)=>`<button class="se__outline-row se__outline-row--block ${section.id===state.selectedSection&&block.id===state.selectedBlock?"is-active":""}" data-section="${esc(section.id)}" data-block="${esc(block.id)}"><span class="se__outline-spacer"></span>${treeIcon("block")}<span>${esc(entry?.editor.blocks.find((item)=>item.type===block.type)?.name||block.type)}</span></button>`).join("");
       const count=entry?.editor.outline?.length?outlineCount(entry.editor.outline,section):section.instance.blocks.length;
@@ -281,8 +281,6 @@
   }
   function bindDynamicTreeInteractions(){
     root.querySelectorAll("[data-section-drag]").forEach((button)=>{
-      button.addEventListener("dragstart",(event)=>{state.pointerDrag=null;beginSectionDrag(button,event)});
-      button.addEventListener("dragend",clearSectionDrag);
       button.addEventListener("pointerdown",(event)=>{
         if(event.button!==0||event.isPrimary===false||state.keyboardDragging)return;
         state.pointerDrag={sectionId:button.dataset.sectionDrag,pointerId:event.pointerId,mouse:event.pointerType==="mouse",button,startX:event.clientX,startY:event.clientY,active:false};
@@ -292,12 +290,6 @@
         if(event.button!==0||state.keyboardDragging||state.pointerDrag)return;
         state.pointerDrag={sectionId:button.dataset.sectionDrag,mouse:true,button,startX:event.clientX,startY:event.clientY,active:false};
       });
-      button.addEventListener("dragover",(event)=>reorderSectionByRow(button,event));
-      button.addEventListener("drop",(event)=>dropSectionOnRow(button,event));
-    });
-    root.querySelectorAll("[data-section-drop-index]").forEach((slot)=>{
-      slot.addEventListener("dragover",(event)=>{if(!state.draggingSectionId)return;event.preventDefault();state.sectionDropIndex=Number(slot.dataset.sectionDropIndex);syncSectionDragUI()});
-      slot.addEventListener("drop",(event)=>reorderSectionByDrop(slot,event));
     });
     root.querySelectorAll('[data-insert-kind="section"]').forEach((slot)=>slot.querySelector("button").onclick=()=>openSectionLibrary(Number(slot.dataset.insertIndex)));
   }

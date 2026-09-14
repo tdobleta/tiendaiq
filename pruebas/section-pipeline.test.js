@@ -487,7 +487,8 @@ test("las secciones se pueden reordenar sobre el mismo modelo y con teclado", ()
   const css = fs.readFileSync(path.join(__dirname, "../app/section-editor.css"), "utf8");
   assert.ok(source.includes("function sectionCanMove(section,finalIndex)"));
   assert.ok(css.includes(".se.is-section-dragging .se__section-insert-slot{display:flex!important"));
-  assert.match(source, /draggable="true" aria-roledescription="sortable"/);
+  assert.match(source, /aria-roledescription="sortable" aria-describedby="se-section-drag-help" data-section-drag/);
+  assert.doesNotMatch(source, /draggable="true" aria-roledescription="sortable"/);
   assert.match(source, /data-section-drop-index/);
   assert.match(source, /function sectionMoveTarget\(sectionId,targetIndex\)/);
   assert.match(source, /function reorderSectionToIndex\(sectionId,finalIndex\)/);
@@ -505,8 +506,8 @@ test("las secciones se pueden reordenar sobre el mismo modelo y con teclado", ()
   assert.match(source, /targetIndex=pointerSectionTarget\(event\);if\(targetIndex===null\)\{clearSectionDrag\(\);return\}/);
   assert.match(source, /root\.addEventListener\("pointermove",handleSectionPointerMove/);
   assert.match(source, /root\.addEventListener\("pointerup",handleSectionPointerUp/);
-  assert.match(source, /button\.addEventListener\(\"dragover\",\(event\)=>reorderSectionByRow\(button,event\)\)/);
-  assert.match(source, /button\.addEventListener\(\"drop\",\(event\)=>dropSectionOnRow\(button,event\)\)/);
+  assert.doesNotMatch(source, /button\.addEventListener\(\"dragover\"/);
+  assert.doesNotMatch(source, /button\.addEventListener\(\"drop\"/);
   assert.match(source, /button\.addEventListener\(\"pointerdown\",\(event\)=>/);
   assert.match(source, /function handleSectionMouseMove\(event\)/);
   assert.match(source, /button\.addEventListener\(\"mousedown\",\(event\)=>/);
