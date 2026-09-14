@@ -165,6 +165,26 @@
     if(!state.draggingSectionId||state.draggingSectionId===button.dataset.sectionDrag)return;
     const targetIndex=sectionRowDropIndex(button,event);if(targetIndex===null)return;event.preventDefault();commitSectionDrop(targetIndex)
   }
+  function sectionDragTargetAtPoint(event){
+    const direct=event.target?.closest?.("[data-section-drag]");
+    if(direct&&root.contains(direct))return direct;
+    const pointed=document.elementFromPoint?.(event.clientX,event.clientY)?.closest?.("[data-section-drag]");
+    return pointed&&root.contains(pointed)?pointed:null
+  }
+  function handleSectionDragOver(event){
+    if(!state.draggingSectionId)return;
+    const row=sectionDragTargetAtPoint(event);
+    if(row){reorderSectionByRow(row,event);return}
+    const slot=event.target?.closest?.("[data-section-drop-index]");
+    if(slot&&root.contains(slot))reorderSectionByDrop(slot,event)
+  }
+  function handleSectionDrop(event){
+    if(!state.draggingSectionId)return;
+    const row=sectionDragTargetAtPoint(event);
+    if(row){dropSectionOnRow(row,event);return}
+    const slot=event.target?.closest?.("[data-section-drop-index]");
+    if(slot&&root.contains(slot))reorderSectionByDrop(slot,event)
+  }
   function pointerSectionTarget(event){
     const tree=root.querySelector(".se__tree");const rect=tree?.getBoundingClientRect();if(!rect||event.clientX<rect.left||event.clientX>rect.right||event.clientY<rect.top||event.clientY>rect.bottom)return null;
     const rows=[...root.querySelectorAll("[data-section-drag]")];
@@ -391,6 +411,8 @@
       document.addEventListener("pointercancel",handleSectionPointerCancel,{passive:false,capture:true});
       document.addEventListener("mousemove",handleSectionMouseMove,{passive:false,capture:true});
       document.addEventListener("mouseup",handleSectionMouseUp,{passive:false,capture:true});
+      document.addEventListener("dragover",handleSectionDragOver,{passive:false,capture:true});
+      document.addEventListener("drop",handleSectionDrop,{passive:false,capture:true});
       document.documentElement.dataset.sectionDragDocumentBound="true";
     }
     const backdrop=root.querySelector("[data-library-backdrop]");if(backdrop)backdrop.onclick=(event)=>{if(event.target===backdrop){state.libraryOpen=false;shell()}};

@@ -525,6 +525,9 @@ test("las secciones se pueden reordenar sobre el mismo modelo y con teclado", ()
   assert.match(source, /button\.addEventListener\(\"pointerdown\",\(event\)=>/);
   assert.match(source, /function handleSectionMouseMove\(event\)/);
   assert.match(source, /button\.addEventListener\(\"mousedown\",\(event\)=>/);
+  assert.match(source, /function sectionDragTargetAtPoint\(event\)/);
+  assert.match(source, /document\.addEventListener\(\"dragover\",handleSectionDragOver/);
+  assert.match(source, /document\.addEventListener\(\"drop\",handleSectionDrop/);
   assert.match(source, /aria-label=\"\$\{esc\(field\.label\|\|field\.id\)\}\"/);
   assert.match(source, /setImageValue\(scope,fieldId,button\.dataset\.mediaUrl,selection\)/);
   assert.match(source, /capabilities\?\.reorderable===false/);
