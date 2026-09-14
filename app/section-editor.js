@@ -104,7 +104,7 @@
     const children=node.children?outlineHtml(section,node.children,level+1)+blockRows(blocks.filter((block)=>block.parentId===node.id)):blockRows(blocks);
     return `<div class="se__outline-node" style="--outline-level:${level}">${row}<div class="se__outline-children" ${expanded?"":"hidden"}>${children}</div></div>`;
   }).join("")}
-  function sectionInsertSlot(index){const sections=state.page.sections;const previous=sections[index-1];const next=sections[index];const anchor=previous||next;const label=index===0?`Añadir sección antes de ${next?.label||"la primera sección"}`:index===sections.length?`Añadir sección después de ${previous?.label||"la última sección"}`:`Añadir sección entre ${previous.label} y ${next.label}`;return insertSlotHtml({kind:"section",section:anchor,label,index});}
+  function sectionInsertSlot(index){const sections=state.page.sections;if(index===0&&sectionOrderFloor()>0)return"";const previous=sections[index-1];const next=sections[index];const anchor=previous||next;const label=index===0?`Añadir sección antes de ${next?.label||"la primera sección"}`:index===sections.length?`Añadir sección después de ${previous?.label||"la última sección"}`:`Añadir sección entre ${previous.label} y ${next.label}`;return insertSlotHtml({kind:"section",section:anchor,label,index});}
   function sectionMenuHtml(section){const open=state.sectionMenuId===section.id;return `<div class="se__section-menu" data-section-menu-popover="${esc(section.id)}" role="menu" ${open?"":"hidden"}><button type="button" role="menuitem" data-section-action="select" data-section-id="${esc(section.id)}">Seleccionar</button><button type="button" role="menuitem" data-section-action="save" data-section-id="${esc(section.id)}" ${state.dirty?"":"disabled"}>Guardar cambios</button><button type="button" role="menuitem" data-section-action="duplicate" data-section-id="${esc(section.id)}">Duplicar sección</button><button type="button" role="menuitem" data-section-action="delete" data-section-id="${esc(section.id)}">Eliminar sección</button></div>`}
   function treeHtml(){
     return sectionInsertSlot(0)+state.page.sections.map((section,index)=>{
@@ -325,7 +325,7 @@
     root.querySelector("#se-variants").onclick=()=>{const id=productNumericId();const shop=String(params.get("shop")||"").replace(/\.myshopify\.com$/i,"");if(id&&/^[a-z0-9][a-z0-9-]*$/i.test(shop))window.open(`https://admin.shopify.com/store/${encodeURIComponent(shop)}/products/${id}`,"_blank","noopener,noreferrer")};
     root.querySelector("#se-actions").onclick=(event)=>{event.stopPropagation();const menu=root.querySelector(".se__actions-popover");menu.hidden=!menu.hidden;root.querySelector("#se-actions").setAttribute("aria-expanded",String(!menu.hidden))};
     root.querySelector("#se-expand-all").onclick=()=>{for(const section of state.page.sections){state.expandedSections.add(section.id);expandAllOutline(section,definition(section)?.editor.outline)}shell()};
-    root.querySelector("#se-collapse-all").onclick=()=>{state.expandedOutline.clear();shell()};
+    root.querySelector("#se-collapse-all").onclick=()=>{state.expandedSections.clear();state.expandedOutline.clear();shell()};
     root.querySelector("#se-add").onclick=()=>openSectionLibrary();
     if(!root.dataset.sectionDragBound){
       root.addEventListener("pointermove",handleSectionPointerMove,{passive:false});

@@ -476,6 +476,7 @@ test("el árbol ofrece inserción contextual de secciones sin insertar bloques a
   assert.match(source, /function openSectionLibrary\(index=state\.page\.sections\.length\)/);
   assert.match(source, /root\.querySelector\("#se-add"\)\.onclick=\(\)=>openSectionLibrary\(\)/);
   assert.match(source, /openSectionLibrary\(Number\(slot\.dataset\.insertIndex\)\)/);
+  assert.match(source, /if\(index===0&&sectionOrderFloor\(\)>0\)return""/);
   assert.doesNotMatch(source, /Añadir bloque en/);
   assert.doesNotMatch(source, /class=\"se__block-add\"/);
   assert.doesNotMatch(source, /data-block-add/);
@@ -499,6 +500,7 @@ test("las secciones se pueden reordenar sobre el mismo modelo y con teclado", ()
   assert.match(source, /function sectionRowDropIndex\(button,event\)/);
   assert.match(source, /function pointerSectionTarget\(event\)/);
   assert.match(source, /function handleSectionPointerMove\(event\)/);
+  assert.match(source, /state\.expandedSections\.clear\(\);state\.expandedOutline\.clear\(\);shell\(\)/);
   assert.match(source, /function handleSectionPointerUp\(event\)/);
   assert.match(source, /state\.pointerDrag=\{sectionId:button\.dataset\.sectionDrag/);
   assert.match(source, /pointerId:event\.pointerId/);
