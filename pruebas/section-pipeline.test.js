@@ -489,12 +489,11 @@ test("las secciones se pueden reordenar sobre el mismo modelo y con teclado", ()
   assert.ok(source.includes("function sectionCanMove(section,finalIndex)"));
   assert.ok(css.includes(".se.is-section-dragging .se__section-insert-slot{display:flex!important"));
   assert.match(source, /aria-roledescription="sortable" aria-describedby="se-section-drag-help" data-section-drag/);
-  assert.match(source, /class=\"se__tree-select\"\$\{dragEnabled\?` draggable=\"true\"`/);
+  assert.match(source, /removeAttribute\('draggable'\)/);
   assert.match(source, /role="button" tabindex="0" aria-label="\$\{esc\(section\.label\)\}" aria-pressed="\$\{active\}"/);
   assert.match(source, /role="presentation" tabindex="-1"/);
   assert.match(source, /!state\.keyboardDragging&&event\.key==="Enter"/);
   assert.match(source, /event\.target\.closest\?\.\("\.se__tree-actions"\)/);
-  assert.match(source, /dragEnabled\?` draggable="true"`/);
   assert.match(source, /button\.addEventListener\("dragstart",\(event\)=>beginSectionDrag/);
   assert.match(source, /button\.addEventListener\("dragover",\(event\)=>reorderSectionByRow/);
   assert.match(source, /button\.addEventListener\("drop",\(event\)=>dropSectionOnRow/);
@@ -533,7 +532,7 @@ test("las secciones se pueden reordenar sobre el mismo modelo y con teclado", ()
   assert.match(source, /aria-label=\"\$\{esc\(field\.label\|\|field\.id\)\}\"/);
   assert.match(source, /setImageValue\(scope,fieldId,button\.dataset\.mediaUrl,selection\)/);
   assert.match(source, /capabilities\?\.reorderable===false/);
-  assert.match(css, /\.se\.is-section-dragging \.se__section-drop-slot\.is-active/);
+  assert.match(css, /\.se__tree-select-shell\[data-section-drag\]/);
 });
 
 test("la instancia conserva el destino editorial de los bloques insertados en un grupo", () => {
