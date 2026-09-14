@@ -134,6 +134,7 @@
   }
   function clearSectionDrag(){const pointer=state.pointerDrag;state.draggingSectionId=null;state.sectionDropIndex=null;state.keyboardDragging=false;state.pointerDrag=null;if(pointer?.button&&pointer.pointerId!=null){try{if(pointer.button.hasPointerCapture?.(pointer.pointerId))pointer.button.releasePointerCapture(pointer.pointerId)}catch{}}syncSectionDragUI()}
   function beginSectionDrag(button,event){
+    traceSectionDrag("dragstart",event);
     const sectionId=button.dataset.sectionDrag;const index=state.page.sections.findIndex((section)=>section.id===sectionId);if(!sectionId||index<sectionOrderFloor()||definition(state.page.sections[index])?.capabilities?.protected===true||definition(state.page.sections[index])?.capabilities?.reorderable===false){event.preventDefault();return}
     state.draggingSectionId=sectionId;state.keyboardDragging=false;state.sectionDropIndex=null;if(event.dataTransfer){event.dataTransfer.effectAllowed="move";event.dataTransfer.setData("text/plain",sectionId)}syncSectionDragUI()
   }
@@ -172,6 +173,7 @@
     return pointed&&root.contains(pointed)?pointed:null
   }
   function handleSectionDragOver(event){
+    traceSectionDrag("dragover",event);
     if(!state.draggingSectionId)return;
     const row=sectionDragTargetAtPoint(event);
     if(row){reorderSectionByRow(row,event);return}
@@ -179,6 +181,7 @@
     if(slot&&root.contains(slot))reorderSectionByDrop(slot,event)
   }
   function handleSectionDrop(event){
+    traceSectionDrag("drop",event);
     if(!state.draggingSectionId)return;
     const row=sectionDragTargetAtPoint(event);
     if(row){dropSectionOnRow(row,event);return}
@@ -200,13 +203,18 @@
     if(slot){const targetIndex=Number(slot.dataset.sectionDropIndex);if(sectionMoveTarget(state.draggingSectionId,targetIndex))return targetIndex}
     return null
   }
+  function traceSectionDrag(name,event){
+    console.debug("[section-drag]",name,{type:event?.type,x:event?.clientX,y:event?.clientY,pointerId:event?.pointerId,button:event?.button,pointerType:event?.pointerType,target:event?.target?.tagName})
+  }
   function beginPointerSectionDrag(button,event){
+    traceSectionDrag("pointerdown",event);
     if(!button||event.button!==0||event.isPrimary===false||state.keyboardDragging||event.target.closest?.(".se__tree-actions"))return;
     const rect=button.getBoundingClientRect();const local=event.clientX>=rect.left&&event.clientX<=rect.right&&event.clientY>=rect.top&&event.clientY<=rect.bottom;
     state.pointerDrag={sectionId:button.dataset.sectionDrag,pointerId:event.pointerId,mouse:event.pointerType==="mouse",button,startX:event.clientX,startY:event.clientY,startOffsetX:local?event.clientX-rect.left:rect.width/2,startOffsetY:local?event.clientY-rect.top:rect.height/2,coordinateSpace:local?"local":"delta",active:false};
     try{button.setPointerCapture?.(event.pointerId)}catch{}
   }
   function beginMouseSectionDrag(button,event){
+    traceSectionDrag("mousedown",event);
     if(!button||event.button!==0||state.keyboardDragging||state.pointerDrag||event.target.closest?.(".se__tree-actions"))return;
     const rect=button.getBoundingClientRect();const local=event.clientX>=rect.left&&event.clientX<=rect.right&&event.clientY>=rect.top&&event.clientY<=rect.bottom;
     state.pointerDrag={sectionId:button.dataset.sectionDrag,mouse:true,button,startX:event.clientX,startY:event.clientY,startOffsetX:local?event.clientX-rect.left:rect.width/2,startOffsetY:local?event.clientY-rect.top:rect.height/2,coordinateSpace:local?"local":"delta",active:false};
@@ -226,6 +234,7 @@
     event.preventDefault();state.sectionDropIndex=targetIndex;syncSectionDragUI()
   }
   function handleSectionPointerUp(event){
+    traceSectionDrag("pointerup",event);
     const pointer=state.pointerDrag;if(!pointer||event.pointerId!==pointer.pointerId||event.isPrimary===false)return;
     if(!pointer.active){
       const moved=Math.hypot(event.clientX-pointer.startX,event.clientY-pointer.startY)>=6;
@@ -254,6 +263,7 @@
     event.preventDefault();state.sectionDropIndex=targetIndex;syncSectionDragUI()
   }
   function handleSectionMouseUp(event){
+    traceSectionDrag("mouseup",event);
     const pointer=state.pointerDrag;if(!pointer?.mouse)return;
     if(!pointer.active){
       const moved=Math.hypot(event.clientX-pointer.startX,event.clientY-pointer.startY)>=6;
