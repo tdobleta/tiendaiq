@@ -7,7 +7,7 @@
   document.body.classList.toggle("se-modal-host",params.get("modal")==="section-editor");
   const pageId=params.get("id");
   const demo=params.get("demo")==="1";
-  const state={page:null,registry:[],shopFiles:[],shopFilesPageInfo:{hasNextPage:false,endCursor:null},language:"es",selectedSection:null,selectedBlock:null,selectedOutline:null,expandedSections:new Set(),expandedOutline:new Set(),mobile:false,fullPreview:false,dirty:false,savedFingerprint:"",previewTimer:null,previewRequest:0,previewAbort:null,libraryOpen:false,libraryCategory:"Todas",insertTarget:null,sectionAdding:false,sectionMenuId:null,past:[],future:[],historyKey:null,draggingSectionId:null,sectionDropIndex:null,keyboardDragging:false,pointerDrag:null};
+  const state={page:null,registry:[],shopFiles:[],shopFilesPageInfo:{hasNextPage:false,endCursor:null},language:"es",selectedSection:null,selectedBlock:null,selectedOutline:null,expandedSections:new Set(),expandedOutline:new Set(),mobile:false,fullPreview:false,dirty:false,savedFingerprint:"",previewTimer:null,previewRequest:0,previewAbort:null,libraryOpen:false,libraryCategory:"Todas",insertTarget:null,sectionAdding:false,sectionMenuId:null,past:[],future:[],historyKey:null,draggingSectionId:null,sectionDropIndex:null,keyboardDragging:false,pointerDrag:null,nativeSectionDrag:false};
   const esc=(value)=>String(value??"").replace(/[&<>"']/g,(c)=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c]);
   const clone=(value)=>JSON.parse(JSON.stringify(value));
 
@@ -132,11 +132,11 @@
     root.querySelectorAll("[data-section-drag]").forEach((button)=>button.classList.toggle("is-dragging",button.dataset.sectionDrag===state.draggingSectionId));
     root.querySelectorAll("[data-section-drop-index]").forEach((slot)=>{const move=dragging&&sectionMoveTarget(state.draggingSectionId,Number(slot.dataset.sectionDropIndex));slot.classList.toggle("is-active",Boolean(move&&move.target===Number(slot.dataset.sectionDropIndex)))})
   }
-  function clearSectionDrag(){const pointer=state.pointerDrag;state.draggingSectionId=null;state.sectionDropIndex=null;state.keyboardDragging=false;state.pointerDrag=null;if(pointer?.button&&pointer.pointerId!=null){try{if(pointer.button.hasPointerCapture?.(pointer.pointerId))pointer.button.releasePointerCapture(pointer.pointerId)}catch{}}syncSectionDragUI()}
+  function clearSectionDrag(){const pointer=state.pointerDrag;state.draggingSectionId=null;state.sectionDropIndex=null;state.keyboardDragging=false;state.pointerDrag=null;state.nativeSectionDrag=false;if(pointer?.button&&pointer.pointerId!=null){try{if(pointer.button.hasPointerCapture?.(pointer.pointerId))pointer.button.releasePointerCapture(pointer.pointerId)}catch{}}syncSectionDragUI()}
   function beginSectionDrag(button,event){
     traceSectionDrag("dragstart",event);
     const sectionId=button.dataset.sectionDrag;const index=state.page.sections.findIndex((section)=>section.id===sectionId);if(!sectionId||index<sectionOrderFloor()||definition(state.page.sections[index])?.capabilities?.protected===true||definition(state.page.sections[index])?.capabilities?.reorderable===false){event.preventDefault();return}
-    state.draggingSectionId=sectionId;state.keyboardDragging=false;state.sectionDropIndex=null;if(event.dataTransfer){event.dataTransfer.effectAllowed="move";event.dataTransfer.setData("text/plain",sectionId)}syncSectionDragUI()
+    state.draggingSectionId=sectionId;state.nativeSectionDrag=true;state.keyboardDragging=false;state.sectionDropIndex=null;if(event.dataTransfer){event.dataTransfer.effectAllowed="move";event.dataTransfer.setData("text/plain",sectionId)}syncSectionDragUI()
   }
   function isSpaceKey(event){return event.key===" "||event.key==="Spacebar"||event.key==="Space"||event.code==="Space"}
   function beginKeyboardSectionDrag(button,event){
@@ -257,6 +257,7 @@
     event.preventDefault();commitSectionDrop(targetIndex)
   }
   function handleSectionPointerCancel(event){
+    if(state.nativeSectionDrag){state.pointerDrag=null;return}
     const pointer=state.pointerDrag;if(!pointer||event.pointerId!==pointer.pointerId)return;
     state.pointerDrag=null;clearSectionDrag()
   }
