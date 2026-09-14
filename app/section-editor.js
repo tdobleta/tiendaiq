@@ -200,6 +200,23 @@
     if(slot){const targetIndex=Number(slot.dataset.sectionDropIndex);if(sectionMoveTarget(state.draggingSectionId,targetIndex))return targetIndex}
     return null
   }
+  function beginPointerSectionDrag(button,event){
+    if(!button||event.button!==0||event.isPrimary===false||state.keyboardDragging||event.target.closest?.(".se__tree-actions"))return;
+    const rect=button.getBoundingClientRect();const local=event.clientX>=rect.left&&event.clientX<=rect.right&&event.clientY>=rect.top&&event.clientY<=rect.bottom;
+    state.pointerDrag={sectionId:button.dataset.sectionDrag,pointerId:event.pointerId,mouse:event.pointerType==="mouse",button,startX:event.clientX,startY:event.clientY,startOffsetX:local?event.clientX-rect.left:rect.width/2,startOffsetY:local?event.clientY-rect.top:rect.height/2,coordinateSpace:local?"local":"delta",active:false};
+    try{button.setPointerCapture?.(event.pointerId)}catch{}
+  }
+  function beginMouseSectionDrag(button,event){
+    if(!button||event.button!==0||state.keyboardDragging||state.pointerDrag||event.target.closest?.(".se__tree-actions"))return;
+    const rect=button.getBoundingClientRect();const local=event.clientX>=rect.left&&event.clientX<=rect.right&&event.clientY>=rect.top&&event.clientY<=rect.bottom;
+    state.pointerDrag={sectionId:button.dataset.sectionDrag,mouse:true,button,startX:event.clientX,startY:event.clientY,startOffsetX:local?event.clientX-rect.left:rect.width/2,startOffsetY:local?event.clientY-rect.top:rect.height/2,coordinateSpace:local?"local":"delta",active:false};
+  }
+  function handleSectionPointerDown(event){
+    const button=event.target.closest?.("[data-section-drag]");if(button&&root.contains(button))beginPointerSectionDrag(button,event)
+  }
+  function handleSectionMouseDown(event){
+    const button=event.target.closest?.("[data-section-drag]");if(button&&root.contains(button))beginMouseSectionDrag(button,event)
+  }
   function handleSectionPointerMove(event){
     const pointer=state.pointerDrag;if(!pointer||event.pointerId!==pointer.pointerId||event.isPrimary===false)return;
     const moved=Math.hypot(event.clientX-pointer.startX,event.clientY-pointer.startY)>=6;
@@ -348,17 +365,8 @@
       button.addEventListener("dragover",(event)=>reorderSectionByRow(button,event));
       button.addEventListener("drop",(event)=>dropSectionOnRow(button,event));
       button.addEventListener("dragend",clearSectionDrag);
-      button.addEventListener("pointerdown",(event)=>{
-        if(event.button!==0||event.isPrimary===false||state.keyboardDragging||event.target.closest?.(".se__tree-actions"))return;
-        const rect=button.getBoundingClientRect();const local=event.clientX>=rect.left&&event.clientX<=rect.right&&event.clientY>=rect.top&&event.clientY<=rect.bottom;
-        state.pointerDrag={sectionId:button.dataset.sectionDrag,pointerId:event.pointerId,mouse:event.pointerType==="mouse",button,startX:event.clientX,startY:event.clientY,startOffsetX:local?event.clientX-rect.left:rect.width/2,startOffsetY:local?event.clientY-rect.top:rect.height/2,coordinateSpace:local?"local":"delta",active:false};
-        try{button.setPointerCapture(event.pointerId)}catch{}
-      });
-      button.addEventListener("mousedown",(event)=>{
-        if(event.button!==0||state.keyboardDragging||state.pointerDrag||event.target.closest?.(".se__tree-actions"))return;
-        const rect=button.getBoundingClientRect();const local=event.clientX>=rect.left&&event.clientX<=rect.right&&event.clientY>=rect.top&&event.clientY<=rect.bottom;
-        state.pointerDrag={sectionId:button.dataset.sectionDrag,mouse:true,button,startX:event.clientX,startY:event.clientY,startOffsetX:local?event.clientX-rect.left:rect.width/2,startOffsetY:local?event.clientY-rect.top:rect.height/2,coordinateSpace:local?"local":"delta",active:false};
-      });
+      button.addEventListener("pointerdown",handleSectionPointerDown);
+      button.addEventListener("mousedown",handleSectionMouseDown);
     });
     root.querySelectorAll("[data-section-drop-index]").forEach((slot)=>{
       slot.addEventListener("dragover",(event)=>reorderSectionByDrop(slot,event));
@@ -417,9 +425,11 @@
     // pointer event at document level as well, because the modal host can keep
     // the release outside the tree root after pointer capture starts.
     if(!document.documentElement.dataset.sectionDragDocumentBound){
+      document.addEventListener("pointerdown",handleSectionPointerDown,{passive:false,capture:true});
       document.addEventListener("pointermove",handleSectionPointerMove,{passive:false,capture:true});
       document.addEventListener("pointerup",handleSectionPointerUp,{passive:false,capture:true});
       document.addEventListener("pointercancel",handleSectionPointerCancel,{passive:false,capture:true});
+      document.addEventListener("mousedown",handleSectionMouseDown,{passive:false,capture:true});
       document.addEventListener("mousemove",handleSectionMouseMove,{passive:false,capture:true});
       document.addEventListener("mouseup",handleSectionMouseUp,{passive:false,capture:true});
       document.addEventListener("dragover",handleSectionDragOver,{passive:false,capture:true});
