@@ -489,6 +489,10 @@ test("las secciones se pueden reordenar sobre el mismo modelo y con teclado", ()
   assert.ok(source.includes("function sectionCanMove(section,finalIndex)"));
   assert.ok(css.includes(".se.is-section-dragging .se__section-insert-slot{display:flex!important"));
   assert.match(source, /aria-roledescription="sortable" aria-describedby="se-section-drag-help" data-section-drag/);
+  assert.match(source, /role="button" tabindex="0" aria-label="\$\{esc\(section\.label\)\}" aria-pressed="\$\{active\}"/);
+  assert.match(source, /role="presentation" tabindex="-1"/);
+  assert.match(source, /!state\.keyboardDragging&&event\.key==="Enter"/);
+  assert.match(source, /event\.target\.closest\?\.\("\.se__tree-actions"\)/);
   assert.doesNotMatch(source, /draggable="true"/);
   assert.doesNotMatch(source, /button\.addEventListener\("dragstart",/);
   assert.doesNotMatch(source, /button\.addEventListener\("dragover",/);

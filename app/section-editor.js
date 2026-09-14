@@ -113,7 +113,9 @@
       const contents=entry?.editor.outline?.length?outlineHtml(section,entry.editor.outline):section.instance.blocks.map((block)=>`<button class="se__outline-row se__outline-row--block ${section.id===state.selectedSection&&block.id===state.selectedBlock?"is-active":""}" data-section="${esc(section.id)}" data-block="${esc(block.id)}"><span class="se__outline-spacer"></span>${treeIcon("block")}<span>${esc(entry?.editor.blocks.find((item)=>item.type===block.type)?.name||block.type)}</span></button>`).join("");
       const count=entry?.editor.outline?.length?outlineCount(entry.editor.outline,section):section.instance.blocks.length;
       const rowActions=dragEnabled?`<div class="se__tree-actions"><button type="button" data-section-preview="${esc(section.id)}" aria-label="Vista previa de ${esc(section.label)}" title="Vista previa">${treeIcon("eye")}</button><button type="button" data-section-menu="${esc(section.id)}" aria-label="Más opciones de ${esc(section.label)}" title="Más opciones">${treeIcon("more")}</button>${sectionMenuHtml(section)}</div>`:"";
-      return `<div class="se__tree-section"><div class="se__tree-main ${active?"is-active":""}"><button class="se__tree-toggle ${expanded?"is-expanded":""}" type="button" data-expand-section="${esc(section.id)}" aria-expanded="${expanded}" aria-label="${expanded?"Contraer":"Expandir"} ${esc(section.label)}">${treeIcon("chevron")}</button><div class="se__tree-select-shell"${dragAttrs}><div class="se__tree-select" role="button" tabindex="0" data-section="${esc(section.id)}" aria-pressed="${active}">${treeIcon("section")}<span>${esc(section.label)}</span><small>(${count})</small></div>${rowActions}</div></div><div class="se__tree-blocks" ${expanded?"":"hidden"}>${contents}</div></div>${sectionInsertSlot(index+1)}`;
+      const shellA11y=dragEnabled?` role="button" tabindex="0" aria-label="${esc(section.label)}" aria-pressed="${active}"`:"";
+      const selectA11y=dragEnabled?` role="presentation" tabindex="-1"`:` role="button" tabindex="0"`;
+      return `<div class="se__tree-section"><div class="se__tree-main ${active?"is-active":""}"><button class="se__tree-toggle ${expanded?"is-expanded":""}" type="button" data-expand-section="${esc(section.id)}" aria-expanded="${expanded}" aria-label="${expanded?"Contraer":"Expandir"} ${esc(section.label)}">${treeIcon("chevron")}</button><div class="se__tree-select-shell"${dragAttrs}${shellA11y}><div class="se__tree-select"${selectA11y} data-section="${esc(section.id)}" aria-pressed="${active}">${treeIcon("section")}<span>${esc(section.label)}</span><small>(${count})</small></div>${rowActions}</div></div><div class="se__tree-blocks" ${expanded?"":"hidden"}>${contents}</div></div>${sectionInsertSlot(index+1)}`;
     }).join("");
   }
   function sectionOrderFloor(){let floor=0;for(const section of state.page.sections){const entry=definition(section);if(entry?.capabilities?.protected===true||entry?.capabilities?.reorderable===false){floor++;continue}break}return floor}
@@ -228,6 +230,7 @@
     if(state.keyboardDragging&&event.key==="Escape"){event.preventDefault();clearSectionDrag();return}
     if(state.keyboardDragging&&["ArrowUp","ArrowDown"].includes(event.key)){moveKeyboardSection(event);return}
     if(state.keyboardDragging&&(isSpaceKey(event)||event.key==="Enter")){event.preventDefault();commitSectionDrop(state.sectionDropIndex);return}
+    if(!state.keyboardDragging&&event.key==="Enter"){event.preventDefault();selectItem(button.dataset.sectionDrag,null,null);return}
     beginKeyboardSectionDrag(button,event)
   }
   function sectionCanMove(section,finalIndex){const index=state.page.sections.indexOf(section);if(index<0||finalIndex<0||finalIndex>=state.page.sections.length)return false;const target=finalIndex>index?finalIndex+1:finalIndex;return Boolean(sectionMoveTarget(section.id,target))}
@@ -317,12 +320,12 @@
   function bindDynamicTreeInteractions(){
     root.querySelectorAll("[data-section-drag]").forEach((button)=>{
       button.addEventListener("pointerdown",(event)=>{
-        if(event.button!==0||event.isPrimary===false||state.keyboardDragging)return;
+        if(event.button!==0||event.isPrimary===false||state.keyboardDragging||event.target.closest?.(".se__tree-actions"))return;
         state.pointerDrag={sectionId:button.dataset.sectionDrag,pointerId:event.pointerId,mouse:event.pointerType==="mouse",button,startX:event.clientX,startY:event.clientY,active:false};
         try{button.setPointerCapture(event.pointerId)}catch{}
       });
       button.addEventListener("mousedown",(event)=>{
-        if(event.button!==0||state.keyboardDragging||state.pointerDrag)return;
+        if(event.button!==0||state.keyboardDragging||state.pointerDrag||event.target.closest?.(".se__tree-actions"))return;
         state.pointerDrag={sectionId:button.dataset.sectionDrag,mouse:true,button,startX:event.clientX,startY:event.clientY,active:false};
       });
     });
