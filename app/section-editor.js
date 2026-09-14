@@ -115,7 +115,7 @@
       const rowActions=dragEnabled?`<div class="se__tree-actions"><button type="button" data-section-preview="${esc(section.id)}" aria-label="Vista previa de ${esc(section.label)}" title="Vista previa">${treeIcon("eye")}</button><button type="button" data-section-menu="${esc(section.id)}" aria-label="Más opciones de ${esc(section.label)}" title="Más opciones">${treeIcon("more")}</button>${sectionMenuHtml(section)}</div>`:"";
       const shellA11y=dragEnabled?` role="button" tabindex="0" aria-label="${esc(section.label)}" aria-pressed="${active}"`:"";
       const selectA11y=dragEnabled?` role="presentation" tabindex="-1"`:` role="button" tabindex="0"`;
-      return `<div class="se__tree-section"><div class="se__tree-main ${active?"is-active":""}"><button class="se__tree-toggle ${expanded?"is-expanded":""}" type="button" data-expand-section="${esc(section.id)}" aria-expanded="${expanded}" aria-label="${expanded?"Contraer":"Expandir"} ${esc(section.label)}">${treeIcon("chevron")}</button><div class="se__tree-select-shell"${dragEnabled?` draggable="true"`:""}${dragAttrs}${shellA11y}><div class="se__tree-select"${selectA11y} data-section="${esc(section.id)}" aria-pressed="${active}">${treeIcon("section")}<span>${esc(section.label)}</span><small>(${count})</small></div>${rowActions}</div></div><div class="se__tree-blocks" ${expanded?"":"hidden"}>${contents}</div></div>${sectionInsertSlot(index+1)}`;
+      return `<div class="se__tree-section"><div class="se__tree-main ${active?"is-active":""}"><button class="se__tree-toggle ${expanded?"is-expanded":""}" type="button" data-expand-section="${esc(section.id)}" aria-expanded="${expanded}" aria-label="${expanded?"Contraer":"Expandir"} ${esc(section.label)}">${treeIcon("chevron")}</button><div class="se__tree-select-shell"${dragEnabled?` draggable="true"`:""}${dragAttrs}${shellA11y}><div class="se__tree-select"${dragEnabled?` draggable="true"`:""}${selectA11y} data-section="${esc(section.id)}" aria-pressed="${active}">${treeIcon("section")}<span>${esc(section.label)}</span><small>(${count})</small></div>${rowActions}</div></div><div class="se__tree-blocks" ${expanded?"":"hidden"}>${contents}</div></div>${sectionInsertSlot(index+1)}`;
     }).join("");
   }
   function sectionOrderFloor(){let floor=0;for(const section of state.page.sections){const entry=definition(section);if(entry?.capabilities?.protected===true||entry?.capabilities?.reorderable===false){floor++;continue}break}return floor}
@@ -184,6 +184,9 @@
     if(row){dropSectionOnRow(row,event);return}
     const slot=event.target?.closest?.("[data-section-drop-index]");
     if(slot&&root.contains(slot))reorderSectionByDrop(slot,event)
+  }
+  function handleSectionDragStart(event){
+    const row=sectionDragTargetAtPoint(event);if(row)beginSectionDrag(row,event)
   }
   function pointerSectionTarget(event){
     const pointer=state.pointerDrag;let point=event;
@@ -417,6 +420,7 @@
       document.addEventListener("mouseup",handleSectionMouseUp,{passive:false,capture:true});
       document.addEventListener("dragover",handleSectionDragOver,{passive:false,capture:true});
       document.addEventListener("drop",handleSectionDrop,{passive:false,capture:true});
+      document.addEventListener("dragstart",handleSectionDragStart,{passive:false,capture:true});
       document.documentElement.dataset.sectionDragDocumentBound="true";
     }
     const backdrop=root.querySelector("[data-library-backdrop]");if(backdrop)backdrop.onclick=(event)=>{if(event.target===backdrop){state.libraryOpen=false;shell()}};

@@ -489,6 +489,7 @@ test("las secciones se pueden reordenar sobre el mismo modelo y con teclado", ()
   assert.ok(source.includes("function sectionCanMove(section,finalIndex)"));
   assert.ok(css.includes(".se.is-section-dragging .se__section-insert-slot{display:flex!important"));
   assert.match(source, /aria-roledescription="sortable" aria-describedby="se-section-drag-help" data-section-drag/);
+  assert.match(source, /class=\"se__tree-select\"\$\{dragEnabled\?` draggable=\"true\"`/);
   assert.match(source, /role="button" tabindex="0" aria-label="\$\{esc\(section\.label\)\}" aria-pressed="\$\{active\}"/);
   assert.match(source, /role="presentation" tabindex="-1"/);
   assert.match(source, /!state\.keyboardDragging&&event\.key==="Enter"/);
@@ -528,6 +529,7 @@ test("las secciones se pueden reordenar sobre el mismo modelo y con teclado", ()
   assert.match(source, /function sectionDragTargetAtPoint\(event\)/);
   assert.match(source, /document\.addEventListener\(\"dragover\",handleSectionDragOver/);
   assert.match(source, /document\.addEventListener\(\"drop\",handleSectionDrop/);
+  assert.match(source, /document\.addEventListener\(\"dragstart\",handleSectionDragStart/);
   assert.match(source, /aria-label=\"\$\{esc\(field\.label\|\|field\.id\)\}\"/);
   assert.match(source, /setImageValue\(scope,fieldId,button\.dataset\.mediaUrl,selection\)/);
   assert.match(source, /capabilities\?\.reorderable===false/);
