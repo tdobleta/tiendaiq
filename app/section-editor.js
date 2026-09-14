@@ -188,6 +188,11 @@
     const slot=event.target?.closest?.("[data-section-drop-index]");
     if(slot&&root.contains(slot))reorderSectionByDrop(slot,event)
   }
+  function handleSectionDragEnd(event){
+    traceSectionDrag("dragend",event);
+    if(state.draggingSectionId&&Number.isInteger(state.sectionDropIndex)){const targetIndex=state.sectionDropIndex;commitSectionDrop(targetIndex);return}
+    clearSectionDrag()
+  }
   function handleSectionDragStart(event){
     const row=sectionDragTargetAtPoint(event);if(row)beginSectionDrag(row,event)
   }
@@ -374,7 +379,7 @@
       button.addEventListener("dragstart",(event)=>beginSectionDrag(button,event));
       button.addEventListener("dragover",(event)=>reorderSectionByRow(button,event));
       button.addEventListener("drop",(event)=>dropSectionOnRow(button,event));
-      button.addEventListener("dragend",clearSectionDrag);
+      button.addEventListener("dragend",handleSectionDragEnd);
       button.addEventListener("pointerdown",handleSectionPointerDown);
       button.addEventListener("mousedown",handleSectionMouseDown);
     });
