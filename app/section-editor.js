@@ -209,7 +209,7 @@
     event.preventDefault();state.sectionDropIndex=targetIndex;syncSectionDragUI()
   }
   function handleSectionPointerUp(event){
-    const pointer=state.pointerDrag;if(!pointer||event.pointerId!==pointer.pointerId||event.isPrimary===false)return;state.pointerDrag=null;
+    const pointer=state.pointerDrag;if(!pointer||event.pointerId!==pointer.pointerId||event.isPrimary===false)return;
     if(!pointer.active){
       const moved=Math.hypot(event.clientX-pointer.startX,event.clientY-pointer.startY)>=6;
       if(!moved){
@@ -221,7 +221,7 @@
       }
       state.draggingSectionId=pointer.sectionId;state.keyboardDragging=false;
     }
-    const targetIndex=pointerSectionTarget(event);if(targetIndex===null){clearSectionDrag();return}
+    const targetIndex=pointerSectionTarget(event);state.pointerDrag=null;if(targetIndex===null){clearSectionDrag();return}
     event.preventDefault();commitSectionDrop(targetIndex)
   }
   function handleSectionPointerCancel(event){
@@ -237,7 +237,7 @@
     event.preventDefault();state.sectionDropIndex=targetIndex;syncSectionDragUI()
   }
   function handleSectionMouseUp(event){
-    const pointer=state.pointerDrag;if(!pointer?.mouse)return;state.pointerDrag=null;
+    const pointer=state.pointerDrag;if(!pointer?.mouse)return;
     if(!pointer.active){
       const moved=Math.hypot(event.clientX-pointer.startX,event.clientY-pointer.startY)>=6;
       if(!moved){
@@ -247,7 +247,7 @@
       }
       state.draggingSectionId=pointer.sectionId;state.keyboardDragging=false;
     }
-    const targetIndex=pointerSectionTarget(event);if(targetIndex===null){clearSectionDrag();return}
+    const targetIndex=pointerSectionTarget(event);state.pointerDrag=null;if(targetIndex===null){clearSectionDrag();return}
     event.preventDefault();commitSectionDrop(targetIndex)
   }
   function handleSectionKeydown(event){
