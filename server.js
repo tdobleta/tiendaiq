@@ -1146,9 +1146,16 @@ async function api(req, res, url) {
     try {
       const cuerpo = await leerCuerpo(req);
       const candidate = validateSectionPage(cuerpo.section_page || existente.data?.section_page);
-      return json(res, 200, { html: await renderSectionPage(candidate) });
+      const expectedRevision = Number(candidate.revision ?? existente.data?.section_page?.revision ?? 0);
+      const previewPage = applyPageTransition({
+        persisted: existente.data?.section_page,
+        candidate,
+        expectedRevision
+      });
+      return json(res, 200, { html: await renderSectionPage(previewPage) });
     } catch (error) {
-      return json(res, 400, { error: error.message || "La vista previa no cumple el contrato de secciones." });
+      const status = error.code === "SECTION_PAGE_REVISION_CONFLICT" ? 409 : 400;
+      return json(res, status, { error: error.message || "La vista previa no cumple el contrato de secciones." });
     }
   }
 

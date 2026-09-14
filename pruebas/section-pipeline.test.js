@@ -467,6 +467,10 @@ test("el navegador lateral usa la jerarquía semántica y sincroniza cada selecc
 test("el árbol ofrece inserción contextual sin crear un segundo modelo de página", () => {
   const source = fs.readFileSync(path.join(__dirname, "../app/section-editor.js"), "utf8");
   const css = fs.readFileSync(path.join(__dirname, "../app/section-editor.css"), "utf8");
+  assert.ok(source.includes('data-insert-outline="${esc(outlineId)}"'));
+  assert.ok(source.includes("function sectionInsertSlot(index)"));
+  assert.ok(source.includes("sectionInsertSlot(0)+state.page.sections.map"));
+  assert.ok(source.includes("index===sections.length?`Añadir sección después"));
   assert.match(source, /data-insert-kind=\"\$\{kind\}\"/);
   assert.match(source, /data-insert-parent=\"\$\{esc\(parentId\)\}\"/);
   assert.match(source, /state\.page\.sections\.splice\(index,0,section\)/);
@@ -482,6 +486,8 @@ test("el árbol ofrece inserción contextual sin crear un segundo modelo de pág
 test("las secciones se pueden reordenar sobre el mismo modelo y con teclado", () => {
   const source = fs.readFileSync(path.join(__dirname, "../app/section-editor.js"), "utf8");
   const css = fs.readFileSync(path.join(__dirname, "../app/section-editor.css"), "utf8");
+  assert.ok(source.includes("function sectionCanMove(section,finalIndex)"));
+  assert.ok(css.includes(".se.is-section-dragging .se__section-insert-slot{display:flex!important"));
   assert.match(source, /draggable="true" aria-roledescription="sortable"/);
   assert.match(source, /data-section-drop-index/);
   assert.match(source, /function sectionMoveTarget\(sectionId,targetIndex\)/);
@@ -560,6 +566,12 @@ test("el selector de imágenes ofrece carga real y galería de Shopify", () => {
 
 test("el editor conserva estado limpio, filtra la biblioteca y guarda con revisión", () => {
   const source = fs.readFileSync(path.join(__dirname, "../app/section-editor.js"), "utf8");
+  const server = fs.readFileSync(path.join(__dirname, "../server.js"), "utf8");
+  assert.ok(source.includes("async function recoverFromConflict(message)"));
+  assert.ok(source.includes("error.status===409"));
+  const previewRoute = server.slice(server.indexOf("const mSectionPreview"), server.indexOf("// POST /api/texto/editar"));
+  assert.match(previewRoute, /applyPageTransition\(\{/);
+  assert.match(previewRoute, /error\.code === "SECTION_PAGE_REVISION_CONFLICT" \? 409/);
   assert.match(source, /savedFingerprint/);
   assert.match(source, /function syncDirty\(\)/);
   assert.match(source, /expected_revision:expectedRevision/);
