@@ -493,9 +493,11 @@ test("las secciones se pueden reordenar sobre el mismo modelo y con teclado", ()
   assert.match(source, /role="presentation" tabindex="-1"/);
   assert.match(source, /!state\.keyboardDragging&&event\.key==="Enter"/);
   assert.match(source, /event\.target\.closest\?\.\("\.se__tree-actions"\)/);
-  assert.doesNotMatch(source, /draggable="true"/);
-  assert.doesNotMatch(source, /button\.addEventListener\("dragstart",/);
-  assert.doesNotMatch(source, /button\.addEventListener\("dragover",/);
+  assert.match(source, /dragEnabled\?` draggable="true"`/);
+  assert.match(source, /button\.addEventListener\("dragstart",\(event\)=>beginSectionDrag/);
+  assert.match(source, /button\.addEventListener\("dragover",\(event\)=>reorderSectionByRow/);
+  assert.match(source, /button\.addEventListener\("drop",\(event\)=>dropSectionOnRow/);
+  assert.match(source, /state\.sectionAdding=true;shell\(\)/);
   assert.match(source, /root\.addEventListener\("pointerup",handleSectionPointerUp/);
   assert.match(source, /root\.addEventListener\("pointercancel",handleSectionPointerCancel/);
   assert.match(source, /data-section-drop-index/);
