@@ -47,6 +47,37 @@ test("rechaza referencias cruzadas y variantes eliminadas", async () => {
   );
 });
 
+test("rechaza publicar un snapshot cuyo producto o galería ya no coincide con Shopify", async () => {
+  const staleTitle = data();
+  staleTitle.section_page.productSnapshot.title = "Producto diferente";
+  await assert.rejects(
+    assertSectionPagePublishable(staleTitle, {}, {
+      async query() {
+        return { product: { id: "gid://shopify/Product/42", title: "Camisa", variants: { nodes: [{ id: "gid://shopify/ProductVariant/7" }] } } };
+      }
+    }),
+    (error) => error instanceof SectionPagePublishError && /título actual/.test(error.message)
+  );
+
+  const staleMedia = data();
+  staleMedia.section_page.productSnapshot.media = [{ id: "gid://shopify/MediaImage/old", url: "https://cdn.shopify.com/old.jpg" }];
+  await assert.rejects(
+    assertSectionPagePublishable(staleMedia, {}, {
+      async query() {
+        return {
+          product: {
+            id: "gid://shopify/Product/42",
+            title: "Camisa",
+            media: { nodes: [{ id: "gid://shopify/MediaImage/current", image: { url: "https://cdn.shopify.com/current.jpg" } }] },
+            variants: { nodes: [{ id: "gid://shopify/ProductVariant/7" }] }
+          }
+        };
+      }
+    }),
+    (error) => error instanceof SectionPagePublishError && /imágenes/.test(error.message)
+  );
+});
+
 test("la extensión reconoce el contrato nuevo antes de los renderers heredados", () => {
   const fs = require("node:fs");
   const path = require("node:path");

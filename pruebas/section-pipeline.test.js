@@ -499,6 +499,7 @@ test("las secciones se pueden reordenar sobre el mismo modelo y con teclado", ()
   assert.match(source, /commitSectionDrop\(state\.sectionDropIndex\)/);
   assert.match(source, /function sectionRowDropIndex\(button,event\)/);
   assert.match(source, /function pointerSectionTarget\(event\)/);
+  assert.match(source, /const tree=root\.querySelector\("\.se__tree"\);const rect=tree\?\.getBoundingClientRect\(\)/);
   assert.match(source, /function handleSectionPointerMove\(event\)/);
   assert.match(source, /state\.expandedSections\.clear\(\);state\.expandedOutline\.clear\(\);shell\(\)/);
   assert.match(source, /function handleSectionPointerUp\(event\)/);
@@ -516,6 +517,8 @@ test("las secciones se pueden reordenar sobre el mismo modelo y con teclado", ()
   assert.match(source, /button\.addEventListener\(\"pointerdown\",\(event\)=>/);
   assert.match(source, /function handleSectionMouseMove\(event\)/);
   assert.match(source, /button\.addEventListener\(\"mousedown\",\(event\)=>/);
+  assert.match(source, /aria-label=\"\$\{esc\(field\.label\|\|field\.id\)\}\"/);
+  assert.match(source, /setImageValue\(scope,fieldId,button\.dataset\.mediaUrl,selection\)/);
   assert.match(source, /capabilities\?\.reorderable===false/);
   assert.match(css, /\.se\.is-section-dragging \.se__section-drop-slot\.is-active/);
 });

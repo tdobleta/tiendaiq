@@ -24,7 +24,7 @@ function descriptorKey(section) {
 }
 
 function blockStructure(section) {
-  return (section.instance.blocks || []).map((block) => ({ id: block.id, type: block.type }));
+  return (section.instance.blocks || []).map((block) => ({ id: block.id, type: block.type, parentId: block.parentId || null }));
 }
 
 function assertServerOwnedFields(persisted, candidate) {

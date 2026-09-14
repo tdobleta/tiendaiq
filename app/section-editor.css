@@ -80,3 +80,15 @@ body.se-modal-host .se__top{grid-template-columns:minmax(0,1fr) auto minmax(430p
 body.se-modal-host .se__identity{display:none}
 body.se-modal-host .se__viewport{grid-column:2;grid-row:1}
 body.se-modal-host .se__actions{grid-column:3;grid-row:1}
+
+/* Los slots contextuales no pueden tapar una fila cuando están inactivos.
+   Durante drag, foco o hover se habilita únicamente el slot correspondiente. */
+.se__section-insert-slot{pointer-events:none}
+.se__section-insert-slot button{pointer-events:none}
+.se__tree-section:hover+.se__section-insert-slot button,
+.se__section-insert-slot:hover button,
+.se__section-insert-slot:focus-within button{pointer-events:auto}
+@media(max-width:900px){
+  body.se-modal-host .se__top{grid-template-columns:minmax(0,1fr) auto}
+  body.se-modal-host .se__actions{grid-column:2;grid-row:1}
+}

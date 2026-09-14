@@ -1336,7 +1336,9 @@
     let plantillas = [];
     try {
       const result = await api("/page-templates");
-      plantillas = (result.templates || []).map((tpl) => ({
+      plantillas = (result.templates || [])
+        .filter((tpl) => tpl && tpl.status === "active" && tpl.creation !== false && tpl.creationEnabled !== false)
+        .map((tpl) => ({
         ...tpl,
         nombre: tpl.name,
         subtitulo: tpl.description,
@@ -1383,7 +1385,7 @@
                 ${previewPlantilla(tpl.tipo, tpl.id, tpl.imagen, tpl.compositionKey)}
                 <span class="plantilla-card__foot">
                   <span>${esc(tpl.subtitulo)}</span>
-                  <span class="tpl-tags">${tpl.tags.map((tag) => `<i>${esc(tag)}</i>`).join("")}</span>
+                <span class="tpl-tags">${(tpl.tags || []).map((tag) => `<i>${esc(tag)}</i>`).join("")}</span>
                 </span>
               </button>
             `).join("")}
@@ -1547,13 +1549,15 @@
       // al documento o al editor anteriores.
       if (body.estilo === "section-page-v1") {
         try {
-          const pageId = pending.pageId || String(body.producto_id).split("/").pop();
-          const fallback = await api(`/paginas/${pageId}`);
-          if (fallback?.data?.section_page) {
-            limpiarGeneracionPendiente();
-            estado.pagina = fallback;
-            abrirEditorV3(pageId);
-            return;
+          const pageId = pending.pageId;
+          if (pageId && /^page-[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(pageId))) {
+            const fallback = await api(`/paginas/${pageId}`);
+            if (fallback?.data?.section_page) {
+              limpiarGeneracionPendiente();
+              estado.pagina = fallback;
+              abrirEditorV3(pageId);
+              return;
+            }
           }
         } catch {}
       }

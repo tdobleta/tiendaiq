@@ -73,6 +73,10 @@ function createProductPage({ product, research = {}, urls = {}, composition = nu
     ? [{ id: productInformation.id, version: productInformation.version, required: true }]
     : (Array.isArray(composition) ? composition : resolvePageComposition(composition));
   if (!selectedComposition.length) throw new SectionContractError("La composición necesita al menos una sección");
+  const productSectionCount = selectedComposition.filter((descriptor) => descriptor?.id === productInformation.id).length;
+  if (productSectionCount > 1) {
+    throw new SectionContractError("La composición no puede contener más de una única sección de Información del producto");
+  }
 
   const sections = selectedComposition.map((descriptor, index) => {
     const definition = resolveSection(descriptor);
@@ -133,6 +137,17 @@ function validatePage(candidate) {
       instance
     };
   });
+  // validatePage también se usa para renderizar una sección reutilizable de
+  // forma aislada en tests/preview. En ese caso no hay una sección de producto
+  // que validar. Cuando sí aparece, la regla de página completa sigue siendo
+  // estricta: exactamente una y siempre al principio.
+  const productSections = sections.filter((section) => section.definition.id === productInformation.id);
+  if (productSections.length > 1) {
+    throw new SectionContractError("La sección de Información del producto admite una sola instancia");
+  }
+  if (productSections.length === 1 && sections[0] !== productSections[0]) {
+    throw new SectionContractError("La sección de Información del producto es obligatoria y no se puede reordenar: debe permanecer al comienzo");
+  }
   const page = {
     ...candidate,
     ...(Object.hasOwn(candidate, "copy_slots_v1")

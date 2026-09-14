@@ -6,6 +6,13 @@ const { validatePage } = require("../section-pipeline/page-pipeline");
 const PRODUCT_QUERY = `query SectionPagePublishCheck($id: ID!) {
   product(id: $id) {
     id
+    title
+    media(first: 100) {
+      nodes {
+        id
+        ... on MediaImage { image { url } }
+      }
+    }
     variants(first: 100) { nodes { id } }
   }
 }`;
@@ -36,9 +43,18 @@ function sectionPageProjection(data) {
 async function assertSectionPagePublishable(data, session, { signal, query = gql } = {}) {
   if (!data?.section_page) return null;
   const page = sectionPageProjection(data);
+  const snapshot = data.section_page.productSnapshot || {};
   const result = await query(PRODUCT_QUERY, { id: page.productId }, session, { signal });
   if (!result?.product || result.product.id !== page.productId) {
     throw new SectionPagePublishError("No se pudo confirmar el producto Shopify de esta página");
+  }
+  if (snapshot.title && result.product.title && String(snapshot.title).trim() !== String(result.product.title).trim()) {
+    throw new SectionPagePublishError("La vista previa no coincide con el título actual del producto Shopify");
+  }
+  const snapshotMedia = Array.isArray(snapshot.media) ? snapshot.media.filter((item) => item?.id) : [];
+  const liveMedia = new Set((result.product.media?.nodes || []).map((item) => String(item?.id || "")).filter(Boolean));
+  if (snapshotMedia.length && liveMedia.size && snapshotMedia.some((item) => !liveMedia.has(String(item.id)))) {
+    throw new SectionPagePublishError("La vista previa contiene imágenes que ya no pertenecen al producto Shopify");
   }
   const liveVariants = new Set((result.product.variants?.nodes || []).map((variant) => String(variant.id)));
   if (liveVariants.size === 0) throw new SectionPagePublishError("El producto necesita al menos una variante para publicarse");

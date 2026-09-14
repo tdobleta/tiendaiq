@@ -49,6 +49,16 @@ test("la plantilla base habilitada para nuevas pruebas nace con una sola secció
   assert.deepEqual(resolvePageComposition("section-page-base-v1"), SECTION_PAGE_BASE_COMPOSITION_V1);
 });
 
+test("una composición nueva no puede materializar dos veces la sección principal", () => {
+  assert.throws(() => createProductPage({
+    product,
+    composition: [
+      { id: "product-information", version: 1 },
+      { id: "product-information", version: 1 }
+    ]
+  }), /única sección de Información del producto/);
+});
+
 test("el comportamiento anterior sigue disponible para páginas que piden una sola sección", () => {
   const page = createProductPage({ product });
   assert.equal(page.sections.length, 1);
