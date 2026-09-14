@@ -186,8 +186,10 @@
     if(!pointer.active){
       const moved=Math.hypot(event.clientX-pointer.startX,event.clientY-pointer.startY)>=6;
       if(!moved){
-        const target=event.target.closest?.("[data-section]");
-        if(target)selectItem(target.dataset.section,target.dataset.block||null,target.dataset.outline||null);
+        // Pointer capture retargets the release to the sortable shell, not
+        // the inner label. Use the id captured on pointerdown so a short
+        // click still selects the section instead of being swallowed by drag.
+        selectItem(pointer.sectionId,null,null);
         clearSectionDrag();return
       }
       state.draggingSectionId=pointer.sectionId;state.keyboardDragging=false;
@@ -212,8 +214,8 @@
     if(!pointer.active){
       const moved=Math.hypot(event.clientX-pointer.startX,event.clientY-pointer.startY)>=6;
       if(!moved){
-        const target=event.target.closest?.("[data-section]");
-        if(target)selectItem(target.dataset.section,target.dataset.block||null,target.dataset.outline||null);
+        // Mouse capture can retarget mouseup to the sortable shell as well.
+        selectItem(pointer.sectionId,null,null);
         clearSectionDrag();return
       }
       state.draggingSectionId=pointer.sectionId;state.keyboardDragging=false;
