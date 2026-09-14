@@ -68,3 +68,4 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .se__section-menu button:disabled{color:#aeb7c0;cursor:default}
 .se__inspector-head{position:relative}
 .se__inspector-head .se__section-menu{top:45px;right:8px}
+.se__section-insert-slot button{pointer-events:auto}
