@@ -136,7 +136,7 @@
   function beginSectionDrag(button,event){
     traceSectionDrag("dragstart",event);
     const sectionId=button.dataset.sectionDrag;const index=state.page.sections.findIndex((section)=>section.id===sectionId);if(!sectionId||index<sectionOrderFloor()||definition(state.page.sections[index])?.capabilities?.protected===true||definition(state.page.sections[index])?.capabilities?.reorderable===false){event.preventDefault();return}
-    state.draggingSectionId=sectionId;state.nativeSectionDrag=true;state.keyboardDragging=false;state.sectionDropIndex=null;if(event.dataTransfer){event.dataTransfer.effectAllowed="move";event.dataTransfer.setData("text/plain",sectionId)}syncSectionDragUI()
+    state.draggingSectionId=sectionId;state.nativeSectionDrag=true;state.pointerDrag=null;state.keyboardDragging=false;state.sectionDropIndex=null;if(event.dataTransfer){event.dataTransfer.effectAllowed="move";event.dataTransfer.setData("text/plain",sectionId)}syncSectionDragUI()
   }
   function isSpaceKey(event){return event.key===" "||event.key==="Spacebar"||event.key==="Space"||event.code==="Space"}
   function beginKeyboardSectionDrag(button,event){
@@ -170,7 +170,8 @@
     const direct=event.target?.closest?.("[data-section-drag]");
     if(direct&&root.contains(direct))return direct;
     const pointed=document.elementFromPoint?.(event.clientX,event.clientY)?.closest?.("[data-section-drag]");
-    return pointed&&root.contains(pointed)?pointed:null
+    if(pointed&&root.contains(pointed))return pointed;
+    return [...root.querySelectorAll("[data-section-drag]")].find((candidate)=>{const rect=candidate.getBoundingClientRect();return event.clientX>=rect.left&&event.clientX<=rect.right&&event.clientY>=rect.top&&event.clientY<=rect.bottom})||null
   }
   function handleSectionDragOver(event){
     traceSectionDrag("dragover",event);
