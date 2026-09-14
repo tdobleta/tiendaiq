@@ -577,6 +577,8 @@ test("el editor conserva estado limpio, filtra la biblioteca y guarda con revisi
   assert.match(previewRoute, /error\.code === "SECTION_PAGE_REVISION_CONFLICT" \? 409/);
   assert.match(source, /savedFingerprint/);
   assert.match(source, /function syncDirty\(\)/);
+  assert.match(source, /undoButton\.disabled=!state\.past\.length/);
+  assert.match(source, /redoButton\.disabled=!state\.future\.length/);
   assert.match(source, /expected_revision:expectedRevision/);
   assert.match(source, /data-library-category/);
   assert.match(source, /function filterLibrary\(\)/);

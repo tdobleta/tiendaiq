@@ -28,7 +28,7 @@
   function remember(key=null){if(key&&state.historyKey===key)return;state.past.push(clone(state.page));if(state.past.length>60)state.past.shift();state.future=[];state.historyKey=key}
   function finishHistory(){state.historyKey=null}
   function fingerprint(page){const copy=clone(page);delete copy.tree;return JSON.stringify(copy)}
-  function syncDirty(){state.dirty=fingerprint(state.page)!==state.savedFingerprint;const saveButton=root.querySelector("#se-save");if(saveButton)saveButton.disabled=!state.dirty}
+  function syncDirty(){state.dirty=fingerprint(state.page)!==state.savedFingerprint;const saveButton=root.querySelector("#se-save");if(saveButton)saveButton.disabled=!state.dirty;const undoButton=root.querySelector("#se-undo");if(undoButton)undoButton.disabled=!state.past.length;const redoButton=root.querySelector("#se-redo");if(redoButton)redoButton.disabled=!state.future.length}
   function changed(){syncDirty()}
   function undo(){const previous=state.past.pop();if(!previous)return;state.future.push(clone(state.page));state.page=previous;finishHistory();syncDirty();shell()}
   function redo(){const next=state.future.pop();if(!next)return;state.past.push(clone(state.page));state.page=next;finishHistory();syncDirty();shell()}
