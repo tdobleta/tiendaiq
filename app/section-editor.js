@@ -291,7 +291,12 @@
   function focusPreview(){const frame=root.querySelector("#se-frame");const doc=frame?.contentDocument;if(!doc||!state.selectedSection)return;const section=doc.querySelector(`[data-tiq-section-id="${CSS.escape(state.selectedSection)}"]`);if(!section)return;let target=section;if(state.selectedBlock)target=section.querySelector(`[data-tiq-block-id="${CSS.escape(state.selectedBlock)}"]`)||section;if(state.selectedOutline)target=section.querySelector(`[data-tiq-outline-id="${CSS.escape(state.selectedOutline)}"]`)||section;target.scrollIntoView({block:"center",behavior:"smooth"})}
   function applySectionMenuAction(button){const sectionId=button.dataset.sectionId;const section=state.page.sections.find((item)=>item.id===sectionId);if(!section)return;const action=button.dataset.sectionAction;state.sectionMenuId=null;state.selectedSection=sectionId;state.selectedBlock=null;state.selectedOutline=null;if(action==="select"){renderSelection();return}if(action==="save"){save();return}if(action==="duplicate"){duplicateSelectedSection();return}if(action==="delete"){deleteSelectedSection();return}renderSelection()}
   function bindTree(){
-    root.querySelectorAll("[data-section]").forEach((button)=>button.onclick=()=>selectItem(button.dataset.section,button.dataset.block||null,button.dataset.outline||null));
+    const tree=root.querySelector(".se__tree");
+    if(tree)tree.onclick=(event)=>{
+      const button=event.target.closest?.("[data-section]");
+      if(!button||!tree.contains(button)||event.target.closest?.("[data-section-menu],[data-section-preview]"))return;
+      selectItem(button.dataset.section,button.dataset.block||null,button.dataset.outline||null);
+    };
     root.querySelectorAll("[data-expand-section]").forEach((button)=>button.onclick=()=>{const id=button.dataset.expandSection;if(state.expandedSections.has(id))state.expandedSections.delete(id);else state.expandedSections.add(id);renderSelection()});
     root.querySelectorAll("[data-expand-outline]").forEach((button)=>button.onclick=()=>{const key=button.dataset.expandOutline;if(state.expandedOutline.has(key))state.expandedOutline.delete(key);else state.expandedOutline.add(key);renderSelection()});
     root.querySelectorAll("[data-section-preview]").forEach((button)=>button.onclick=(event)=>{event.stopPropagation();selectItem(button.dataset.sectionPreview,null,null)});
