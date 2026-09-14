@@ -183,7 +183,11 @@
   }
   function handleSectionPointerUp(event){
     const pointer=state.pointerDrag;if(!pointer||event.pointerId!==pointer.pointerId||event.isPrimary===false)return;state.pointerDrag=null;
-    if(!pointer.active){clearSectionDrag();return}
+    if(!pointer.active){
+      const moved=Math.hypot(event.clientX-pointer.startX,event.clientY-pointer.startY)>=6;
+      if(!moved){clearSectionDrag();return}
+      state.draggingSectionId=pointer.sectionId;state.keyboardDragging=false;
+    }
     const targetIndex=pointerSectionTarget(event);if(targetIndex===null){clearSectionDrag();return}
     event.preventDefault();commitSectionDrop(targetIndex)
   }
@@ -201,7 +205,11 @@
   }
   function handleSectionMouseUp(event){
     const pointer=state.pointerDrag;if(!pointer?.mouse)return;state.pointerDrag=null;
-    if(!pointer.active){clearSectionDrag();return}
+    if(!pointer.active){
+      const moved=Math.hypot(event.clientX-pointer.startX,event.clientY-pointer.startY)>=6;
+      if(!moved){clearSectionDrag();return}
+      state.draggingSectionId=pointer.sectionId;state.keyboardDragging=false;
+    }
     const targetIndex=pointerSectionTarget(event);if(targetIndex===null){clearSectionDrag();return}
     event.preventDefault();commitSectionDrop(targetIndex)
   }
