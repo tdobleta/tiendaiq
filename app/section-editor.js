@@ -193,7 +193,7 @@
   }
   function handleSectionDragEnd(event){
     traceSectionDrag("dragend",event);
-    if(state.draggingSectionId){const targetIndex=Number.isInteger(state.sectionDropIndex)?state.sectionDropIndex:sectionDropIndexNearPoint(event);if(Number.isInteger(targetIndex)){commitSectionDrop(targetIndex);return}}
+    if(state.draggingSectionId){const targetIndex=Number.isInteger(state.sectionDropIndex)?state.sectionDropIndex:sectionDropIndexNearPoint(event);traceSectionDrag(`dragend-target:${targetIndex}`,event);if(Number.isInteger(targetIndex)){commitSectionDrop(targetIndex);return}}
     clearSectionDrag()
   }
   function sectionDropIndexNearPoint(event){
