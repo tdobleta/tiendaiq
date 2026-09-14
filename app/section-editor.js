@@ -242,7 +242,17 @@
     apply.onclick=()=>{remember(`${section.id}:${block?.id||"section"}:${fieldId}`);settings[fieldId]=`<p>${esc(result)}</p>`;changed();close();shell();notify("Propuesta aplicada al borrador. Guardá para conservarla.")};modal.querySelector("[data-ai-instructions]")?.focus();
   }
   function bindInspector(){
-    root.querySelectorAll("[data-field]").forEach((control)=>{const event=control.type==="range"?"input":"change";control.addEventListener(event,()=>update(control));if(control.type==="range"){control.addEventListener("change",finishHistory);control.addEventListener("blur",finishHistory)}});
+    root.querySelectorAll("[data-field]").forEach((control)=>{
+      const textLike=control.tagName==="TEXTAREA"||["text","url"].includes(control.type);
+      const event=control.type==="range"||textLike?"input":"change";
+      control.addEventListener(event,()=>update(control));
+      if(textLike){
+        // Mantener el borrador sincronizado mientras se escribe evita perder
+        // el valor cuando la vista previa vuelve a renderizarse.
+        control.addEventListener("change",()=>{update(control);finishHistory()});
+      }
+      if(control.type==="range"){control.addEventListener("change",finishHistory);control.addEventListener("blur",finishHistory)}
+    });
     root.querySelectorAll("[data-number-for]").forEach((control)=>control.addEventListener("change",()=>{const range=root.querySelector(`[data-field="${CSS.escape(control.dataset.numberFor)}"]`);range.value=control.value;update(range)}));
     root.querySelectorAll("[data-color-for]").forEach((control)=>control.addEventListener("change",()=>{const picker=root.querySelector(`[data-field="${CSS.escape(control.dataset.colorFor)}"]`);if(/^#[0-9a-f]{6}$/i.test(control.value)){picker.value=control.value;update(picker)}}));
     root.querySelectorAll("input[type=color][data-field]").forEach((control)=>control.addEventListener("input",()=>{const text=root.querySelector(`[data-color-for="${CSS.escape(control.dataset.field)}"]`);if(text)text.value=control.value.toUpperCase()}));
@@ -357,7 +367,7 @@
     bindTree();
     bindInspector();
   }
-  function update(control){const {section,block}=selected();const target=control.dataset.scope==="block"?block.settings:section.instance.settings;const historyKey=`${section.id}:${block?.id||"section"}:${control.dataset.field}`;remember(historyKey);let value=control.type==="checkbox"?control.checked:control.value;if(control.type==="range"){value=Number(value);const number=root.querySelector(`[data-number-for="${CSS.escape(control.dataset.field)}"]`);if(number)number.value=control.value}target[control.dataset.field]=value;changed();if(control.type!=="range")finishHistory();clearTimeout(state.previewTimer);state.previewTimer=setTimeout(refreshPreview,160)}
+  function update(control){const {section,block}=selected();if(!section)return;const target=control.dataset.scope==="block"?block?.settings:section.instance.settings;if(!target)return;const historyKey=`${section.id}:${block?.id||"section"}:${control.dataset.field}`;remember(historyKey);let value=control.type==="checkbox"?control.checked:control.value;if(control.type==="range"){value=Number(value);const number=root.querySelector(`[data-number-for="${CSS.escape(control.dataset.field)}"]`);if(number)number.value=control.value}target[control.dataset.field]=value;changed();if(control.type!=="range"&&!((control.tagName==="TEXTAREA")||["text","url"].includes(control.type)))finishHistory();clearTimeout(state.previewTimer);state.previewTimer=setTimeout(refreshPreview,160)}
   async function refreshPreview(){const request=++state.previewRequest;state.previewAbort?.abort();const controller=new AbortController();state.previewAbort=controller;try{const path=demo?"/section-page-demo-preview":`/api/paginas/${encodeURIComponent(pageId)}/section-preview`;const result=await api(path,{method:"POST",signal:controller.signal,body:{section_page:state.page}});if(request!==state.previewRequest)return;const frame=root.querySelector("#se-frame");if(frame){frame.onload=()=>focusPreview();frame.srcdoc=result.html}}catch(error){if(error.name!=="AbortError"&&request===state.previewRequest)notify(error.message)}}
   async function recoverFromConflict(message){
     try{
