@@ -488,11 +488,10 @@ test("las secciones se pueden reordenar sobre el mismo modelo y con teclado", ()
   const css = fs.readFileSync(path.join(__dirname, "../app/section-editor.css"), "utf8");
   assert.ok(source.includes("function sectionCanMove(section,finalIndex)"));
   assert.ok(css.includes(".se.is-section-dragging .se__section-insert-slot{display:flex!important"));
-  assert.match(source, /aria-roledescription="sortable" aria-describedby="se-section-drag-help" draggable="true" data-section-drag/);
-  assert.match(source, /draggable="true"/);
-  assert.match(source, /button\.addEventListener\("dragstart",/);
-  assert.match(source, /button\.addEventListener\("dragover",/);
-  assert.match(source, /button\.addEventListener\("drop",/);
+  assert.match(source, /aria-roledescription="sortable" aria-describedby="se-section-drag-help" data-section-drag/);
+  assert.doesNotMatch(source, /draggable="true"/);
+  assert.doesNotMatch(source, /button\.addEventListener\("dragstart",/);
+  assert.doesNotMatch(source, /button\.addEventListener\("dragover",/);
   assert.match(source, /root\.addEventListener\("pointerup",handleSectionPointerUp/);
   assert.match(source, /root\.addEventListener\("pointercancel",handleSectionPointerCancel/);
   assert.match(source, /data-section-drop-index/);
