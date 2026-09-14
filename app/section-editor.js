@@ -152,6 +152,7 @@
   function commitSectionDrop(targetIndex){
     const sectionId=state.draggingSectionId;const move=sectionId&&sectionMoveTarget(sectionId,targetIndex);if(!move){clearSectionDrag();return false}const moved=reorderSectionToIndex(sectionId,move.finalIndex);clearSectionDrag();if(moved)notify("Sección reordenada.");return moved
   }
+  function previewSectionDrop(slot,event){if(!state.draggingSectionId)return;const targetIndex=Number(slot.dataset.sectionDropIndex);if(!sectionMoveTarget(state.draggingSectionId,targetIndex))return;event.preventDefault();state.sectionDropIndex=targetIndex;syncSectionDragUI()}
   function reorderSectionByDrop(slot,event){if(!state.draggingSectionId)return;event.preventDefault();commitSectionDrop(Number(slot.dataset.sectionDropIndex))}
   function sectionRowDropIndex(button,event){
     const targetIndex=state.page.sections.findIndex((section)=>section.id===button.dataset.sectionDrag);if(targetIndex<sectionOrderFloor())return null;
@@ -180,7 +181,7 @@
     if(row)traceSectionDrag(`dragover-target:${row.dataset.sectionDrag}`,event);
     if(row){reorderSectionByRow(row,event);return}
     const slot=event.target?.closest?.("[data-section-drop-index]");
-    if(slot&&root.contains(slot))reorderSectionByDrop(slot,event)
+    if(slot&&root.contains(slot))previewSectionDrop(slot,event)
   }
   function handleSectionDrop(event){
     traceSectionDrag("drop",event);
@@ -387,7 +388,7 @@
       button.addEventListener("mousedown",handleSectionMouseDown);
     });
     root.querySelectorAll("[data-section-drop-index]").forEach((slot)=>{
-      slot.addEventListener("dragover",(event)=>reorderSectionByDrop(slot,event));
+      slot.addEventListener("dragover",(event)=>previewSectionDrop(slot,event));
       slot.addEventListener("drop",(event)=>reorderSectionByDrop(slot,event));
     });
     root.querySelectorAll('[data-insert-kind="section"]').forEach((slot)=>slot.querySelector("button").onclick=()=>openSectionLibrary(Number(slot.dataset.insertIndex)));
