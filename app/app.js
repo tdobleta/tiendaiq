@@ -757,10 +757,14 @@
         </s-section>
       </s-page>`;
 
-    const crear = $("ir-crear") || $("ir-crear-inline") || $("vacio-crear");
-    if (crear) crear.onclick = () => cargarLista();
-    const vacioCrear = $("vacio-crear");
-    if (vacioCrear) vacioCrear.onclick = () => cargarLista();
+    // Shopify puede conservar el botón del slot primary-action aunque no lo
+    // pinte dentro del iframe. Vincular todas las entradas evita que el botón
+    // visible quede sin acción cuando el slot oculto aparece primero en el DOM.
+    [$("ir-crear"), $("ir-crear-inline"), $("vacio-crear")]
+      .filter(Boolean)
+      .forEach((crear) => {
+        crear.onclick = () => cargarLista();
+      });
     vista.querySelectorAll("[data-editar]").forEach((b) => {
       b.onclick = () => abrirEditorV3(b.dataset.editar);
     });
