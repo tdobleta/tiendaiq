@@ -17,6 +17,9 @@ test("el chrome del editor usa componentes nativos de Shopify", () => {
   assert.match(editor, /<s-button variant="secondary" class="se__brand-button/);
   assert.match(editor, /<s-button variant="secondary" class="se__action-button se__action-button--secondary" id="se-save"/);
   assert.match(editor, /<s-button variant="primary" class="se__action-button se__action-button--primary" id="se-publish"/);
+  assert.match(editor, /<s-button variant="secondary" class="se__media-select" data-media-menu/);
+  assert.match(editor, /<s-button variant="tertiary" data-media-upload/);
+  assert.match(editor, /<s-button variant="tertiary" data-media-gallery/);
   assert.match(editor, /<s-badge class="se__origin-badge/);
   assert.doesNotMatch(editor, /sourceIcon\(origin\).*<span class="se__origin-badge/);
 });

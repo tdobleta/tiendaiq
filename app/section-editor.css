@@ -127,3 +127,47 @@ s-button{font-family:inherit}
 .se__section-insert-slot s-button{position:relative;z-index:1;width:24px;height:24px;min-width:24px;padding:0;border:1px solid #2c6ecb;border-radius:50%;background:#1769c2;color:#fff;box-shadow:0 1px 3px rgba(23,105,194,.28)}.se__section-insert-slot s-button svg{width:14px;height:14px}.se__section-insert-slot s-button span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .se__section-menu s-button{width:100%;min-height:30px;display:flex;align-items:center;justify-content:flex-start;padding:0 9px;border-radius:5px;text-align:left}.se__section-menu s-button:hover{background:#edf3fb;color:#1769c2}.se__section-menu s-button[disabled]{color:#aeb7c0;cursor:default}
 .se.is-section-dragging .se__tree-select-shell[data-section-drag]{cursor:grabbing}.se.is-section-dragging .se__tree-select-shell:not(.is-dragging){opacity:.98}.se.is-section-dragging .se__tree-actions s-button{min-width:23px;height:23px;padding:0}
+
+/*
+ * Native Shopify controls
+ *
+ * These hosts intentionally do not paint their own borders, fills, radius or
+ * typography. Polaris owns that surface through <s-button>; this file only
+ * supplies layout constraints so the controls remain aligned in the editor.
+ * Keeping the visual contract on the native element also prevents the header,
+ * brand controls and image chooser from drifting into bespoke button styles.
+ */
+.se__top .se__action-button,
+.se__top .se__advanced-toggle,
+.se__top .se__brand-button,
+.se__media-picker .se__media-select,
+.se__media-menu s-button{
+  box-sizing:border-box;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:0;
+  min-width:0;
+  padding:0;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  color:inherit;
+  font:inherit;
+  font-weight:inherit;
+  box-shadow:none;
+  cursor:pointer;
+}
+.se__top .se__action-button{min-height:36px}
+.se__top .se__advanced-toggle,
+.se__top .se__brand-button{min-height:30px}
+.se__media-picker .se__media-select{width:min(100%,228px)}
+.se__media-menu s-button{width:100%;min-height:35px;justify-content:flex-start;gap:8px;padding:7px 9px;text-align:left}
+.se__media-menu s-button:hover{background:#f1f1f1}
+.se__top .se__action-button:hover:not(:disabled),
+.se__top .se__advanced-toggle:hover,
+.se__top .se__brand-button:hover,
+.se__media-picker .se__media-select:hover{background:transparent;border-color:transparent;box-shadow:none}
+.se__top .se__action-button:disabled{background:transparent;border-color:transparent;box-shadow:none}
+.se__top .se__advanced-toggle.is-on{outline:2px solid rgba(44,110,203,.2);outline-offset:1px}
+.se__top .se__brand-button i{display:inline-block}
