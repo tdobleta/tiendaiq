@@ -18,16 +18,12 @@
 // Idempotente: correrlo de nuevo pisa el metafield y reasigna el suffix.
 // ============================================================
 
-const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
 const { gql, sesionDeEnv } = require("./shopify");
 const { assertFixedTemplatePublishable } = require("./src/shopify/fixed-template-publish-guard");
-const { storefrontProjection } = require("./src/piloto/pdp01-contract");
-const {
-  assertSectionPagePublishable,
-  sectionPageProjection
-} = require("./src/shopify/section-page-publish-guard");
+const { assertSectionPagePublishable } = require("./src/shopify/section-page-publish-guard");
+const { preparePublishedData, publishedContentHash } = require("./src/shopify/publication-content");
 
 const RUTA_JSON = path.join(__dirname, "ultima-pagina.json");
 
@@ -35,24 +31,7 @@ const RUTA_JSON = path.join(__dirname, "ultima-pagina.json");
 // Nunca se elige ni se sube una imagen local como sustituto de una reseña.
 // Si una publicación histórica conserva una URL, se omite del nuevo metafield;
 // la limpieza de Files se hace aparte, desde un inventario revisado por tienda.
-function prepararDatosPublicacion(data) {
-  const dataTienda = JSON.parse(JSON.stringify(data));
-  if (dataTienda?.section_page) {
-    dataTienda.section_page = sectionPageProjection(dataTienda);
-  }
-  // Piloto 01 keeps the full source snapshot only in our private page record.
-  // The storefront gets an intentional projection: dynamic catalog information
-  // comes from Liquid/Shopify, never from an old generated document.
-  if (dataTienda?.piloto_pdp_01) {
-    dataTienda.piloto_pdp_01 = storefrontProjection(dataTienda.piloto_pdp_01);
-    dataTienda.fuente = { shopify_product_id: dataTienda?.fuente?.shopify_product_id };
-  }
-  const reseña = dataTienda?.facetas?.hero?.resena_destacada;
-  if (reseña && Object.prototype.hasOwnProperty.call(reseña, "avatar")) {
-    reseña.avatar = null;
-  }
-  return dataTienda;
-}
+const prepararDatosPublicacion = preparePublishedData;
 
 // ---------- mutaciones ----------
 
@@ -85,7 +64,7 @@ async function publicarPagina(data, sesion, log = () => {}, { signal } = {}) {
 
   // --- 1. metafield con el Producto Universal ---
   const serializedData = JSON.stringify(dataTienda);
-  const publishedHash = crypto.createHash("sha256").update(serializedData).digest("hex");
+  const publishedHash = publishedContentHash(data);
   const r1 = await gql(
     M_METAFIELD,
     {

@@ -9,6 +9,7 @@ const {
   normalizePageRecord,
   normalizeStoredPageRecord
 } = require("../../domain/page-contract");
+const { publishedContentHash } = require("../../shopify/publication-content");
 
 function hasCurrentPageContract(record) {
   return isPlainObject(record) && Object.prototype.hasOwnProperty.call(record, "data");
@@ -229,7 +230,11 @@ function createPageRepository(pool) {
         page.last_completed_job_id = activeJobId;
         page.last_job_error = null;
         page.published_content_hash = publishedHash;
-        const currentHash = crypto.createHash("sha256").update(JSON.stringify(page.data || {})).digest("hex");
+        // published_content_hash is the hash of the exact projection sent to
+        // Shopify, not of the private editor document. Using the same helper
+        // as the publisher prevents false "changes pending" after publishing
+        // a section page or a legacy page with private metadata.
+        const currentHash = publishedContentHash(page.data || {});
         page.cambios_sin_publicar = currentHash !== publishedHash;
         return page;
       });

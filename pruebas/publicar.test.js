@@ -3,6 +3,7 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const { prepararDatosPublicacion } = require("../publicar");
+const { publishedContentHash } = require("../src/shopify/publication-content");
 const { hashSource } = require("../src/piloto/pdp01-contract");
 
 test("la publicación no conserva ni crea avatares de reseñas", () => {
@@ -58,4 +59,17 @@ test("la página por secciones publica sólo el contrato necesario para storefro
   assert.equal(published.section_page.evidence, undefined);
   assert.equal(published.section_page.tree, undefined);
   assert.equal(published.section_page.sections.length, 1);
+});
+
+test("el hash de publicación usa la misma proyección que recibe Shopify", () => {
+  const data = {
+    fuente: { shopify_product_id: "gid://shopify/Product/42", descripcion_cruda: "privada" },
+    section_page: require("../src/section-pipeline/page-pipeline").createProductPage({
+      product: { id: "gid://shopify/Product/42", title: "Camisa", variants: [{ id: "gid://shopify/ProductVariant/7", title: "Única", price: "20.00" }] }
+    })
+  };
+  const published = prepararDatosPublicacion(data);
+  const crypto = require("node:crypto");
+  const expected = crypto.createHash("sha256").update(JSON.stringify(published)).digest("hex");
+  assert.equal(publishedContentHash(data), expected);
 });

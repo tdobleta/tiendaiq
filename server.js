@@ -98,6 +98,7 @@ const { publicarDocumentoV1 } = require("./nucleo/publicar-v1");
 const { createProductPage, editorRegistry, instantiateSection, validatePage: validateSectionPage } = require("./src/section-pipeline/page-pipeline");
 const { creationTemplates } = require("./src/domain/template-registry");
 const { pageIdFromCreationRequest, REQUEST_ID } = require("./src/domain/page-identity");
+const { generationIntentFingerprint } = require("./src/domain/generation-intent");
 const { DEMO_SECTION_PAGE_COMPOSITION_V1 } = require("./src/section-pipeline/page-compositions");
 const { applyPageTransition } = require("./src/section-pipeline/page-transition");
 const { renderSectionPage } = require("./src/section-pipeline/preview-renderer");
@@ -293,6 +294,7 @@ const json = (res, codigo, cuerpo, headers = {}) => {
 const jobPublico = (job) => job && ({
   id: job.id,
   type: job.type,
+  pageId: job.payload?.pageId || null,
   status: job.status,
   attempts: job.attempts,
   maxAttempts: job.maxAttempts,
@@ -1375,8 +1377,15 @@ async function api(req, res, url) {
     // acción nueva crea un recurso independiente aunque use el mismo
     // producto. Un reintento de la misma acción vuelve al mismo borrador.
     const pageId = pageIdFromCreationRequest(request_id);
+    const intentionFingerprint = generationIntentFingerprint({ producto_id, idioma, angulo, estilo });
     let existente = await leerPagina(sesion.tenant, pageId);
     let sectionDraftCreated = false;
+    if (existente?.generacion?.intencion_hash && existente.generacion.intencion_hash !== intentionFingerprint) {
+      return json(res, 409, {
+        error: "Ese request_id ya pertenece a otra intención de creación. Iniciá una nueva generación.",
+        code: "GENERATION_INTENT_COLLISION"
+      });
+    }
     if (requestedTemplate.rendererKey === "section-page-v1") {
       try {
         if (!existente) {
@@ -1390,7 +1399,7 @@ async function api(req, res, url) {
             data: base.data,
             urls: base.urls,
             avisos: base.avisos,
-            generacion: { status: "copy_pending", ai: false, request_id },
+            generacion: { status: "copy_pending", ai: false, request_id, intencion_hash: intentionFingerprint },
             url_publica: null,
             actualizado: new Date().toISOString(),
             titulo: base.titulo
@@ -1434,7 +1443,7 @@ async function api(req, res, url) {
           data: base.data,
           urls: base.urls,
           avisos: base.avisos,
-          generacion: { status: "paused", code: admissionPause.code, message: admissionPause.message, ai: false },
+          generacion: { status: "paused", code: admissionPause.code, message: admissionPause.message, ai: false, request_id, intencion_hash: intentionFingerprint },
           url_publica: null,
           actualizado: new Date().toISOString(),
           titulo: base.titulo
@@ -1452,7 +1461,7 @@ async function api(req, res, url) {
 
     const plan = await estadoPlan(sesion);
     const { job } = await encolarGeneracionDB(sesion.tenant, {
-      payload: { productId: producto_id, pageId, idioma, angulo, estilo, requestId: request_id },
+      payload: { productId: producto_id, pageId, idioma, angulo, estilo, requestId: request_id, intentionFingerprint },
       idempotencyKey: `generate:${request_id}`,
       period: mesActual(),
       limit: plan.limite,

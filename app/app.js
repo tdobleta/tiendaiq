@@ -1486,7 +1486,8 @@
       return estado.pagina;
     }
     const completed = await esperarJob(pending.jobId, { timeoutMs: 6 * 60 * 1000 });
-    const pageId = completed.result?.pageId || pending.pageId || String(pending.body.producto_id).split("/").pop();
+    const pageId = completed.result?.pageId || pending.pageId || null;
+    if (!pageId) throw new Error("La operación terminó sin devolver el identificador de la página. Reintentá desde la lista de páginas.");
     pending.pageId = pageId;
     estado.pagina = await api(`/paginas/${pageId}`);
     if (pending.tema && pending.tema !== "auto" && estado.pagina?.data) {

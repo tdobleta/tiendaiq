@@ -23,10 +23,10 @@
         <div class="{{ section_dom_id }}__body rte">{{ section.settings.body }}</div>
       {% endif %}
 
-      {% if section.settings.button_label != blank %}
+      {% if section.settings.button_label != blank and section.settings.button_link != blank %}
         <a
           class="{{ section_dom_id }}__button {{ section_dom_id }}__button--{{ section.settings.button_style }}"
-          href="{{ section.settings.button_link | default: '#' }}"
+          href="{{ section.settings.button_link }}"
         >
           <span>{{ section.settings.button_label | escape }}</span>
           <svg aria-hidden="true" viewBox="0 0 20 20" focusable="false"><path d="M4 10h11m-4-4 4 4-4 4"/></svg>

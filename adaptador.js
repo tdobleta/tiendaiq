@@ -136,8 +136,8 @@ function elegirAvatar() {
 // 1. EXTRACCION
 // ============================================================
 
-const CONSULTA_LISTA = `{
-  products(first: 100, sortKey: TITLE) {
+const CONSULTA_LISTA = `query($after: String) {
+  products(first: 100, after: $after, sortKey: TITLE) {
     edges {
       node {
         id
@@ -149,6 +149,7 @@ const CONSULTA_LISTA = `{
         variants(first: 20) { edges { node { id title availableForSale } } }
       }
     }
+    pageInfo { hasNextPage endCursor }
   }
 }`;
 
@@ -158,19 +159,64 @@ const CONSULTA_PRODUCTO = `query($id: ID!) {
     title
     description
     vendor
-    media(first: 20) {
+    media(first: 100) {
       edges { node { id ... on MediaImage { image { url width height } } } }
+      pageInfo { hasNextPage endCursor }
     }
+    priceRangeV2 { minVariantPrice { currencyCode } }
     options { name values }
-    variants(first: 50) {
-      edges { node { id title price compareAtPrice sku } }
+    variants(first: 100) {
+      edges { node { id title price compareAtPrice sku availableForSale } }
+      pageInfo { hasNextPage endCursor }
     }
   }
 }`;
 
+const CONSULTA_MEDIA_PAGINA = `query($id: ID!, $after: String) {
+  product(id: $id) {
+    media(first: 100, after: $after) {
+      edges { node { id ... on MediaImage { image { url width height } } } }
+      pageInfo { hasNextPage endCursor }
+    }
+  }
+}`;
+
+const CONSULTA_VARIANTES_PAGINA = `query($id: ID!, $after: String) {
+  product(id: $id) {
+    variants(first: 100, after: $after) {
+      edges { node { id title price compareAtPrice sku availableForSale } }
+      pageInfo { hasNextPage endCursor }
+    }
+  }
+}`;
+
+const MAX_PRODUCT_CONNECTION_ITEMS = 500;
+
 async function extraer(idProducto, sesion, { signal } = {}) {
   const { product } = await gql(CONSULTA_PRODUCTO, { id: idProducto }, sesion, { signal });
   if (!product) throw new Error(`Producto no encontrado: ${idProducto}`);
+
+  const avisos = [];
+  const mediaEdges = [...(product.media?.edges || [])];
+  const variantEdges = [...(product.variants?.edges || [])];
+  let mediaPage = product.media?.pageInfo || {};
+  let variantsPage = product.variants?.pageInfo || {};
+  while (mediaPage.hasNextPage && mediaPage.endCursor && mediaEdges.length < MAX_PRODUCT_CONNECTION_ITEMS) {
+    const next = await gql(CONSULTA_MEDIA_PAGINA, { id: idProducto, after: mediaPage.endCursor }, sesion, { signal });
+    const connection = next.product?.media;
+    mediaEdges.push(...(connection?.edges || []));
+    mediaPage = connection?.pageInfo || {};
+  }
+  if (mediaPage.hasNextPage) avisos.push(`El producto tiene más de ${MAX_PRODUCT_CONNECTION_ITEMS} medios; se analizaron los primeros ${MAX_PRODUCT_CONNECTION_ITEMS}.`);
+  while (variantsPage.hasNextPage && variantsPage.endCursor && variantEdges.length < MAX_PRODUCT_CONNECTION_ITEMS) {
+    const next = await gql(CONSULTA_VARIANTES_PAGINA, { id: idProducto, after: variantsPage.endCursor }, sesion, { signal });
+    const connection = next.product?.variants;
+    variantEdges.push(...(connection?.edges || []));
+    variantsPage = connection?.pageInfo || {};
+  }
+  if (variantsPage.hasNextPage) avisos.push(`El producto tiene más de ${MAX_PRODUCT_CONNECTION_ITEMS} variantes; se analizaron las primeras ${MAX_PRODUCT_CONNECTION_ITEMS}.`);
+  product.media = { edges: mediaEdges };
+  product.variants = { edges: variantEdges };
 
   const variantes = product.variants.edges.map((e) => e.node);
   const primera = variantes[0] ?? {};
@@ -188,11 +234,13 @@ async function extraer(idProducto, sesion, { signal } = {}) {
     precio: primera.price ?? "0.00",
     // Shopify manda null cuando no hay precio de comparacion → render condicional
     precio_comparativo: primera.compareAtPrice ?? null,
-    moneda: env.MONEDA || "ARS",
+    // The store currency is authoritative. MONEDA remains only as a
+    // compatibility fallback for old fixtures without priceRangeV2.
+    moneda: product.priceRangeV2?.minVariantPrice?.currencyCode || env.MONEDA || "ARS",
     variantes: product.options.map((o) => ({ nombre: o.name, valores: o.values }))
   };
 
-  return { fuente, medios, product };
+  return { fuente, medios, product, avisos };
 }
 
 // ============================================================
@@ -818,8 +866,15 @@ function ensamblar(fuente, salida, { idioma, angulo }) {
 // ============================================================
 
 async function listarProductos(sesion) {
-  const d = await gql(CONSULTA_LISTA, {}, sesion);
-  return d.products.edges.map((e) => e.node);
+  const productos = [];
+  let after = null;
+  do {
+    const d = await gql(CONSULTA_LISTA, { after }, sesion);
+    productos.push(...(d.products?.edges || []).map((e) => e.node));
+    const pageInfo = d.products?.pageInfo || {};
+    after = pageInfo.hasNextPage ? pageInfo.endCursor : null;
+  } while (after);
+  return productos;
 }
 
 // El endpoint POST /paginas entero: extracción → adaptador → IA → ensamblado.
@@ -835,10 +890,10 @@ async function crearPagina(idProducto, sesion, {
   // Resolver antes de extraer/generar: un estilo inválido nunca debe consumir
   // Shopify ni Anthropic para terminar convertido silenciosamente en Clásico.
   const template = resolveTemplateForCreation(estilo);
-  const { fuente, medios, product } = await extraer(idProducto, sesion, { signal });
+  const { fuente, medios, product, avisos: extractionWarnings } = await extraer(idProducto, sesion, { signal });
   if (typeof beforeProviderCall === "function") await beforeProviderCall();
   if (template.rendererKey === "section-page-v1") {
-    const generated = await researchProduct(product, medios, { idioma, angulo });
+    const generated = await researchProduct(product, medios, { idioma, angulo, signal });
     const metadata = templateMetadata(template);
     const urls = Object.fromEntries(medios.map((m) => [m.media_id, m.url]));
     const sectionPage = createProductPage({
@@ -857,12 +912,12 @@ async function crearPagina(idProducto, sesion, {
         section_page: sectionPage
       },
       urls,
-      avisos: [],
+      avisos: extractionWarnings,
       uso: generated.uso
     };
   }
   if (template.rendererKey === "piloto-pdp-01") {
-    const generated = await generatePdp01(product, medios, { idioma, angulo });
+    const generated = await generatePdp01(product, medios, { idioma, angulo, signal });
     const metadata = templateMetadata(template);
     const data = {
       global: { estilo: metadata.legacyStyle, template: metadata.template, idioma, angulo, cta: "Agregar al carrito" },
@@ -873,7 +928,7 @@ async function crearPagina(idProducto, sesion, {
     return {
       data,
       urls: Object.fromEntries(medios.map((m) => [m.media_id, m.url])),
-      avisos: [],
+      avisos: extractionWarnings,
       uso: generated.uso
     };
   }
@@ -886,7 +941,7 @@ async function crearPagina(idProducto, sesion, {
   data.global.estilo = metadata.legacyStyle;
   data.global.template = metadata.template;
   const urls = Object.fromEntries(medios.map((m) => [m.media_id, m.url]));
-  return { data, urls, avisos: validar(data, salida), uso };
+  return { data, urls, avisos: [...extractionWarnings, ...validar(data, salida)], uso };
 }
 
 // Una página no debe desaparecer sólo porque el proveedor de IA esté cerrado

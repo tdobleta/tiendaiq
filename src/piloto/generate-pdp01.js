@@ -72,7 +72,8 @@ function composePdp01Content(copy, sourceFields) {
   };
 }
 
-async function generatePdp01(product, media, { idioma = "es", angulo = "" } = {}) {
+async function generatePdp01(product, media, { idioma = "es", angulo = "", signal } = {}) {
+  if (signal?.aborted) throw signal.reason || new Error("Generación cancelada");
   const source_fields = sourceFieldsFromProduct(product);
   if (!source_fields.media_ids.length) throw new Error("Piloto 01 necesita al menos una imagen real del producto.");
   const promptMedia = media.flatMap((item) => [
@@ -97,7 +98,7 @@ async function generatePdp01(product, media, { idioma = "es", angulo = "" } = {}
     model: MODEL, max_tokens: 4500, system,
     output_config: { format: { type: "json_schema", schema: PDP01_COPY_OUTPUT_SCHEMA } },
     messages: [{ role: "user", content: promptMedia }]
-  }, { timeout: TIMEOUT, maxRetries: 0 });
+  }, { timeout: TIMEOUT, maxRetries: 0, ...(signal ? { signal } : {}) });
   const text = response.content?.find((block) => block.type === "text")?.text;
   if (!text) throw new Error("La IA no devolvió el contenido de Piloto 01.");
   const document = {

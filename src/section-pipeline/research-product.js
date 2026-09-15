@@ -332,7 +332,8 @@ function validateResearch(value, mediaIds) {
   });
 }
 
-async function researchProduct(product, media, { idioma = "es", angulo = "" } = {}) {
+async function researchProduct(product, media, { idioma = "es", angulo = "", signal } = {}) {
+  if (signal?.aborted) throw signal.reason || new Error("Investigación cancelada");
   const mediaIds = media.map((item) => item.media_id);
   const content = media.slice(0, 8).flatMap((item) => [
     { type: "text", text: `media_id: ${item.media_id}` },
@@ -365,7 +366,7 @@ async function researchProduct(product, media, { idioma = "es", angulo = "" } = 
     system,
     output_config: { format: { type: "json_schema", schema: OUTPUT_SCHEMA } },
     messages: [{ role: "user", content }]
-  }, { timeout: TIMEOUT, maxRetries: 0 });
+  }, { timeout: TIMEOUT, maxRetries: 0, ...(signal ? { signal } : {}) });
   const text = response.content?.find((block) => block.type === "text")?.text;
   if (!text) throw new Error("La investigación del producto no devolvió contenido.");
   return { research: validateResearch(parseJson(text), mediaIds), uso: response.usage };

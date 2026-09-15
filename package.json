@@ -17,6 +17,7 @@
     "coherencia": "node pruebas/coherencia.js",
     "unidad": "node --test pruebas/*.test.js",
     "humo": "node pruebas/humo.js",
+    "e2e:paginas": "node pruebas/e2e-section-editor.js",
     "db:migrate": "node scripts/migrar-db.js",
     "db:migrate:check": "node scripts/migrar-db.js --dry-run",
     "db:bind-shopify-registration": "node scripts/vincular-registro-shopify.js",

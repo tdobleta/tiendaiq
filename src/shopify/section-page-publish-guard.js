@@ -12,8 +12,16 @@ const PRODUCT_QUERY = `query SectionPagePublishCheck($id: ID!) {
         id
         ... on MediaImage { image { url } }
       }
+      pageInfo { hasNextPage endCursor }
     }
-    variants(first: 100) { nodes { id } }
+    variants(first: 100) { nodes { id } pageInfo { hasNextPage endCursor } }
+  }
+}`;
+
+const CONNECTION_PAGE_QUERY = `query SectionPageConnectionPage($id: ID!, $mediaAfter: String, $variantsAfter: String) {
+  product(id: $id) {
+    media(first: 100, after: $mediaAfter) { nodes { id } pageInfo { hasNextPage endCursor } }
+    variants(first: 100, after: $variantsAfter) { nodes { id } pageInfo { hasNextPage endCursor } }
   }
 }`;
 
@@ -51,12 +59,29 @@ async function assertSectionPagePublishable(data, session, { signal, query = gql
   if (snapshot.title && result.product.title && String(snapshot.title).trim() !== String(result.product.title).trim()) {
     throw new SectionPagePublishError("La vista previa no coincide con el título actual del producto Shopify");
   }
+  const liveMediaNodes = [...(result.product.media?.nodes || [])];
+  const liveVariantNodes = [...(result.product.variants?.nodes || [])];
+  let mediaPage = result.product.media?.pageInfo || {};
+  let variantsPage = result.product.variants?.pageInfo || {};
+  while ((mediaPage.hasNextPage || variantsPage.hasNextPage) && (mediaPage.endCursor || variantsPage.endCursor)) {
+    const next = await query(CONNECTION_PAGE_QUERY, {
+      id: page.productId,
+      mediaAfter: mediaPage.hasNextPage ? mediaPage.endCursor : null,
+      variantsAfter: variantsPage.hasNextPage ? variantsPage.endCursor : null
+    }, session, { signal });
+    const media = next.product?.media;
+    const variants = next.product?.variants;
+    liveMediaNodes.push(...(media?.nodes || []));
+    liveVariantNodes.push(...(variants?.nodes || []));
+    mediaPage = media?.pageInfo || {};
+    variantsPage = variants?.pageInfo || {};
+  }
   const snapshotMedia = Array.isArray(snapshot.media) ? snapshot.media.filter((item) => item?.id) : [];
-  const liveMedia = new Set((result.product.media?.nodes || []).map((item) => String(item?.id || "")).filter(Boolean));
+  const liveMedia = new Set(liveMediaNodes.map((item) => String(item?.id || "")).filter(Boolean));
   if (snapshotMedia.length && liveMedia.size && snapshotMedia.some((item) => !liveMedia.has(String(item.id)))) {
     throw new SectionPagePublishError("La vista previa contiene imágenes que ya no pertenecen al producto Shopify");
   }
-  const liveVariants = new Set((result.product.variants?.nodes || []).map((variant) => String(variant.id)));
+  const liveVariants = new Set(liveVariantNodes.map((variant) => String(variant.id)));
   if (liveVariants.size === 0) throw new SectionPagePublishError("El producto necesita al menos una variante para publicarse");
   for (const section of page.sections) {
     for (const block of section.instance.blocks || []) {
