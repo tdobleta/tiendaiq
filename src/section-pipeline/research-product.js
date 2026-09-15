@@ -141,6 +141,24 @@ const OUTPUT_SCHEMA = Object.freeze({
   }
 });
 
+// Anthropic's structured-output validator accepts the object/field shape but
+// currently rejects JSON Schema array cardinality keywords such as maxItems.
+// Keep those limits in OUTPUT_SCHEMA for our own normalization/validation and
+// derive a provider-safe copy for the API request. This prevents a provider
+// compatibility detail from weakening the durable application contract.
+function schemaForProvider(value) {
+  if (Array.isArray(value)) return value.map(schemaForProvider);
+  if (!value || typeof value !== "object") return value;
+  const output = {};
+  for (const [key, child] of Object.entries(value)) {
+    if (key === "minItems" || key === "maxItems") continue;
+    output[key] = schemaForProvider(child);
+  }
+  return output;
+}
+
+const PROVIDER_OUTPUT_SCHEMA = Object.freeze(schemaForProvider(OUTPUT_SCHEMA));
+
 const COPY_SLOT_MANIFEST = Object.freeze({
   "product-information": Object.freeze({ section: Object.freeze(["description"]), blocks: Object.freeze({ benefit: Object.freeze(["text"]) }) }),
   "image-with-text": Object.freeze({ section: Object.freeze(["body"]), blocks: Object.freeze({}) }),
@@ -364,7 +382,7 @@ async function researchProduct(product, media, { idioma = "es", angulo = "", sig
     model: MODEL,
     max_tokens: 1800,
     system,
-    output_config: { format: { type: "json_schema", schema: OUTPUT_SCHEMA } },
+    output_config: { format: { type: "json_schema", schema: PROVIDER_OUTPUT_SCHEMA } },
     messages: [{ role: "user", content }]
   }, { timeout: TIMEOUT, maxRetries: 0, ...(signal ? { signal } : {}) });
   const text = response.content?.find((block) => block.type === "text")?.text;
@@ -372,4 +390,4 @@ async function researchProduct(product, media, { idioma = "es", angulo = "", sig
   return { research: validateResearch(parseJson(text), mediaIds), uso: response.usage };
 }
 
-module.exports = Object.freeze({ OUTPUT_SCHEMA, researchProduct, validateResearch });
+module.exports = Object.freeze({ OUTPUT_SCHEMA, PROVIDER_OUTPUT_SCHEMA, researchProduct, validateResearch, schemaForProvider });

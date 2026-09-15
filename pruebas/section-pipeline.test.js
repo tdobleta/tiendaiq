@@ -6,7 +6,7 @@ const productInformation = require("../src/section-pipeline/product-information-
 const imageWithText = require("../src/section-pipeline/image-with-text-v1");
 const { createProductPage, editorRegistry, instantiateSection, validatePage } = require("../src/section-pipeline/page-pipeline");
 const { outlineTargets, renderSectionPage } = require("../src/section-pipeline/preview-renderer");
-const { OUTPUT_SCHEMA, validateResearch } = require("../src/section-pipeline/research-product");
+const { OUTPUT_SCHEMA, PROVIDER_OUTPUT_SCHEMA, schemaForProvider, validateResearch } = require("../src/section-pipeline/research-product");
 const { readCopySlot, normalizePersistedCopySlots } = require("../src/section-pipeline/copy-slots");
 const { SectionContractError, createSectionDefinition, sha256, validateInstance } = require("../src/section-pipeline/section-contract");
 const { build: buildStorefront } = require("../src/section-pipeline/compile-storefront");
@@ -37,6 +37,21 @@ test("el código Shopify es la fuente inmutable del diseño y del editor", () =>
 
 test("la investigación de Claude debe devolver los contratos de copy nuevos", () => {
   assert.deepEqual(OUTPUT_SCHEMA.required, ["summary", "claims", "visualObservations", "sectionCopy", "copy_slots_v1"]);
+});
+
+test("el esquema enviado a Anthropic no usa cardinalidad de arrays no soportada", () => {
+  const inspect = (value) => {
+    if (Array.isArray(value)) return value.forEach(inspect);
+    if (!value || typeof value !== "object") return;
+    assert.equal(Object.hasOwn(value, "minItems"), false);
+    assert.equal(Object.hasOwn(value, "maxItems"), false);
+    Object.values(value).forEach(inspect);
+  };
+  inspect(PROVIDER_OUTPUT_SCHEMA);
+  assert.equal(OUTPUT_SCHEMA.properties.claims.maxItems, 4);
+  assert.equal(PROVIDER_OUTPUT_SCHEMA.properties.claims.maxItems, undefined);
+  assert.notEqual(PROVIDER_OUTPUT_SCHEMA, OUTPUT_SCHEMA);
+  assert.equal(schemaForProvider({ type: "array", minItems: 1, maxItems: 2, items: { type: "string" } }).maxItems, undefined);
 });
 
 test("el registro distingue definiciones, catálogo y capacidades", () => {
