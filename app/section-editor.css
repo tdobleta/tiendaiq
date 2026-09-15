@@ -77,7 +77,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 body.se-modal-host{overflow:hidden;background:#f1f3f5}
 body.se-modal-host .se{height:100%;background:#f1f3f5}
 body.se-modal-host .se__top{grid-template-columns:minmax(0,1fr) auto minmax(430px,1fr);background:#eaf3ff}
-body.se-modal-host .se__identity{display:none}
+body.se-modal-host .se__identity{display:flex}
 body.se-modal-host .se__viewport{grid-column:2;grid-row:1}
 body.se-modal-host .se__actions{grid-column:3;grid-row:1}
 
