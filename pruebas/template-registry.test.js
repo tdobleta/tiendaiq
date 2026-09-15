@@ -33,6 +33,9 @@ test("el catálogo de creación sólo expone plantillas con composición real", 
     assert.ok(item.compositionKey);
     assert.ok(item.name);
     assert.ok(Array.isArray(item.tags) && item.tags.length > 0);
+    assert.equal(item.status, "active");
+    assert.equal(item.creation, true);
+    assert.equal(item.creationEnabled, true);
   }
 });
 

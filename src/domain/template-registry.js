@@ -208,7 +208,13 @@ function creationTemplates() {
       template: descriptor(entry),
       rendererKey: entry.rendererKey,
       compositionKey: entry.compositionKey || null,
-      ...entry.creation
+      ...entry.creation,
+      // Keep the creation catalog contract explicit. The client must be able
+      // to distinguish an available template from a legacy/frozen one without
+      // inferring state from optional presentation metadata.
+      status: entry.status,
+      creationEnabled: entry.creationEnabled !== false,
+      creation: true
     }));
 }
 
