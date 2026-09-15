@@ -617,7 +617,7 @@ test("las páginas por secciones abren el editor como modal independiente de Sho
   assert.match(source, /window\.shopify\?\.modal\?\.show/);
   assert.match(source, /params\.set\("modal", "section-editor"\)/);
   assert.match(css, /body\.se-modal-host/);
-  assert.match(css, /body\.se-modal-host \.se__identity\{display:none\}/);
+  assert.match(css, /body\.se-modal-host \.se__identity\{display:flex\}/);
 });
 
 test("el inspector comunica el origen de cada campo desde el contrato de la sección", () => {
