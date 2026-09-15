@@ -722,6 +722,17 @@
 
         <div id="banner-pagina"></div>
 
+        <!--
+          Shopify puede ocultar las acciones del slot primary-action cuando la
+          app está montada dentro de un iframe embebido. Mantener una acción
+          equivalente dentro del contenido evita dejar al merchant sin entrada
+          al flujo principal; sigue siendo un s-button nativo y no duplica la
+          acción en el layout directo de desarrollo.
+        -->
+        ${EMBEBIDA ? `<s-stack direction="inline" justifyContent="end" gap="small" class="paginas__crear-fallback">
+          <s-button variant="primary" id="ir-crear-inline">Crear página de producto con IA</s-button>
+        </s-stack>` : ""}
+
         <s-section heading="Páginas de producto">
           <s-stack direction="block" gap="base">
             <s-text color="subdued">Administrá tus páginas de producto generadas por IA</s-text>
@@ -746,7 +757,7 @@
         </s-section>
       </s-page>`;
 
-    const crear = $("ir-crear") || $("vacio-crear");
+    const crear = $("ir-crear") || $("ir-crear-inline") || $("vacio-crear");
     if (crear) crear.onclick = () => cargarLista();
     const vacioCrear = $("vacio-crear");
     if (vacioCrear) vacioCrear.onclick = () => cargarLista();
